@@ -16,6 +16,7 @@
  * props as every other quotation template, so it is a drop-in.
  */
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { AmountInWordsLine } from "@/lib/pdf/house";
 
 import { hasValue } from "@/lib/pdf/pdf-utils";
 import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
@@ -91,6 +92,7 @@ type Props = {
   companyContacts: string;
   companyEmail: string;
   companyWebsite: string;
+  companyTaxId?: string | null;
   companyLogoUrl: string | null;
 
   quotationNumber: string;
@@ -119,6 +121,7 @@ type Props = {
   vatLabel: string;
   vatAmount: string;
   totalAmountPayable: string;
+  amountWords?: string | null;
   estimatedDuration: string;
   approvalStatus: string;
   recommendation: string;
@@ -133,7 +136,7 @@ type Props = {
 };
 
 export function QuotationDocumentModern(props: Props) {
-  const contact = [props.companyContacts, props.companyEmail, props.companyWebsite].filter(Boolean).join(" · ");
+  const contact = [props.companyContacts, props.companyEmail, props.companyWebsite, props.companyTaxId ? `TIN: ${props.companyTaxId}` : ""].filter(Boolean).join(" · ");
   const address = [props.companyAddressLine1, props.companyAddressLine2].filter(Boolean).join(" · ");
 
   return (
@@ -247,6 +250,7 @@ export function QuotationDocumentModern(props: Props) {
               <Text style={s.value}>Total payable</Text>
               <Text style={s.summaryTotal}>{props.totalAmountPayable}</Text>
             </View>
+            <AmountInWordsLine value={props.amountWords} />
           </View>
 
           {props.termsText ? (

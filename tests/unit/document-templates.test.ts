@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, it, expect } from "bun:test";
 
 import {
@@ -93,4 +95,42 @@ describe("document template resolution", () => {
     });
     expect(starter).not.toBe("invoice_executive");
   });
+});
+
+/**
+ * Every advertised template must carry the TIN and the amount in words.
+ *
+ * This is a source scan rather than a render check because @react-pdf draws
+ * text as glyph codes from a subsetted font — the words are genuinely not
+ * extractable from the PDF as text, so "did it print?" cannot be asserted from
+ * the output. What can be asserted is that each template's source reaches for
+ * the props at all, which is exactly the failure this guards: a design that
+ * quietly lacks something the others have is the same defect as a template that
+ * silently rendered the default, and that one shipped for months.
+ */
+describe("every template carries the TIN and the amount in words", () => {
+  const FILES: Record<string, string> = {
+    invoice_classic:   "lib/pdf/EagleInfoInvoiceAdapter.tsx",
+    invoice_modern:    "lib/pdf/InvoiceDocumentV2.tsx",
+    invoice_premium:   "lib/pdf/InvoiceDocumentPremium.tsx",
+    invoice_minimal:   "lib/pdf/InvoiceDocumentMinimal.tsx",
+    invoice_executive: "lib/pdf/InvoiceDocumentExecutive.tsx",
+    quote_classic:     "lib/pdf/EagleInfoQuotationAdapter.tsx",
+    quote_modern:      "lib/pdf/QuotationDocumentModern.tsx",
+    quote_minimal:     "lib/pdf/QuotationDocumentMinimal.tsx",
+    quote_detailed:    "lib/pdf/QuotationDocument.tsx",
+    quote_executive:   "lib/pdf/QuotationDocumentExecutive.tsx",
+  };
+
+  for (const [key, file] of Object.entries(FILES)) {
+    it(`${key} renders the amount in words`, () => {
+      const src = readFileSync(file, "utf8");
+      expect(src).toContain("props.amountWords");
+    });
+
+    it(`${key} renders the TIN`, () => {
+      const src = readFileSync(file, "utf8");
+      expect(src).toContain("props.companyTaxId");
+    });
+  }
 });

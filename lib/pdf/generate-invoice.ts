@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import { amountInWords } from "@/lib/amount-in-words";
 import { renderToBuffer } from "@react-pdf/renderer";
 
 import { getClientBill } from "@/lib/billing";
@@ -292,6 +293,7 @@ export async function generateInvoiceBuffer(
     vatLabel: `${branding.vatLabel ?? "VAT"} (${branding.vatRatePercent ?? 0}%)`,
     vatAmount: formatMoney(vatAmount, currency),
     totalAmountPayable: formatMoney(clientBill, currency),
+    amountWords: amountInWords(clientBill, currency),
     // Actual money received on the linked invoice, and the resulting balance —
     // not the old clientApproved-based guess, so the PDF matches the job's money panel.
     paymentMade: formatMoney(paidAmount, currency),

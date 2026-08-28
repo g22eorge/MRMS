@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { amountInWords } from "@/lib/amount-in-words";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createElement } from "react";
 import { prisma } from "@/lib/prisma";
@@ -118,6 +119,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     vatLabel: "Tax",
     vatAmount: formatMoney(taxAmount, currency),
     totalAmountPayable: formatMoney(subtotal + taxAmount, currency),
+    amountWords: amountInWords(subtotal + taxAmount, currency),
     estimatedDuration: "",
     approvalStatus: invoice.status,
     recommendation: "",

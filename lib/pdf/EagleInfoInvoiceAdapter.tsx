@@ -36,6 +36,7 @@ type Props = {
   vatLabel: string;
   vatAmount: string;
   totalAmountPayable: string;
+  amountWords?: string | null;
   paymentMade?: string;
   balanceDue?: string;
   isPaid: boolean;
@@ -112,6 +113,7 @@ export function EagleInfoInvoiceAdapter(props: Props) {
       vatAmount={showVat ? props.vatAmount : null}
       totalLabel="Total"
       totalAmount={props.totalAmountPayable}
+      amountInWords={props.amountWords || null}
       paymentMade={props.paymentMade ?? (props.isPaid ? props.totalAmountPayable : "UGX 0")}
       balanceDue={props.balanceDue ?? (props.isPaid ? "UGX 0" : props.totalAmountPayable)}
       notes={props.footerText || null}

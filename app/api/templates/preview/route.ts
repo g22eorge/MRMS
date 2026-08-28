@@ -84,6 +84,7 @@ const SAMPLE = {
   vatLabel:        "VAT (18%)",
   vatAmount:       "UGX 86,400",
   totalAmountPayable: "UGX 566,400",
+  amountWords: "Ugandan Shillings Five Hundred and Sixty-Six Thousand Four Hundred Only",
   estimatedDuration: "2 – 3 business days",
   approvalStatus:  "Approved",
   recommendation:  "Proceed with repair",
@@ -153,6 +154,7 @@ export async function GET(req: NextRequest) {
     companyContacts:     branding.companyContacts   || SAMPLE.companyContacts,
     companyEmail:        branding.companyEmail      || SAMPLE.companyEmail,
     companyWebsite:      branding.companyWebsite    || SAMPLE.companyWebsite,
+    companyTaxId:        branding.companyTaxId       || null,
   };
   const logoUrl = await resolveLogoDataUri();
 
@@ -196,6 +198,7 @@ export async function GET(req: NextRequest) {
       vatLabel:          SAMPLE.vatLabel,
       vatAmount:         SAMPLE.vatAmount,
       totalAmountPayable: SAMPLE.totalAmountPayable,
+      amountWords: SAMPLE.amountWords,
       subtotalValue:     SAMPLE.repairCost,
       estimatedDuration: SAMPLE.estimatedDuration,
       approvalStatus:    SAMPLE.approvalStatus,

@@ -129,6 +129,32 @@ export function companyLetterheadLines(input: {
   ].filter((l) => l && l.trim());
 }
 
+/**
+ * The document total written out, for the line under a totals block.
+ *
+ * A shared component rather than markup copied into each template: there are
+ * ten invoice and quotation designs, and a line that only appears on the
+ * default is the same defect as a template that only renders the default —
+ * the customer picks "Executive" and quietly loses something the others have.
+ *
+ * Renders nothing without a value, so a document that has no total to write
+ * out simply does not carry the block.
+ */
+export function AmountInWordsLine({ value, accent }: { value?: string | null; accent?: string | null }) {
+  if (!value) return null;
+  return (
+    // marginBottom as well as marginTop: the templates place their next
+    // section straight after this with no spacing of its own, so without it the
+    // written amount ran into the "Terms & Conditions" heading below.
+    <View style={{ marginTop: SP.sm, marginBottom: SP.md, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: accent || DIVIDER }}>
+      <Text style={{ fontSize: LABEL_SZ, fontFamily: "Helvetica-Bold", color: MUTED, letterSpacing: 0.8 }}>
+        AMOUNT IN WORDS
+      </Text>
+      <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", color: INK, marginTop: 3 }}>{value}</Text>
+    </View>
+  );
+}
+
 /** Full-bleed accent bar, repeated on every page so each sheet is sealed. */
 export function HouseTopRule({ accent }: { accent?: string | null }) {
   return <View style={[house.topRule, { backgroundColor: accent || NAVY }]} fixed />;

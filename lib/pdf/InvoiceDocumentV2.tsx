@@ -1,4 +1,5 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { AmountInWordsLine } from "@/lib/pdf/house";
 
 import { LineItemsTable, type PdfLineItem } from "./pdf-line-items";
 
@@ -215,6 +216,7 @@ type Props = {
   companyContacts: string;
   companyEmail?: string;
   companyWebsite?: string;
+  companyTaxId?: string | null;
   companyLogoUrl?: string;
   invoiceNumber: string;
   dateIssued: string;
@@ -236,6 +238,7 @@ type Props = {
   vatLabel: string;
   vatAmount: string;
   totalAmountPayable: string;
+  amountWords?: string | null;
   isPaid: boolean;
   status: string;
   currency: string;
@@ -335,6 +338,7 @@ export function InvoiceDocumentV2(rawProps: Props) {
             <Text style={s.companyLine}>{props.companyContacts}</Text>
             {props.companyEmail ? <Text style={s.companyLine}>{props.companyEmail}</Text> : null}
             {props.companyWebsite ? <Text style={s.companyLine}>{props.companyWebsite}</Text> : null}
+            {props.companyTaxId ? <Text style={s.companyLine}>TIN: {props.companyTaxId}</Text> : null}
           </View>
 
           <View style={s.headerRight}>
@@ -487,6 +491,11 @@ export function InvoiceDocumentV2(rawProps: Props) {
           </View>
         </View>
         )}
+
+        {/* Outside both branches: the line-items table and the repair cost
+            breakdown are mutually exclusive, and the line belonged to only
+            one of them. */}
+        <AmountInWordsLine value={props.amountWords} />
 
         {/* Terms */}
         <View style={s.section}>

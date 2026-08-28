@@ -40,6 +40,7 @@ type Props = {
   vatLabel: string;
   vatAmount: string;
   totalAmountPayable: string;
+  amountWords?: string | null;
   estimatedDuration: string;
   approvalStatus: string;
   recommendation: string;
@@ -110,6 +111,7 @@ export function EagleInfoQuotationAdapter(props: Props) {
       vatAmount={showVat ? props.vatAmount : null}
       totalLabel="Total"
       totalAmount={props.totalAmountPayable}
+      amountInWords={props.amountWords || null}
       paymentMade="UGX 0"
       balanceDue={props.totalAmountPayable}
       notes={notesArr.join("\n\n") || "Looking forward to your business."}

@@ -3,6 +3,7 @@
  * Dark slate/charcoal header, gold accent, premium feel for enterprise clients.
  */
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { AmountInWordsLine } from "@/lib/pdf/house";
 
 import { LineItemsTable, type PdfLineItem } from "./pdf-line-items";
 
@@ -86,13 +87,15 @@ const s = StyleSheet.create({
 
 type Props = {
   companyName: string; companyTagline?: string; companyAddressLine1: string; companyAddressLine2: string;
-  companyContacts: string; companyEmail?: string; companyWebsite?: string; companyLogoUrl?: string;
+  companyContacts: string; companyEmail?: string; companyWebsite?: string;
+  companyTaxId?: string | null; companyLogoUrl?: string;
   documentTitle: string; quotationNumber: string; dateIssued: string; validUntil: string;
   repairId: string; preparedByName: string; preparedByRole: string;
   clientName: string; clientPhone: string; clientEmail: string; clientOrganization: string;
   deviceType: string; deviceLabel: string; serialOrImei: string; accessories: string; physicalCondition: string;
   customerIssue: string; diagnosisSummary: string; scopeOfWork: string;
   repairCost: string; vatApplicable: boolean; vatLabel: string; vatAmount: string; totalAmountPayable: string;
+  amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
   promo?: QuotationPromo | null;
@@ -136,6 +139,7 @@ export function InvoiceDocumentExecutive(props: Props) {
               <Text style={s.coLine}>{props.companyAddressLine2}</Text>
               <Text style={s.coLine}>{props.companyContacts}{props.companyEmail ? ` · ${props.companyEmail}` : ""}</Text>
               {props.companyWebsite ? <Text style={s.coLine}>{props.companyWebsite}</Text> : null}
+              {props.companyTaxId ? <Text style={s.coLine}>TIN: {props.companyTaxId}</Text> : null}
             </View>
           </View>
           <View style={s.docSide}>
@@ -218,6 +222,11 @@ export function InvoiceDocumentExecutive(props: Props) {
               <View style={s.totalRow}><Text style={s.totalLbl}>Total Amount Payable</Text><Text style={s.totalVal}>{props.totalAmountPayable}</Text></View>
             </View>
           )}
+
+          {/* Outside both branches: the line-items table and the repair cost
+              breakdown are mutually exclusive, and the line belonged to only
+              one of them. */}
+          <AmountInWordsLine value={props.amountWords} />
 
           {/* ── Terms ── */}
           <View style={[s.wideCard, { marginBottom: 14 }]}>

@@ -1,4 +1,5 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { AmountInWordsLine } from "@/lib/pdf/house";
 
 import { isTermsHeading } from "@/lib/quote-terms";
 import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
@@ -201,6 +202,7 @@ type Props = {
   companyContacts: string;
   companyEmail?: string;
   companyWebsite?: string;
+  companyTaxId?: string | null;
   companyLogoUrl?: string;
   quotationNumber: string;
   dateIssued: string;
@@ -225,6 +227,7 @@ type Props = {
   vatLabel: string;
   vatAmount: string;
   totalAmountPayable: string;
+  amountWords?: string | null;
   estimatedDuration: string;
   approvalStatus: string;
   recommendation: string;
@@ -276,6 +279,7 @@ export function QuotationDocument(props: Props) {
             <Text style={s.companyLine}>{props.companyContacts}</Text>
             {props.companyEmail ? <Text style={s.companyLine}>{props.companyEmail}</Text> : null}
             {props.companyWebsite ? <Text style={s.companyLine}>{props.companyWebsite}</Text> : null}
+            {props.companyTaxId ? <Text style={s.companyLine}>TIN: {props.companyTaxId}</Text> : null}
           </View>
 
           <View style={s.headerRight}>
@@ -410,6 +414,7 @@ export function QuotationDocument(props: Props) {
                   <Text style={s.totalLabel}>Total Payable</Text>
                   <Text style={s.totalValue}>{props.totalAmountPayable}</Text>
                 </View>
+                <AmountInWordsLine value={props.amountWords} />
               </View>
             </View>
           </View>

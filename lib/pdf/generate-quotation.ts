@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import { amountInWords } from "@/lib/amount-in-words";
 import { renderToBuffer } from "@react-pdf/renderer";
 
 import { getClientBill } from "@/lib/billing";
@@ -149,6 +150,7 @@ export async function generateQuotationBuffer(
     vatLabel: `${branding.vatLabel} (${branding.vatRatePercent}%)`,
     vatAmount: formatMoney(vatAmount, currency),
     totalAmountPayable: formatMoney(bill, currency),
+    amountWords: amountInWords(bill, currency),
     estimatedDuration: compactText(job.repairTimeline, 35),
     approvalStatus:
       job.clientApproved === true ? "Approved"
