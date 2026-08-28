@@ -61,6 +61,10 @@ export async function enqueueWhatsAppMessage(input: {
   type: OutboundMessageType;
   repairRequestId?: string;
   jobId?: string;
+  /** Set by payment reminders so a chase can be traced to what it chases. */
+  invoiceId?: string;
+  /** Which rung of the reminder ladder; the dedupe key with invoiceId. */
+  reminderStage?: string;
   provider?: string;
   nextAttemptAt?: Date;
   templateKey?: string;
@@ -104,6 +108,8 @@ export async function enqueueWhatsAppMessage(input: {
         provider: input.provider,
         repairRequestId: input.repairRequestId,
         jobId: input.jobId,
+        invoiceId: input.invoiceId,
+        reminderStage: input.reminderStage,
         orgId: input.orgId ?? null,
         nextAttemptAt: input.nextAttemptAt ?? new Date(),
       },
@@ -150,6 +156,8 @@ export async function enqueueEmailMessage(input: {
   type: OutboundMessageType;
   repairRequestId?: string;
   jobId?: string;
+  invoiceId?: string;
+  reminderStage?: string;
   nextAttemptAt?: Date;
   templateKey?: string;
   templateVars?: string;
@@ -181,6 +189,8 @@ export async function enqueueEmailMessage(input: {
       nextAttemptAt: input.nextAttemptAt ?? new Date(),
       repairRequestId: input.repairRequestId,
       jobId: input.jobId,
+      invoiceId: input.invoiceId,
+      reminderStage: input.reminderStage,
       orgId: input.orgId ?? null,
       provider: "resend",
     },

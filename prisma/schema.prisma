@@ -105,6 +105,7 @@ model Organization {
 
   @@index([slug])
   @@index([isActive])
+  paymentReminderSettings PaymentReminderSettings?
 }
 
 enum OrgModule {
@@ -735,6 +736,7 @@ model Invoice {
   payments      Payment[]
   refunds       Refund[]
   deliveryNotes DeliveryNote[]
+  outboundMessages OutboundMessage[]
   creditNotes   CreditNote[]
   attachments   InvoiceAttachment[]
   receipts      Receipt[]
@@ -1337,6 +1339,14 @@ model OutboundMessage {
   repairRequest   RepairRequest? @relation(fields: [repairRequestId], references: [id], onDelete: SetNull)
   jobId           String?
   job             Job?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  // Without this a payment reminder cannot be traced to the invoice it chases,
+  // so nothing can answer "have we already asked?" — which is the difference
+  // between a reminder system and a way to pester customers.
+  invoiceId       String?
+  invoice         Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  // Which rung of the reminder ladder this message was: "T-7", "DUE", "+3".
+  // Kept as text so the ladder can change shape without a migration.
+  reminderStage   String?
   orgId           String?
   org             Organization?  @relation(fields: [orgId], references: [id], onDelete: SetNull)
 
@@ -1347,6 +1357,7 @@ model OutboundMessage {
   @@index([channel, status, nextAttemptAt])
   @@index([providerMessageId])
   @@index([repairRequestId])
+  @@index([invoiceId, reminderStage])
   @@index([jobId])
   @@index([templateKey])
 }
@@ -3346,4 +3357,40 @@ model RepairMessage {
 
   @@index([jobId, createdAt])
   @@index([orgId, jobId])
+}
+
+
+/// Per-org control of automatic payment reminders.
+///
+/// Off by default and dry-run by default, deliberately: this is the only
+/// feature in the system that contacts a customer without a person deciding to,
+/// and the failure mode — chasing someone who has already paid, or at 6am — is
+/// paid for in goodwill rather than in errors.
+model PaymentReminderSettings {
+  id    String       @id @default(cuid())
+  orgId String       @unique
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(false)
+  /// Render and log every reminder but send nothing to customers. The way to
+  /// watch a ladder for a fortnight before it speaks on the business's behalf.
+  dryRun  Boolean @default(true)
+
+  /// Used when an invoice carries no due date of its own, which is most of them.
+  paymentTermsDays Int @default(30)
+
+  /// Above this balance a reminder is not sent; a task is raised instead. A
+  /// large debt is a conversation, and a template answering it reads as one.
+  manualReviewAbove Float @default(2000000)
+
+  /// A client holding several unpaid invoices gets one statement rather than
+  /// one message per invoice.
+  statementForMultiInvoice Boolean @default(true)
+
+  /// Local hours, inclusive start, exclusive end. Nothing sends outside them.
+  quietHourStart Int @default(8)
+  quietHourEnd   Int @default(20)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
