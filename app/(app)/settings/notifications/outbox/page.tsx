@@ -38,6 +38,9 @@ const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
   FAILED:  "bg-red-500/12 text-red-600 dark:text-red-400",
   DEAD:    "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+  // A dry-run reminder: the real message, never delivered. Blue rather than
+  // the muted grey it would otherwise inherit, so it does not read as failed.
+  PREVIEW: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
 };
 
 const CHANNEL_DOT: Record<string, string> = {

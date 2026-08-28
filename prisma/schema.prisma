@@ -1252,6 +1252,10 @@ enum OutboundMessageStatus {
   SENT
   FAILED
   DEAD
+  /// Written by a dry run: the exact message that would have gone out, kept so
+  /// it can be read before the feature is allowed to speak. The retry sweep
+  /// takes only PENDING and FAILED, so a PREVIEW row can never be delivered.
+  PREVIEW
 }
 
 enum OutboundMessageType {

@@ -190,20 +190,34 @@ export async function runPaymentReminders(params: {
       continue;
     }
 
-    // Checked before the dry-run exit on purpose: a preview that reports a
-    // message it could never actually send is worse than no preview, because
-    // someone watching it for a fortnight counts it as working.
-    if (dryRun) {
-      push("dry-run");
-      continue;
-    }
-
     const common = {
       orgId: params.orgId,
       invoiceId: invoice.id,
       reminderStage: stage.key,
       type: OutboundMessageType.INVOICE_REMINDER,
     };
+    // A dry run writes the message it would have sent, as PREVIEW. Recording
+    // nothing would have made the preview unreadable — the settings page
+    // promises the outbox can be read for a fortnight before the feature is
+    // allowed to speak, and a summary in a cron response is not that.
+    if (dryRun) {
+      await prisma.outboundMessage.create({
+        data: {
+          orgId: params.orgId,
+          invoiceId: invoice.id,
+          reminderStage: stage.key,
+          type: OutboundMessageType.INVOICE_REMINDER,
+          channel: channel === "whatsapp" ? "WHATSAPP" : "EMAIL",
+          status: "PREVIEW",
+          to: channel === "whatsapp" ? invoice.client.phone! : invoice.client.email!,
+          subject: channel === "email" ? `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}` : null,
+          body,
+        },
+      });
+      push("dry-run");
+      continue;
+    }
+
     if (channel === "whatsapp") {
       await enqueueWhatsAppMessage({ ...common, to: invoice.client.phone!, body });
     } else {
