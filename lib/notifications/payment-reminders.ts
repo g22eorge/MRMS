@@ -135,17 +135,22 @@ export async function runPaymentReminders(params: {
     const balance = invoice.totalAmount - invoice.paidAmount;
     const currency = normalizeCurrency(invoice.currency, org.baseCurrency);
     const due = effectiveDueDate(invoice, settings.paymentTermsDays);
-    // What this invoice has actually been sent, so the ladder can tell a cold
-    // start from a customer who has been climbing it. PREVIEW is excluded for
-    // the same reason it is excluded from the dedupe: a rehearsal is not a
-    // message the customer received.
+    // What this invoice has actually been *delivered*, so the ladder can tell a
+    // cold start from a customer who has been climbing it.
+    //
+    // SENT only, deliberately. A message that failed at the provider — a dead
+    // number, a block — was never heard, and counting it would walk someone up
+    // the ladder on the strength of messages that never arrived, until the
+    // final rung fired at a person who had received nothing. The dedupe below
+    // still counts the attempt, so nothing is re-queued; the two guards ask
+    // different questions and want different answers.
     const sentStages = (
       await prisma.outboundMessage.findMany({
         where: {
           orgId: params.orgId,
           invoiceId: invoice.id,
           type: OutboundMessageType.INVOICE_REMINDER,
-          status: { not: "PREVIEW" },
+          status: "SENT",
           reminderStage: { not: null },
         },
         select: { reminderStage: true },
@@ -170,8 +175,10 @@ export async function runPaymentReminders(params: {
       continue;
     }
 
-    // Already asked at this rung. The guard is the pair (invoice, stage), so a
-    // cron running more than once a day is harmless.
+    // Already attempted at this rung — attempted, not delivered. A failed
+    // message is the retry sweep's to re-send, and queuing a second row for the
+    // same rung would mean two copies could both eventually land. This is why
+    // it asks a different question from the delivery history above.
     //
     // PREVIEW rows are excluded deliberately. A dry run is a rehearsal, and
     // counting it as the message would mean a fortnight of watching the outbox

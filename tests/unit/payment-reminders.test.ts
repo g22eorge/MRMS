@@ -141,3 +141,20 @@ describe("cold start", () => {
     expect(stageDueNow(due, day("2026-09-05"), [])).toBeNull();
   });
 });
+
+describe("unreachable customers", () => {
+  const due = day("2026-10-01");
+
+  it("does not escalate someone who has received nothing", () => {
+    // Their messages all failed at the provider, so no rung was ever heard.
+    // With an empty delivered-history the ladder treats them as a cold start
+    // and caps at firm, rather than firing the final rung at someone who has
+    // had no contact at all.
+    expect(stageDueNow(due, day("2026-10-20"), [])?.tone).toBe("firm");
+  });
+
+  it("escalates only on the strength of what actually arrived", () => {
+    // One delivered rung is enough to stop being a cold start.
+    expect(stageDueNow(due, day("2026-10-20"), ["+3"])?.key).toBe("+10");
+  });
+});
