@@ -63,7 +63,7 @@ function pageMeta(pathname: string, role: Role) {
   if (pathname === "/intake") return { title: "Repair Requests", description: "Incoming website requests awaiting intake conversion." };
   if (pathname === "/documents/credit-notes") return { title: "Credit Notes", description: "Sales returns, adjustments, and item return tracking." };
   if (pathname === "/documents/refunds") return { title: "Refunds", description: "Track refunds issued against receipts and sales." };
-  if (pathname === "/documents/delivery-notes") return { title: "Delivery Notes", description: "Delivery and handover proof for paid invoices and sales." };
+  if (pathname === "/documents/delivery-notes") return { title: "Delivery Notes", description: "Proof that goods were handed over, whether paid for or sold on credit." };
   if (pathname === "/pos") return { title: "Point of Sale", description: "Walk-in and retail sales transactions." };
   if (parts[0] === "pos" && parts[1]) {
     // No subtitle here on purpose. This used to read `Ref ${id.slice(0, 8)}`,

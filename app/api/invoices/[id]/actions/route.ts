@@ -3,9 +3,10 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+
+import { createDeliveryNoteFromInvoice } from "@/lib/commercial/delivery-note-from-invoice";
 import { sendInvoiceViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import type { DeliveryMethod } from "@prisma/client";
 
@@ -55,42 +56,28 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     const deliveryMethod = (["PICKUP", "DELIVERY", "COURIER"].includes(methodRaw) ? methodRaw : "PICKUP") as DeliveryMethod;
     if (!deliveredByName || !receivedByName) return NextResponse.json({ error: "missing-fields" }, { status: 400 });
 
-    const inv = await prisma.invoice.findFirst({ where: { id: invoice.id, orgId }, select: { paidAmount: true, totalAmount: true, jobId: true, subject: true } });
-    if (!inv) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (inv.paidAmount < inv.totalAmount) return NextResponse.json({ error: "invoice-not-fully-paid" }, { status: 400 });
-
-    // Dedup: one delivery note per invoice (there is no @unique on invoiceId).
-    const existingDn = await prisma.deliveryNote.findFirst({ where: { orgId, invoiceId: invoice.id }, select: { deliveryNoteNumber: true } });
-    if (existingDn) {
-      return NextResponse.json({ ok: true, deliveryNoteNumber: existingDn.deliveryNoteNumber, duplicate: true });
-    }
-
-    const desc = inv.jobId
-      ? `Repair handover for job`
-      : (inv.subject ?? invoice.invoiceNumber);
-
-    // Allocate the number and create the note in one transaction (was split
-    // across two calls, so the number could collide or the create fail alone).
-    const deliveryNoteNumber = await prisma.$transaction(async (tx) => {
-      const number = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
-      await tx.deliveryNote.create({
-        data: {
-          orgId,
-          invoiceId: invoice.id,
-          deliveryNoteNumber: number,
-          deliveryMethod,
-          deliveredByName,
-          receivedByName,
-          note: note || null,
-          items: { create: [{ description: desc, quantity: 1 }] },
-        },
-      });
-      return number;
+    // Shared with the documents page and the invoice page so all three agree
+    // on when a delivery note may be raised. This route used to write a single
+    // generic line rather than the invoice's actual lines, and logged the
+    // invoice id as the delivery note's in the audit trail; the helper does
+    // both correctly.
+    const result = await createDeliveryNoteFromInvoice({
+      orgId,
+      invoiceId: invoice.id,
+      actorUserId: user.id,
+      deliveredByName,
+      receivedByName,
+      deliveryMethod,
+      note,
     });
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 404 });
+    const deliveryNoteNumber = result.deliveryNoteNumber;
 
-    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: invoice.id, action: "DELIVERY_NOTE_CREATED", summary: `DN ${deliveryNoteNumber} for ${invoice.id}` });
     revalidatePath("/documents/invoices");
     revalidatePath(`/documents/invoices/${invoice.id}`);
+    if (result.duplicate) {
+      return NextResponse.json({ ok: true, deliveryNoteNumber, duplicate: true });
+    }
     return NextResponse.json({ ok: true, deliveryNoteNumber });
   }
 

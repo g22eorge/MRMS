@@ -21,6 +21,7 @@ import { CollectPaymentButton } from "@/components/documents/CollectPaymentButto
 import { InvoiceMoreMenu } from "@/components/documents/InvoiceMoreMenu";
 import { InvoiceCreateDialog } from "../InvoiceCreateDialog";
 
+import { createDeliveryNoteFromInvoice } from "@/lib/commercial/delivery-note-from-invoice";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 const INVOICE_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
@@ -181,6 +182,29 @@ export default async function InvoiceDetailPage({
     redirect(`/documents/invoices/${id}?sent=${ok ? "email" : "failed"}`);
   }
 
+  // The chain quotation -> invoice -> delivery note had no third step in the
+  // interface: this page listed delivery notes but offered no way to raise one,
+  // so the only route was the Delivery Notes page and picking the invoice back
+  // out of a dropdown. Payment is deliberately not checked — goods sold on
+  // credit are delivered before they are paid for.
+  async function createDeliveryNoteAction() {
+    "use server";
+    const { user: actor, orgId: actorOrg, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
+    if (!(can.viewFinancials(actor) || ["ADMIN", "OPS", "FRONT_DESK"].includes(actor.role))) return;
+    const result = await createDeliveryNoteFromInvoice({
+      orgId: actorOrg,
+      invoiceId: id,
+      actorUserId: actor.id,
+      // Who carried and who signed is filled in on the note itself; the names
+      // are not known at the moment the document is raised from the invoice.
+      deliveredByName: actor.name ?? "",
+      receivedByName: "",
+    });
+    if (!result.ok) redirect(`/documents/invoices/${id}?dn=failed`);
+    redirect(`/documents/delivery-notes/${result.deliveryNoteId}`);
+  }
+
   // ---- Edit dialog data (loaded only when ?edit=1) ----
   const sp = searchParams ? await searchParams : {};
   const isEdit = sp.edit === "1";
@@ -261,6 +285,22 @@ export default async function InvoiceDetailPage({
       )}
       <Link href={`/api/invoices/${invoice.id}/pdf`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">PDF</Link>
       <Link href={`/documents/invoices/${invoice.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Edit</Link>
+      {!isVoid && canSend && (
+        invoice.deliveryNotes.length > 0 ? (
+          <Link
+            href={`/documents/delivery-notes/${invoice.deliveryNotes[0].id}`}
+            className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium"
+          >
+            Delivery note
+          </Link>
+        ) : (
+          <form action={createDeliveryNoteAction} className="inline">
+            <SubmitButton bare pendingLabel="Creating…" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">
+              Create delivery note
+            </SubmitButton>
+          </form>
+        )
+      )}
     </>
   );
 

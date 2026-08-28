@@ -8,6 +8,7 @@ import { type DeliveryMethod, Prisma } from "@prisma/client";
 import { can } from "@/lib/permissions";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
+import { createDeliveryNoteFromInvoice } from "@/lib/commercial/delivery-note-from-invoice";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
@@ -74,59 +75,24 @@ export default async function DeliveryNotesPage({
     const deliveryMethod = DELIVERY_METHODS.includes(methodRaw as DeliveryMethod) ? (methodRaw as DeliveryMethod) : null;
 
     if (sourceType === "invoice") {
-      const invoice = await prisma.invoice.findFirst({
-        where: { id: sourceId, orgId, status: { not: "VOID" } },
-        select: {
-          id: true,
-          invoiceNumber: true,
-          paidAmount: true,
-          totalAmount: true,
-          subject: true,
-          lines: { select: { description: true, quantity: true } },
-          job: { select: { jobNumber: true, brand: true, model: true } },
-        },
+      const result = await createDeliveryNoteFromInvoice({
+        orgId,
+        invoiceId: sourceId,
+        actorUserId: user.id,
+        deliveredByName,
+        receivedByName,
+        deliveryMethod,
+        note,
       });
-      if (!invoice) return;
-      if (invoice.paidAmount < invoice.totalAmount) {
-        // A delivery note is only issued once the invoice is settled; saying so
-        // beats the dialog closing with nothing having happened.
-        redirect(`/documents/delivery-notes?error=${encodeURIComponent("That invoice is not fully paid yet, so a delivery note can't be issued for it.")}`);
+      if (!result.ok) {
+        redirect(`/documents/delivery-notes?error=${encodeURIComponent(result.error)}`);
       }
-
-      const fallbackDescription = invoice.job
-        ? `Repair handover for ${invoice.job.jobNumber} (${invoice.job.brand} ${invoice.job.model})`
-        : invoice.subject ?? invoice.invoiceNumber;
-      const items = invoice.lines.length > 0
-        ? invoice.lines.map((line) => ({
-            description: line.description,
-            quantity: Math.max(1, Math.round(Number(line.quantity) || 1)),
-          }))
-        : [{ description: fallbackDescription, quantity: 1 }];
-
-      // Double-submit guard: a delivery note for this invoice landed seconds ago.
-      const dupDn = await findRecentDuplicate(prisma.deliveryNote, { orgId, invoiceId: invoice.id });
-      if (dupDn) { revalidatePath("/documents/delivery-notes"); redirect("/documents/delivery-notes"); }
-
-      const noteRecord = await prisma.$transaction(async (tx) => {
-        const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
-        return tx.deliveryNote.create({
-          data: {
-            orgId,
-            invoiceId: invoice.id,
-            deliveryNoteNumber,
-            deliveryMethod,
-            deliveredByName,
-            receivedByName,
-            note: note || null,
-            createdById: session.user.id,
-            items: { create: items },
-          },
-        });
-      });
-      await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: noteRecord.id, action: "DELIVERY_NOTE_CREATED", summary: `${noteRecord.deliveryNoteNumber} generated from ${invoice.invoiceNumber}` });
     } else {
       const sale = await prisma.sale.findFirst({
-        where: { id: sourceId, orgId, status: "PAID" },
+        // OPEN is the credit sale: goods out, payment due later. Only a sale
+        // whose goods came back (RETURNED) or never happened (VOID) has
+        // nothing to deliver.
+        where: { id: sourceId, orgId, status: { in: ["OPEN", "PAID", "PARTIALLY_RETURNED"] } },
         select: {
           id: true,
           saleNumber: true,
@@ -382,9 +348,9 @@ export default async function DeliveryNotesPage({
       orderBy: { issuedAt: "desc" },
       take: 80,
       select: { id: true, invoiceNumber: true, totalAmount: true, currency: true, paidAmount: true, job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } }, client: { select: { fullName: true, phone: true, organization: true } } },
-    }).then((rows) => rows.filter((invoice) => invoice.paidAmount >= invoice.totalAmount)),
+    }),
     prisma.sale.findMany({
-      where: { orgId, status: "PAID" },
+      where: { orgId, status: { in: ["OPEN", "PAID", "PARTIALLY_RETURNED"] } },
       orderBy: { createdAt: "desc" },
       take: 80,
       select: { id: true, saleNumber: true, totalAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
@@ -398,14 +364,22 @@ export default async function DeliveryNotesPage({
   // the row.
   const deliverySourceGroups: SourceGroup[] = [
     {
-      label: "Paid invoices",
+      label: "Invoices",
       options: invoiceOptions.map((invoice) => {
         const who = clientDisplayName(invoice.client ?? invoice.job?.client, "No customer");
         const phone = invoice.client?.phone ?? invoice.job?.client?.phone ?? "";
+        const currency = normalizeCurrency(invoice.currency, org.baseCurrency);
+        const outstanding = invoice.totalAmount - invoice.paidAmount;
+        // Unpaid invoices belong in this list — goods go out on credit — but
+        // whoever is releasing them should see the balance while choosing,
+        // not discover it later.
+        const settlement = outstanding > 0
+          ? `${formatMoney(outstanding, currency)} outstanding`
+          : "paid";
         return {
           value: `invoice:${invoice.id}`,
           label: `${who} — ${invoice.invoiceNumber}`,
-          hint: [invoice.job?.jobNumber, formatMoney(invoice.totalAmount, normalizeCurrency(invoice.currency, org.baseCurrency))]
+          hint: [invoice.job?.jobNumber, formatMoney(invoice.totalAmount, currency), settlement]
             .filter(Boolean)
             .join(" · "),
           search: [who, phone, invoice.invoiceNumber, invoice.job?.jobNumber].filter(Boolean).join(" "),
@@ -413,7 +387,7 @@ export default async function DeliveryNotesPage({
       }),
     },
     {
-      label: "Paid sales",
+      label: "Sales",
       options: saleOptions.map((sale) => {
         const who = clientDisplayName(sale.client, "Walk-in");
         return {
@@ -451,7 +425,7 @@ export default async function DeliveryNotesPage({
       {hasDeliverySources ? (
         <div id="create-delivery-note" className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5 text-[0.75rem] font-semibold text-[var(--ink)]">
-            Create Delivery Note from paid invoice or sale
+            Create Delivery Note from an invoice or sale
           </div>
           <form action={createDeliveryNoteAction} className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="sm:col-span-2">
@@ -459,8 +433,8 @@ export default async function DeliveryNotesPage({
                 name="sourceKey"
                 required
                 groups={deliverySourceGroups}
-                placeholder="Search paid invoices and sales by customer, number or job…"
-                emptyLabel="No paid invoice or sale matches that"
+                placeholder="Search invoices and sales by customer, number or job…"
+                emptyLabel="No invoice or sale matches that"
               />
             </div>
             <input name="deliveredByName" required placeholder="Delivered by" className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm" />
@@ -475,7 +449,7 @@ export default async function DeliveryNotesPage({
         </div>
       ) : (
         <div id="create-delivery-note" className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">No paid invoices or sales are ready for delivery notes.</p>
+          <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">No invoices or sales are available for delivery notes yet.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href="/documents/invoices?create=1#create-invoice" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Create invoice</Link>
             <Link href="/pos" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]">Open POS</Link>
@@ -512,7 +486,7 @@ export default async function DeliveryNotesPage({
         className="doc-list"
         rows={pageRows}
         getRowKey={(n) => n.id}
-        empty="No delivery notes yet. Generate one from a paid invoice where delivery or handover proof is needed."
+        empty="No delivery notes yet. Generate one from any invoice or sale where handover proof is needed — including goods sold on credit."
         columns={[
           {
             key: "note",
