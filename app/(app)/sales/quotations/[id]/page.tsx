@@ -491,36 +491,36 @@ export default async function QuotationDetailPage({
             {
               key: "description",
               header: "Item",
-              cell: (item) =>
+              cell: (item, _i, v) =>
                 canEditDraft ? (
-                  <input form={`quote-item-${item.id}`} name="description" defaultValue={item.description} aria-label="Description" className={cellInput} />
+                  <input form={`quote-item-${v}-${item.id}`} name="description" defaultValue={item.description} aria-label="Description" className={cellInput} />
                 ) : item.description,
             },
             {
               key: "qty",
               header: "Qty",
               className: "w-20 whitespace-nowrap tabular-nums",
-              cell: (item) =>
+              cell: (item, _i, v) =>
                 canEditDraft ? (
-                  <input form={`quote-item-${item.id}`} name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} aria-label="Quantity" className={cellInput} />
+                  <input form={`quote-item-${v}-${item.id}`} name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} aria-label="Quantity" className={cellInput} />
                 ) : item.quantity,
             },
             {
               key: "unitPrice",
               header: "Price",
               className: "w-32 whitespace-nowrap tabular-nums",
-              cell: (item) =>
+              cell: (item, _i, v) =>
                 canEditDraft ? (
-                  <input form={`quote-item-${item.id}`} name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} aria-label="Unit price" className={cellInput} />
+                  <input form={`quote-item-${v}-${item.id}`} name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} aria-label="Unit price" className={cellInput} />
                 ) : formatMoney(item.unitPrice, currency),
             },
             {
               key: "discount",
               header: "Disc",
               className: "w-20 whitespace-nowrap tabular-nums text-[var(--ink-muted)]",
-              cell: (item) =>
+              cell: (item, _i, v) =>
                 canEditDraft && canOverrideDiscount ? (
-                  <input form={`quote-item-${item.id}`} name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} aria-label="Discount percent" className={cellInput} />
+                  <input form={`quote-item-${v}-${item.id}`} name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} aria-label="Discount percent" className={cellInput} />
                 ) : item.discount > 0 ? `${item.discount}%` : <span className="opacity-30">&mdash;</span>,
             },
             {
@@ -532,9 +532,9 @@ export default async function QuotationDetailPage({
           ]}
           actions={
             canEditDraft
-              ? (item) => (
+              ? (item, _ai, v) => (
                   <div className="flex items-center justify-end gap-1.5">
-                    <form id={`quote-item-${item.id}`} action={updateItemAction}>
+                    <form id={`quote-item-${v}-${item.id}`} action={updateItemAction}>
                       <input type="hidden" name="itemId" value={item.id} />
                       {!canOverrideDiscount ? <input type="hidden" name="discount" value="0" /> : null}
                       <SubmitButton bare title="Save line" className={iconBtn}>

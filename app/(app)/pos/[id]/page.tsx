@@ -1068,27 +1068,27 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             {
               key: "item",
               header: "Item",
-              cell: (it) =>
+              cell: (it, _i, v) =>
                 isOpen ? (
-                  <input form={`edit-item-${it.id}`} name="description" defaultValue={it.description} aria-label="Description" className={cellInput} />
+                  <input form={`edit-item-${v}-${it.id}`} name="description" defaultValue={it.description} aria-label="Description" className={cellInput} />
                 ) : it.description,
             },
             {
               key: "qty",
               header: "Qty",
               className: "w-20 whitespace-nowrap tabular-nums",
-              cell: (it) =>
+              cell: (it, _i, v) =>
                 isOpen ? (
-                  <input form={`edit-item-${it.id}`} name="quantity" defaultValue={it.quantity} inputMode="numeric" aria-label="Quantity" className={cellInput} />
+                  <input form={`edit-item-${v}-${it.id}`} name="quantity" defaultValue={it.quantity} inputMode="numeric" aria-label="Quantity" className={cellInput} />
                 ) : it.quantity,
             },
             {
               key: "price",
               header: "Price",
               className: "w-32 whitespace-nowrap tabular-nums",
-              cell: (it) =>
+              cell: (it, _i, v) =>
                 isOpen ? (
-                  <input form={`edit-item-${it.id}`} name="unitPrice" defaultValue={it.unitPrice} inputMode="decimal" aria-label="Unit price" className={cellInput} />
+                  <input form={`edit-item-${v}-${it.id}`} name="unitPrice" defaultValue={it.unitPrice} inputMode="decimal" aria-label="Unit price" className={cellInput} />
                 ) : formatMoney(it.unitPrice, saleCurrency),
             },
             {
@@ -1100,9 +1100,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           ]}
           actions={
             isOpen
-              ? (it) => (
+              ? (it, _ai, v) => (
                   <div className="flex items-center justify-end gap-1.5">
-                    <form id={`edit-item-${it.id}`} action={updateItemAction}>
+                    <form id={`edit-item-${v}-${it.id}`} action={updateItemAction}>
                       <input type="hidden" name="saleId" value={sale.id} />
                       <input type="hidden" name="itemId" value={it.id} />
                       <SubmitButton bare title="Save line" className={iconBtn}>

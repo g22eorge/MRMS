@@ -29,8 +29,18 @@ export type DataTableColumn<T> = {
   key: string;
   /** Header label. Leave empty for an unlabeled column. */
   header?: ReactNode;
-  /** Cell renderer. */
-  cell: (row: T, index: number) => ReactNode;
+  /**
+   * Cell renderer.
+   *
+   * `variant` says which copy is being drawn. Every row is rendered twice —
+   * once as a mobile card, once as a table row — with CSS hiding one. That is
+   * invisible until a cell emits an id: two elements then share it, and
+   * anything resolving that id, including an input's form= association, binds
+   * to whichever came first in the DOM. On a desktop window that is the hidden
+   * card, so the visible fields are not the ones that submit. Cells that emit
+   * an id must fold the variant into it.
+   */
+  cell: (row: T, index: number, variant: "card" | "table") => ReactNode;
   /** Extra classes on each <td> (e.g. mono, max-w-[220px] truncate, whitespace-nowrap). */
   className?: string;
   /** Extra classes on the <th>. */
@@ -43,7 +53,8 @@ export type DataTableProps<T> = {
   rows: T[];
   getRowKey: (row: T, index: number) => string;
   /** Optional right-aligned actions column. May return null per row. */
-  actions?: (row: T, index: number) => ReactNode;
+  /** Row actions. Takes `variant` for the same reason `cell` does. */
+  actions?: (row: T, index: number, variant: "card" | "table") => ReactNode;
   /** Shown when there are no rows. */
   empty?: ReactNode;
   /**
@@ -187,7 +198,7 @@ export function DataTable<T>({
               className={`${dense ? "px-3 py-2.5" : "px-4 py-3"} space-y-1.5 ${i > 0 ? "border-t border-[var(--line)]/40" : ""} ${rowClassName?.(row, i) ?? ""}`}
             >
               {columns.map((c, ci) => {
-                const value = c.cell(row, i);
+                const value = c.cell(row, i, "card");
                 if (value === null || value === undefined || value === false || value === "") return null;
                 // Lead with the first column as the card's title (unless header-less).
                 if (ci === 0 && !hideHeader) {
@@ -208,7 +219,7 @@ export function DataTable<T>({
                   </div>
                 );
               })}
-              {actions ? <div className="flex flex-wrap items-center justify-end gap-1 pt-0.5">{actions(row, i)}</div> : null}
+              {actions ? <div className="flex flex-wrap items-center justify-end gap-1 pt-0.5">{actions(row, i, "card")}</div> : null}
             </div>
           ))}
         </div>
@@ -246,12 +257,12 @@ export function DataTable<T>({
                 >
                   {columns.map((c) => (
                     <td key={c.key} className={`${cell} ${alignClass(c.align)} ${c.className ?? ""}`}>
-                      {c.cell(row, i)}
+                      {c.cell(row, i, "table")}
                     </td>
                   ))}
                   {actions ? (
                     <td className={`${cell} text-right`}>
-                      <div className="inline-flex items-center justify-end gap-1">{actions(row, i)}</div>
+                      <div className="inline-flex items-center justify-end gap-1">{actions(row, i, "table")}</div>
                     </td>
                   ) : null}
                 </tr>
