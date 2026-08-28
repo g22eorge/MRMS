@@ -36,8 +36,31 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       reference: true,
       receivedAt: true,
       createdBy: { select: { name: true } },
-      sale: { select: { id: true, saleNumber: true, totalAmount: true, paidAmount: true, client: { select: { fullName: true, organization: true, phone: true } } } },
-      invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, organization: true, phone: true } } } } } },
+      sale: {
+        select: {
+          id: true, saleNumber: true, totalAmount: true, paidAmount: true,
+          client: { select: { fullName: true, organization: true, phone: true } },
+          items: {
+            select: { description: true, quantity: true, unitPrice: true, lineTotal: true },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      },
+      // invoice.client as well as invoice.job.client: an invoice raised without
+      // a job — a straight sale of goods — carries its customer directly, and
+      // reading only the job's meant the receipt printed "Received from: —"
+      // for every one of them.
+      invoice: {
+        select: {
+          id: true, invoiceNumber: true, totalAmount: true, paidAmount: true,
+          client: { select: { fullName: true, organization: true, phone: true } },
+          lines: {
+            select: { description: true, quantity: true, unitPrice: true, lineTotal: true },
+            orderBy: { createdAt: "asc" },
+          },
+          job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, organization: true, phone: true } } } },
+        },
+      },
     },
   });
 
@@ -63,12 +86,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         : "Payment";
 
   const clientName = payment.invoice?.job?.client?.fullName
+    ?? payment.invoice?.client?.fullName
     ?? payment.sale?.client?.fullName
     ?? null;
   const clientOrganization = payment.invoice?.job?.client?.organization
+    ?? payment.invoice?.client?.organization
     ?? payment.sale?.client?.organization
     ?? null;
   const clientPhone = payment.invoice?.job?.client?.phone
+    ?? payment.invoice?.client?.phone
     ?? payment.sale?.client?.phone
     ?? null;
 
@@ -77,6 +103,23 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const docTotal = payment.invoice?.totalAmount ?? payment.sale?.totalAmount ?? null;
   const docPaid = payment.invoice?.paidAmount ?? payment.sale?.paidAmount ?? null;
   const docBalance = docTotal != null && docPaid != null ? Math.max(0, docTotal - docPaid) : null;
+
+  // What the money was actually for. The receipt used to print one made-up line
+  // reading "Payment received - Invoice X", so a customer who paid for two items
+  // got a receipt naming neither, and had no document tying the amount to goods.
+  // A partial payment still lists everything: the lines describe the debt, and
+  // Total / Payment Made / Balance Due below them say how much of it is settled.
+  const sourceLines = payment.invoice?.lines?.length
+    ? payment.invoice.lines
+    : payment.sale?.items?.length
+      ? payment.sale.items
+      : [];
+  const lineItems = sourceLines.map((l) => ({
+    name: l.description,
+    quantity: l.quantity,
+    rate: formatMoney(l.unitPrice, currency),
+    amount: formatMoney(l.lineTotal, currency),
+  }));
 
   const element = createElement(PaymentReceiptDocument as never, {
     branding: { ...branding, companyLogoUrl: logoUrl ?? null },
@@ -92,6 +135,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     clientName,
     clientOrganization,
     clientPhone,
+    lineItems,
+    docTotalLabel: docTotal != null ? formatMoney(docTotal, currency) : null,
   });
 
   const pdf = await renderToBuffer(element as never);
