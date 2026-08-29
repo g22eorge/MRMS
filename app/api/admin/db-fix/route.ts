@@ -2611,6 +2611,22 @@ async function runDbFix() {
 }
 
 export async function POST() {
+  // This repairer speaks SQLite: PRAGMA, sqlite_master, INSERT OR REPLACE and
+  // table rebuilds. It exists because Prisma Migrate cannot run against Turso's
+  // libSQL protocol, which is not a constraint PostgreSQL has — there, Migrate
+  // is the right mechanism and this would be a worse version of it. So it says
+  // so rather than dying on a PRAGMA and reading like a bug in the tool.
+  const dbUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "";
+  if (/^postgres(ql)?:\/\//i.test(dbUrl)) {
+    return NextResponse.json(
+      {
+        error: "DB Fix is SQLite/libSQL only",
+        detail: "This repairer works around Prisma Migrate being unavailable on Turso. On PostgreSQL run `prisma migrate deploy` instead.",
+      },
+      { status: 400 },
+    );
+  }
+
   try {
     return await runDbFix();
   } catch (error) {

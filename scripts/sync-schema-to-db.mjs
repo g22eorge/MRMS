@@ -18,6 +18,30 @@ import { createClient } from "@libsql/client";
 
 import { splitSqlStatements } from "./lib/split-sql.mjs";
 
+/**
+ * This tooling is SQLite-only by design, and deliberately not ported.
+ *
+ * It exists because Prisma Migrate cannot run against Turso's libSQL protocol,
+ * so the production schema has to be reconciled by hand on every deploy. That
+ * constraint does not exist on PostgreSQL, where Migrate works normally and the
+ * 49 migrations already in this repository are the right mechanism. Porting the
+ * reconciler would be building a worse version of something Prisma already does.
+ *
+ * So it refuses rather than fails. Pointed at Postgres it would otherwise die on
+ * a PRAGMA with a syntax error, which reads like a bug in the tool instead of a
+ * tool being used on the wrong engine.
+ */
+function refuseOnPostgres() {
+  const url = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "";
+  if (/^postgres(ql)?:\/\//i.test(url)) {
+    console.error("[sync-schema-to-db] refusing to run: this reconciler is SQLite/libSQL only.");
+    console.error("[sync-schema-to-db] on PostgreSQL use Prisma Migrate — `prisma migrate deploy` — which this exists to work around.");
+    process.exit(1);
+  }
+}
+refuseOnPostgres();
+
+
 // Use || (not ??) so an empty-string env var falls through to the next source.
 const url = process.env.TURSO_DATABASE_URL?.trim() || process.env.DATABASE_URL?.trim() || "file:./prisma/dev.db";
 const authToken = process.env.TURSO_AUTH_TOKEN;
