@@ -421,7 +421,7 @@ export default async function ClientsPage({
         {/* Create-client form — revealed by the "+ New Client" CTA above (no separate quick-create reveal bar) */}
         {(user.role === "ADMIN" || user.role === "OPS") ? (
           <DisclosurePanel>
-            <form action={createClientAction} noValidate className="border-t border-[var(--line)] px-3 pb-3 pt-3">
+            <form action={createClientAction} className="border-t border-[var(--line)] px-3 pb-3 pt-3">
               {filters.createError ? (
                 <p className="mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">
                   {filters.createError}
@@ -429,18 +429,11 @@ export default async function ClientsPage({
               ) : null}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {/*
-                  These mirror createClientSchema — min 2, min 3, a real email.
-                  They do NOT block submission, and it is worth knowing why: React
-                  sets noValidate on any form whose action is a function, so every
-                  server-action form in this codebase has native validation turned
-                  off. checkValidity() reports false here and the browser submits
-                  regardless. The server is the check, as it has to be.
-
-                  Kept because they still earn their place: `required` marks the
-                  field required to screen readers, and type="email" gives mobile
-                  users the @ keyboard. Making them actually block would mean
-                  changing the shared submit path for all 112 required fields in
-                  the app at once, which is a different job than this.
+                  These mirror createClientSchema — min 2, min 3, a real email —
+                  so the browser refuses exactly what the server would refuse, and
+                  says which field, at the field. The server action still validates
+                  independently; it is its own entry point and this is not the
+                  check, only the fast half of it.
                 */}
                 <input name="fullName" required minLength={2} placeholder="Full name *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
                 <input name="phone" required minLength={3} placeholder="Phone *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />

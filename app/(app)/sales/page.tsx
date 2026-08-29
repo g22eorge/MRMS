@@ -642,16 +642,23 @@ export default async function SalesPage({
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">New Lead</p>
           </div>
-          <form action={createLeadAction} noValidate className="p-3">
+          {/*
+            noValidate removed. It had been switching off the `required` markers
+            two lines below, which have been on these fields all along — the form
+            asked for a name and a phone, marked both with a *, and then let an
+            empty one through to be refused by the server. Nothing here does its
+            own client-side validation, which is the only reason to opt out.
+          */}
+          <form action={createLeadAction} className="p-3">
             {filters.createError ? (
               <p className="mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">
                 {filters.createError}
               </p>
             ) : null}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <input name="fullName" required placeholder="Full name *" className={field} />
-              <input name="phone" required placeholder="Phone *" className={field} />
-              <input name="email" placeholder="Email" className={field} />
+              <input name="fullName" required minLength={2} placeholder="Full name *" className={field} />
+              <input name="phone" required minLength={3} placeholder="Phone *" className={field} />
+              <input name="email" type="email" placeholder="Email" className={field} />
               <input name="organization" placeholder="Organization" className={field} />
               <input name="interest" placeholder="Interest / product" className={field} />
               <input name="estimatedValue" type="number" placeholder={`Est. value (${currency})`} className={field} />
