@@ -32,10 +32,20 @@ async function toDocumentBase(
     docCurrency: string | null | undefined;
     baseCurrency: string;
     rateFrom: { invoiceId?: string; saleId?: string };
+    /** The document's own stored rate, which outranks anything inferred. */
+    docRate?: number | null;
   },
 ): Promise<number> {
   const cur = params.docCurrency ?? params.baseCurrency;
   if (cur === params.baseCurrency) return params.amount;
+
+  // The document's own rate first. Deriving it from a payment is circular — it
+  // makes what the invoice is worth depend on how it happened to be settled —
+  // and it cannot work at all before the first payment exists, which is exactly
+  // when the paid/total comparison is most likely to be wrong. The payment
+  // lookup below stays only for rows written before documents carried a rate.
+  if (params.docRate && params.docRate > 0) return params.amount * params.docRate;
+
   const fx = await tx.payment.findFirst({
     where: {
       orgId: params.orgId,
@@ -48,6 +58,10 @@ async function toDocumentBase(
     orderBy: { receivedAt: "desc" },
   });
   const rate = fx?.exchangeRateToBase;
+  // Last resort: a foreign document with no rate anywhere. Returning the amount
+  // unconverted overstates nothing in base terms but understates the total, so
+  // the document can flip to PAID early. It is preserved as the historical
+  // behaviour for legacy rows; new documents always carry a rate.
   return rate && rate > 0 ? params.amount * rate : params.amount;
 }
 
@@ -116,7 +130,7 @@ export async function syncInvoicePaymentState(
 ): Promise<InvoicePaymentSyncResult> {
   const invoice = await tx.invoice.findFirst({
     where: { id: params.invoiceId, orgId: params.orgId },
-    select: { id: true, totalAmount: true, currency: true, jobId: true, status: true },
+    select: { id: true, totalAmount: true, currency: true, exchangeRateToBase: true, jobId: true, status: true },
   });
 
   if (!invoice) {
@@ -136,6 +150,7 @@ export async function syncInvoicePaymentState(
     amount: invoice.totalAmount,
     docCurrency: invoice.currency,
     baseCurrency: params.baseCurrency,
+    docRate: invoice.exchangeRateToBase,
     rateFrom: { invoiceId: params.invoiceId },
   });
   const isPaid = totalBase > 0 && paidAmount >= totalBase;

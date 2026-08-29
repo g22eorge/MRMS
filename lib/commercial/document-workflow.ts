@@ -250,6 +250,11 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
       subject: quotation.job ? `Repair invoice for ${quotation.job.jobNumber}` : `Invoice from quotation ${quotation.quoteNumber}`,
       invoiceNumber,
       currency: quotation.currency || params.currency,
+      // The quote's rate, not today's. An invoice raised from a quote agreed at
+      // 3,750 is worth what was agreed; re-reading a live rate here would make
+      // the same work worth a different number of shillings depending on when
+      // the conversion happened to be clicked.
+      exchangeRateToBase: quotation.exchangeRateToBase,
       status: "ISSUED",
       totalAmount,
       notes: `Converted from quotation ${quotation.quoteNumber}`,
