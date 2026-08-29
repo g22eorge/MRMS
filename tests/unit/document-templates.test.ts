@@ -114,11 +114,13 @@ describe("every template carries the TIN and the amount in words", () => {
     invoice_modern:    "lib/pdf/InvoiceDocumentV2.tsx",
     invoice_premium:   "lib/pdf/InvoiceDocumentPremium.tsx",
     invoice_minimal:   "lib/pdf/InvoiceDocumentMinimal.tsx",
+    invoice_itemized:  "lib/pdf/InvoiceDocumentItemized.tsx",
     invoice_executive: "lib/pdf/InvoiceDocumentExecutive.tsx",
     quote_classic:     "lib/pdf/EagleInfoQuotationAdapter.tsx",
     quote_modern:      "lib/pdf/QuotationDocumentModern.tsx",
     quote_minimal:     "lib/pdf/QuotationDocumentMinimal.tsx",
     quote_detailed:    "lib/pdf/QuotationDocument.tsx",
+    quote_technical:   "lib/pdf/QuotationDocumentTechnical.tsx",
     quote_executive:   "lib/pdf/QuotationDocumentExecutive.tsx",
   };
 

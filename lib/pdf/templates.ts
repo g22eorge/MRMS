@@ -5,6 +5,8 @@ import type { ComponentType } from "react";
 import { EagleInfoInvoiceAdapter }  from "@/lib/pdf/EagleInfoInvoiceAdapter";
 import { EagleInfoJobCardDocument } from "@/lib/pdf/EagleInfoJobCardDocument";
 import { EagleInfoQuotationAdapter }from "@/lib/pdf/EagleInfoQuotationAdapter";
+import { InvoiceDocumentItemized } from "./InvoiceDocumentItemized";
+import { QuotationDocumentTechnical } from "./QuotationDocumentTechnical";
 import { InvoiceDocumentExecutive }     from "@/lib/pdf/InvoiceDocumentExecutive";
 import { InvoiceDocumentMinimal }       from "@/lib/pdf/InvoiceDocumentMinimal";
 import { InvoiceDocumentPremium }       from "@/lib/pdf/InvoiceDocumentPremium";
@@ -31,12 +33,14 @@ export type TemplateKey =
   | "invoice_modern"
   | "invoice_premium"
   | "invoice_minimal"
+  | "invoice_itemized"
   | "invoice_executive"
   // Quotation
   | "quote_classic"
   | "quote_modern"
   | "quote_minimal"
   | "quote_detailed"
+  | "quote_technical"
   | "quote_executive"
   // Job Card
   | "job_card_classic"
@@ -79,14 +83,16 @@ export const DOC_TEMPLATES: TemplateDef[] = [
   { kind: "INVOICE", key: "invoice_modern",    label: "Modern",    description: "Two-column layout with accent sidebar",                  previewColor: "bg-blue-500",   minPlan: "STANDARD",   templateNumber: 2 },
   { kind: "INVOICE", key: "invoice_premium",   label: "Premium",   description: "Full-color header with logo prominence",                 previewColor: "bg-violet-500", minPlan: "GROWTH",     templateNumber: 3 },
   { kind: "INVOICE", key: "invoice_minimal",   label: "Minimal",   description: "Ultra-clean, no borders, whitespace-focused",            previewColor: "bg-zinc-400",   minPlan: "GROWTH",     templateNumber: 4 },
-  { kind: "INVOICE", key: "invoice_executive", label: "Executive", description: "Dark header, premium feel for enterprise clients",        previewColor: "bg-slate-800",  minPlan: "ENTERPRISE", templateNumber: 5 },
+  { kind: "INVOICE", key: "invoice_itemized",  label: "Itemized",  description: "Every line with stock code and tax, plus paid and balance", previewColor: "bg-teal-600",   minPlan: "PREMIUM",    templateNumber: 5 },
+  { kind: "INVOICE", key: "invoice_executive", label: "Executive", description: "Dark header, premium feel for enterprise clients",        previewColor: "bg-slate-800",  minPlan: "ENTERPRISE", templateNumber: 6 },
 
   // ── QUOTATION ──────────────────────────────────────────────────────────────
   { kind: "QUOTATION", key: "quote_classic",   label: "Default",   description: "Standard quotation with validity period",                previewColor: "bg-slate-500",  minPlan: "STARTER",    templateNumber: 1 },
   { kind: "QUOTATION", key: "quote_modern",    label: "Modern",    description: "Colorful header with summary box",                       previewColor: "bg-blue-500",   minPlan: "STANDARD",   templateNumber: 2 },
   { kind: "QUOTATION", key: "quote_minimal",   label: "Minimal",   description: "Clean, distraction-free presentation",                   previewColor: "bg-zinc-400",   minPlan: "GROWTH",     templateNumber: 3 },
   { kind: "QUOTATION", key: "quote_detailed",  label: "Detailed",  description: "Adds terms, notes, and signature block",                 previewColor: "bg-amber-500",  minPlan: "GROWTH",     templateNumber: 4 },
-  { kind: "QUOTATION", key: "quote_executive", label: "Executive", description: "Dark premium layout for corporate proposals",            previewColor: "bg-slate-800",  minPlan: "ENTERPRISE", templateNumber: 5 },
+  { kind: "QUOTATION", key: "quote_technical", label: "Technical", description: "Assessment, per-line specification and an exclusions block", previewColor: "bg-orange-500", minPlan: "PREMIUM",    templateNumber: 5 },
+  { kind: "QUOTATION", key: "quote_executive", label: "Executive", description: "Dark premium layout for corporate proposals",            previewColor: "bg-slate-800",  minPlan: "ENTERPRISE", templateNumber: 6 },
 
   // ── JOB_CARD ───────────────────────────────────────────────────────────────
   { kind: "JOB_CARD", key: "job_card_classic",   label: "Default",   description: "Standard workshop job card with diagnosis",            previewColor: "bg-slate-500",  minPlan: "STARTER",    templateNumber: 1 },
@@ -172,6 +178,7 @@ const INVOICE_TEMPLATES: Record<InvoiceKey, ComponentType<any>> = {
   invoice_modern:    InvoiceDocumentV2,
   invoice_premium:   InvoiceDocumentPremium,
   invoice_minimal:   InvoiceDocumentMinimal,
+  invoice_itemized:  InvoiceDocumentItemized,
   invoice_executive: InvoiceDocumentExecutive,
 };
 
@@ -181,6 +188,7 @@ const QUOTATION_TEMPLATES: Record<QuotationKey, ComponentType<any>> = {
   quote_modern:    QuotationDocumentModern,
   quote_minimal:   QuotationDocumentMinimal,
   quote_detailed:  QuotationDocument,
+  quote_technical: QuotationDocumentTechnical,
   quote_executive: QuotationDocumentExecutive,
 };
 
