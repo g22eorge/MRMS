@@ -21,7 +21,9 @@ import { flash } from "@/lib/flash";
 const createLeadSchema = z.object({
   fullName: z.string().min(2),
   phone: z.string().min(3),
-  email: z.string().optional(),
+  // A lead's address becomes a client's address on conversion, so it has to
+  // clear the same bar the client forms apply.
+  email: z.string().email("Enter a valid email address, or leave it blank").optional().or(z.literal("")),
   organization: z.string().optional(),
   interest: z.string().optional(),
   source: z.string().optional(),
@@ -34,7 +36,7 @@ const createLeadSchema = z.object({
 const updateLeadDetailsSchema = z.object({
   fullName: z.string().min(2),
   phone: z.string().min(3),
-  email: z.string().optional(),
+  email: z.string().email("Enter a valid email address, or leave it blank").optional().or(z.literal("")),
   organization: z.string().optional(),
   interest: z.string().optional(),
   source: z.string().optional(),

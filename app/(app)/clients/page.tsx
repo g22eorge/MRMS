@@ -21,6 +21,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { clientContactName, clientDisplayName } from "@/lib/client-name";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import {
   formatPhoneDisplay,
   normalizePhoneForStorage,
@@ -34,7 +35,10 @@ import { icontains } from "@/lib/db/search";
 const createClientSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(3),
-  email: z.string().optional(),
+  // Validated, because this address is what "Send email" and every emailed
+  // document go to. An unchecked string here fails silently at delivery time,
+  // long after whoever typed it has moved on.
+  email: z.string().email().optional().or(z.literal("")),
   organization: z.string().optional(),
   address: z.string().optional(),
 });
@@ -162,6 +166,7 @@ export default async function ClientsPage({
       const field = String(firstIssue?.path[0] ?? "input");
       const msg = field === "fullName" ? "Full name must be at least 2 characters"
         : field === "phone" ? "Phone number must be at least 3 characters"
+        : field === "email" ? "Enter a valid email address, or leave it blank"
         : "Invalid input";
       redirect(`/clients?createError=${encodeURIComponent(msg)}`);
     }
@@ -498,10 +503,13 @@ export default async function ClientsPage({
                   {user.role === "ADMIN" && client._count.jobs === 0 ? (
                     <form action={deleteClientAction}>
                       <input type="hidden" name="id" value={client.id} />
-                      <SubmitButton bare aria-label="Delete client"
+                      <ConfirmSubmitButton
+                        message={`Delete ${clientDisplayName(client)}? This cannot be undone.`}
+                        confirmLabel="Delete client"
+                        aria-label="Delete client"
  className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]/50 active:text-red-500">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                      </SubmitButton>
+                      </ConfirmSubmitButton>
                     </form>
                   ) : null}
                 </div>
@@ -586,10 +594,13 @@ export default async function ClientsPage({
                 {user.role === "ADMIN" && client._count.jobs === 0 ? (
                   <form action={deleteClientAction} className="inline">
                     <input type="hidden" name="id" value={client.id} />
-                    <SubmitButton bare title="Delete client"
+                    <ConfirmSubmitButton
+                      message={`Delete ${clientDisplayName(client)}? This cannot be undone.`}
+                      confirmLabel="Delete client"
+                      title="Delete client"
  className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/20 text-[var(--ink-muted)]/40 transition hover:border-red-400/40 hover:text-red-500">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                    </SubmitButton>
+                    </ConfirmSubmitButton>
                   </form>
                 ) : null}
               </>

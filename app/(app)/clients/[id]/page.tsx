@@ -31,7 +31,9 @@ import { icontains } from "@/lib/db/search";
 const updateClientSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(4, "Enter a valid phone number"),
-  email: z.string().optional(),
+  // The create form validates this; without the same check here an address
+  // could be captured correctly and then edited into something undeliverable.
+  email: z.string().email("Enter a valid email address, or leave it blank").optional().or(z.literal("")),
   organization: z.string().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
