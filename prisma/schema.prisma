@@ -1600,6 +1600,7 @@ model RepairRequest {
   @@index([requestStatus, createdAt])
   @@index([phone])
   @@index([clientId])
+  @@index([orgId, createdAt])
 }
 
 // Allocates human-friendly repair request numbers safely under concurrency.
@@ -3274,6 +3275,7 @@ model CampaignContact {
   @@unique([campaignId, leadId])
   @@unique([campaignId, clientId])
   @@index([campaignId, status])
+  @@index([orgId])
 }
 
 // ── AI Knowledge & Feedback ──────────────────────────────────────────────────
