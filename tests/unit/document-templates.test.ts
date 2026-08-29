@@ -9,6 +9,7 @@ import {
   QuotationTemplateComponent,
   ReceiptTemplateComponent,
   resolveTemplateKey,
+  templatesFor,
   type DocKind,
   type TemplateKey,
 } from "../../lib/pdf/templates";
@@ -135,4 +136,38 @@ describe("every template carries the TIN and the amount in words", () => {
       expect(src).toContain("props.companyTaxId");
     });
   }
+});
+
+describe("what can be chosen is what will be rendered", () => {
+  const PLANS = ["STARTER", "STANDARD", "GROWTH", "PREMIUM", "ENTERPRISE"] as const;
+  const KINDS = ["INVOICE", "QUOTATION", "JOB_CARD", "RECEIPT"] as const;
+
+  it("resolves every selectable template to itself, on every plan", () => {
+    // The invariant the picker broke. ADMIN and MANAGER used to bypass the tier
+    // when choosing, while the renderer never did — so a Duuka Max invoice
+    // picked on a Duuka Pro org saved, reported success, and then came out as
+    // the plain Default on every PDF. Selectable and renderable are now the
+    // same set by construction; this fails if they ever diverge again.
+    for (const plan of PLANS) {
+      for (const kind of KINDS) {
+        for (const t of templatesFor(kind, plan)) {
+          const rendered = resolveTemplateKey({ kind, requestedKey: t.key, plan });
+          expect(rendered).toBe(t.key);
+        }
+      }
+    }
+  });
+
+  it("falls back rather than throwing when a key is above the plan", () => {
+    // Existing rows may already hold an out-of-plan key saved under the old
+    // bypass. They must keep rendering something valid, not break.
+    const rendered = resolveTemplateKey({ kind: "INVOICE", requestedKey: "invoice_itemized", plan: "GROWTH" });
+    expect(templatesFor("INVOICE", "GROWTH").some((t) => t.key === rendered)).toBe(true);
+  });
+
+  it("no longer lets any role pick a template above the org's plan", () => {
+    const src = readFileSync("app/(app)/documents/templates/page.tsx", "utf8");
+    expect(src).not.toContain("bypassPlanGate");
+    expect(src).not.toContain("isAdminBypass");
+  });
 });

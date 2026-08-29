@@ -66,8 +66,14 @@ export default async function DocumentTemplatesPage() {
     .catch(() => null);
   const plan: OrgPlan = (org?.plan as OrgPlan) ?? "STARTER";
 
-  // ADMIN and MANAGER can access all templates regardless of plan tier.
-  const bypassPlanGate = user.role === "ADMIN" || user.role === "MANAGER";
+  // No role bypasses the tier here, and the reason is structural rather than a
+  // policy choice: the chosen template is stored on the organisation and outlives
+  // the request, but a role bypass only exists during one. Nothing renders a PDF
+  // "as an admin" — generate-invoice and friends resolve the saved key against
+  // the org's plan with no notion of who asked. So a bypass could let a template
+  // be saved but never let it be used, which is exactly what happened: an admin
+  // on Duuka Pro could pick the Duuka Max invoice, see it saved, and get the
+  // plain Default on every PDF thereafter.
 
   const settings = await getDocumentBrandingSettings(orgId);
 
@@ -99,12 +105,10 @@ export default async function DocumentTemplatesPage() {
       .catch(() => null);
     const actionPlan: OrgPlan = (orgRow?.plan as OrgPlan) ?? "STARTER";
 
-    // ADMIN and MANAGER bypass plan tier restrictions
-    const isAdminBypass = actionUser.role === "ADMIN" || actionUser.role === "MANAGER";
-    if (!isAdminBypass) {
-      const allowed = templatesFor(kind, actionPlan);
-      if (!allowed.some((t) => t.key === key)) return;
-    }
+    // The same rule the renderer applies, applied here too. Server actions are
+    // their own entry point, so hiding the control is not the check — this is.
+    const allowed = templatesFor(kind, actionPlan);
+    if (!allowed.some((t) => t.key === key)) return;
 
     const field = KIND_FIELD_MAP[kind];
 
@@ -172,7 +176,7 @@ export default async function DocumentTemplatesPage() {
             <div className="p-4">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {allTemplates.map((t) => {
-                  const isAllowed  = bypassPlanGate || templatesFor(kind, plan).some((d) => d.key === t.key);
+                  const isAllowed  = templatesFor(kind, plan).some((d) => d.key === t.key);
                   const isCurrent  = t.key === currentKey;
 
                   return (
