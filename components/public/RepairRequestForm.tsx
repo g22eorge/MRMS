@@ -186,7 +186,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
     );
   }
 
-  const inputCls = "w-full rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder-white/30 outline-none transition focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/25";
+  const inputCls = "w-full rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder-white/30 outline-none transition focus:border-[#C9A227]/50 focus:ring-1 focus:ring-[#C9A227]/25";
   const labelCls = "mb-1 block text-[0.8125rem] font-semibold uppercase tracking-wider text-white/60";
 
   return (
@@ -287,7 +287,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
               key={opt.value}
               className={`flex cursor-pointer flex-col gap-0.5 rounded-lg border px-3.5 py-3 transition ${
                 data.handover_method === opt.value
-                  ? "border-[#D4AF37]/50 bg-[#D4AF37]/8"
+                  ? "border-[#C9A227]/50 bg-[#C9A227]/8"
                   : "border-white/8 bg-white/3 hover:border-white/15"
               }`}
             >
@@ -297,7 +297,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
                 onChange={(e) => set("handover_method", e.target.value)}
                 className="sr-only"
               />
-              <span className={`mb-1 ${data.handover_method === opt.value ? "text-[#D4AF37]/80" : "text-white/60"}`}>{opt.icon}</span>
+              <span className={`mb-1 ${data.handover_method === opt.value ? "text-[#C9A227]/80" : "text-white/60"}`}>{opt.icon}</span>
               <span className="text-sm font-semibold text-white/80">{opt.label}</span>
               <span className="text-[0.8125rem] text-white/60">{opt.desc}</span>
             </label>
@@ -358,7 +358,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
         <button
           type="submit" disabled={busy}
           className="flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-black transition hover:opacity-90 disabled:opacity-60"
-          style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)", boxShadow: "0 6px 24px rgba(212,175,55,0.30)" }}
+          style={{ background: "linear-gradient(180deg,#DEBD54 0%,#C9A020 100%)", boxShadow: "0 6px 24px rgba(201, 162, 39,0.30)" }}
         >
           {busy ? (
             <>

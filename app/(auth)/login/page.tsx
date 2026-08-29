@@ -26,15 +26,15 @@ export default async function LoginPage() {
     <main className="theme-blackgold min-h-dvh bg-[#0a0a0a]">
       {/* Subtle ambient glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-0 h-[500px] w-[700px] -translate-x-1/2 rounded-full bg-[#D4AF37]/8 blur-[120px]" />
+        <div className="absolute left-1/2 top-0 h-[500px] w-[700px] -translate-x-1/2 rounded-full bg-[#C9A227]/8 blur-[120px]" />
       </div>
 
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[1fr_1fr]">
 
         {/* ── Left: branding panel (desktop only) ── */}
         <section className="relative hidden flex-col justify-between overflow-hidden bg-[linear-gradient(150deg,#0d0d0d_0%,#161616_50%,#1a1500_100%)] p-12 lg:flex">
-          <div className="pointer-events-none absolute -left-16 top-1/3 h-80 w-80 rounded-full bg-[#D4AF37]/10 blur-[80px]" />
-          <div className="pointer-events-none absolute -right-10 bottom-20 h-60 w-60 rounded-full bg-[#D4AF37]/6 blur-[60px]" />
+          <div className="pointer-events-none absolute -left-16 top-1/3 h-80 w-80 rounded-full bg-[#C9A227]/10 blur-[80px]" />
+          <div className="pointer-events-none absolute -right-10 bottom-20 h-60 w-60 rounded-full bg-[#C9A227]/6 blur-[60px]" />
 
           <div className="relative">
             <AppLogoDark height={52} priority />
@@ -42,7 +42,7 @@ export default async function LoginPage() {
 
           <div className="relative space-y-7">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]/70">All-in-one Business OS</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C9A227]/70">All-in-one Business OS</p>
               <h1 className="mt-2 text-2xl font-semibold leading-snug text-white xl:text-3xl">
                 Every module your<br />business needs
               </h1>
@@ -91,7 +91,7 @@ export default async function LoginPage() {
                   key={m.label}
                   className="flex items-start gap-2 rounded-lg border border-white/6 bg-white/3 px-3 py-2.5"
                 >
-                  <span className="mt-0.5 text-[#D4AF37]/50">{m.icon}</span>
+                  <span className="mt-0.5 text-[#C9A227]/50">{m.icon}</span>
                   <div className="min-w-0">
                     <p className="text-[0.8125rem] font-semibold text-white/80 leading-tight">{m.label}</p>
                     <p className="text-[0.75rem] text-white/60 leading-tight mt-0.5">{m.desc}</p>
@@ -105,7 +105,7 @@ export default async function LoginPage() {
               <p className="text-[0.75rem] uppercase tracking-widest text-white/60 mb-2">9 role-isolated access levels</p>
               <div className="flex flex-wrap gap-1.5">
                 {["Admin", "Tech Manager", "Sales Manager", "Operations", "Technician", "Sales", "Front Desk", "Cashier", "External Tech"].map((r) => (
-                  <span key={r} className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/6 px-2.5 py-0.5 text-[0.75rem] font-medium text-[#D4AF37]/70">
+                  <span key={r} className="rounded-full border border-[#C9A227]/20 bg-[#C9A227]/6 px-2.5 py-0.5 text-[0.75rem] font-medium text-[#C9A227]/70">
                     {r}
                   </span>
                 ))}
@@ -119,7 +119,7 @@ export default async function LoginPage() {
               href="https://app.eagleinfosolutions.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[0.8125rem] text-[#D4AF37]/50 hover:text-[#D4AF37] transition-colors"
+              className="text-[0.8125rem] text-[#C9A227]/50 hover:text-[#C9A227] transition-colors"
             >
               app.eagleinfosolutions.com →
             </a>

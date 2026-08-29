@@ -5,7 +5,7 @@ import { isTermsHeading } from "@/lib/quote-terms";
 import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 const NAVY = "#0f3b7a";
 const NAVY_LIGHT = "#1e56a8";
-const GOLD = "#D4AF37";
+const GOLD = "#C9A227";
 const DARK = "#0f172a";
 const MID = "#475569";
 const LIGHT = "#94a3b8";

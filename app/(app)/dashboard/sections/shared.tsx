@@ -77,7 +77,7 @@ export function RepairStatusReference({
   guidance: string;
 }) {
   return (
-    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(212,175,55,0.06),rgba(212,175,55,0.02))]">
+    <section className="panel-shadow overflow-hidden rounded-xl border border-[var(--line)] bg-[linear-gradient(135deg,rgba(201, 162, 39,0.06),rgba(201, 162, 39,0.02))]">
       <div className="border-b border-[var(--line)] px-4 py-3">
         <p className="text-[0.8125rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Repair Status Guide</p>
         <p className="mt-1 text-sm font-semibold text-[var(--ink)]">{title}</p>

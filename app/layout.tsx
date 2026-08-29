@@ -2,20 +2,33 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/next";
-import { Inter } from "next/font/google";
+import { Manrope, DM_Serif_Display } from "next/font/google";
 
 import { ThemeProvider, type Theme } from "@/components/layout/ThemeProvider";
 import "./globals.css";
 
-// Inter — industry standard for business SaaS dashboards (Stripe, Linear, Figma).
-// Next.js serves it self-hosted with zero layout shift and full subsetting.
-// Variable font covers all weights (100–900) in a single ~95 KB download.
-const inter = Inter({
+// Manrope and DM Serif Display — the pair eagleinfosolutions.com is set in, so
+// a customer moving from the website to an invoice sees one company rather than
+// two. Inter was here before and is the reason the dashboard read as generic
+// SaaS: it is the face Stripe, Linear and Figma all use.
+//
+// Both are self-hosted by Next.js, so there is no render-blocking request to
+// Google and no layout shift.
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-inter", // consumed as --font-inter throughout globals.css
   display: "swap",
-  // Preload only the weights we actually use to keep the WOFF2 small
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+// Headings only, and only one weight exists. The website pairs it the same way:
+// a serif display over a sans body is most of why that page reads established
+// rather than templated.
+const dmSerif = DM_Serif_Display({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+  weight: ["400"],
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://localhost:3000";
@@ -84,7 +97,7 @@ export default async function RootLayout({
     // suppressHydrationWarning: the theme class is finalized on the client and
     // browser extensions inject attributes on <html> (e.g. crxemulator="") before
     // hydration. Scoped to this element only — it never masks child mismatches.
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full antialiased${themeClass ? " " + themeClass : ""}`}>
+    <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${dmSerif.variable} h-full antialiased${themeClass ? " " + themeClass : ""}`}>
       <body className="min-h-full bg-[var(--page-bg)] text-[var(--ink)]">
         <ThemeProvider initialTheme={initialTheme}>
           {children}

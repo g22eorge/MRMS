@@ -6,7 +6,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 
 const NAVY  = "#0f172a";
 const NAVY2 = "#1e293b";
-const GOLD  = "#d4af37";
+const GOLD  = "#C9A227";
 const GOLD2 = "#f6e27a";
 const MID   = "#475569";
 const LITE  = "#94a3b8";

@@ -116,7 +116,7 @@ function getJobListFlag(job: JobRow, canManagePricing: boolean): JobListFlag | n
     return {
       // Every other flag carries a dark: variant; without one this dark gold sat
       // on a dark ground at 2.98:1 and failed AA.
-      badge: "bg-[var(--accent)]/10 text-[#7A5F00] dark:text-[var(--accent)]",
+      badge: "bg-[var(--accent)]/10 text-[#665214] dark:text-[var(--accent)]",
       label: "Priced",
     };
   }

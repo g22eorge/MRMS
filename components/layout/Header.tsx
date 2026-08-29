@@ -340,8 +340,8 @@ function MenuItem({
 const THEME_OPTIONS: { key: Theme; label: string; swatch: string }[] = [
   { key: "system", label: "System", swatch: "linear-gradient(135deg,#F5F3EF 0 50%,#0B1220 50% 100%)" },
   { key: "light", label: "Light", swatch: "#F5F3EF" },
-  { key: "blackgold", label: "Black + Gold", swatch: "linear-gradient(135deg,#0A0A0A 0 58%,#D4AF37 58% 100%)" },
-  { key: "navy", label: "Navy + Gold", swatch: "linear-gradient(135deg,#0B1220 0 58%,#D4AF37 58% 100%)" },
+  { key: "blackgold", label: "Black + Gold", swatch: "linear-gradient(135deg,#0A0A0A 0 58%,#C9A227 58% 100%)" },
+  { key: "navy", label: "Navy + Gold", swatch: "linear-gradient(135deg,#0B1220 0 58%,#C9A227 58% 100%)" },
 ];
 
 function ThemePicker() {

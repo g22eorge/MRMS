@@ -9,10 +9,10 @@
   --line: #D4CEC6;
   --brand: #111111;
   --brand-deep: #000000;
-  --accent: #D4AF37;
-  --accent-fg: #7A5F00;
-  --accent-muted: rgba(212, 175, 55, 0.12);
-  --accent-border: rgba(212, 175, 55, 0.35);
+  --accent: #C9A227;
+  --accent-fg: #665214;
+  --accent-muted: rgba(201, 162, 39, 0.12);
+  --accent-border: rgba(201, 162, 39, 0.35);
   --sidebar-bg: #FFFFFF;
   --mobile-gap: 0.75rem;
   --mobile-radius: 0.9rem;
@@ -31,12 +31,12 @@
     --panel: #141414;
     --panel-strong: #1c1c1c;
     --line: rgba(255, 255, 255, 0.12);
-    --brand: #D4AF37;
+    --brand: #C9A227;
     --brand-deep: #B8960C;
-    --accent: #D4AF37;
-    --accent-fg: #D4AF37;
-    --accent-muted: rgba(212, 175, 55, 0.14);
-    --accent-border: rgba(212, 175, 55, 0.35);
+    --accent: #C9A227;
+    --accent-fg: #C9A227;
+    --accent-muted: rgba(201, 162, 39, 0.14);
+    --accent-border: rgba(201, 162, 39, 0.35);
     --sidebar-bg: #0a0a0a;
   }
 }
@@ -49,12 +49,12 @@
   --panel: #141414;
   --panel-strong: #1c1c1c;
   --line: rgba(255, 255, 255, 0.12);
-  --brand: #D4AF37;
+  --brand: #C9A227;
   --brand-deep: #B8960C;
-  --accent: #D4AF37;
-  --accent-fg: #D4AF37;
-  --accent-muted: rgba(212, 175, 55, 0.14);
-  --accent-border: rgba(212, 175, 55, 0.35);
+  --accent: #C9A227;
+  --accent-fg: #C9A227;
+  --accent-muted: rgba(201, 162, 39, 0.14);
+  --accent-border: rgba(201, 162, 39, 0.35);
   --sidebar-bg: #0a0a0a;
 }
 
@@ -68,10 +68,10 @@
   --line: #D4CEC6;
   --brand: #111111;
   --brand-deep: #000000;
-  --accent: #D4AF37;
-  --accent-fg: #7A5F00;
-  --accent-muted: rgba(212, 175, 55, 0.12);
-  --accent-border: rgba(212, 175, 55, 0.35);
+  --accent: #C9A227;
+  --accent-fg: #665214;
+  --accent-muted: rgba(201, 162, 39, 0.12);
+  --accent-border: rgba(201, 162, 39, 0.35);
   --sidebar-bg: #FFFFFF;
 }
 
@@ -86,12 +86,12 @@
   --panel: #131D33;
   --panel-strong: #1B2842;
   --line: rgba(255, 255, 255, 0.10);
-  --brand: #E8C84A;
+  --brand: #DEBD54;
   --brand-deep: #B8960C;
-  --accent: #D4AF37;
-  --accent-fg: #E8C84A;
-  --accent-muted: rgba(212, 175, 55, 0.16);
-  --accent-border: rgba(212, 175, 55, 0.38);
+  --accent: #C9A227;
+  --accent-fg: #DEBD54;
+  --accent-muted: rgba(201, 162, 39, 0.16);
+  --accent-border: rgba(201, 162, 39, 0.38);
   --sidebar-bg: #0A1120;
 }
 
@@ -105,8 +105,8 @@
 .theme-blackgold :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):focus {
   background: var(--panel-strong);
   color: var(--ink);
-  border-color: rgba(212, 175, 55, 0.62);
-  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.22);
+  border-color: rgba(201, 162, 39, 0.62);
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.22);
 }
 .theme-blackgold :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea)::placeholder {
   color: var(--ink-muted);
@@ -141,15 +141,15 @@
 }
 
 .theme-blackgold .btn-premium {
-  border-color: rgba(212, 175, 55, 0.7);
+  border-color: rgba(201, 162, 39, 0.7);
   background: linear-gradient(160deg, #e8c337 0%, #b8860a 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset, 0 4px 12px rgba(212, 175, 55, 0.25), 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset, 0 4px 12px rgba(201, 162, 39, 0.25), 0 8px 24px rgba(0, 0, 0, 0.4);
   color: #fff;
 }
 
 .theme-blackgold .btn-premium:hover {
   filter: brightness(1.1);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 6px 16px rgba(212, 175, 55, 0.3), 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 6px 16px rgba(201, 162, 39, 0.3), 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
 .theme-blackgold .btn-premium:active {
@@ -198,9 +198,9 @@
 }
 
 .theme-blackgold .btn-premium-success {
-  border-color: rgba(212, 175, 55, 0.7);
+  border-color: rgba(201, 162, 39, 0.7);
   background: linear-gradient(160deg, #e8c337 0%, #b8860a 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset, 0 4px 12px rgba(212, 175, 55, 0.25), 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset, 0 4px 12px rgba(201, 162, 39, 0.25), 0 8px 24px rgba(0, 0, 0, 0.4);
   color: #fff;
 }
 
@@ -212,23 +212,23 @@
 .theme-blackgold .btn-premium-dark:focus-visible {
   outline: none;
   box-shadow:
-    0 0 0 2px rgba(212, 175, 55, 0.6),
+    0 0 0 2px rgba(201, 162, 39, 0.6),
     0 0 0 4px rgba(0, 0, 0, 0.5),
     0 6px 14px rgba(0, 0, 0, 0.3);
 }
 
 .theme-blackgold .nav-icon-premium {
-  border-color: rgba(212, 175, 55, 0.35);
-  background: linear-gradient(160deg, rgba(255, 252, 224, 0.15) 0%, rgba(212, 175, 55, 0.08) 100%);
-  color: rgba(212, 175, 55, 0.9);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 3px 8px rgba(212, 175, 55, 0.1);
+  border-color: rgba(201, 162, 39, 0.35);
+  background: linear-gradient(160deg, rgba(255, 252, 224, 0.15) 0%, rgba(201, 162, 39, 0.08) 100%);
+  color: rgba(201, 162, 39, 0.9);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 3px 8px rgba(201, 162, 39, 0.1);
 }
 
 .theme-blackgold .nav-icon-premium-active {
-  border-color: rgba(212, 175, 55, 0.6);
-  background: linear-gradient(160deg, rgba(232, 195, 55, 0.25) 0%, rgba(212, 175, 55, 0.12) 100%);
-  color: #d4af37;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 10px rgba(212, 175, 55, 0.15);
+  border-color: rgba(201, 162, 39, 0.6);
+  background: linear-gradient(160deg, rgba(232, 195, 55, 0.25) 0%, rgba(201, 162, 39, 0.12) 100%);
+  color: #C9A227;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 10px rgba(201, 162, 39, 0.15);
 }
 
 .theme-blackgold .panel-elevated {
@@ -276,21 +276,28 @@
 body {
   background: var(--page-bg);
   color: var(--ink);
-  /* Inter first — falls back to system font stack if not yet loaded.
-     Inter is self-hosted by Next.js so it's typically already cached. */
+  /* Manrope — the face eagleinfosolutions.com is set in. Self-hosted by Next.js
+     so it is typically already cached. The variable is still named --font-inter
+     because it is read in a dozen places; the value is what matters. */
   font-family: var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-  /* Inter is designed with tighter letter-spacing than system fonts */
-  letter-spacing: -0.014em;
+  /* Manrope sits wider than Inter, so it needs less negative tracking pulled
+     out of it — at -0.014em the counters started closing up. */
+  letter-spacing: -0.006em;
   /* Sharper rendering on high-DPI screens */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11"; /* Inter's cleaner alternates */
+  /* Inter's cv02/cv03/cv04/cv11 alternates were dropped with Inter — Manrope
+     does not define them, and asking for absent features costs a lookup. */
 }
 
 :where(h1, h2, h3, h4) {
+  /* DM Serif Display. The hook was already here with a sans fallback and no
+     display face ever set, so every heading rendered in the body font. */
   font-family: var(--font-display, var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif));
-  letter-spacing: -0.02em;
+  /* A serif at display size needs far less tracking removed than a sans did. */
+  letter-spacing: -0.01em;
+  font-weight: 400;
 }
 
 code,
@@ -343,9 +350,16 @@ pre,
   --dc-ink-3: #726b5e;
   --dc-line: #e7e2d8;
   --dc-line-soft: #efebe3;
-  --dc-accent: #a87f16;
-  --dc-accent-2: #7a5f00;
-  --dc-accent-soft: rgba(184, 144, 28, 0.12);
+  --dc-accent: #9F801F;
+  /* Gold has two jobs and they pull opposite ways. As TEXT on a light panel it
+     has to be dark enough to read (#9F801F clears AA for large text at 3.6;
+     the brand gold manages only 2.32). As a FILLED SURFACE under dark text it
+     should be the brand gold itself — which is also the higher contrast of the
+     two there, 7.54 against 4.85. eagleinfosolutions.com resolves it the same
+     way: #C9A227 panels with near-black bold labels. */
+  --dc-accent-surface: #C9A227;
+  --dc-accent-2: #665214;
+  --dc-accent-soft: rgba(159, 128, 31, 0.12);
   --dc-good: #2c8f61;
   --dc-warn: #bd8410;
   --dc-crit: #c9463a;
@@ -365,9 +379,9 @@ pre,
     --dc-ink-3: rgba(255, 255, 255, 0.5); /* was 0.32 (2.9:1, failed AA) — raised to ~5.3:1 on the #151515 card */
     --dc-line: rgba(255, 255, 255, 0.07);
     --dc-line-soft: rgba(255, 255, 255, 0.05);
-    --dc-accent: #d4af37;
-    --dc-accent-2: #d4af37;
-    --dc-accent-soft: rgba(212, 175, 55, 0.14);
+    --dc-accent: #C9A227;
+    --dc-accent-2: #C9A227;
+    --dc-accent-soft: rgba(201, 162, 39, 0.14);
     --dc-good: #43bf85;
     --dc-warn: #dda52c;
     --dc-crit: #e5695c;
@@ -387,9 +401,9 @@ pre,
   --dc-ink-3: rgba(255, 255, 255, 0.5); /* was 0.32 (2.9:1, failed AA) — raised to ~5.3:1 on the #151515 card */
   --dc-line: rgba(255, 255, 255, 0.07);
   --dc-line-soft: rgba(255, 255, 255, 0.05);
-  --dc-accent: #d4af37;
-  --dc-accent-2: #d4af37;
-  --dc-accent-soft: rgba(212, 175, 55, 0.14);
+  --dc-accent: #C9A227;
+  --dc-accent-2: #C9A227;
+  --dc-accent-soft: rgba(201, 162, 39, 0.14);
   --dc-good: #43bf85;
   --dc-warn: #dda52c;
   --dc-crit: #e5695c;
@@ -411,9 +425,16 @@ pre,
   --dc-ink-3: #726b5e;
   --dc-line: #e7e2d8;
   --dc-line-soft: #efebe3;
-  --dc-accent: #a87f16;
-  --dc-accent-2: #7a5f00;
-  --dc-accent-soft: rgba(184, 144, 28, 0.12);
+  --dc-accent: #9F801F;
+  /* Gold has two jobs and they pull opposite ways. As TEXT on a light panel it
+     has to be dark enough to read (#9F801F clears AA for large text at 3.6;
+     the brand gold manages only 2.32). As a FILLED SURFACE under dark text it
+     should be the brand gold itself — which is also the higher contrast of the
+     two there, 7.54 against 4.85. eagleinfosolutions.com resolves it the same
+     way: #C9A227 panels with near-black bold labels. */
+  --dc-accent-surface: #C9A227;
+  --dc-accent-2: #665214;
+  --dc-accent-soft: rgba(159, 128, 31, 0.12);
   --dc-good: #2c8f61;
   --dc-warn: #bd8410;
   --dc-crit: #c9463a;
@@ -435,9 +456,11 @@ pre,
   --dc-ink-3: rgba(255, 255, 255, 0.52); /* was 0.38 (~3.4:1) — raised to ~4.9:1 on the navy #131D33 panel */
   --dc-line: rgba(255, 255, 255, 0.09);
   --dc-line-soft: rgba(255, 255, 255, 0.05);
-  --dc-accent: #E8C84A;
-  --dc-accent-2: #E8C84A;
-  --dc-accent-soft: rgba(212, 175, 55, 0.16);
+  --dc-accent: #DEBD54;
+  /* On a near-black ground the text gold is already bright enough to fill with. */
+  --dc-accent-surface: #DEBD54;
+  --dc-accent-2: #DEBD54;
+  --dc-accent-soft: rgba(201, 162, 39, 0.16);
   --dc-good: #43bf85;
   --dc-warn: #dda52c;
   --dc-crit: #e5695c;
@@ -463,8 +486,11 @@ pre,
   box-shadow: var(--dc-shadow-hover);
 }
 .dc-btn {
-  background: var(--dc-accent);
-  color: #fff;
+  /* Was white on the text gold: 3.76, under the 4.5 this size of text needs,
+     and the brand gold would have taken it to 2.42. Dark label on the brand
+     gold reaches 7.54 and matches how the website sets its buttons. */
+  background: var(--dc-accent-surface, var(--dc-accent));
+  color: #1a1500;
   box-shadow: var(--dc-shadow);
   transition: filter 150ms ease;
 }
@@ -493,6 +519,7 @@ pre,
   --ink: var(--dc-ink);
   --ink-muted: var(--dc-ink-2);
   --accent: var(--dc-accent);
+  --accent-surface: var(--dc-accent-surface, var(--dc-accent));
   --accent-fg: var(--dc-accent-2);
   --accent-muted: var(--dc-accent-soft);
 }
@@ -558,7 +585,7 @@ pre,
 
 .btn-premium {
   border: 1px solid rgba(150, 122, 8, 0.35);
-  background: var(--accent);
+  background: var(--accent-surface, var(--accent));
   color: #1a1500;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -650,7 +677,7 @@ pre,
   outline: none;
   box-shadow:
     0 0 0 2px rgba(255, 255, 255, 0.95),
-    0 0 0 4px rgba(212, 175, 55, 0.5),
+    0 0 0 4px rgba(201, 162, 39, 0.5),
     0 6px 14px rgba(15, 23, 42, 0.18);
 }
 
@@ -683,15 +710,15 @@ pre,
   border: 1px solid var(--accent-border);
   background: linear-gradient(160deg, #fffdf0 0%, #fef9dc 100%);
   color: var(--accent);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 3px 8px rgba(212, 175, 55, 0.12);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 3px 8px rgba(201, 162, 39, 0.12);
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
 .nav-icon-premium-active {
-  border-color: rgba(212, 175, 55, 0.5);
+  border-color: rgba(201, 162, 39, 0.5);
   background: linear-gradient(160deg, #fef9dc 0%, #fde97a 40%, #fae060 100%);
   color: #a07b00;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 4px 10px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 4px 10px rgba(201, 162, 39, 0.2);
 }
 
 .sidebar-nav-icon {
@@ -713,8 +740,8 @@ pre,
 }
 
 a:hover .nav-icon-premium {
-  border-color: rgba(212, 175, 55, 0.55);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset, 0 5px 12px rgba(212, 175, 55, 0.18);
+  border-color: rgba(201, 162, 39, 0.55);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset, 0 5px 12px rgba(201, 162, 39, 0.18);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -779,17 +806,17 @@ a:hover .nav-icon-premium {
 
 :where(input, select, textarea):focus {
   outline: none;
-  border-color: rgba(212, 175, 55, 0.6);
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+  border-color: rgba(201, 162, 39, 0.6);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.12);
   background: var(--panel);
 }
 
 :where(input, select, textarea):focus-visible {
   outline: none;
-  border-color: rgba(212, 175, 55, 0.7);
+  border-color: rgba(201, 162, 39, 0.7);
   box-shadow:
     0 0 0 2px rgba(255, 255, 255, 0.95),
-    0 0 0 4px rgba(212, 175, 55, 0.4);
+    0 0 0 4px rgba(201, 162, 39, 0.4);
 }
 
 :where(details > summary) {
@@ -845,16 +872,16 @@ tr:has(details[open]) {
 }
 
 .theme-blackgold :where(input, select, textarea):focus {
-  border-color: rgba(212, 175, 55, 0.65);
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+  border-color: rgba(201, 162, 39, 0.65);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15);
   background: rgba(255, 255, 255, 0.07);
 }
 
 .theme-blackgold :where(input, select, textarea):focus-visible {
-  border-color: rgba(212, 175, 55, 0.7);
+  border-color: rgba(201, 162, 39, 0.7);
   box-shadow:
     0 0 0 2px rgba(0, 0, 0, 0.5),
-    0 0 0 4px rgba(212, 175, 55, 0.35);
+    0 0 0 4px rgba(201, 162, 39, 0.35);
 }
 
 .theme-blackgold select option {
@@ -976,8 +1003,8 @@ tr:has(details[open]) {
 }
 
 /* ── Accessible accent text ──────────────────────────────────────────────── */
-/* In light mode #D4AF37 fails WCAG AA contrast on white. Override text-only
-   uses of --accent to use --accent-fg (#7A5F00, ~6:1 on white) instead.
+/* In light mode #C9A227 fails WCAG AA contrast on white. Override text-only
+   uses of --accent to use --accent-fg (#665214, ~6:1 on white) instead.
    Dark mode keeps --accent-fg == --accent so no change there.               */
 .text-\[var\(--accent\)\] {
   color: var(--accent-fg) !important;

@@ -1388,8 +1388,8 @@ async function runDbFix() {
     };
 
     await addBrandingColumn("primaryColor", "TEXT", "'#000000'");
-    await addBrandingColumn("secondaryColor", "TEXT", "'#D4AF37'");
-    await addBrandingColumn("accentColor", "TEXT", "'#D4AF37'");
+    await addBrandingColumn("secondaryColor", "TEXT", "'#C9A227'");
+    await addBrandingColumn("accentColor", "TEXT", "'#C9A227'");
     await addBrandingColumn("backgroundColor", "TEXT", "'#FFFFFF'");
     await addBrandingColumn("surfaceColor", "TEXT", "'#F5F5F5'");
     await addBrandingColumn("borderColor", "TEXT", "'#E5E5E5'");
