@@ -344,7 +344,7 @@ function DuukaSaasLanding() {
             <span className="h-1.5 w-1.5 rounded-full bg-[#C9A227]" />
             <span className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#C9A227]">One system for your whole business</span>
           </div>
-          <h1 className="max-w-2xl text-4xl font-black leading-[0.95] tracking-tight text-white md:text-6xl">
+          <h1 className="display-serif max-w-2xl text-4xl leading-[0.95] tracking-tight text-white md:text-6xl">
             Run everything from
             <span className="block bg-gradient-to-r from-[#DEBD54] to-[#C9A020] bg-clip-text text-transparent">one workspace.</span>
           </h1>
@@ -807,7 +807,7 @@ export default async function Page() {
                 <span className="text-[0.8125rem] font-semibold text-white/60">Eagle Info Solutions</span>
               </div>
 
-              <h1 className="text-3xl font-extrabold leading-tight text-white xl:text-4xl">
+              <h1 className="display-serif text-3xl leading-tight text-white xl:text-4xl">
                 Device broken?<br />
                 <span className="bg-gradient-to-r from-[#DEBD54] to-[#C9A020] bg-clip-text text-transparent">
                   We fix it fast.

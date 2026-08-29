@@ -292,12 +292,23 @@ body {
 }
 
 :where(h1, h2, h3, h4) {
-  /* DM Serif Display. The hook was already here with a sans fallback and no
-     display face ever set, so every heading rendered in the body font. */
+  /* Manrope, like the body. The serif briefly lived here and it was wrong:
+     DM Serif Display ships in one weight, 400, and every heading in this app
+     asks for semibold, extrabold or black. The browser cannot decline, so it
+     synthesised the weight — smeared, uneven strokes on a face that has no
+     bold to give. Headings are UI here; they need the weight more than the
+     flourish. */
+  font-family: var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  letter-spacing: -0.02em;
+}
+
+/* Opt in, for display sizes only — a marketing hero, not a panel title. The
+   weight is pinned to 400 because that is the only one the face has: without
+   it a `font-black` on the element brings the synthetic bold straight back. */
+.display-serif {
   font-family: var(--font-display, var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif));
-  /* A serif at display size needs far less tracking removed than a sans did. */
-  letter-spacing: -0.01em;
   font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 code,
