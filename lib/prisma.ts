@@ -75,6 +75,14 @@ function createPrismaClient() {
     throw new Error("Missing TURSO_DATABASE_URL");
   }
 
+  // The datasource reads env("DATABASE_URL"), and production sets only the
+  // Turso variables. The adapter below is what actually connects, so this value
+  // is never dialled — it exists so the schema's env reference resolves rather
+  // than failing construction on a variable nothing here uses.
+  if (!process.env.DATABASE_URL?.trim()) {
+    process.env.DATABASE_URL = DEFAULT_LOCAL_DATABASE_URL;
+  }
+
   const adapter = new PrismaLibSql({
     url,
     ...(process.env.TURSO_AUTH_TOKEN ? { authToken: process.env.TURSO_AUTH_TOKEN } : {}),

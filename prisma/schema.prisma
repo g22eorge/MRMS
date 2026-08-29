@@ -5,9 +5,19 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Read from the environment rather than named here. As a literal this silently
+// won every argument: `test:unit` asks for prisma/test.db and got dev.db, so
+// `db push --accept-data-loss` was aimed at the working development database
+// and the tests read whatever data happened to be in it. Every script in
+// package.json already exports a file: URL before calling Prisma, and
+// prisma.config.ts falls back to prisma/dev.db when nothing is set, so the
+// variable is always defined by the time the CLI reads it.
+//
+// Production never consults this: lib/prisma.ts connects through the libSQL
+// adapter, which carries its own URL.
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 // ── MULTI-TENANCY ────────────────────────────────────────────────────────────
