@@ -36,6 +36,25 @@ const TRANSACTION_OPTIONS = {
 } as const;
 
 function createPrismaClient() {
+  // PostgreSQL connects through Prisma's own driver from DATABASE_URL — no
+  // adapter, unlike Turso. It is checked before anything else because the rest
+  // of this function assumes the engine is SQLite: it would rewrite the URL as
+  // a file path and then refuse to start for want of Turso variables that a
+  // Postgres deployment has no reason to set.
+  //
+  // Reaching this branch also requires the schema's provider to be postgresql;
+  // see scripts/pg-schema.mjs, which produces that variant. A Postgres URL
+  // under the sqlite provider is a misconfiguration Prisma reports itself.
+  const postgresUrl = (process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "").trim();
+  if (/^postgres(ql)?:\/\//i.test(postgresUrl)) {
+    // Accept POSTGRES_URL as the source, but the datasource reads DATABASE_URL.
+    process.env.DATABASE_URL = postgresUrl;
+    return new PrismaClient({
+      log: ["error", "warn"],
+      transactionOptions: TRANSACTION_OPTIONS,
+    });
+  }
+
   // Use TURSO_DATABASE_URL to detect production mode
   const isProduction = !!process.env.TURSO_DATABASE_URL;
 

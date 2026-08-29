@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
+import { listTables, tableColumns } from "@/lib/db/introspect";
 import { whatsappConfigSummary } from "@/lib/notifications/whatsapp";
 import { emailIsConfigured } from "@/lib/notifications/email";
 
@@ -40,9 +41,10 @@ export async function GET() {
   };
 
   // Baseline connectivity
-  await run("db:tables", async () =>
-    prisma.$queryRaw<Array<{ name: string }>>`SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`,
-  );
+  // Asked through the dialect helper: the SQLite spelling throws on Postgres,
+  // and this probe catches, so it would have reported an empty database rather
+  // than a question it could not ask.
+  await run("db:tables", async () => [...(await listTables())].sort());
 
   // Core reads used by dashboard/jobs
   await run("job:count", async () => prisma.job.count());
@@ -204,8 +206,8 @@ export async function GET() {
     return { delegate: true, hasRow: Boolean(row) };
   });
 
-  await run("branding:pragmaColumns", async () =>
-    prisma.$queryRaw<Array<{ name: string }>>`PRAGMA table_info('DocumentBrandingSettings')`,
+  await run("branding:columns", async () =>
+    [...(await tableColumns("DocumentBrandingSettings"))].sort(),
   );
 
   // Session user lookup path

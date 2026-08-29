@@ -7,9 +7,12 @@ mock.module("@/lib/prisma", () => ({
     $queryRawUnsafe: async (sql: string, ...args: unknown[]) => {
       seen.push({ sql, args });
       if (/information_schema\.columns/.test(sql)) return [{ column_name: "orgId" }, { column_name: "companyTaxId" }];
-      if (/information_schema\.tables/.test(sql)) return [{ n: 1 }];
+      // tableExists counts; listTables selects names. Same table, different question.
+      if (/information_schema\.tables/.test(sql) && /COUNT/.test(sql)) return [{ n: 1 }];
+      if (/information_schema\.tables/.test(sql)) return [{ table_name: "Client" }, { table_name: "Job" }];
       if (/PRAGMA/.test(sql)) return [{ name: "orgId" }, { name: "companyTaxId" }];
-      if (/sqlite_master/.test(sql)) return [{ name: "Client" }];
+      if (/sqlite_master/.test(sql) && /type = 'table' AND name/.test(sql)) return [{ name: "Client" }];
+      if (/sqlite_master/.test(sql)) return [{ name: "Client" }, { name: "Job" }];
       return [];
     },
     $executeRawUnsafe: async (sql: string, ...args: unknown[]) => { seen.push({ sql, args }); return 1; },
@@ -117,5 +120,52 @@ describe("addColumnIfMissing", () => {
     const added = await m.addColumnIfMissing("OrgWhatsAppConfig", "atApiKey", "TEXT");
     expect(added).toBe(false);
     expect(seen.some((x) => x.sql.includes("ALTER TABLE"))).toBe(false);
+  });
+});
+
+describe("listTables", () => {
+  // Its own mock: the addColumnIfMissing tests above replace the module-level
+  // one, and bun does not unwind that between blocks.
+  const install = () => mock.module("@/lib/prisma", () => ({
+    prisma: {
+      $queryRawUnsafe: async (sql: string, ...args: unknown[]) => {
+        seen.push({ sql, args });
+        if (/information_schema\.tables/.test(sql)) return [{ table_name: "Client" }, { table_name: "Job" }];
+        if (/sqlite_master/.test(sql)) return [{ name: "Client" }, { name: "Job" }];
+        return [];
+      },
+      $executeRawUnsafe: async () => 1,
+    },
+  }));
+
+  it("reads sqlite_master on SQLite", async () => {
+    install();
+    const m = await loadWith(SQLITE);
+    const tables = await m.listTables();
+    expect(seen[0].sql).toContain("sqlite_master");
+    expect(tables.has("Client")).toBe(true);
+    expect(tables.size).toBe(2);
+  });
+
+  it("reads information_schema on PostgreSQL, filtered to real tables", async () => {
+    install();
+    const m = await loadWith(PG);
+    const tables = await m.listTables();
+    expect(seen[0].sql).toContain("information_schema.tables");
+    // Views are not tables; without this filter the health page would list them
+    // alongside real ones and report a shape the database does not have.
+    expect(seen[0].sql).toContain("BASE TABLE");
+    expect(tables.has("Job")).toBe(true);
+  });
+
+  it("returns an empty set rather than throwing, so callers degrade as before", async () => {
+    mock.module("@/lib/prisma", () => ({
+      prisma: {
+        $queryRawUnsafe: async () => { throw new Error("no such table"); },
+        $executeRawUnsafe: async () => 1,
+      },
+    }));
+    const m = await loadWith(PG);
+    expect((await m.listTables()).size).toBe(0);
   });
 });

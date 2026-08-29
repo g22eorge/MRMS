@@ -60,6 +60,36 @@ export async function tableColumns(table: string): Promise<Set<string>> {
   }
 }
 
+/**
+ * Every table in the current schema, or an empty set when it cannot be read.
+ *
+ * The admin health and probe routes list tables to report what the deployed
+ * database actually has. On PostgreSQL the SQLite spelling of that question
+ * throws, and both routes catch — so instead of an error they would report
+ * every table missing, which reads exactly like a catastrophically broken
+ * database rather than a query asked in the wrong dialect.
+ *
+ * Postgres is filtered to BASE TABLE so views do not appear as tables; SQLite's
+ * sqlite_master is filtered the same way by `type = 'table'`.
+ */
+export async function listTables(): Promise<Set<string>> {
+  try {
+    if (IS_POSTGRES) {
+      const rows = await prisma.$queryRawUnsafe<Array<{ table_name: string }>>(
+        `SELECT table_name FROM information_schema.tables
+          WHERE table_schema = current_schema() AND table_type = 'BASE TABLE'`,
+      );
+      return new Set(rows.map((r) => r.table_name));
+    }
+    const rows = await prisma.$queryRawUnsafe<Array<{ name: string }>>(
+      `SELECT name FROM sqlite_master WHERE type = 'table'`,
+    );
+    return new Set(rows.map((r) => r.name));
+  } catch {
+    return new Set();
+  }
+}
+
 /** True when the table is present. False on any error, as before. */
 export async function tableExists(table: string): Promise<boolean> {
   try {

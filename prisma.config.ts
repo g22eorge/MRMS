@@ -23,6 +23,16 @@ function getDatabaseUrl() {
     return url;
   }
 
+  // PostgreSQL connection strings are already absolute and must be handed over
+  // untouched. Without this they fall into the SQLite branch below and come out
+  // as `file:/repo/postgresql://user@host/db` — a path, not a connection, which
+  // Prisma then rejects for not starting with postgresql://. The error names the
+  // schema's url line and reads like the schema is wrong when the config
+  // rewrote it.
+  if (/^postgres(ql)?:\/\//i.test(url)) {
+    return url;
+  }
+
   // Prisma CLI expects a `file:` URL for local sqlite.
   if (!url.startsWith("file:")) {
     const raw = url.replace(/^file:/, "");
@@ -44,12 +54,21 @@ function getDatabaseUrl() {
 // Set the env var so prisma schema can use it
 process.env.DATABASE_URL = getDatabaseUrl();
 
+const resolvedUrl = getDatabaseUrl();
+const isPostgres = /^postgres(ql)?:\/\//i.test(resolvedUrl);
+
+// The 49 migrations in prisma/migrations are SQLite DDL — DATETIME columns and
+// TEXT primary keys — and would fail partway through on PostgreSQL, leaving a
+// half-built database. Postgres gets its own directory with a baseline
+// generated from the same models (see scripts/pg-schema.mjs). Choosing by
+// dialect here means `prisma migrate deploy` cannot be pointed at the wrong
+// set by forgetting a flag.
 export default defineConfig({
-  schema: "prisma/schema.prisma",
+  schema: isPostgres ? "prisma/schema.postgresql.prisma" : "prisma/schema.prisma",
   migrations: {
-    path: "prisma/migrations",
+    path: isPostgres ? "prisma/migrations-postgresql" : "prisma/migrations",
   },
   datasource: {
-    url: getDatabaseUrl(),
+    url: resolvedUrl,
   },
 });

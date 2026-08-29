@@ -1,0 +1,3529 @@
+// GENERATED FILE — DO NOT EDIT.
+//
+// Produced from prisma/schema.prisma by scripts/pg-schema.mjs. Edit the source and
+// regenerate; edits made here are overwritten without warning.
+//
+// Exists because Prisma requires a literal datasource provider, so supporting
+// both engines needs two files. Everything below is identical to the source
+// except the provider.
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Read from the environment rather than named here. As a literal this silently
+// won every argument: `test:unit` asks for prisma/test.db and got dev.db, so
+// `db push --accept-data-loss` was aimed at the working development database
+// and the tests read whatever data happened to be in it. Every script in
+// package.json already exports a file: URL before calling Prisma, and
+// prisma.config.ts falls back to prisma/dev.db when nothing is set, so the
+// variable is always defined by the time the CLI reads it.
+//
+// Production never consults this: lib/prisma.ts connects through the libSQL
+// adapter, which carries its own URL.
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── MULTI-TENANCY ────────────────────────────────────────────────────────────
+
+enum OrgPlan {
+  STARTER
+  STANDARD
+  GROWTH
+  PREMIUM
+  ENTERPRISE
+}
+
+enum OrgBillingStatus {
+  TRIALING // free trial, no payment yet
+  ACTIVE // paid and current
+  PAST_DUE // payment failed, grace period
+  CANCELLED // subscription cancelled, reverts to STARTER at period end
+}
+
+model Organization {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  plan     OrgPlan @default(STARTER)
+  isActive Boolean @default(true)
+
+  // Flutterwave subscription tracking
+  billingStatus     OrgBillingStatus @default(TRIALING)
+  flwCustomerId     String? // Flutterwave customer ID
+  flwSubscriptionId String? // active FLW subscription ID
+  flwPlanId         String? // FLW payment plan ID in use
+  trialEndsAt       DateTime? // null = no trial
+  planRenewsAt      DateTime? // next renewal date
+  planCancelledAt   DateTime? // set when cancelled
+
+  // AI model override (e.g. "claude-haiku-4-5-20251001"). Null = platform default.
+  aiModel String?
+
+  // Multi-currency
+  baseCurrency        String @default("UGX")
+  supportedCurrencies String @default("UGX") // comma-separated ISO currency codes
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users                   User[]
+  clients                 Client[]
+  devices                 Device[]
+  jobs                    Job[]
+  parts                   Part[]
+  repairRequests          RepairRequest[]
+  repairRequestSequences  RepairRequestSequence[]
+  brandingSettings        DocumentBrandingSettings?
+  commTemplates           CommunicationTemplate[]
+  commPolicies            CommunicationPolicy[]
+  notifications           Notification[]
+  outboundMessages        OutboundMessage[]
+  inboundMessages         InboundMessage[]
+  invoices                Invoice[]
+  payments                Payment[]
+  refunds                 Refund[]
+  creditNotes             CreditNote[]
+  sales                   Sale[]
+  deliveryNotes           DeliveryNote[]
+  auditLogs               AuditLog[]
+  invites                 UserInvite[]
+  branches                Branch[]
+  departments             Department[]              @relation("OrgDepartments")
+  suppliers               Supplier[]
+  purchaseRequests        PurchaseRequest[]
+  purchaseOrders          PurchaseOrder[]
+  stockTransfers          StockTransfer[]
+  goodsReceivedNotes      GoodsReceived[]
+  supplierBills           SupplierBill[]
+  supplierPayments        SupplierPayment[]
+  stockCounts             StockCount[]
+  userGroups              UserGroup[]
+  complaints              Complaint[]
+  salesTargets            SalesTarget[]
+  moduleGrants            OrgModuleGrant[]
+  leads                   Lead[]
+  quotations              Quotation[]
+  posSessions             PosSession[]
+  fieldVisits             FieldVisit[]
+  taxRates                TaxRate[]
+  expenses                Expense[]
+  recurringInvoices       RecurringInvoice[]
+  chartOfAccounts         ChartOfAccount[]
+  journalEntries          JournalEntry[]
+  bankAccounts            BankAccount[]
+  bankTransactions        BankTransaction[]
+  campaigns               Campaign[]
+  portalUsers             PortalUser[]              @relation("OrgPortalUsers")
+  warrantyClaims          WarrantyClaim[]
+  paymentReminderSettings PaymentReminderSettings?
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+enum OrgModule {
+  JOBS
+  INVENTORY
+  POS
+  PURCHASE_ORDERS
+  INVOICING
+  COMPLAINTS
+  REPORTS
+  SALES
+  FIELD
+  TARGETS
+}
+
+model OrgModuleGrant {
+  orgId  String
+  module OrgModule
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@id([orgId, module])
+  @@index([orgId])
+}
+
+model UserInvite {
+  id          String       @id @default(cuid())
+  token       String       @unique @default(cuid())
+  email       String
+  role        Role         @default(OPS)
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invitedById String
+  invitedBy   User         @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([token])
+  @@index([orgId])
+  @@index([email, orgId])
+}
+
+model User {
+  id              String         @id @default(cuid())
+  name            String
+  email           String         @unique
+  phone           String?
+  emailVerified   Boolean        @default(false)
+  image           String?
+  role            Role           @default(OPS)
+  isActive        Boolean        @default(true)
+  accessMode      UserAccessMode @default(FULL)
+  orgId           String?
+  org             Organization?  @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  branchId        String?
+  branch          Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  departmentId    String?
+  department      Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  techType        TechType?
+  employeeId      String?
+  specializations String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  sessions                  Session[]
+  accounts                  Account[]
+  permissionGrants          UserPermission[]
+  jobsCreated               Job[]                    @relation("CreatedBy")
+  jobsAssigned              Job[]                    @relation("AssignedTo")
+  payoutsMarked             Job[]                    @relation("PayoutMarkedBy")
+  clientPaymentsMarked      Job[]                    @relation("ClientPaymentMarkedBy")
+  auditLogs                 AuditLog[]
+  clientNotes               ClientNote[]
+  notifications             Notification[]
+  notificationPreferences   NotificationPreferences?
+  partReservations          PartReservation[]        @relation("PartReservedBy")
+  deliveryNotesCreated      DeliveryNote[]           @relation("DeliveryNoteCreatedBy")
+  stockTransactions         PartStockTransaction[]   @relation("StockTxnBy")
+  attachmentsUploaded       InvoiceAttachment[]      @relation("InvoiceAttachmentUploadedBy")
+  paymentsCreated           Payment[]                @relation("PaymentCreatedBy")
+  technicianPayoutsRecorded TechnicianPayout[]       @relation("TechnicianPayoutRecordedBy")
+  refundsCreated            Refund[]
+  creditNotesCreated        CreditNote[]             @relation("CreditNoteCreatedBy")
+  creditNotesReceivedBack   CreditNote[]             @relation("CreditNoteReceivedBackBy")
+  salesCreated              Sale[]                   @relation("SaleCreatedBy")
+  accessAuditEntries        UserAccessAudit[]        @relation("AccessAuditTarget")
+  accessAuditChanges        UserAccessAudit[]        @relation("AccessAuditActor")
+  invitesSent               UserInvite[]             @relation("InvitedBy")
+  groupMemberships          UserGroupMember[]
+  complaintsAssigned        Complaint[]              @relation("ComplaintAssignee")
+  salesTargets              SalesTarget[]            @relation("SalesTargets")
+  targetsSet                SalesTarget[]            @relation("TargetSetBy")
+  posSessionsOperated       PosSession[]             @relation("PosSessionOperator")
+  leadsCreated              Lead[]                   @relation("LeadCreatedBy")
+  leadsAssigned             Lead[]                   @relation("LeadAssignedTo")
+  leadActivities            LeadActivity[]           @relation("LeadActivityBy")
+  quotationsCreated         Quotation[]              @relation("QuotationCreatedBy")
+  quotationsApproved        Quotation[]              @relation("QuotationApprovedBy")
+  fieldVisitsAssigned       FieldVisit[]             @relation("FieldVisitAssignedTo")
+  fieldVisitsScheduled      FieldVisit[]             @relation("FieldVisitScheduledBy")
+  stockTransfersCreated     StockTransfer[]          @relation("StockTransferCreatedBy")
+  stockTransfersApproved    StockTransfer[]          @relation("StockTransferApprovedBy")
+  stockTransfersDispatched  StockTransfer[]          @relation("StockTransferDispatchedBy")
+  stockTransfersReceived    StockTransfer[]          @relation("StockTransferReceivedBy")
+  goodsReceivedCreated      GoodsReceived[]          @relation("GoodsReceivedCreatedBy")
+  supplierBillsCreated      SupplierBill[]           @relation("SupplierBillCreatedBy")
+  supplierPaymentsCreated   SupplierPayment[]        @relation("SupplierPaymentCreatedBy")
+  purchaseRequestsCreated   PurchaseRequest[]        @relation("PurchaseRequestCreatedBy")
+  purchaseRequestsReviewed  PurchaseRequest[]        @relation("PurchaseRequestReviewedBy")
+  stockCountsCreated        StockCount[]             @relation("StockCountCreatedBy")
+  stockCountsApproved       StockCount[]             @relation("StockCountApprovedBy")
+  expensesCreated           Expense[]                @relation("ExpenseCreatedBy")
+  recurringInvoicesCreated  RecurringInvoice[]       @relation("RecurringInvoiceCreatedBy")
+  journalEntriesCreated     JournalEntry[]           @relation("JournalEntryCreatedBy")
+  campaignsCreated          Campaign[]               @relation("CampaignCreatedBy")
+  receiptsIssued            Receipt[]                @relation("ReceiptIssuedBy")
+
+  @@index([orgId])
+  @@index([branchId])
+  @@index([departmentId])
+}
+
+model UserPermission {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, permission])
+  @@index([permission])
+}
+
+model UserAccessAudit {
+  id           String   @id @default(cuid())
+  targetUserId String
+  targetUser   User     @relation("AccessAuditTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  actorUserId  String
+  actorUser    User     @relation("AccessAuditActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  action       String
+  detail       String?
+  createdAt    DateTime @default(now())
+
+  @@index([targetUserId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model UserGroup {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  members     UserGroupMember[]
+  permissions UserGroupPermission[]
+
+  @@unique([orgId, name])
+  @@index([orgId, createdAt])
+}
+
+model UserGroupMember {
+  id        String    @id @default(cuid())
+  groupId   String
+  group     UserGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model UserGroupPermission {
+  id         String    @id @default(cuid())
+  groupId    String
+  group      UserGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  permission String
+  createdAt  DateTime  @default(now())
+
+  @@unique([groupId, permission])
+  @@index([permission])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  TECH_MANAGER
+  FINANCE
+  SALES
+  SALES_MANAGER
+  SALES_CORPORATE
+  SALES_RETAIL
+  SALES_POS
+  TECH_FIELD
+  OPS
+  TECHNICIAN_INTERNAL
+  TECHNICIAN_EXTERNAL
+  FRONT_DESK
+  // Legacy: kept for existing production rows.
+  // The app normalizes this to FRONT_DESK at runtime.
+  INTAKE
+}
+
+enum UserAccessMode {
+  FULL
+  READ_ONLY
+}
+
+enum TechType {
+  INTERNAL
+  EXTERNAL_PERMANENT
+  EXTERNAL_ONE_TIME
+  FIELD
+}
+
+enum JobStatus {
+  RECEIVED
+  DIAGNOSING
+  REFERRED
+  PENDING_EXTERNAL_ASSIGNMENT
+  ASSIGNED_ONE_TIME_EXTERNAL
+  IN_EXTERNAL_REPAIR
+  WAITING_FOR_PARTS
+  RETURNED_FROM_EXTERNAL
+  AWAITING_APPROVAL
+  IN_REPAIR
+  READY_FOR_PICKUP
+  DELIVERED
+  COMPLETED
+  CLOSED
+}
+
+enum RecommendationOption {
+  PROCEED_REPAIR
+  REPLACE_DEVICE
+  RETURN_UNREPAIRED
+}
+
+enum CommunicationStatus {
+  NONE
+  AWAITING_RESPONSE
+  APPROVED
+  DECLINED
+}
+
+enum RepairPath {
+  IN_HOUSE
+  EXTERNAL
+}
+
+enum ServiceType {
+  HARDWARE
+  SOFTWARE
+  BOTH
+}
+
+enum SoftwareInstallerSource {
+  CLIENT_PROVIDED_INSTALLER
+  CLIENT_ACCOUNT_LOGIN
+  COMPANY_LICENSE
+  OPEN_SOURCE
+  OTHER
+}
+
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+  COURIER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+}
+
+enum InvoiceType {
+  REPAIR
+  SERVICE
+  MERCHANDISE
+  CONTRACT
+  OTHER
+}
+
+enum ExpenseCategory {
+  RENT
+  UTILITIES
+  SALARIES
+  SUPPLIES
+  MARKETING
+  TRAVEL
+  EQUIPMENT
+  MAINTENANCE
+  TAXES
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK_TRANSFER
+  CARD
+  OTHER
+}
+
+enum SaleBillingMode {
+  CASH
+  INVOICE
+}
+
+enum SaleStatus {
+  OPEN
+  PAID
+  PARTIALLY_RETURNED
+  RETURNED
+  VOID
+}
+
+enum DeviceType {
+  PHONE_ANDROID
+  PHONE_IPHONE
+  TABLET
+  WINDOWS_PC
+  MAC
+  OTHER
+}
+
+enum TimelineConfidence {
+  FIRM
+  ESTIMATED
+  PARTS_DEPENDENT
+}
+
+enum WorkflowReason {
+  NONE
+  PARTS_PENDING
+  SPECIALIST_ESCALATION
+  CLIENT_DECLINED
+  UNREPAIRABLE
+  CUSTOMER_CANCELLED
+  OTHER
+}
+
+enum PartReservationStatus {
+  RESERVED
+  CONSUMED
+  RELEASED
+}
+
+enum StockTransactionType {
+  IN
+  OUT
+  ADJUST
+}
+
+enum StockTransferStatus {
+  REQUESTED
+  APPROVED
+  DISPATCHED
+  RECEIVED
+  CANCELLED
+}
+
+model Client {
+  id           String       @id @default(cuid())
+  fullName     String
+  phone        String
+  email        String?
+  organization String?
+  address      String?
+  notes        String?
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  jobs              Job[]
+  devices           Device[]
+  notesEntries      ClientNote[]
+  inboundMessages   InboundMessage[]
+  sales             Sale[]
+  leads             Lead[]
+  quotations        Quotation[]
+  invoices          Invoice[]
+  recurringInvoices RecurringInvoice[]
+  campaignContacts  CampaignContact[]
+  receipts          Receipt[]
+  portalUsers       PortalUser[]       @relation("ClientPortalUsers")
+  linkedPortalUsers PortalUserClient[] @relation("ClientLinkedPortalUsers")
+  outboundMessages  OutboundMessage[]
+
+  @@unique([phone, orgId])
+  @@index([orgId])
+  @@index([orgId, updatedAt])
+}
+
+model Device {
+  id       String       @id @default(cuid())
+  clientId String
+  client   Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  deviceType    DeviceType
+  brand         String
+  model         String
+  serialOrImei  String?
+  accessories   String?
+  physicalNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs Job[]
+
+  @@index([clientId])
+  @@index([orgId])
+  @@index([serialOrImei])
+}
+
+model ClientNote {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Job {
+  id            String       @id @default(cuid())
+  jobNumber     String       @unique
+  status        JobStatus    @default(RECEIVED)
+  repairPath    RepairPath?
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  branchId      String?
+  branch        Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  clientId      String
+  client        Client       @relation(fields: [clientId], references: [id])
+  deviceId      String?
+  device        Device?      @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  createdById   String
+  createdBy     User         @relation("CreatedBy", fields: [createdById], references: [id])
+  assignedToId  String?
+  assignedTo    User?        @relation("AssignedTo", fields: [assignedToId], references: [id])
+  deviceType    DeviceType
+  brand         String
+  model         String
+  serialOrImei  String?
+  accessories   String?
+  physicalNotes String?
+
+  // Business line: hardware repair vs software-only services.
+  serviceType ServiceType @default(HARDWARE)
+
+  // Software service scope (no app catalog; client must provide valid licenses).
+  softwareOsInstall           Boolean                  @default(false)
+  softwareDriversUpdates      Boolean                  @default(false)
+  softwareDataBackupRestore   Boolean                  @default(false)
+  softwareAccountSetup        Boolean                  @default(false)
+  softwarePerformanceTune     Boolean                  @default(false)
+  softwareThirdPartyApps      Boolean                  @default(false)
+  softwareRequestedNotes      String?
+  softwareLicenseAttested     Boolean                  @default(false)
+  softwareInstallerSource     SoftwareInstallerSource?
+  softwareInstallerSourceNote String?
+
+  issueDescription       String
+  workflowReason         WorkflowReason        @default(NONE)
+  statusNote             String?
+  diagnosisNotes         String?
+  externalDiagnosis      String?
+  recommendedRepair      String?
+  recommendationOption   RecommendationOption?
+  communicationStatus    CommunicationStatus   @default(NONE)
+  clientConversationNote String?
+  lastClientContactAt    DateTime?
+  partsNeeded            String?
+
+  externalTechBill   Float?    @map("costEstimate")
+  clientBill         Float?    @map("finalCost")
+  vatApplicable      Boolean   @default(true)
+  externalTechFee    Float?
+  externalPaid       Boolean   @default(false)
+  externalPaidAt     DateTime?
+  externalPaidById   String?
+  externalPaidBy     User?     @relation("PayoutMarkedBy", fields: [externalPaidById], references: [id])
+  externalPaymentRef String?
+  clientPaid         Boolean   @default(false)
+  clientPaidAt       DateTime?
+  clientPaidById     String?
+  clientPaidBy       User?     @relation("ClientPaymentMarkedBy", fields: [clientPaidById], references: [id])
+  clientPaymentRef   String?
+  invoiceNumber      String?   @unique
+  invoiceIssuedAt    DateTime?
+  clientApproved     Boolean?
+  approvalDate       DateTime?
+  quotedAt           DateTime?
+  // Job quotations print a number but never create a Quotation row, so the
+  // number has to live here — allocated once from DocumentSequence and reused
+  // forever, exactly as invoiceNumber above. Before this existed the number was
+  // derived from jobNumber on every render, inheriting its format each time.
+  quotationNumber    String?   @unique
+
+  repairTimeline     String?
+  timelineMinMinutes Int?
+  timelineMaxMinutes Int?
+  timelineConfidence TimelineConfidence?
+  timelineNote       String?
+  technicianNotes    String?
+  workDone           String?
+  partsReplaced      String?
+
+  receivedAt        DateTime        @default(now())
+  completedAt       DateTime?
+  // Warranty coverage on the completed repair (shown in the client portal).
+  warrantyMonths    Int?
+  warrantyExpiresAt DateTime?
+  deliveredAt       DateTime?
+  deliveryMethod    DeliveryMethod? // PICKUP, DELIVERY, COURIER
+  deliveredTo       String? // name of person who received
+  closedAt          DateTime?
+  updatedAt         DateTime        @updatedAt
+
+  photos                    Photo[]
+  auditLogs                 AuditLog[]
+  notifications             Notification[]
+  oneTimeExternalAssignment OneTimeExternalTechAssignment?
+  outboundMessages          OutboundMessage[]
+  inboundMessages           InboundMessage[]
+  partReservations          PartReservation[]
+  stockTransactions         PartStockTransaction[]
+  warrantyClaims            WarrantyClaim[]                @relation("WarrantyClaimOriginalJob")
+  warrantyRepairFor         WarrantyClaim[]                @relation("WarrantyClaimWarrantyJob")
+  quotations                Quotation[]                    @relation("JobQuotation")
+  fieldVisits               FieldVisit[]                   @relation("JobFieldVisits")
+  technicianPayouts         TechnicianPayout[]
+
+  invoice    Invoice?
+  complaints Complaint[]
+
+  @@index([orgId])
+  @@index([orgId, status])
+  @@index([orgId, completedAt])
+  @@index([orgId, receivedAt])
+  @@index([orgId, repairPath, status])
+  @@index([orgId, jobNumber])
+  @@index([deviceId])
+  @@index([clientId])
+  @@index([createdById])
+  @@index([status, updatedAt])
+  @@index([status, receivedAt])
+  @@index([assignedToId, status])
+  @@index([completedAt])
+  @@index([repairPath])
+}
+
+model Invoice {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // Repair invoices link to a Job; standalone invoices link directly to a Client.
+  jobId    String? @unique
+  job      Job?    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  invoiceType InvoiceType @default(REPAIR)
+  subject     String?
+  dueDate     DateTime?
+
+  invoiceNumber      String        @unique
+  currency           String        @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+  status             InvoiceStatus @default(ISSUED)
+  issuedAt           DateTime      @default(now())
+  totalAmount        Float
+
+  paidAmount Float     @default(0)
+  paidAt     DateTime?
+
+  notes String?
+
+  lines            InvoiceLine[]
+  payments         Payment[]
+  refunds          Refund[]
+  deliveryNotes    DeliveryNote[]
+  outboundMessages OutboundMessage[]
+  creditNotes      CreditNote[]
+  attachments      InvoiceAttachment[]
+  receipts         Receipt[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([orgId, issuedAt])
+  @@index([orgId, status])
+  @@index([orgId, invoiceType])
+  @@index([orgId, createdAt])
+  @@index([clientId])
+}
+
+model InvoiceAttachment {
+  id           String   @id @default(cuid())
+  orgId        String
+  invoiceId    String
+  fileName     String
+  filePath     String
+  fileSize     Int
+  mimeType     String?
+  uploadedById String?
+  uploadedAt   DateTime @default(now())
+
+  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  uploadedBy User?   @relation("InvoiceAttachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([invoiceId])
+}
+
+model Payment {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  currency           String @default("UGX")
+  exchangeRateToBase Float? // when currency != org.baseCurrency
+
+  amount     Float
+  method     PaymentMethod @default(CASH)
+  kind       String        @default("PAYMENT")
+  reference  String?
+  receivedAt DateTime      @default(now())
+
+  createdById String?
+  createdBy   User?               @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  receipts    Receipt[]
+  allocations PaymentAllocation[]
+
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([orgId, receivedAt])
+  @@index([orgId, kind, receivedAt])
+  @@index([invoiceId])
+  @@index([saleId])
+}
+
+model TechnicianPayout {
+  id           String        @id @default(cuid())
+  orgId        String
+  jobId        String
+  job          Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  amount       Float
+  method       PaymentMethod @default(CASH)
+  reference    String?
+  note         String?
+  paidAt       DateTime      @default(now())
+  recordedById String?
+  recordedBy   User?         @relation("TechnicianPayoutRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
+
+  @@index([orgId, paidAt])
+  @@index([jobId])
+}
+
+model Refund {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // Refund can relate to either a Sale (merchandise) or an Invoice (repairs).
+  saleId       String?
+  sale         Sale?       @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  invoiceId    String?
+  invoice      Invoice?    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  creditNoteId String?
+  creditNote   CreditNote? @relation(fields: [creditNoteId], references: [id], onDelete: SetNull)
+
+  currency           String        @default("UGX")
+  exchangeRateToBase Float?
+  amount             Float
+  method             PaymentMethod @default(CASH)
+  reference          String?
+  refundedAt         DateTime      @default(now())
+  createdById        String
+  createdBy          User          @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  note               String?
+  createdAt          DateTime      @default(now())
+
+  @@index([orgId, refundedAt])
+  @@index([saleId])
+  @@index([invoiceId])
+  @@index([creditNoteId])
+}
+
+model CreditNote {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // A credit note hangs off EXACTLY ONE parent: a POS sale or an invoice.
+  // Both are nullable because SQLite has no way to express "one or the other"
+  // as a column constraint, and a CHECK cannot be added to an existing table.
+  // The invariant is enforced in application code — see creditNoteParent().
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  creditNoteNumber   String   @unique
+  currency           String   @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+  totalAmount        Float
+  issuedAt           DateTime @default(now())
+  reason             String?
+
+  // Stock return is only applied when items are physically received back.
+  itemsReceivedBackAt   DateTime?
+  itemsReceivedBackById String?
+  itemsReceivedBackBy   User?     @relation("CreditNoteReceivedBackBy", fields: [itemsReceivedBackById], references: [id], onDelete: SetNull)
+  itemsReceivedBackNote String?
+
+  createdById String
+  createdBy   User     @relation("CreditNoteCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  items   CreditNoteItem[]
+  refunds Refund[]
+
+  @@index([orgId, issuedAt])
+  @@index([saleId])
+  @@index([invoiceId])
+}
+
+model CreditNoteItem {
+  id           String     @id @default(cuid())
+  creditNoteId String
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+
+  partId        String?
+  part          Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
+  description   String
+  // Float, like InvoiceLine.quantity: an invoice line can legitimately be
+  // fractional (a UoM factor of 0.5), and an Int here would silently truncate
+  // the returned amount when crediting one.
+  quantity      Float
+  unitPrice     Float
+  lineTotal     Float
+  // Base stock units per 1 sale unit, snapshot at credit-note time so the
+  // return-to-stock uses the same factor even if the product's changes later.
+  saleUomFactor Float?
+
+  createdAt DateTime @default(now())
+
+  @@index([creditNoteId])
+  @@index([partId])
+}
+
+model Sale {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  posSessionId String?
+  posSession   PosSession? @relation(fields: [posSessionId], references: [id], onDelete: SetNull)
+
+  status     SaleStatus @default(OPEN)
+  saleNumber String     @unique
+
+  billingMode   SaleBillingMode @default(CASH)
+  invoiceNumber String?
+  invoicedAt    DateTime?
+
+  currency String @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+
+  exchangeRateToBase Float?
+
+  subtotal       Float     @default(0)
+  discountAmount Float     @default(0)
+  vatAmount      Float     @default(0)
+  taxApplicable  Boolean   @default(false)
+  totalAmount    Float     @default(0)
+  paidAmount     Float     @default(0)
+  paidAt         DateTime?
+
+  notes String?
+
+  items             SaleItem[]
+  payments          Payment[]
+  refunds           Refund[]
+  creditNotes       CreditNote[]
+  deliveryNotes     DeliveryNote[]
+  stockTransactions PartStockTransaction[]
+  receipts          Receipt[]
+
+  createdById String?
+  createdBy   User?   @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, createdAt])
+  @@index([orgId, status])
+  @@index([branchId])
+  @@index([clientId])
+  @@index([posSessionId])
+}
+
+model DeliveryNote {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  deliveryNoteNumber String          @unique
+  deliveredAt        DateTime        @default(now())
+  deliveryMethod     DeliveryMethod?
+
+  deliveredByName         String
+  receivedByName          String
+  receivedBySignatureText String?
+
+  note        String?
+  createdById String?
+  createdBy   User?    @relation("DeliveryNoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  items DeliveryNoteItem[]
+
+  @@index([orgId, deliveredAt])
+  @@index([saleId])
+  @@index([invoiceId])
+}
+
+model DeliveryNoteItem {
+  id             String       @id @default(cuid())
+  deliveryNoteId String
+  deliveryNote   DeliveryNote @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+
+  saleItemId String?
+  saleItem   SaleItem? @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
+
+  partId String?
+  part   Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
+
+  description String
+  quantity    Int
+
+  @@index([deliveryNoteId])
+  @@index([saleItemId])
+  @@index([partId])
+}
+
+model SaleItem {
+  id     String @id @default(cuid())
+  saleId String
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  partId String?
+  part   Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
+
+  description   String
+  quantity      Int    @default(1)
+  unitPrice     Float
+  lineTotal     Float
+  // Base stock units per 1 sale unit, snapshot at sale time so stock reverses
+  // by the same factor even if the product's saleUomFactor later changes.
+  saleUomFactor Float?
+  // Product cost per base unit at sale time, snapshot for stable historical COGS.
+  costAtSale    Float?
+
+  createdAt DateTime @default(now())
+
+  deliveryNoteItems DeliveryNoteItem[]
+
+  @@index([saleId])
+  @@index([partId])
+}
+
+model Part {
+  id                String       @id @default(cuid())
+  sku               String
+  name              String
+  manufacturer      String?
+  unitCost          Float?
+  sellingPrice      Float?
+  category          String?
+  description       String?
+  taxable           Boolean      @default(true)
+  taxRate           Float?
+  baseUom           String?
+  saleUom           String?
+  purchaseUom       String?
+  // Base stock units per 1 sale/purchase unit (null = 1:1). qtyOnHand is in
+  // base units; sales multiply by saleUomFactor, receipts by purchaseUomFactor.
+  saleUomFactor     Float?
+  purchaseUomFactor Float?
+  // Float, not Int: qtyOnHand is in BASE units and every write derives it by
+  // multiplying a sale/purchase quantity by a Float UoM factor, so a factor like
+  // 0.5 (half-metre, half-litre) produces a fractional base quantity. Declaring
+  // it Int did not stop SQLite storing the fraction — it only made Prisma hand
+  // back a non-integer typed as Int, so stock totals, reorder comparisons and
+  // the negative-stock guard all read a value the type said was impossible.
+  qtyOnHand         Float        @default(0)
+  qtyReserved       Int          @default(0)
+  reorderLevel      Int          @default(0)
+  isActive          Boolean      @default(true)
+  orgId             String
+  org               Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  reservations         PartReservation[]
+  transactions         PartStockTransaction[]
+  saleItems            SaleItem[]
+  purchaseOrderItems   PurchaseOrderItem[]
+  purchaseRequestItems PurchaseRequestItem[]
+  creditNoteItems      CreditNoteItem[]
+  deliveryNoteItems    DeliveryNoteItem[]
+  quotationItems       QuotationItem[]        @relation("PartQuotationItems")
+  locationStocks       PartLocationStock[]
+  stockTransferItems   StockTransferItem[]
+  goodsReceivedItems   GoodsReceivedItem[]
+  stockCountItems      StockCountItem[]
+
+  @@unique([sku, orgId])
+  @@index([orgId, isActive])
+}
+
+model PartReservation {
+  id               String                @id @default(cuid())
+  jobId            String
+  job              Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  partId           String
+  part             Part                  @relation(fields: [partId], references: [id], onDelete: Restrict)
+  quantity         Int
+  status           PartReservationStatus @default(RESERVED)
+  unitCostSnapshot Float?
+  reservedById     String?
+  reservedBy       User?                 @relation("PartReservedBy", fields: [reservedById], references: [id], onDelete: SetNull)
+  reservedAt       DateTime              @default(now())
+  consumedAt       DateTime?
+  releasedAt       DateTime?
+  note             String?
+
+  @@index([jobId, status])
+  @@index([partId, status])
+}
+
+model PartStockTransaction {
+  id          String               @id @default(cuid())
+  partId      String
+  part        Part                 @relation(fields: [partId], references: [id], onDelete: Cascade)
+  type        StockTransactionType
+  // Base units, derived via a Float UoM factor — see Part.qtyOnHand.
+  quantity    Float
+  reason      String?
+  // M6: org scope, location, unit cost, and the source document that caused the
+  // movement — so a stock ledger row can be reconciled and valued.
+  orgId       String?
+  locationId  String?
+  unitCost    Float? // cost per unit at the time of the movement
+  sourceType  String? // GRN | PO | ADJUSTMENT | TRANSFER | SALE | REPAIR | CREDIT_NOTE
+  sourceId    String? // id of the causing document
+  jobId       String?
+  job         Job?                 @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  saleId      String?
+  sale        Sale?                @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?                @relation("StockTxnBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime             @default(now())
+
+  @@index([partId, createdAt])
+  @@index([orgId, createdAt])
+  @@index([jobId])
+  @@index([saleId])
+}
+
+model OneTimeExternalTechAssignment {
+  id    String @id @default(cuid())
+  jobId String @unique
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  technicianName String
+  phone          String
+  specialization String?
+
+  agreedRepairCost  Float?
+  partsNotes        String?
+  expectedPartsCost Float?
+
+  assignedAt       DateTime
+  expectedReturnAt DateTime?
+  returnedAt       DateTime?
+
+  instructions  String?
+  progressNotes String?
+  finalOutcome  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assignedAt])
+}
+
+model Photo {
+  id           String   @id @default(cuid())
+  jobId        String
+  job          Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  url          String
+  label        String?
+  // Client portal: photos default to INTERNAL; staff mark ones the customer may
+  // see as "CLIENT". orgId scopes the serving/ownership checks; storageKey lets
+  // us delete the blob when the row is removed.
+  orgId        String?
+  visibility   String   @default("INTERNAL")
+  storageKey   String?
+  mimeType     String?
+  uploadedById String?
+  uploadedAt   DateTime @default(now())
+
+  @@index([jobId, uploadedAt])
+  @@index([jobId, visibility])
+  @@index([orgId])
+}
+
+model AuditLog {
+  id        String        @id @default(cuid())
+  jobId     String
+  job       Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  action    String
+  detail    String?
+  orgId     String?
+  org       Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  createdAt DateTime      @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([jobId, createdAt])
+  @@index([userId, createdAt])
+}
+
+enum NotificationType {
+  STATUS_CHANGE
+  APPROVAL_NEEDED
+  JOB_ASSIGNED
+  ESTIMATE_SUBMITTED
+  PAYMENT_RECEIVED
+  PAYOUT_GENERATED
+  TIMELINE_UPDATED
+  DELAY_NOTE_ADDED
+  STOCK_LOW
+  STOCK_OUT
+  JOB_CREATED
+  REPAIR_REQUEST_RECEIVED
+  QUOTATION_ACCEPTED
+  QUOTATION_REJECTED
+  LEAD_WON
+  LEAD_LOST
+  PURCHASE_REQUEST_SUBMITTED
+  PURCHASE_REQUEST_APPROVED
+  STOCK_RECEIVED
+  STOCK_TRANSFER_UPDATED
+  STOCK_COUNT_APPROVED
+  FIELD_VISIT_COMPLETED
+  CREDIT_NOTE_ISSUED
+  REFUND_ISSUED
+  BILLING
+  PORTAL_MESSAGE
+}
+
+enum NotificationChannel {
+  DASHBOARD
+  WHATSAPP
+  EMAIL
+}
+
+enum OutboundMessageChannel {
+  WHATSAPP
+  EMAIL
+}
+
+enum OutboundMessageStatus {
+  PENDING
+  SENT
+  FAILED
+  DEAD
+  /// Written by a dry run: the exact message that would have gone out, kept so
+  /// it can be read before the feature is allowed to speak. The retry sweep
+  /// takes only PENDING and FAILED, so a PREVIEW row can never be delivered.
+  PREVIEW
+}
+
+enum OutboundMessageType {
+  REPAIR_REQUEST_CONFIRMATION
+  FRONT_DESK_APPROVED
+  FRONT_DESK_REJECTED
+  // Legacy: kept for existing production rows.
+  // The app treats these as FRONT_DESK_*.
+  INTAKE_APPROVED
+  INTAKE_REJECTED
+  JOB_CREATED
+  JOB_COMPLETED
+  JOB_STATUS_UPDATE
+  READY_FOR_PICKUP_NUDGE_1
+  READY_FOR_PICKUP_NUDGE_2
+  REPAIR_REQUEST_EMAIL_ALERT
+  ADMIN_TEST
+  STAFF_REPLY
+  INVOICE_REMINDER
+  WARRANTY_CLAIM_UPDATE
+  CAMPAIGN_MESSAGE
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  jobId     String?
+  job       Job?                @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  userId    String?
+  user      User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  channel   NotificationChannel @default(DASHBOARD)
+  isRead    Boolean             @default(false)
+  readAt    DateTime?
+  orgId     String?
+  org       Organization?       @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  createdAt DateTime            @default(now())
+
+  @@index([orgId, isRead, createdAt])
+  @@index([userId, isRead])
+  @@index([jobId])
+}
+
+model OutboundMessage {
+  id      String                 @id @default(cuid())
+  channel OutboundMessageChannel
+  status  OutboundMessageStatus  @default(PENDING)
+  type    OutboundMessageType
+
+  to      String
+  // EMAIL only. (Legacy rows may store the subject on the first line of `body`.)
+  subject String?
+  body    String
+
+  // Optional template metadata for observability/debugging.
+  templateKey          String?
+  // JSON string of the variables used to render the template at enqueue time.
+  templateVars         String?
+  // When set, this message is sent as a Meta-approved template message instead of free-form text.
+  metaTemplateName     String? // approved template name, e.g. "repair_status_update"
+  metaTemplateLanguage String? // language code, e.g. "en"
+  // JSON array of parameter VALUES in positional order matching {{1}}, {{2}}… in the template body.
+  metaTemplateVars     String?
+
+  provider          String?
+  providerMessageId String?
+
+  // Provider delivery statuses (webhook callbacks). This does not affect outbox retry.
+  providerDeliveryStatus    String?
+  providerDeliveryAt        DateTime?
+  providerDeliveryErrorCode String?
+  providerDeliveryError     String?
+
+  attemptCount  Int       @default(0)
+  lastAttemptAt DateTime?
+  nextAttemptAt DateTime  @default(now())
+  sentAt        DateTime?
+
+  lastErrorCode String?
+  lastError     String?
+
+  lockedAt DateTime?
+
+  repairRequestId String?
+  repairRequest   RepairRequest? @relation(fields: [repairRequestId], references: [id], onDelete: SetNull)
+  jobId           String?
+  job             Job?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  // Without this a payment reminder cannot be traced to the invoice it chases,
+  // so nothing can answer "have we already asked?" — which is the difference
+  // between a reminder system and a way to pester customers.
+  invoiceId       String?
+  invoice         Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  // A statement covers a client rather than one invoice, so it needs its own
+  // link — without it there is no way to ask whether this client has already
+  // had one this month.
+  clientId        String?
+  client          Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  // Which rung of the reminder ladder this message was: "T-7", "DUE", "+3".
+  // Kept as text so the ladder can change shape without a migration.
+  reminderStage   String?
+  orgId           String?
+  org             Organization?  @relation(fields: [orgId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, channel, status, nextAttemptAt])
+  @@index([channel, status, nextAttemptAt])
+  @@index([providerMessageId])
+  @@index([repairRequestId])
+  @@index([invoiceId, reminderStage])
+  @@index([clientId, reminderStage])
+  @@index([jobId])
+  @@index([templateKey])
+}
+
+model NotificationPreferences {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  notifyStatusChange      Boolean @default(true)
+  notifyApprovalNeeded    Boolean @default(true)
+  notifyJobAssigned       Boolean @default(true)
+  notifyEstimateSubmitted Boolean @default(true)
+  notifyPaymentReceived   Boolean @default(true)
+  notifyPayoutGenerated   Boolean @default(true)
+  notifyTimelineUpdated   Boolean @default(true)
+  notifyDelayNote         Boolean @default(true)
+  notifyStockAlert        Boolean @default(true)
+  notifyJobCreated        Boolean @default(true)
+  notifyRepairRequest     Boolean @default(true)
+  notifyQuotationStatus   Boolean @default(true)
+  notifyLeadStatus        Boolean @default(true)
+  notifyPurchaseRequest   Boolean @default(true)
+  notifyStockMovement     Boolean @default(true)
+  notifyFieldVisit        Boolean @default(true)
+  notifyCreditNote        Boolean @default(true)
+
+  whatsappEnabled Boolean @default(true)
+  emailEnabled    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CommunicationTemplate {
+  id               String                 @id @default(cuid())
+  key              String
+  channel          OutboundMessageChannel
+  label            String
+  subject          String?
+  body             String
+  // JSON array of placeholder keys in the ORDER they map to Meta template {{1}}, {{2}}…
+  variables        String?
+  // Meta / WhatsApp Business API template fields. Set these once the template is approved.
+  metaTemplateName String?
+  metaLanguageCode String?
+  isActive         Boolean                @default(true)
+  orgId            String?
+  org              Organization?          @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@unique([key, channel, orgId])
+  @@index([orgId, channel, isActive])
+}
+
+model CommunicationPolicy {
+  id               String        @id @default(cuid())
+  status           JobStatus
+  dashboardEnabled Boolean       @default(true)
+  whatsappEnabled  Boolean       @default(false)
+  emailEnabled     Boolean       @default(false)
+  templateKey      String?
+  nudge1Hours      Int?
+  nudge2Hours      Int?
+  orgId            String?
+  org              Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@unique([status, orgId])
+  @@index([orgId, templateKey])
+}
+
+model DocumentBrandingSettings {
+  id                    String        @id @default(cuid())
+  orgId                 String?       @unique
+  org                   Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  companyName           String        @default("Eagle Info Solutions")
+  companyTagline        String?
+  companyAddressLine1   String        @default("Nalubega Complex, 1st Floor")
+  companyAddressLine2   String        @default("Shop L28, Bombo Road Opposite Watoto Church")
+  companyContacts       String        @default("+256772 006 344 | +256754 006 344")
+  companyEmail          String?
+  companyWebsite        String?
+  // Tax Identification Number, printed in the company block on every document.
+  // Nullable because an org that is not registered should print nothing rather
+  // than an empty label.
+  companyTaxId          String?
+  documentTitle         String        @default("Job Card")
+  quotePrefix           String        @default("EIS")
+  quoteFormat           String        @default("{PREFIX} {M}/{YYYY}/{SEQ}")
+  quoteValidityDays     Int           @default(30)
+  sequencePadLength     Int           @default(4)
+  vatDefaultApplicable  Boolean       @default(false)
+  vatRatePercent        Float         @default(18)
+  vatInclusive          Boolean       @default(false)
+  vatLabel              String        @default("VAT")
+  termsText             String        @default("We supply equipment and carry out repairs; only the terms relevant to this document apply.\nGoods are subject to stock availability and carry the manufacturer warranty only, where applicable.\nRepair work is carried out only after approval is recorded, and parts availability may affect the timeline.\nPre-existing or hidden faults may affect the outcome of a repair.\nUncollected devices may attract storage fees after notice.")
+  footerText            String        @default("Powered by Duuka Pro Max — Eagle Info's repair & business management platform. care.eagleinfosolutions.com")
+  paymentInstructions   String        @default("")
+  paymentAccounts       String        @default("")
+  signatureCompanyLabel String        @default("Signed by: Eagle Info Solutions")
+  signatureClientLabel  String        @default("Signed by: Client")
+  primaryColor          String        @default("#000000")
+  secondaryColor        String        @default("#D4AF37")
+  accentColor           String        @default("#D4AF37")
+  backgroundColor       String        @default("#FFFFFF")
+  surfaceColor          String        @default("#F5F5F5")
+  borderColor           String        @default("#E5E5E5")
+
+  // Document template selections (gated by org plan in UI/server)
+  invoiceTemplateKey   String @default("invoice_classic")
+  quotationTemplateKey String @default("quote_classic")
+  jobCardTemplateKey   String @default("job_card_classic")
+  receiptTemplateKey   String @default("receipt_classic")
+
+  updatedAt DateTime @updatedAt
+}
+
+model InboundMessage {
+  id           String   @id @default(cuid())
+  wamid        String   @unique
+  from         String
+  body         String?
+  mediaType    String?
+  mediaId      String?
+  mediaCaption String?
+  timestamp    DateTime
+
+  clientId String?
+  client   Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  jobId    String?
+  job      Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  orgId    String?
+  org      Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, isRead, createdAt])
+  @@index([from, timestamp])
+  @@index([jobId, timestamp])
+  @@index([clientId, isRead])
+  @@index([isRead, createdAt])
+}
+
+// REPAIR REQUEST FRONT_DESK MODELS
+model RepairRequest {
+  id             String               @id @default(cuid())
+  requestNumber  String               @unique
+  requestStatus  RepairRequestStatus  @default(PENDING_FRONT_DESK)
+  handoverStatus RepairHandoverStatus @default(PENDING)
+  orgId          String?
+  org            Organization?        @relation(fields: [orgId], references: [id], onDelete: SetNull)
+
+  // Customer info
+  customerName           String
+  phone                  String
+  email                  String?
+  preferredContactMethod ContactMethod @default(WHATSAPP)
+
+  // Device info
+  deviceType   DeviceType
+  brand        String
+  model        String?
+  serialNumber String?
+
+  // Problem description
+  problemDescription String
+
+  // Handover method specific fields
+  handoverMethod       HandoverMethod
+  preferredDropoffDate String?
+  preferredDropoffTime String?
+  dropoffNotes         String?
+
+  deliveryPersonName        String?
+  deliveryPersonPhone       String?
+  deliveryCompany           String?
+  dispatchDate              String?
+  expectedArrivalTime       String?
+  deliveryTrackingReference String?
+  deliveryFeeResponsibility String?
+  deliveryNotes             String?
+
+  pickupAddress          String?
+  pickupLandmark         String?
+  preferredPickupDate    String?
+  preferredPickupTime    String?
+  alternateContactPerson String?
+  alternateContactPhone  String?
+  pickupNotes            String?
+
+  // Linked job (set when converted to a job)
+  linkedJobId             String?
+  // Portal attribution: set when a corporate client submits via the client portal.
+  clientId                String?
+  submittedByPortalUserId String?
+
+  // Anti-spam
+  submissionIp String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  outboundMessages OutboundMessage[]
+
+  @@index([requestStatus, createdAt])
+  @@index([phone])
+  @@index([clientId])
+  @@index([orgId, createdAt])
+}
+
+// Allocates human-friendly repair request numbers safely under concurrency.
+model RepairRequestSequence {
+  id        String        @id @default(cuid())
+  orgId     String?
+  org       Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  year      Int
+  value     Int           @default(0)
+  updatedAt DateTime      @updatedAt
+
+  @@unique([orgId, year])
+}
+
+// Atomic per-(type,year) counter for shared document numbers (INV/QT/RCT/CN/DN).
+// Numbers stay globally sequential (matching the existing @unique columns); the
+// counter just removes the read-max-then-write race that could 500 under
+// concurrent creation. Lazy-initialised from the current max for continuity.
+model DocumentSequence {
+  id        String   @id @default(cuid())
+  orgId     String?
+  type      String
+  year      Int
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, type, year])
+}
+
+enum RepairRequestStatus {
+  // Legacy: kept for existing production rows.
+  PENDING_INTAKE
+  PENDING_FRONT_DESK
+  APPROVED
+  REJECTED
+  CONVERTED_TO_JOB
+}
+
+enum RepairHandoverStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ContactMethod {
+  WHATSAPP
+  PHONE
+  EMAIL
+  SMS
+}
+
+enum HandoverMethod {
+  SELF_DROPOFF
+  SEND_WITH_DELIVERY_PERSON
+  REQUEST_PICKUP
+}
+
+// ── Branch ────────────────────────────────────────────────────────────────────
+
+model Branch {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  phone     String?
+  isDefault Boolean      @default(false)
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  users        User[]
+  jobs         Job[]
+  sales        Sale[]
+  posSessions  PosSession[]
+  leads        Lead[]
+  salesTargets SalesTarget[] @relation("BranchSalesTargets")
+  fieldVisits  FieldVisit[]
+  expenses     Expense[]
+  receipts     Receipt[]
+
+  @@index([orgId])
+}
+
+model Department {
+  id        String        @id @default(cuid())
+  orgId     String?
+  org       Organization? @relation("OrgDepartments", fields: [orgId], references: [id], onDelete: SetNull)
+  name      String
+  code      String
+  createdAt DateTime      @default(now())
+
+  users        User[]
+  salesTargets SalesTarget[] @relation("DeptSalesTargets")
+
+  @@unique([orgId, code])
+}
+
+// ── Supplier ──────────────────────────────────────────────────────────────────
+
+model Supplier {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  notes       String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  purchaseOrders     PurchaseOrder[]
+  purchaseRequests   PurchaseRequest[]
+  goodsReceivedNotes GoodsReceived[]
+  supplierBills      SupplierBill[]
+  expenses           Expense[]
+
+  @@index([orgId])
+}
+
+// ── Purchase Orders ───────────────────────────────────────────────────────────
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  PARTIAL
+  RECEIVED
+  CANCELLED
+}
+
+enum GoodsReceivedStatus {
+  POSTED
+  CANCELLED
+}
+
+enum SupplierBillStatus {
+  DRAFT
+  POSTED
+  PART_PAID
+  PAID
+  CANCELLED
+}
+
+enum PurchaseRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CONVERTED
+  CANCELLED
+}
+
+enum PurchaseRequestPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum StockCountStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  CANCELLED
+}
+
+model PurchaseRequest {
+  id            String                  @id @default(cuid())
+  orgId         String
+  org           Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  requestNumber String                  @unique
+  status        PurchaseRequestStatus   @default(SUBMITTED)
+  priority      PurchaseRequestPriority @default(NORMAL)
+  supplierId    String?
+  supplier      Supplier?               @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  neededBy      DateTime?
+  reason        String?
+  notes         String?
+  requestedById String
+  requestedBy   User                    @relation("PurchaseRequestCreatedBy", fields: [requestedById], references: [id], onDelete: Restrict)
+  reviewedById  String?
+  reviewedBy    User?                   @relation("PurchaseRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt    DateTime?
+  reviewNote    String?
+  convertedPoId String?
+  convertedPo   PurchaseOrder?          @relation(fields: [convertedPoId], references: [id], onDelete: SetNull)
+  convertedAt   DateTime?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  items PurchaseRequestItem[]
+
+  @@index([orgId, status, createdAt])
+  @@index([supplierId])
+  @@index([requestedById])
+}
+
+model PurchaseRequestItem {
+  id                String          @id @default(cuid())
+  requestId         String
+  request           PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  partId            String?
+  part              Part?           @relation(fields: [partId], references: [id], onDelete: SetNull)
+  description       String
+  quantity          Int
+  estimatedUnitCost Float?
+  createdAt         DateTime        @default(now())
+
+  @@index([requestId])
+  @@index([partId])
+}
+
+model PurchaseOrder {
+  id                 String              @id @default(cuid())
+  orgId              String
+  org                Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  supplierId         String
+  supplier           Supplier            @relation(fields: [supplierId], references: [id])
+  status             PurchaseOrderStatus @default(DRAFT)
+  /// A purchase order raised on a foreign supplier is priced in that supplier's
+  /// currency. It carried none, so a USD bill was compared against a shilling
+  /// PO value as though the two numbers were the same kind of thing.
+  currency           String              @default("UGX")
+  /// Units of base per 1 unit of `currency`, snapshotted when the PO was raised.
+  exchangeRateToBase Float?
+  reference          String?
+  orderedAt          DateTime?
+  expectedAt         DateTime?
+  receivedAt         DateTime?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  items              PurchaseOrderItem[]
+  purchaseRequests   PurchaseRequest[]
+  goodsReceivedNotes GoodsReceived[]
+  supplierBills      SupplierBill[]
+
+  @@index([orgId])
+  @@index([supplierId])
+}
+
+model PurchaseOrderItem {
+  id          String        @id @default(cuid())
+  poId        String
+  po          PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  partId      String?
+  part        Part?         @relation(fields: [partId], references: [id])
+  description String
+  qtyOrdered  Int
+  qtyReceived Int           @default(0)
+  unitCost    Float
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([poId])
+}
+
+model GoodsReceived {
+  id          String              @id @default(cuid())
+  orgId       String
+  org         Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  grnNumber   String              @unique
+  status      GoodsReceivedStatus @default(POSTED)
+  supplierId  String
+  supplier    Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  poId        String?
+  po          PurchaseOrder?      @relation(fields: [poId], references: [id], onDelete: SetNull)
+  locationId  String
+  location    StockLocation       @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  receivedAt  DateTime            @default(now())
+  note        String?
+  createdById String
+  createdBy   User                @relation("GoodsReceivedCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  items         GoodsReceivedItem[]
+  supplierBills SupplierBill[]
+
+  @@index([orgId, receivedAt])
+  @@index([supplierId])
+  @@index([poId])
+  @@index([locationId])
+}
+
+model GoodsReceivedItem {
+  id          String        @id @default(cuid())
+  grnId       String
+  grn         GoodsReceived @relation(fields: [grnId], references: [id], onDelete: Cascade)
+  poItemId    String?
+  partId      String?
+  part        Part?         @relation(fields: [partId], references: [id], onDelete: SetNull)
+  description String
+  quantity    Int
+  unitCost    Float
+  createdAt   DateTime      @default(now())
+
+  @@index([grnId])
+  @@index([partId])
+  @@index([poItemId])
+}
+
+model SupplierBill {
+  id                 String             @id @default(cuid())
+  orgId              String
+  org                Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  billNumber         String             @unique
+  supplierRef        String?
+  status             SupplierBillStatus @default(POSTED)
+  supplierId         String
+  supplier           Supplier           @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  poId               String?
+  po                 PurchaseOrder?     @relation(fields: [poId], references: [id], onDelete: SetNull)
+  grnId              String?
+  grn                GoodsReceived?     @relation(fields: [grnId], references: [id], onDelete: SetNull)
+  currency           String             @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+  subtotal           Float
+  taxAmount          Float              @default(0)
+  totalAmount        Float
+  paidAmount         Float              @default(0)
+  issuedAt           DateTime           @default(now())
+  dueAt              DateTime?
+  notes              String?
+  createdById        String
+  createdBy          User               @relation("SupplierBillCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  items    SupplierBillItem[]
+  payments SupplierPayment[]
+
+  @@index([orgId, issuedAt])
+  @@index([orgId, status])
+  @@index([supplierId])
+  @@index([poId])
+  @@index([grnId])
+}
+
+model SupplierBillItem {
+  id          String       @id @default(cuid())
+  billId      String
+  bill        SupplierBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int
+  unitCost    Float
+  lineTotal   Float
+  createdAt   DateTime     @default(now())
+
+  @@index([billId])
+}
+
+model SupplierPayment {
+  id                 String        @id @default(cuid())
+  orgId              String
+  org                Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  billId             String
+  bill               SupplierBill  @relation(fields: [billId], references: [id], onDelete: Cascade)
+  currency           String        @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+  amount             Float
+  /// The transfer charge, in BASE currency, paid on top of `amount`. Sending
+  /// money abroad costs money and the fee is charged separately from the sum
+  /// the supplier receives — recording only the latter understates what left
+  /// the account, every single time.
+  feeAmount          Float?
+  /// What actually left the bank, in BASE currency, including the fee. This is
+  /// the figure on the statement and the only one that can be reconciled. The
+  /// effective rate is derived from it rather than typed, so the books match
+  /// the bank instead of matching a rate someone looked up.
+  baseAmountSent     Float?
+  method             PaymentMethod @default(CASH)
+  reference          String?
+  paidAt             DateTime      @default(now())
+  note               String?
+  createdById        String
+  createdBy          User          @relation("SupplierPaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime      @default(now())
+
+  @@index([orgId, paidAt])
+  @@index([billId])
+}
+
+model StockCount {
+  id           String           @id @default(cuid())
+  orgId        String
+  org          Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  countNumber  String           @unique
+  status       StockCountStatus @default(DRAFT)
+  locationId   String
+  location     StockLocation    @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  countedAt    DateTime         @default(now())
+  submittedAt  DateTime?
+  approvedAt   DateTime?
+  note         String?
+  createdById  String
+  createdBy    User             @relation("StockCountCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedById String?
+  approvedBy   User?            @relation("StockCountApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  items StockCountItem[]
+
+  @@index([orgId, status, countedAt])
+  @@index([locationId])
+}
+
+model StockCountItem {
+  id           String     @id @default(cuid())
+  stockCountId String
+  stockCount   StockCount @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  partId       String
+  part         Part       @relation(fields: [partId], references: [id], onDelete: Restrict)
+  systemQty    Int
+  countedQty   Int
+  varianceQty  Int
+  note         String?
+  createdAt    DateTime   @default(now())
+
+  @@index([stockCountId])
+  @@index([partId])
+}
+
+model SystemAuditEvent {
+  id          String   @id @default(cuid())
+  orgId       String?
+  actorUserId String?
+  entityType  String
+  entityId    String
+  action      String
+  summary     String?
+  beforeJson  String?
+  afterJson   String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model OrgFeatureEntitlement {
+  id           String    @id @default(cuid())
+  orgId        String
+  feature      String
+  enabled      Boolean   @default(true)
+  limitValue   Float?
+  metadataJson String?
+  startsAt     DateTime?
+  endsAt       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([orgId, feature])
+  @@index([orgId, enabled])
+}
+
+model OrgSubscriptionEvent {
+  id              String   @id @default(cuid())
+  orgId           String
+  provider        String
+  eventType       String
+  providerEventId String?
+  plan            String?
+  status          String?
+  amount          Float?
+  currency        String?
+  payloadJson     String?
+  occurredAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([orgId, occurredAt])
+  @@index([provider, providerEventId])
+}
+
+model OrgUsageSnapshot {
+  id           String   @id @default(cuid())
+  orgId        String
+  periodKey    String
+  metric       String
+  value        Float
+  capturedAt   DateTime @default(now())
+  metadataJson String?
+
+  @@unique([orgId, periodKey, metric])
+  @@index([orgId, metric, capturedAt])
+}
+
+model CustomerConsent {
+  id          String    @id @default(cuid())
+  orgId       String
+  clientId    String
+  consentType String
+  channel     String?
+  granted     Boolean   @default(true)
+  source      String?
+  capturedAt  DateTime  @default(now())
+  expiresAt   DateTime?
+  note        String?
+
+  @@index([orgId, clientId, consentType])
+  @@index([orgId, capturedAt])
+}
+
+model ClientMergeRecord {
+  id             String   @id @default(cuid())
+  orgId          String
+  sourceClientId String
+  targetClientId String
+  mergedById     String
+  reason         String?
+  snapshotJson   String?
+  mergedAt       DateTime @default(now())
+
+  @@index([orgId, mergedAt])
+  @@index([sourceClientId])
+  @@index([targetClientId])
+}
+
+model DeviceSpecification {
+  id        String   @id @default(cuid())
+  orgId     String
+  deviceId  String
+  key       String
+  value     String
+  source    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([deviceId, key])
+  @@index([orgId, key])
+}
+
+model JobAssignmentHistory {
+  id             String    @id @default(cuid())
+  orgId          String
+  jobId          String
+  assignedToId   String?
+  assignedById   String?
+  assignmentType String    @default("PRIMARY")
+  startedAt      DateTime  @default(now())
+  endedAt        DateTime?
+  note           String?
+
+  @@index([orgId, jobId, startedAt])
+  @@index([assignedToId, startedAt])
+}
+
+model JobStatusHistory {
+  id           String   @id @default(cuid())
+  orgId        String
+  jobId        String
+  fromStatus   String?
+  toStatus     String
+  reason       String?
+  changedById  String?
+  changedAt    DateTime @default(now())
+  metadataJson String?
+
+  @@index([orgId, jobId, changedAt])
+  @@index([orgId, toStatus, changedAt])
+}
+
+model DiagnosisReport {
+  id              String   @id @default(cuid())
+  orgId           String
+  jobId           String
+  authorId        String?
+  visibility      String   @default("INTERNAL")
+  summary         String
+  findings        String?
+  recommendedWork String?
+  riskNotes       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([orgId, jobId, createdAt])
+}
+
+model RepairTask {
+  id           String    @id @default(cuid())
+  orgId        String
+  jobId        String
+  title        String
+  description  String?
+  status       String    @default("PENDING")
+  priority     String    @default("NORMAL")
+  assignedToId String?
+  dueAt        DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([orgId, jobId, status])
+  @@index([assignedToId, status, dueAt])
+}
+
+model CustomerApproval {
+  id                 String    @id @default(cuid())
+  orgId              String
+  jobId              String
+  approvalType       String
+  status             String    @default("PENDING")
+  amount             Float?
+  currency           String?
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+  requestedById      String?
+  respondedByName    String?
+  responseNote       String?
+  requestedAt        DateTime  @default(now())
+  respondedAt        DateTime?
+
+  @@index([orgId, jobId, status])
+  @@index([orgId, requestedAt])
+}
+
+model QualityCheck {
+  id            String    @id @default(cuid())
+  orgId         String
+  jobId         String
+  checkedById   String?
+  status        String    @default("PENDING")
+  checklistJson String?
+  notes         String?
+  checkedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([orgId, jobId, status])
+}
+
+/// A warranty claim against a completed repair.
+///
+/// The two job links are deliberately different shapes. `originalJob` is the
+/// repair being claimed against and is what gives the claim its meaning, so the
+/// claim is a child of that job. `warrantyJob` is the follow-up repair raised to
+/// honour the claim; it may not exist yet, and if it is later removed the claim
+/// itself must survive with the link cleared — the obligation outlives the
+/// second visit.
+model WarrantyClaim {
+  id            String       @id @default(cuid())
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  originalJobId String
+  originalJob   Job          @relation("WarrantyClaimOriginalJob", fields: [originalJobId], references: [id], onDelete: Cascade)
+  warrantyJobId String?
+  warrantyJob   Job?         @relation("WarrantyClaimWarrantyJob", fields: [warrantyJobId], references: [id], onDelete: SetNull)
+  status        String       @default("OPEN")
+  reason        String
+  resolution    String?
+  openedAt      DateTime     @default(now())
+  closedAt      DateTime?
+
+  @@index([orgId, status, openedAt])
+  @@index([originalJobId])
+  @@index([warrantyJobId])
+}
+
+model InventoryCategory {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  parentId  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, name])
+  @@index([orgId, isActive])
+}
+
+model StockLocation {
+  id        String   @id @default(cuid())
+  orgId     String
+  branchId  String?
+  name      String
+  code      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  goodsReceivedNotes GoodsReceived[]
+  stockCounts        StockCount[]
+
+  @@unique([orgId, code])
+  @@index([orgId, branchId, isActive])
+}
+
+model PartLocationStock {
+  id          String   @id @default(cuid())
+  orgId       String
+  partId      String
+  locationId  String
+  qtyOnHand   Int      @default(0)
+  qtyReserved Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@unique([partId, locationId])
+  @@index([orgId, locationId])
+  @@index([partId])
+}
+
+model StockTransfer {
+  id             String              @id @default(cuid())
+  orgId          String
+  org            Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  transferNumber String              @unique
+  status         StockTransferStatus @default(REQUESTED)
+  fromLocationId String
+  toLocationId   String
+  requestedAt    DateTime            @default(now())
+  approvedAt     DateTime?
+  dispatchedAt   DateTime?
+  receivedAt     DateTime?
+  cancelledAt    DateTime?
+  note           String?
+
+  createdById    String
+  createdBy      User    @relation("StockTransferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedById   String?
+  approvedBy     User?   @relation("StockTransferApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  dispatchedById String?
+  dispatchedBy   User?   @relation("StockTransferDispatchedBy", fields: [dispatchedById], references: [id], onDelete: SetNull)
+  receivedById   String?
+  receivedBy     User?   @relation("StockTransferReceivedBy", fields: [receivedById], references: [id], onDelete: SetNull)
+
+  items     StockTransferItem[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([orgId, status, createdAt])
+  @@index([fromLocationId])
+  @@index([toLocationId])
+}
+
+model StockTransferItem {
+  id            String        @id @default(cuid())
+  transferId    String
+  transfer      StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  partId        String
+  part          Part          @relation(fields: [partId], references: [id], onDelete: Restrict)
+  quantity      Int
+  qtyDispatched Int           @default(0)
+  qtyReceived   Int           @default(0)
+  note          String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([transferId])
+  @@index([partId])
+}
+
+model SupplierPrice {
+  id                 String    @id @default(cuid())
+  orgId              String
+  supplierId         String
+  partId             String?
+  sku                String?
+  description        String
+  unitCost           Float
+  currency           String    @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+  minQuantity        Int?
+  leadTimeDays       Int?
+  validFrom          DateTime  @default(now())
+  validTo            DateTime?
+  createdAt          DateTime  @default(now())
+
+  @@index([orgId, supplierId, validFrom])
+  @@index([partId, validFrom])
+}
+
+model ReorderRule {
+  id                  String   @id @default(cuid())
+  orgId               String
+  partId              String
+  locationId          String?
+  minQty              Int      @default(0)
+  targetQty           Int      @default(0)
+  preferredSupplierId String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([partId, locationId])
+  @@index([orgId, isActive])
+}
+
+model InvoiceLine {
+  id             String   @id @default(cuid())
+  orgId          String
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sourceType     String?
+  sourceId       String?
+  description    String
+  quantity       Float    @default(1)
+  unitPrice      Float
+  discountAmount Float    @default(0)
+  taxAmount      Float    @default(0)
+  lineTotal      Float
+  // Base stock units per 1 sale unit, snapshot so voids restore the same base
+  // amount even if the product's saleUomFactor later changes.
+  saleUomFactor  Float?
+  // Product cost per base unit at issue time, snapshot for stable historical COGS.
+  costAtSale     Float?
+  createdAt      DateTime @default(now())
+
+  @@index([orgId, invoiceId])
+  @@index([sourceType, sourceId])
+}
+
+model TaxRate {
+  id                 String       @id @default(cuid())
+  orgId              String
+  org                Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name               String
+  code               String
+  rate               Float
+  isDefault          Boolean      @default(false)
+  isActive           Boolean      @default(true)
+  appliesToSales     Boolean      @default(true)
+  appliesToPurchases Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([orgId, code])
+  @@index([orgId])
+}
+
+model Expense {
+  id                 String          @id @default(cuid())
+  orgId              String
+  org                Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  expenseNumber      String          @unique
+  category           ExpenseCategory @default(OTHER)
+  description        String
+  amount             Float
+  currency           String          @default("UGX")
+  exchangeRateToBase Float?
+  paidAt             DateTime?
+  method             PaymentMethod?
+  supplierId         String?
+  supplier           Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  branchId           String?
+  branch             Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  reference          String?
+  notes              String?
+  createdById        String
+  createdBy          User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime        @default(now())
+
+  @@index([orgId, paidAt])
+  @@index([orgId, category])
+  @@index([orgId, createdAt])
+  @@index([supplierId])
+}
+
+model RecurringInvoice {
+  id                 String       @id @default(cuid())
+  orgId              String
+  org                Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  clientId           String
+  client             Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  subject            String
+  invoiceType        InvoiceType  @default(SERVICE)
+  frequency          String // WEEKLY | MONTHLY | QUARTERLY | ANNUAL
+  nextDueAt          DateTime
+  lastIssuedAt       DateTime?
+  currency           String       @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+  notes              String?
+  isActive           Boolean      @default(true)
+  autoIssue          Boolean      @default(false)
+  createdById        String
+  createdBy          User         @relation("RecurringInvoiceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  items RecurringInvoiceItem[]
+
+  @@index([orgId, isActive, nextDueAt])
+  @@index([clientId])
+}
+
+model RecurringInvoiceItem {
+  id                 String           @id @default(cuid())
+  recurringInvoiceId String
+  recurringInvoice   RecurringInvoice @relation(fields: [recurringInvoiceId], references: [id], onDelete: Cascade)
+  description        String
+  quantity           Float            @default(1)
+  unitPrice          Float
+  discountAmount     Float            @default(0)
+  lineTotal          Float
+
+  @@index([recurringInvoiceId])
+}
+
+model DocumentTaxLine {
+  id            String   @id @default(cuid())
+  orgId         String
+  documentType  String
+  documentId    String
+  taxLabel      String
+  taxRate       Float
+  taxableAmount Float
+  taxAmount     Float
+  createdAt     DateTime @default(now())
+
+  @@index([orgId, documentType, documentId])
+}
+
+model Receipt {
+  id                 String    @id @default(cuid())
+  orgId              String
+  receiptNumber      String    @unique
+  paymentId          String?
+  payment            Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  saleId             String?
+  sale               Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  invoiceId          String?
+  invoice            Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  branchId           String?
+  branch             Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  clientId           String?
+  client             Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  amount             Float
+  currency           String    @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+  issuedAt           DateTime  @default(now())
+  issuedById         String?
+  issuedBy           User?     @relation("ReceiptIssuedBy", fields: [issuedById], references: [id], onDelete: SetNull)
+  voidedAt           DateTime?
+  voidReason         String?
+
+  @@unique([orgId, paymentId])
+  @@index([orgId, issuedAt])
+  @@index([paymentId])
+  @@index([clientId])
+  @@index([saleId])
+  @@index([invoiceId])
+}
+
+model PaymentAllocation {
+  id          String   @id @default(cuid())
+  orgId       String
+  paymentId   String
+  // L10: real FK so allocations die with their payment instead of orphaning.
+  // (targetType/targetId stays polymorphic by design.)
+  payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  targetType  String
+  targetId    String
+  amount      Float
+  allocatedAt DateTime @default(now())
+  note        String?
+
+  @@index([orgId, paymentId])
+  @@index([targetType, targetId])
+}
+
+model CashierShift {
+  id           String    @id @default(cuid())
+  orgId        String
+  branchId     String?
+  posSessionId String?
+  cashierId    String
+  status       String    @default("OPEN")
+  shiftPin     String?
+  openingCash  Float     @default(0)
+  closingCash  Float?
+  openedAt     DateTime  @default(now())
+  closedAt     DateTime?
+  notes        String?
+
+  @@index([orgId, branchId, status])
+  @@index([cashierId, openedAt])
+}
+
+model Conversation {
+  id              String    @id @default(cuid())
+  orgId           String
+  channel         String
+  clientId        String?
+  jobId           String?
+  repairRequestId String?
+  assignedToId    String?
+  status          String    @default("OPEN")
+  subject         String?
+  lastMessageAt   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([orgId, status, lastMessageAt])
+  @@index([clientId])
+  @@index([jobId])
+}
+
+model ConversationMessage {
+  id                String    @id @default(cuid())
+  orgId             String
+  conversationId    String
+  direction         String
+  channel           String
+  sender            String?
+  recipient         String?
+  body              String?
+  outboundMessageId String?
+  inboundMessageId  String?
+  providerMessageId String?
+  sentAt            DateTime?
+  receivedAt        DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([orgId, conversationId, createdAt])
+  @@index([providerMessageId])
+}
+
+model CommunicationTemplateVersion {
+  id          String    @id @default(cuid())
+  orgId       String?
+  templateId  String
+  version     Int
+  status      String    @default("DRAFT")
+  subject     String?
+  body        String
+  variables   String?
+  approvedAt  DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([templateId, version])
+  @@index([orgId, status])
+}
+
+model FileAsset {
+  id           String    @id @default(cuid())
+  orgId        String
+  ownerType    String
+  ownerId      String
+  url          String
+  storageKey   String?
+  fileName     String?
+  mimeType     String?
+  sizeBytes    Int?
+  label        String?
+  visibility   String    @default("INTERNAL")
+  uploadedById String?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([orgId, ownerType, ownerId])
+  @@index([storageKey])
+}
+
+// ── COMPLAINTS (ISO 10002:2018) ───────────────────────────────────────────────
+
+enum ComplaintStatus {
+  RECEIVED
+  ACKNOWLEDGED
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+enum ComplaintCategory {
+  SERVICE_QUALITY
+  REPAIR_DELAY
+  BILLING
+  STAFF_CONDUCT
+  DAMAGE_CAUSED
+  UNRESOLVED_FAULT
+  OTHER
+}
+
+enum ComplaintChannel {
+  WEB
+  WALK_IN
+  PHONE
+  WHATSAPP
+  EMAIL
+}
+
+model Complaint {
+  id              String            @id @default(cuid())
+  orgId           String
+  org             Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  complaintNumber String            @unique // CMP-YYYY-XXXX
+  status          ComplaintStatus   @default(RECEIVED)
+  category        ComplaintCategory @default(OTHER)
+  channel         ComplaintChannel  @default(WEB)
+
+  // Linked reference (one or the other)
+  jobId  String?
+  job    Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  saleId String?
+
+  // Complainant info
+  clientName  String
+  clientPhone String
+  clientEmail String?
+
+  // Complaint content
+  description        String
+  expectedResolution String?
+
+  // Internal workflow
+  assignedToId  String?
+  assignedTo    User?   @relation("ComplaintAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  internalNotes String?
+  resolution    String?
+
+  // ISO 10002 SLA timestamps
+  acknowledgedAt  DateTime?
+  investigatingAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+
+  // Satisfaction follow-up
+  satisfactionRating  Int?
+  satisfactionComment String?
+  ratedAt             DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, status, createdAt])
+  @@index([orgId, createdAt])
+  @@index([jobId])
+}
+
+// ── Sales Targets ───────────────────────────────────────────────────────────
+// Monthly revenue targets. userId = null means a team/org-level target.
+// period = "YYYY-MM" e.g. "2026-05"
+enum TargetEntityType {
+  USER
+  INDIVIDUAL
+  DEPARTMENT
+  BRANCH
+  COMPANY
+}
+
+enum TargetMetric {
+  REVENUE
+  JOBS_COMPLETED
+  LEADS_CONVERTED
+  SALES_COUNT
+  QUOTATIONS_SENT
+  POS_SALES
+  CUSTOMER_SATISFACTION
+  RESPONSE_TIME_HOURS
+}
+
+enum TargetPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  YEARLY
+}
+
+model SalesTarget {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation("SalesTargets", fields: [userId], references: [id], onDelete: SetNull)
+
+  departmentId String?
+  department   Department? @relation("DeptSalesTargets", fields: [departmentId], references: [id], onDelete: SetNull)
+
+  branchId String?
+  branch   Branch? @relation("BranchSalesTargets", fields: [branchId], references: [id], onDelete: SetNull)
+
+  setById String?
+  setBy   User?   @relation("TargetSetBy", fields: [setById], references: [id], onDelete: SetNull)
+
+  entityType  TargetEntityType @default(COMPANY)
+  metric      TargetMetric     @default(REVENUE)
+  period      String // "YYYY-MM" or enum label, depending on source
+  periodLabel String?
+
+  // Legacy commercial target fields remain for dashboard/report compatibility.
+  targetRevenue Float @default(0)
+  targetJobs    Int   @default(0)
+
+  targetValue Float   @default(0)
+  actualValue Float   @default(0)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, userId, period])
+  @@index([orgId, period])
+  @@index([entityType, period, periodLabel])
+  @@index([userId])
+  @@index([departmentId])
+  @@index([branchId])
+}
+
+// ── Sales CRM / field work / POS sessions ───────────────────────────────────
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL_SENT
+  WON
+  LOST
+  STALE
+}
+
+enum LeadSource {
+  WALK_IN
+  REFERRAL
+  PHONE
+  SOCIAL_MEDIA
+  WEBSITE
+  OTHER
+}
+
+model Lead {
+  id       String        @id @default(cuid())
+  orgId    String?
+  org      Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  branchId String?
+  branch   Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  fullName       String
+  phone          String
+  email          String?
+  organization   String?
+  interest       String?
+  source         LeadSource @default(WALK_IN)
+  status         LeadStatus @default(NEW)
+  estimatedValue Float?
+  score          Int        @default(0) // 0-100 lead quality score
+  notes          String?
+  lostReason     String? // e.g. "Price", "Competitor", "No Budget", "Timing", "Other"
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  assignedToId String?
+  assignedTo   User?   @relation("LeadAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdById  String?
+  createdBy    User?   @relation("LeadCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  convertedAt DateTime?
+  closedAt    DateTime?
+  followUpAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  activities       LeadActivity[]
+  quotations       Quotation[]
+  campaignContacts CampaignContact[]
+
+  @@index([orgId, status])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@index([orgId, updatedAt])
+}
+
+model LeadActivity {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("LeadActivityBy", fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  note      String
+  createdAt DateTime @default(now())
+
+  @@index([leadId, createdAt])
+  @@index([userId, createdAt])
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  VOID
+}
+
+model Quotation {
+  id                 String          @id @default(cuid())
+  orgId              String?
+  org                Organization?   @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  quoteNumber        String          @unique
+  status             QuotationStatus @default(DRAFT)
+  currency           String          @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+
+  leadId   String?
+  lead     Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  jobId    String?
+  job      Job?    @relation("JobQuotation", fields: [jobId], references: [id], onDelete: SetNull)
+
+  subtotal       Float     @default(0)
+  discountAmount Float     @default(0)
+  vatAmount      Float     @default(0)
+  taxLabel       String?
+  taxRate        Float?
+  totalAmount    Float     @default(0)
+  notes          String?
+  issueDate      DateTime?
+  validUntil     DateTime?
+  sentAt         DateTime?
+  acceptedAt     DateTime?
+  rejectedAt     DateTime?
+
+  createdById  String?
+  createdBy    User?   @relation("QuotationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  approvedById String?
+  approvedBy   User?   @relation("QuotationApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  convertedToInvoiceId String? @unique
+
+  items     QuotationItem[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([orgId, status])
+  @@index([leadId])
+  @@index([orgId, createdAt])
+  @@index([clientId])
+  @@index([jobId])
+}
+
+model QuotationItem {
+  id          String    @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  partId      String?
+  part        Part?     @relation("PartQuotationItems", fields: [partId], references: [id], onDelete: SetNull)
+  description String
+  quantity    Int
+  unitPrice   Float
+  discount    Float     @default(0)
+  lineTotal   Float
+  createdAt   DateTime  @default(now())
+
+  @@index([quotationId])
+  @@index([partId])
+}
+
+enum PosSessionStatus {
+  OPEN
+  CLOSED
+}
+
+model PosSession {
+  id                   String           @id @default(cuid())
+  orgId                String?
+  org                  Organization?    @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  branchId             String?
+  branch               Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  operatorId           String
+  operator             User             @relation("PosSessionOperator", fields: [operatorId], references: [id], onDelete: Cascade)
+  status               PosSessionStatus @default(OPEN)
+  openingFloat         Float            @default(0)
+  closingCash          Float?
+  cashTotal            Float            @default(0)
+  cardTotal            Float            @default(0)
+  mobileTotal          Float            @default(0)
+  totalSales           Float            @default(0)
+  salesCount           Int              @default(0)
+  actualClosingBalance Float?
+  openedAt             DateTime         @default(now())
+  closedAt             DateTime?
+  notes                String?
+
+  sales Sale[]
+
+  @@index([orgId, status])
+  @@index([operatorId, openedAt])
+  @@index([branchId])
+}
+
+enum FieldVisitType {
+  COLLECTION
+  DELIVERY
+  ONSITE_REPAIR
+  ASSESSMENT
+  FOLLOWUP
+}
+
+enum FieldVisitStatus {
+  SCHEDULED
+  EN_ROUTE
+  ARRIVED
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+model FieldVisit {
+  id       String        @id @default(cuid())
+  orgId    String?
+  org      Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  branchId String?
+  branch   Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  jobId    String?
+  job      Job?          @relation("JobFieldVisits", fields: [jobId], references: [id], onDelete: SetNull)
+
+  assignedToId  String
+  assignedTo    User   @relation("FieldVisitAssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+  scheduledById String
+  scheduledBy   User   @relation("FieldVisitScheduledBy", fields: [scheduledById], references: [id], onDelete: Cascade)
+
+  type        FieldVisitType
+  status      FieldVisitStatus @default(SCHEDULED)
+  scheduledAt DateTime
+  startedAt   DateTime?
+  arrivedAt   DateTime?
+  completedAt DateTime?
+
+  address      String
+  gpsLat       Float?
+  gpsLng       Float?
+  contactName  String?
+  contactPhone String?
+  notes        String?
+  outcomeNotes String?
+  signoffName  String?
+  signoffAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, status])
+  @@index([assignedToId, scheduledAt])
+  @@index([jobId])
+  @@index([branchId])
+}
+
+// ── ACCOUNTING (Double-Entry) ─────────────────────────────────────────────────
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+model ChartOfAccount {
+  id          String           @id @default(cuid())
+  orgId       String
+  org         Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  code        String // e.g. "1000"
+  name        String
+  type        AccountType
+  parentId    String?
+  parent      ChartOfAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    ChartOfAccount[] @relation("AccountHierarchy")
+  description String?
+  isSystem    Boolean          @default(false) // system accounts can't be deleted
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  journalLines JournalLine[]
+
+  @@unique([orgId, code])
+  @@index([orgId, type])
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  POSTED
+  VOID
+}
+
+model JournalEntry {
+  id          String             @id @default(cuid())
+  orgId       String
+  org         Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  entryNumber String // JE-YYYY-XXXX
+  date        DateTime
+  description String
+  reference   String? // invoice/expense/etc ref
+  status      JournalEntryStatus @default(DRAFT)
+  totalAmount Float              @default(0)
+  createdById String
+  createdBy   User               @relation("JournalEntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  postedAt    DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  lines JournalLine[]
+
+  @@unique([orgId, entryNumber])
+  // Every money event looks an entry up by reference for idempotency, which
+  // without this scanned the org's entire ledger.
+  @@index([orgId, reference])
+  @@index([orgId, date])
+  @@index([orgId, status])
+  @@index([orgId, status, date])
+}
+
+model JournalLine {
+  id             String         @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  debit          Float          @default(0)
+  credit         Float          @default(0)
+  description    String?
+
+  @@index([journalEntryId])
+  @@index([accountId])
+}
+
+model BankAccount {
+  id             String       @id @default(cuid())
+  orgId          String
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name           String
+  accountNumber  String?
+  bankName       String
+  currency       String       @default("UGX")
+  openingBalance Float        @default(0)
+  currentBalance Float        @default(0)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  transactions BankTransaction[]
+
+  @@index([orgId])
+}
+
+enum BankTransactionType {
+  CREDIT
+  DEBIT
+}
+
+model BankTransaction {
+  id                 String              @id @default(cuid())
+  bankAccountId      String
+  bankAccount        BankAccount         @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  orgId              String
+  org                Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  date               DateTime
+  description        String
+  amount             Float // positive always; type distinguishes direction
+  /// A transaction on a foreign-currency account. Was absent entirely,
+  /// so every balance summed dollars and shillings as one number.
+  currency           String              @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Float?
+  type               BankTransactionType
+  reference          String?
+  reconciledAt       DateTime?
+  createdAt          DateTime            @default(now())
+
+  @@index([bankAccountId, date])
+  @@index([orgId, date])
+}
+
+// ── CRM — Campaigns & Lead Scoring ───────────────────────────────────────────
+
+enum CampaignType {
+  EMAIL
+  SMS
+  CALL
+  WHATSAPP
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignContactStatus {
+  PENDING
+  SENT
+  OPENED
+  RESPONDED
+  OPTED_OUT
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  orgId       String
+  org         Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  type        CampaignType
+  status      CampaignStatus @default(DRAFT)
+  subject     String? // email subject line
+  body        String // message body / template
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdById String
+  createdBy   User           @relation("CampaignCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  contacts CampaignContact[]
+
+  @@index([orgId, status])
+}
+
+model CampaignContact {
+  id         String                @id @default(cuid())
+  campaignId String
+  campaign   Campaign              @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  orgId      String
+  // target is either a lead or an existing client
+  leadId     String?
+  lead       Lead?                 @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  clientId   String?
+  client     Client?               @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  status     CampaignContactStatus @default(PENDING)
+  sentAt     DateTime?
+  openedAt   DateTime?
+  repliedAt  DateTime?
+  createdAt  DateTime              @default(now())
+
+  @@unique([campaignId, leadId])
+  @@unique([campaignId, clientId])
+  @@index([campaignId, status])
+  @@index([orgId])
+}
+
+// ── AI Knowledge & Feedback ──────────────────────────────────────────────────
+
+model AiKnowledgeArticle {
+  id            String   @id @default(cuid())
+  orgId         String?
+  title         String
+  module        String
+  content       String
+  embeddingJson String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([orgId, module, isActive])
+  @@index([isActive, updatedAt])
+}
+
+model AiFeedback {
+  id        String   @id @default(cuid())
+  orgId     String?
+  userId    String?
+  feature   String
+  question  String
+  answer    String
+  rating    String
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@index([orgId, feature, createdAt])
+  @@index([rating, createdAt])
+}
+
+model AiPromptLog {
+  id               String   @id @default(cuid())
+  orgId            String?
+  userId           String?
+  feature          String
+  promptVersion    String
+  model            String?
+  questionRedacted String
+  contextSummary   String?
+  mode             String
+  createdAt        DateTime @default(now())
+
+  @@index([orgId, feature, createdAt])
+  @@index([promptVersion, createdAt])
+}
+
+model AiOrgSettings {
+  orgId              String   @id
+  aiEnabled          Boolean  @default(true)
+  guideEnabled       Boolean  @default(true)
+  insightsEnabled    Boolean  @default(true)
+  allowOrgKnowledge  Boolean  @default(true)
+  allowPromptLogging Boolean  @default(true)
+  model              String?
+  updatedAt          DateTime @updatedAt
+}
+
+/// Platform-wide announcement published by a platform admin, shown as a banner
+/// to every organization's users. Not org-scoped (cross-tenant by design).
+model SystemAnnouncement {
+  id          String    @id @default(cuid())
+  title       String
+  body        String
+  level       String    @default("INFO") // INFO | WARNING | CRITICAL
+  isActive    Boolean   @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive, startsAt, endsAt])
+}
+
+// ── Corporate Client Portal (Phase 4) ───────────────────────────────────────
+// A PortalUser is a CUSTOMER login, fully separate from staff `User`/BetterAuth.
+// It belongs to a Client (the corporate customer) and an Organization (the shop
+// tenant), so access is isolated at both the tenant and the customer level.
+// Not added to ORG_SCOPED_MODELS — portal-auth scopes every query explicitly.
+
+enum PortalRole {
+  ORG_ADMIN // corporate customer's admin — manages portal users, sees all their repairs/docs
+  IT_OFFICER // primary contact — submits and tracks repairs
+  MEMBER // additional user; permissions configurable
+}
+
+model PortalUser {
+  id                 String       @id @default(cuid())
+  orgId              String
+  org                Organization @relation("OrgPortalUsers", fields: [orgId], references: [id], onDelete: Cascade)
+  clientId           String
+  client             Client       @relation("ClientPortalUsers", fields: [clientId], references: [id], onDelete: Cascade)
+  name               String
+  email              String
+  phone              String?
+  department         String?
+  position           String?
+  role               PortalRole   @default(IT_OFFICER)
+  passwordHash       String?
+  isActive           Boolean      @default(true)
+  /**
+   * Set when an admin issues or resets a login, so the customer is made to
+   * replace the password they were handed before they can see anything. The
+   * admin knows that initial password; nobody should keep using it.
+   */
+  mustChangePassword Boolean      @default(false)
+  lastLoginAt        DateTime?
+  createdById        String? // staff user who provisioned this portal login
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  sessions      PortalSession[]
+  linkedClients PortalUserClient[]
+
+  @@unique([orgId, email])
+  @@index([clientId])
+  @@index([orgId])
+}
+
+/**
+ * Extra client accounts a portal login may act for, beyond its primary
+ * `PortalUser.clientId`. Lets one corporate employee manage several sibling
+ * accounts (e.g. C-Care IHK and C-Care IMC) and switch between them in the
+ * portal. The primary client is always accessible; rows here add the rest.
+ */
+model PortalUserClient {
+  id           String     @id @default(cuid())
+  portalUserId String
+  portalUser   PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client     @relation("ClientLinkedPortalUsers", fields: [clientId], references: [id], onDelete: Cascade)
+  orgId        String
+  createdAt    DateTime   @default(now())
+
+  @@unique([portalUserId, clientId])
+  @@index([portalUserId])
+  @@index([clientId])
+  @@index([orgId])
+}
+
+model PortalSession {
+  id           String     @id @default(cuid())
+  token        String     @unique
+  portalUserId String
+  portalUser   PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime   @default(now())
+
+  @@index([portalUserId])
+}
+
+/// Two-way message thread on a repair, shared between shop staff and the
+/// corporate client's portal users. Not org-scoped in ORG_SCOPED_MODELS —
+/// both sides query it with explicit orgId + jobId scoping.
+model RepairMessage {
+  id         String   @id @default(cuid())
+  orgId      String
+  jobId      String
+  clientId   String?
+  authorType String // STAFF | CUSTOMER
+  authorId   String? // staff userId or portalUserId
+  authorName String
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@index([jobId, createdAt])
+  @@index([orgId, jobId])
+}
+
+/// Per-org control of automatic payment reminders.
+///
+/// Off by default and dry-run by default, deliberately: this is the only
+/// feature in the system that contacts a customer without a person deciding to,
+/// and the failure mode — chasing someone who has already paid, or at 6am — is
+/// paid for in goodwill rather than in errors.
+model PaymentReminderSettings {
+  id    String       @id @default(cuid())
+  orgId String       @unique
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(false)
+  /// Render and log every reminder but send nothing to customers. The way to
+  /// watch a ladder for a fortnight before it speaks on the business's behalf.
+  dryRun  Boolean @default(true)
+
+  /// Used when an invoice carries no due date of its own, which is most of them.
+  paymentTermsDays Int @default(30)
+
+  /// Above this balance a reminder is not sent; a task is raised instead. A
+  /// large debt is a conversation, and a template answering it reads as one.
+  manualReviewAbove Float @default(2000000)
+
+  /// A client holding several unpaid invoices gets one statement rather than
+  /// one message per invoice.
+  statementForMultiInvoice Boolean @default(true)
+
+  /// Local hours, inclusive start, exclusive end. Nothing sends outside them.
+  quietHourStart Int @default(8)
+  quietHourEnd   Int @default(20)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A published reference exchange rate, cached for comparison only.
+///
+/// Never used to post or convert anything. What a business actually pays to
+/// move money abroad is a bureau's rate plus a spread that no feed publishes,
+/// so posting from here would make the books disagree with the bank while
+/// looking authoritative. Its only job is to answer "how far above the
+/// published rate did that transfer settle?" — which is the number that shows
+/// which channel is quietly expensive.
+model FxReferenceRate {
+  id        String   @id @default(cuid())
+  /// Currency being priced, e.g. AED.
+  base      String
+  /// Currency it is priced in, e.g. UGX.
+  quote     String
+  /// Units of `quote` per 1 unit of `base`.
+  rate      Float
+  /// Where it came from, so a suspect number can be traced.
+  source    String
+  fetchedAt DateTime @default(now())
+
+  @@unique([base, quote])
+  @@index([fetchedAt])
+}

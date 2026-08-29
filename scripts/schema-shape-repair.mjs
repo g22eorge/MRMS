@@ -51,6 +51,28 @@ import { createClient } from "@libsql/client";
 
 import { splitSqlStatements } from "./lib/split-sql.mjs";
 
+/**
+ * SQLite-only, and deliberately so: the whole rebuild dance exists because
+ * SQLite cannot drop a column constraint. PostgreSQL can — `ALTER TABLE ... DROP
+ * COLUMN` and `ALTER COLUMN ... DROP NOT NULL` both work there — so on Postgres
+ * this is not merely unsupported, it is unnecessary.
+ *
+ * Refusing beats failing. Pointed at Postgres it would open a libSQL client
+ * against a postgres:// URL and die somewhere less legible, which reads like a
+ * broken tool rather than a tool on the wrong engine. Matches the guard in
+ * sync-schema-to-db.mjs.
+ */
+function refuseOnPostgres() {
+  const url = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "";
+  if (/^postgres(ql)?:\/\//i.test(url)) {
+    console.error("[schema-shape-repair] refusing to run: this repair is SQLite/libSQL only.");
+    console.error("[schema-shape-repair] it rebuilds tables because SQLite cannot drop a column constraint; PostgreSQL can.");
+    console.error("[schema-shape-repair] on PostgreSQL use Prisma Migrate — `prisma migrate deploy`.");
+    process.exit(1);
+  }
+}
+refuseOnPostgres();
+
 const CHECK_ONLY = process.argv.includes("--check");
 
 // Populated tables are rebuilt only when named explicitly, one at a time:
