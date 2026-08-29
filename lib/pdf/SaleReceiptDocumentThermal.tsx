@@ -11,7 +11,7 @@ import { clientDisplayName } from "@/lib/client-name";
 
 type Branding = {
   documentTitle?: string | null; companyName?: string | null; companyContacts?: string | null;
-  companyEmail?: string | null; companyWebsite?: string | null;
+  companyEmail?: string | null; companyWebsite?: string | null; companyTaxId?: string | null;
   companyAddressLine1?: string | null; companyAddressLine2?: string | null;
   vatRatePercent?: number | null;
 } | null;
@@ -69,6 +69,9 @@ export function SaleReceiptDocumentThermal({ sale, branding }: { sale: Sale; bra
         {branding?.companyAddressLine2 ? <Text style={s.line}>{branding.companyAddressLine2}</Text> : null}
         {branding?.companyContacts     ? <Text style={s.line}>{branding.companyContacts}</Text>     : null}
         {branding?.companyEmail        ? <Text style={s.line}>{branding.companyEmail}</Text>        : null}
+        {/* An 80mm roll has no room for the amount in words, but the TIN is a
+            legal requirement on a receipt and fits on one short line. */}
+        {branding?.companyTaxId        ? <Text style={s.line}>TIN: {branding.companyTaxId}</Text>     : null}
         {branding?.companyWebsite      ? <Text style={s.line}>{branding.companyWebsite}</Text>      : null}
 
         <View style={s.dashedDiv} />

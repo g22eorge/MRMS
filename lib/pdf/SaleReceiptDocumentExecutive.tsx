@@ -6,11 +6,12 @@ import React from "react";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
+import { amountInWords } from "@/lib/amount-in-words";
 import { clientDisplayName } from "@/lib/client-name";
 
 type Branding = {
   documentTitle?: string | null; companyName?: string | null; companyContacts?: string | null;
-  companyEmail?: string | null; companyWebsite?: string | null;
+  companyEmail?: string | null; companyWebsite?: string | null; companyTaxId?: string | null;
   companyAddressLine1?: string | null; companyAddressLine2?: string | null;
   vatRatePercent?: number | null;
 } | null;
@@ -59,6 +60,7 @@ const s = StyleSheet.create({
   stripLbl:     { fontSize: 6.8, color: LITE, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 },
   stripVal:     { fontSize: 9.5, fontWeight: 700, color: WHITE },
   stripValGold: { fontSize: 11, fontWeight: 700, color: GOLD },
+  words:        { fontSize: 7.2, color: LITE, fontStyle: "italic", marginTop: 6, lineHeight: 1.35, textAlign: "right" },
 
   body: { paddingHorizontal: 28 },
 
@@ -103,6 +105,9 @@ export function SaleReceiptDocumentExecutive({ sale, branding }: { sale: Sale; b
             {branding?.companyAddressLine2 ? <Text style={s.coLine}>{branding.companyAddressLine2}</Text> : null}
             {branding?.companyContacts ? <Text style={s.coLine}>{branding.companyContacts}</Text> : null}
             {branding?.companyEmail    ? <Text style={s.coLine}>{branding.companyEmail}</Text>    : null}
+            {/* A receipt is a tax document; the default template carries the TIN,
+                and choosing this design must not quietly drop it. */}
+            {branding?.companyTaxId    ? <Text style={s.coLine}>TIN: {branding.companyTaxId}</Text> : null}
           </View>
           <View style={s.docSide}>
             <Text style={s.docTitle}>{branding?.documentTitle || "RECEIPT"}</Text>
@@ -147,6 +152,11 @@ export function SaleReceiptDocumentExecutive({ sale, branding }: { sale: Sale; b
             {sale.discountAmount > 0 ? <View style={s.totalRow}><Text style={s.totalLbl}>Discount</Text><Text style={s.totalVal}>-{formatMoney(sale.discountAmount, currency)}</Text></View> : null}
             {sale.vatAmount > 0 ? <View style={s.totalRow}><Text style={s.totalLbl}>VAT</Text><Text style={s.totalVal}>{formatMoney(sale.vatAmount, currency)}</Text></View> : null}
             <View style={s.grandRow}><Text style={s.grandLbl}>TOTAL</Text><Text style={s.grandVal}>{formatMoney(sale.totalAmount, currency)}</Text></View>
+            {/* Spelled out, which is what makes the figure hard to alter after
+                the fact — the reason receipts carry it at all. */}
+            {sale.paidAmount > 0 ? (
+              <Text style={s.words}>{amountInWords(sale.paidAmount, currency)}</Text>
+            ) : null}
           </View>
 
           {/* Payments */}

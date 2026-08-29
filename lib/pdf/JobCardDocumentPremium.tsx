@@ -57,6 +57,16 @@ const s = StyleSheet.create({
   rlbl: { fontSize: 8, color: MID },
   rval: { fontSize: 8.2, fontWeight: 600, color: NAVY, maxWidth: "60%", textAlign: "right" },
 
+  // Intake checklist. The catalogue has always sold this template as "branded
+  // cover + checklist"; the checklist was the half that never got built, so an
+  // ENTERPRISE customer picking it received a document missing the feature they
+  // were paying the tier for. Two columns so six items cost one band of height.
+  checkWrap: { flexDirection: "row", gap: 12 },
+  checkCol:  { flex: 1, gap: 5 },
+  checkRow:  { flexDirection: "row", alignItems: "center", gap: 7 },
+  checkBox:  { width: 11, height: 11, borderRadius: 2, border: `1.2 solid ${GOLD}`, backgroundColor: WHITE },
+  checkLbl:  { fontSize: 8.2, color: NAVY },
+
   fieldCard: { border: `1 solid ${LINE_L}`, borderRadius: 7, backgroundColor: WHITE, marginBottom: 10, overflow: "hidden" },
   fieldHead: { backgroundColor: NAVY2, paddingHorizontal: 10, paddingVertical: 5 },
   fieldTitle: { fontSize: 7.5, fontWeight: 700, color: GOLD, textTransform: "uppercase", letterSpacing: 0.8 },
@@ -82,6 +92,16 @@ type Props = {
   status: string; footerText: string; signatureCompanyLabel: string; signatureClientLabel: string;
   statusQrDataUrl?: string;
 };
+
+/**
+ * Ticked by hand at the counter, with the customer present — which is why the
+ * boxes are empty rather than driven by data. The same six the Technical card
+ * uses, so a workshop running both is not checking two different lists.
+ */
+const INTAKE_CHECKS = [
+  "Power on?", "Screen intact?", "Battery OK?",
+  "Charging port?", "Buttons functional?", "Camera working?",
+];
 
 export function JobCardDocumentPremium(props: Props) {
   return (
@@ -136,6 +156,25 @@ export function JobCardDocumentPremium(props: Props) {
                 {props.serialOrImei ? <View style={s.row}><Text style={s.rlbl}>S/N</Text><Text style={s.rval}>{props.serialOrImei}</Text></View> : null}
                 <View style={s.row}><Text style={s.rlbl}>Condition</Text><Text style={s.rval}>{props.physicalCondition}</Text></View>
                 {props.accessories ? <View style={s.row}><Text style={s.rlbl}>Accessories</Text><Text style={s.rval}>{props.accessories}</Text></View> : null}
+              </View>
+            </View>
+          </View>
+
+          {/* Intake checklist — completed at the counter, before the device is accepted. */}
+          <View style={s.fieldCard} wrap={false}>
+            <View style={s.fieldHead}><Text style={s.fieldTitle}>Intake Checklist</Text></View>
+            <View style={s.fieldBody}>
+              <View style={s.checkWrap}>
+                {[INTAKE_CHECKS.slice(0, 3), INTAKE_CHECKS.slice(3)].map((column, i) => (
+                  <View style={s.checkCol} key={i}>
+                    {column.map((item) => (
+                      <View style={s.checkRow} key={item}>
+                        <View style={s.checkBox} />
+                        <Text style={s.checkLbl}>{item}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
               </View>
             </View>
           </View>

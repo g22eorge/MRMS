@@ -17,6 +17,7 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { clientDisplayName } from "@/lib/client-name";
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
+import { amountInWords } from "@/lib/amount-in-words";
 
 type Branding = {
   documentTitle?: string | null;
@@ -25,6 +26,7 @@ type Branding = {
   companyContacts?: string | null;
   companyEmail?: string | null;
   companyWebsite?: string | null;
+  companyTaxId?: string | null;
   companyAddressLine1?: string | null;
   companyAddressLine2?: string | null;
   vatRatePercent?: number | null;
@@ -120,6 +122,7 @@ const s = StyleSheet.create({
   grandLbl: { fontSize: 9, color: INK, fontWeight: 700 },
   grandVal: { fontSize: 12, color: TEAL, fontWeight: 800 },
   balance: { flexDirection: "row", justifyContent: "space-between", marginTop: 5 },
+  words: { fontSize: 7.2, color: MID, fontStyle: "italic", marginTop: 6, lineHeight: 1.35 },
   balanceLbl: { fontSize: 8.6, fontWeight: 700, color: INK },
 
   payHead: { marginTop: 14 },
@@ -151,6 +154,9 @@ export function SaleReceiptDocumentItemized({ sale, branding }: { sale: Sale; br
             {branding?.companyTagline ? <Text style={s.coLine}>{branding.companyTagline}</Text> : null}
             {contact ? <Text style={s.coLine}>{contact}</Text> : null}
             {address ? <Text style={s.coLine}>{address}</Text> : null}
+            {/* A receipt is a tax document. The default template carries the TIN;
+                without it here, choosing this design quietly drops it. */}
+            {branding?.companyTaxId ? <Text style={s.coLine}>TIN: {branding.companyTaxId}</Text> : null}
           </View>
           <View style={s.docSide}>
             <Text style={s.docType}>RECEIPT</Text>
@@ -250,6 +256,11 @@ export function SaleReceiptDocumentItemized({ sale, branding }: { sale: Sale; br
                 <Text style={s.balanceLbl}>Settled in full</Text>
               )}
             </View>
+            {/* Spelling the figure out is what makes a receipt hard to alter
+                after the fact, which is the whole reason receipts carry it. */}
+            {sale.paidAmount > 0 ? (
+              <Text style={s.words}>{amountInWords(sale.paidAmount, currency)}</Text>
+            ) : null}
           </View>
         </View>
 

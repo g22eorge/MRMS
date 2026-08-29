@@ -171,3 +171,51 @@ describe("what can be chosen is what will be rendered", () => {
     expect(src).not.toContain("isAdminBypass");
   });
 });
+
+describe("receipts carry the TIN and the amount in words, whichever design is picked", () => {
+  // The earlier block covers invoices and quotations only, and the receipt
+  // family was left out — so the classic receipt gained both this pass while
+  // the other four silently kept neither. A receipt is a tax document; the
+  // figure is what gets altered, and the words are what stop it.
+  const RECEIPTS: Record<string, string> = {
+    receipt_classic:   "lib/pdf/SaleReceiptDocument.tsx",
+    receipt_thermal:   "lib/pdf/SaleReceiptDocumentThermal.tsx",
+    receipt_branded:   "lib/pdf/SaleReceiptDocumentBranded.tsx",
+    receipt_itemized:  "lib/pdf/SaleReceiptDocumentItemized.tsx",
+    receipt_executive: "lib/pdf/SaleReceiptDocumentExecutive.tsx",
+  };
+
+  for (const [key, file] of Object.entries(RECEIPTS)) {
+    it(`${key} renders the TIN`, () => {
+      expect(readFileSync(file, "utf8")).toContain("companyTaxId");
+    });
+  }
+
+  // Thermal is the one exception, and deliberately: an 80mm till roll has no
+  // room for a spelled-out figure. The TIN above still applies to it.
+  for (const [key, file] of Object.entries(RECEIPTS)) {
+    if (key === "receipt_thermal") continue;
+    it(`${key} spells the amount out`, () => {
+      expect(readFileSync(file, "utf8")).toContain("amountInWords");
+    });
+  }
+});
+
+describe("every template delivers what the catalogue sells it as", () => {
+  // job_card_premium advertised "Branded cover + checklist" and shipped without
+  // the checklist — the same shape as the tier gate: the catalogue promising
+  // something the document does not do, on the most expensive tier.
+  const PROMISES: Array<[string, string, RegExp]> = [
+    ["job_card_technical", "lib/pdf/JobCardDocumentTechnical.tsx", /INTAKE_CHECKS/],
+    ["job_card_premium",   "lib/pdf/JobCardDocumentPremium.tsx",   /INTAKE_CHECKS/],
+    ["quote_detailed",     "lib/pdf/QuotationDocument.tsx",        /signature/i],
+    ["receipt_itemized",   "lib/pdf/SaleReceiptDocumentItemized.tsx", /sku/i],
+    ["receipt_thermal",    "lib/pdf/SaleReceiptDocumentThermal.tsx",  /80mm|226|227/],
+  ];
+
+  for (const [key, file, promise] of PROMISES) {
+    it(`${key} has the feature its description advertises`, () => {
+      expect(readFileSync(file, "utf8")).toMatch(promise);
+    });
+  }
+});
