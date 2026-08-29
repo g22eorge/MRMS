@@ -99,17 +99,17 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1">
           <span className="text-xs font-medium text-[var(--ink-muted)]">Full name</span>
-          <input name="fullName" defaultValue={client.fullName} className={controlClass} />
+          <input name="fullName" required minLength={2} defaultValue={client.fullName} className={controlClass} />
         </label>
 
         <label className="space-y-1">
           <span className="text-xs font-medium text-[var(--ink-muted)]">Phone</span>
-          <input name="phone" defaultValue={client.phone} className={controlClass} />
+          <input name="phone" required minLength={4} defaultValue={client.phone} className={controlClass} />
         </label>
 
         <label className="space-y-1">
           <span className="text-xs font-medium text-[var(--ink-muted)]">Email</span>
-          <input name="email" defaultValue={client.email ?? ""} className={controlClass} />
+          <input name="email" type="email" defaultValue={client.email ?? ""} className={controlClass} />
         </label>
 
         <label className="space-y-1">

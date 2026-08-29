@@ -428,9 +428,23 @@ export default async function ClientsPage({
                 </p>
               ) : null}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <input name="fullName" placeholder="Full name *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-                <input name="phone" placeholder="Phone *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
-                <input name="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+                {/*
+                  These mirror createClientSchema — min 2, min 3, a real email.
+                  They do NOT block submission, and it is worth knowing why: React
+                  sets noValidate on any form whose action is a function, so every
+                  server-action form in this codebase has native validation turned
+                  off. checkValidity() reports false here and the browser submits
+                  regardless. The server is the check, as it has to be.
+
+                  Kept because they still earn their place: `required` marks the
+                  field required to screen readers, and type="email" gives mobile
+                  users the @ keyboard. Making them actually block would mean
+                  changing the shared submit path for all 112 required fields in
+                  the app at once, which is a different job than this.
+                */}
+                <input name="fullName" required minLength={2} placeholder="Full name *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+                <input name="phone" required minLength={3} placeholder="Phone *" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
+                <input name="email" type="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
                 <input name="organization" placeholder="Organization" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
                 <input name="address" placeholder="Address / location" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 sm:col-span-2" />
               </div>
