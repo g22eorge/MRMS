@@ -92,7 +92,14 @@ describe("the generated Postgres schema stays in step with its source", () => {
     const generated = readFileSync("prisma/schema.postgresql.prisma", "utf8");
 
     const body = generated.slice(generated.indexOf("// This is your Prisma schema file"));
-    expect(body).toBe(source.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"'));
+    // Provider and url both. The source must name a file: literal (vercel-build
+    // hands Prisma a libsql:// URL and the sqlite provider rejects it), while
+    // Postgres has no such constraint and reads the environment.
+    expect(body).toBe(
+      source
+        .replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"')
+        .replace(/url\s*=\s*"file:[^"]*"/, 'url      = env("DATABASE_URL")'),
+    );
     expect(generated).toContain("GENERATED FILE");
   });
 

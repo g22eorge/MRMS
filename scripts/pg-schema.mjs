@@ -68,7 +68,15 @@ if (found.length) {
   process.exit(1);
 }
 
-const generated = HEADER + source.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
+// The provider AND the url. The source names dev.db as a literal because the
+// sqlite provider rejects any env value that is not file: — and vercel-build
+// hands Prisma a libsql:// URL, which broke every deploy the once this was an
+// env(). PostgreSQL has no such constraint, so the variant reads the
+// environment, which is what a Postgres deployment needs and what leaving a
+// file: path inside a postgresql datasource would quietly not do.
+const generated = HEADER + source
+  .replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"')
+  .replace(/url\s*=\s*"file:[^"]*"/, 'url      = env("DATABASE_URL")');
 
 if (CHECK_ONLY) {
   let current = null;

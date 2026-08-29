@@ -5,19 +5,21 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Read from the environment rather than named here. As a literal this silently
-// won every argument: `test:unit` asks for prisma/test.db and got dev.db, so
-// `db push --accept-data-loss` was aimed at the working development database
-// and the tests read whatever data happened to be in it. Every script in
-// package.json already exports a file: URL before calling Prisma, and
-// prisma.config.ts falls back to prisma/dev.db when nothing is set, so the
-// variable is always defined by the time the CLI reads it.
+// A literal, and it has to stay one. This was briefly env("DATABASE_URL") and
+// that broke every deploy on both projects: `vercel-build` sets DATABASE_URL to
+// the real libsql:// URL for `prisma migrate deploy`, and the sqlite provider
+// rejects any env value that is not file: — "the URL must start with the
+// protocol file:", pointing at this line. A literal validates whatever the
+// environment holds, and prisma.config.ts supplies the real connection through
+// its `datasource` override, which is how Turso has always been reached.
 //
-// Production never consults this: lib/prisma.ts connects through the libSQL
-// adapter, which carries its own URL.
+// It is not what the CLI actually connects to. prisma.config.ts decides that,
+// and runtime is decided by lib/prisma.ts, which passes an explicit
+// datasourceUrl so a test run can be pointed at prisma/test.db rather than
+// writing to the database somebody is working in.
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:./dev.db"
 }
 
 // ── MULTI-TENANCY ────────────────────────────────────────────────────────────

@@ -76,13 +76,16 @@ function createPrismaClient() {
 
   if (!isProduction) {
     const databaseUrl = process.env.DATABASE_URL?.trim();
+    const resolved = databaseUrl
+      ? toSqliteAbsoluteUrl(databaseUrl)
+      : toSqliteAbsoluteUrl(DEFAULT_LOCAL_DATABASE_URL);
+    process.env.DATABASE_URL = resolved;
 
-    if (!databaseUrl) {
-      process.env.DATABASE_URL = toSqliteAbsoluteUrl(DEFAULT_LOCAL_DATABASE_URL);
-    } else {
-      process.env.DATABASE_URL = toSqliteAbsoluteUrl(databaseUrl);
-    }
-
+    // No datasourceUrl here on purpose. Pointing the client at DATABASE_URL
+    // while the schema literal still sends `prisma db push` to dev.db splits the
+    // two halves apart: the client opens prisma/test.db, which the push never
+    // created, and every database-touching test fails. They have to move
+    // together, and moving them is a separate change from unblocking the build.
     return new PrismaClient({
       log: ["error", "warn"],
       transactionOptions: TRANSACTION_OPTIONS,
