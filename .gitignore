@@ -52,6 +52,10 @@ next-env.d.ts
 # local sqlite files
 dev.db
 *.db
+# Generated per test run by scripts/test-schema.mjs — a copy of schema.prisma
+# pointing at test.db. Regenerated every time, so committing it only creates
+# churn and a second file to keep in step with the models.
+prisma/schema.test.prisma
 *.db-journal
 *.db-wal
 *.db-shm

@@ -81,12 +81,16 @@ function createPrismaClient() {
       : toSqliteAbsoluteUrl(DEFAULT_LOCAL_DATABASE_URL);
     process.env.DATABASE_URL = resolved;
 
-    // No datasourceUrl here on purpose. Pointing the client at DATABASE_URL
-    // while the schema literal still sends `prisma db push` to dev.db splits the
-    // two halves apart: the client opens prisma/test.db, which the push never
-    // created, and every database-touching test fails. They have to move
-    // together, and moving them is a separate change from unblocking the build.
+    // The client half of pointing a test run at its own database. The schema
+    // names dev.db as a literal and has to keep doing so — the deploy validates
+    // that line against a libsql:// URL — so the client is told explicitly
+    // instead. The CLI half is scripts/test-schema.mjs, which gives `db push` a
+    // variant pointing at test.db; both have to move or the client opens a
+    // database that was never built.
+    //
+    // Everywhere else this resolves to exactly what it did before: dev.db.
     return new PrismaClient({
+      datasourceUrl: resolved,
       log: ["error", "warn"],
       transactionOptions: TRANSACTION_OPTIONS,
     });

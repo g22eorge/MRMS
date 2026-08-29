@@ -16,7 +16,19 @@ let _testPrisma: PrismaClient | null = null;
 
 export function getTestPrisma(): PrismaClient {
   if (!_testPrisma) {
-    _testPrisma = new PrismaClient({ log: [] });
+    // datasourceUrl, not the schema's. The schema names dev.db as a literal and
+    // must keep doing so — the deploy validates that line — so a client built
+    // without this opens the database somebody is working in and writes test
+    // fixtures into it, which is precisely what was happening: the runner sets
+    // DATABASE_URL to prisma/test.db and this ignored it.
+    const url = process.env.DATABASE_URL?.trim();
+    if (!url) {
+      throw new Error(
+        "DATABASE_URL is not set. Unit tests must be run through `bun run test:unit`, " +
+        "which points it at prisma/test.db — without it this would open prisma/dev.db.",
+      );
+    }
+    _testPrisma = new PrismaClient({ datasourceUrl: url, log: [] });
   }
   return _testPrisma;
 }
