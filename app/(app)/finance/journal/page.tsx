@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { JournalEntryStatus } from "@prisma/client";
@@ -58,7 +59,13 @@ export default async function JournalPage({
   const month  = parsePeriodInt(sp.month, 0); // 0 = all months
   const statusFilter = sp.status ?? "all";
   const searchQ = (sp.q ?? "").trim();
-  const currency = "UGX";
+  // The organisation's own currency, not a literal. A tenant whose books are
+  // kept in KES was shown every figure on this page labelled UGX.
+  const currency =
+    (await prisma.organization.findUnique({
+      where: { id: user.orgId ?? "" },
+      select: { baseCurrency: true },
+    }).catch(() => null))?.baseCurrency ?? "UGX";
   const page = parsePage(sp.page);
   const pageSize = parsePageSize(sp.size);
 

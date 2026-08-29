@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { rowToBase } from "@/lib/currency";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { ExpenseCategory, PaymentMethod } from "@prisma/client";
@@ -141,7 +142,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
       // this slim, filter-scoped fetch so they don't reflect only the page.
       db.expense.findMany({
         where,
-        select: { amount: true, paidAt: true, createdAt: true, category: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true, paidAt: true, createdAt: true, category: true },
       }),
       db.expense.count({ where }),
       db.supplier
@@ -150,37 +151,49 @@ export default async function ExpensesPage({ searchParams }: Props) {
       // For 6-month trend chart (all categories, no filters)
       db.expense.findMany({
         where: { paidAt: { gte: trendStart } },
-        select: { amount: true, paidAt: true, createdAt: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true, paidAt: true, createdAt: true },
       }),
       db.expense.findMany({
         where: { paidAt: { gte: prevMonthStart, lte: prevMonthEnd } },
-        select: { amount: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
       }),
       db.expense.findMany({
         where: { paidAt: { gte: ytdStart } },
-        select: { amount: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
       }),
       db.expense.findMany({
         where: { paidAt: { gte: prevYtdStart, lte: prevYtdEnd } },
-        select: { amount: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
       }),
     ]);
 
-  const currency = "UGX";
+  // The organisation's own currency, not a literal. A tenant whose books are
+  // kept in KES was shown every figure on this page labelled UGX.
+  const currency =
+    (await prisma.organization.findUnique({
+      where: { id: user.orgId ?? "" },
+      select: { baseCurrency: true },
+    }).catch(() => null))?.baseCurrency ?? "UGX";
   const pageView = paginationView(page, total, pageSize);
 
-  const totalAmount = statsRows.reduce((sum, e) => sum + e.amount, 0);
+  // Every expense total on this page is converted. Expense has carried a rate
+  // for some time; the page simply never used it, so a foreign expense was
+  // summed at face value into a base-currency figure.
+  const toBase = (e: { amount: number; currency?: string | null; exchangeRateToBase?: number | null }) =>
+    rowToBase(e, currency);
+
+  const totalAmount = statsRows.reduce((sum, e) => sum + toBase(e), 0);
 
   const thisMonthAmount = statsRows
     .filter((e) => {
       const d = e.paidAt ?? e.createdAt;
       return d.getFullYear() === thisYear && d.getMonth() === thisMonth;
     })
-    .reduce((sum, e) => sum + e.amount, 0);
+    .reduce((sum, e) => sum + toBase(e), 0);
 
-  const prevMonthTotal = prevMonthExpenses.reduce((s, e) => s + e.amount, 0);
-  const ytdTotal = ytdExpenses.reduce((s, e) => s + e.amount, 0);
-  const prevYtdTotal = prevYtdExpenses.reduce((s, e) => s + e.amount, 0);
+  const prevMonthTotal = prevMonthExpenses.reduce((s, e) => s + toBase(e), 0);
+  const ytdTotal = ytdExpenses.reduce((s, e) => s + toBase(e), 0);
+  const prevYtdTotal = prevYtdExpenses.reduce((s, e) => s + toBase(e), 0);
   const momDelta = thisMonthAmount - prevMonthTotal;
   const ytdDelta = ytdTotal - prevYtdTotal;
 

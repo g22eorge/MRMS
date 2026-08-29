@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition, type FormEvent } from "react";
+
+import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { useRouter } from "next/navigation";
 
 import { CommercialLineItemsEditor, LineItemTotals, TaxToggleField } from "@/components/forms";
@@ -97,6 +99,12 @@ export function NewQuotationForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // A quote may be raised in a currency the business does not keep its books
+  // in. `currency` is the org's own; docCurrency is what this quote is priced
+  // in, and they are usually the same.
+  const [docCurrency, setDocCurrency] = useState(currency);
+  const [exchangeRate, setExchangeRate] = useState("");
+  const isForeign = docCurrency !== currency;
   const initialSourceKey = jobId ? `job:${jobId}` : clientId ? `client:${clientId}` : leadId ? `lead:${leadId}` : "";
   const [customerMode, setCustomerMode] = useState<"existing" | "new">("existing");
   const [sourceQuery, setSourceQuery] = useState("");
@@ -224,8 +232,8 @@ export function NewQuotationForm({
   const totalAmount = subtotal + taxAmount;
 
   function formatAmount(value: number) {
-    const isZeroDecimal = new Set(["UGX", "JPY", "KRW"]).has(currency);
-    return `${currency} ${value.toLocaleString("en-US", { minimumFractionDigits: isZeroDecimal ? 0 : 2, maximumFractionDigits: isZeroDecimal ? 0 : 2 })}`;
+    const isZeroDecimal = new Set(["UGX", "JPY", "KRW"]).has(docCurrency);
+    return `${docCurrency} ${value.toLocaleString("en-US", { minimumFractionDigits: isZeroDecimal ? 0 : 2, maximumFractionDigits: isZeroDecimal ? 0 : 2 })}`;
   }
 
   function handleSubmit(e: FormEvent) {
@@ -256,6 +264,8 @@ export function NewQuotationForm({
             issueDate: issueDate || undefined,
             validUntil: validUntil || undefined,
             notes: notes || undefined,
+            currency: docCurrency,
+            exchangeRate: isForeign ? exchangeRate : undefined,
             taxApplicable: taxEnabled,
             taxRate,
             taxLabel: taxEnabled ? selectedTax?.taxLabel : undefined,
@@ -407,13 +417,46 @@ export function NewQuotationForm({
           </section>
 
           <section className="dc-card min-w-0 p-3">
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Currency</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <select
+                value={docCurrency}
+                onChange={(e) => setDocCurrency(e.target.value)}
+                className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/60"
+              >
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>{c}{c === currency ? " · your books" : ""}</option>
+                ))}
+              </select>
+              {/* Required for a foreign quote, because a document that cannot
+                  be converted is scored as zero in every total that matters —
+                  and the rate is fixed here so the shilling value of this quote
+                  is what was agreed, not what the market does later. */}
+              {isForeign ? (
+                <input
+                  value={exchangeRate}
+                  onChange={(e) => setExchangeRate(e.target.value)}
+                  inputMode="decimal"
+                  placeholder={`${currency} per 1 ${docCurrency}`}
+                  className="h-9 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/60"
+                />
+              ) : null}
+            </div>
+            {isForeign ? (
+              <p className="mt-1.5 text-[0.75rem] text-[var(--ink-muted)]">
+                Priced in {docCurrency}. Your books stay in {currency}, at the rate you agree today.
+              </p>
+            ) : null}
+          </section>
+
+          <section className="dc-card min-w-0 p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Totals</p>
               <Link href="/finance/tax-rates" className="text-xs font-semibold text-[var(--accent)] hover:underline">Tax rates</Link>
             </div>
             <LineItemTotals
               className="mt-3"
-              currency={currency}
+              currency={docCurrency}
               formatMoney={formatAmount}
               leadingRows={[
                 { label: "Lines ready", value: <>{validItems.length}/{lines.length}</> },

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { landedCost } from "@/lib/inventory/landed-cost";
+import { formatMoney } from "@/lib/currency";
 import { notFound, redirect } from "next/navigation";
 
 import { DataTable } from "@/components/ui/DataTable";
@@ -16,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SupplierBillDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
   if (!can.manageInventory(user)) redirect("/inventory");
 
   const bill = await prisma.supplierBill.findUnique({
@@ -37,6 +39,31 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
 
   const fmt = (d: Date | null) => d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "-";
   const balance = bill.totalAmount - bill.paidAmount;
+
+  // Landed cost, for pricing. The books treat a transfer charge as a finance
+  // cost so that cost of sales stays the cost of the goods; pricing needs the
+  // opposite view, because an item bought abroad cost the goods plus the spread
+  // plus the bank's charge, and pricing off the invoice value alone sells at a
+  // loss on every consignment. Computed here and never written back over a
+  // stored unit cost, which would rewrite the margin on stock already sold.
+  const baseCurrency = org.baseCurrency ?? "UGX";
+  const feesBase = bill.payments.reduce((sum, p) => sum + (p.feeAmount ?? 0), 0);
+  // The rate that was actually settled, taken from the payments made on this
+  // bill; a bill already in base currency needs none.
+  const settledRate = bill.currency === baseCurrency
+    ? null
+    : (bill.payments.find((p) => p.exchangeRateToBase && p.exchangeRateToBase > 0)?.exchangeRateToBase
+        ?? bill.exchangeRateToBase
+        ?? null);
+  const landed = landedCost({
+    baseCurrency,
+    currency: bill.currency,
+    exchangeRateToBase: settledRate,
+    feesBase,
+    lines: bill.items.map((i) => ({ id: i.id, quantity: i.quantity, lineTotal: i.lineTotal })),
+  });
+  const landedById = new Map(landed.lines.map((l) => [l.id, l]));
+  const showLanded = feesBase > 0 || bill.currency !== baseCurrency;
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -76,6 +103,22 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
       </div>
 
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
+        {showLanded ? (
+          <div className="border-b border-[var(--line)] bg-[var(--panel-strong)] px-5 py-3">
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Landed cost · for pricing</p>
+            <p className="mt-1 text-[0.8125rem] text-[var(--ink)]">
+              Goods <span className="font-semibold tabular-nums">{formatMoney(landed.goodsBase, baseCurrency)}</span>
+              {" + "}charges <span className="font-semibold tabular-nums">{formatMoney(landed.feesBase, baseCurrency)}</span>
+              {" = "}<span className="font-semibold tabular-nums text-[var(--accent)]">{formatMoney(landed.landedBase, baseCurrency)}</span>
+            </p>
+            <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">
+              {settledRate
+                ? `Settled at ${settledRate.toLocaleString()} ${baseCurrency} per ${bill.currency}, derived from what left the account.`
+                : `Charges apportioned across lines by value.`}
+              {" "}The books post charges as a finance cost, so this figure is deliberately higher than cost of sales.
+            </p>
+          </div>
+        ) : null}
         <div className="px-5 py-3 border-b border-[var(--line)] flex flex-wrap items-center justify-between gap-2">
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Bill Lines</p>
           <div className="flex gap-2 text-xs font-semibold">
@@ -93,6 +136,21 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
             { key: "qty", header: "Qty", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (item) => item.quantity },
             { key: "unitCost", header: "Unit Cost", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (item) => item.unitCost.toLocaleString() },
             { key: "total", header: "Total", align: "right", className: "tabular-nums font-semibold text-[var(--ink)]", cell: (item) => item.lineTotal.toLocaleString() },
+            // Only shown when it differs from the invoice value — on a
+            // base-currency bill with no charges the two are the same number
+            // and a second column of it is noise.
+            ...(showLanded
+              ? [{
+                  key: "landed",
+                  header: `Landed / unit (${baseCurrency})`,
+                  align: "right" as const,
+                  className: "tabular-nums font-semibold text-[var(--accent)]",
+                  cell: (item: (typeof bill.items)[number]) => {
+                    const l = landedById.get(item.id);
+                    return l ? formatMoney(l.landedUnitBase, baseCurrency) : "—";
+                  },
+                }]
+              : []),
           ]}
           tableFooter={
             <>

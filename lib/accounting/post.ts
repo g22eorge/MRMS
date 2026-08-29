@@ -26,6 +26,10 @@ const CORE_ACCOUNTS = [
   { code: "4000", name: "Sales Revenue", type: "REVENUE" },
   { code: "5000", name: "Cost of Sales", type: "EXPENSE" },
   { code: "6000", name: "Operating Expenses", type: "EXPENSE" },
+  // Bank and transfer charges are a finance cost, not part of what the goods
+  // cost. Keeping them out of 5000 is what lets gross margin stay meaningful
+  // while the true landed cost of stock is still reported for pricing.
+  { code: "6100", name: "Bank & Transfer Charges", type: "EXPENSE" },
 ] as const;
 
 export type CoreAccountCode = (typeof CORE_ACCOUNTS)[number]["code"];
@@ -293,6 +297,30 @@ export async function postTechnicianPayout(tx: Tx, p: MoneyEvent): Promise<void>
 }
 
 /** Supplier/inventory payment (cash basis = cost recognised when paid): Dr Cost of Sales, Cr Cash. */
+/**
+ * The charge paid to move money to a supplier, as a finance cost.
+ *
+ * Posted separately from the goods so the books answer two different questions
+ * correctly: cost of sales stays the cost of what was bought, and the annual
+ * cost of moving money abroad is visible as its own line rather than buried in
+ * stock. Pricing uses landed cost, which adds this back per item — the two
+ * views are deliberately different and both are right.
+ */
+export async function postSupplierTransferFee(tx: Tx, p: MoneyEvent): Promise<void> {
+  if (!(p.amount > 0)) return;
+  await postJournalEntry(tx, {
+    orgId: p.orgId,
+    userId: p.userId,
+    date: p.date,
+    description: p.description ?? "Supplier transfer charge",
+    reference: p.reference,
+    lines: [
+      { code: "6100", debit: p.amount, memo: "Bank & transfer charges" },
+      { code: "1000", credit: p.amount, memo: "Charge deducted on transfer" },
+    ],
+  });
+}
+
 export async function postSupplierPayment(tx: Tx, p: MoneyEvent): Promise<void> {
   if (!(p.amount > 0)) return;
   await postJournalEntry(tx, {

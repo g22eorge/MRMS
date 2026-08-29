@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { effectiveRateFromSettlement } from "@/lib/currency";
 import { redirect } from "next/navigation";
 
 import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { postSupplierPayment } from "@/lib/accounting/post";
+import { postSupplierPayment, postSupplierTransferFee } from "@/lib/accounting/post";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -178,6 +179,12 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
   const reference = String(formData.get("reference") ?? "").trim() || null;
   const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim() || null;
+  // What actually left the bank, and what the charges were. Both in base
+  // currency, because that is what the statement shows.
+  const feeRaw = String(formData.get("feeAmount") ?? "").replace(/,/g, "").trim();
+  const sentRaw = String(formData.get("baseAmountSent") ?? "").replace(/,/g, "").trim();
+  const feeAmount = feeRaw ? Number(feeRaw) : null;
+  const baseAmountSent = sentRaw ? Number(sentRaw) : null;
 
   if (!billId) return;
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -206,12 +213,30 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
     if (dup) return null;
 
     const nextPaid = bill.paidAmount + amount;
+    const payCurrency = bill.currency || org.baseCurrency;
+
+    // The rate is derived from the settlement, never typed and never fetched:
+    // what a transfer actually costs is the bank's rate plus a spread that no
+    // public feed publishes, and it is already implied by what left the account.
+    const settledRate = payCurrency === org.baseCurrency
+      ? null
+      : effectiveRateFromSettlement({ amount, baseAmountSent, feeAmount });
+    // Base value of the goods themselves, excluding the charge.
+    const goodsBase = payCurrency === org.baseCurrency
+      ? amount
+      : settledRate
+        ? amount * settledRate
+        : Math.max(0, (baseAmountSent ?? 0) - (feeAmount ?? 0));
+
     const supplierPayment = await tx.supplierPayment.create({
       data: {
         orgId,
         billId,
-        currency: bill.currency || org.baseCurrency,
+        currency: payCurrency,
+        exchangeRateToBase: settledRate,
         amount,
+        feeAmount: Number.isFinite(feeAmount as number) && (feeAmount as number) > 0 ? feeAmount : null,
+        baseAmountSent: Number.isFinite(baseAmountSent as number) && (baseAmountSent as number) > 0 ? baseAmountSent : null,
         method: method as never,
         reference,
         paidAt: paidAtRaw ? new Date(paidAtRaw) : new Date(),
@@ -228,14 +253,28 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
       },
     });
     // C5: cash-basis ledger post — Dr Cost of Sales, Cr Cash.
+    // The ledger is kept in base currency. Posting `amount` directly put AED
+    // 1,000 into the books as 1,000 shillings.
     await postSupplierPayment(tx, {
       orgId,
       userId: session.user.id,
-      amount,
+      amount: goodsBase,
       date: supplierPayment.paidAt ?? undefined,
       reference: `supplier-pay:${supplierPayment.id}`,
       description: `Supplier payment on bill ${billId}`,
     });
+    // The charge is a finance cost, posted apart from the goods so cost of
+    // sales stays the cost of what was bought.
+    if (feeAmount && feeAmount > 0) {
+      await postSupplierTransferFee(tx, {
+        orgId,
+        userId: session.user.id,
+        amount: feeAmount,
+        date: supplierPayment.paidAt ?? undefined,
+        reference: `supplier-fee:${supplierPayment.id}`,
+        description: `Transfer charge on bill ${billId}`,
+      });
+    }
     return { currency: bill.currency || org.baseCurrency };
   });
 

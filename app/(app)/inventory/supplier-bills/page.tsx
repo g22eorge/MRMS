@@ -28,7 +28,10 @@ export default async function SupplierBillsPage({
 }: {
   searchParams: Promise<{ page?: string; size?: string; error?: string }>;
 }) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  // The currency the books are kept in. The payment form asks for the transfer
+  // figures in this, since that is what the bank statement shows.
+  const baseCurrency = org.baseCurrency ?? "UGX";
   if (!can.manageInventory(user)) redirect("/inventory");
 
   const params = await searchParams;
@@ -179,6 +182,18 @@ export default async function SupplierBillsPage({
                       </select>
                       <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
                       <input name="reference" placeholder="Reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                      {/* Only for a bill in another currency. The rate is not
+                          typed: it is derived from what the statement shows, so
+                          the books carry the spread that was actually paid
+                          rather than a rate nobody transacted at. */}
+                      {bill.currency !== baseCurrency ? (
+                        <>
+                          <input name="baseAmountSent" type="number" min={0} step="any" placeholder={`Total ${baseCurrency} that left the account`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-right text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                          <input name="feeAmount" type="number" min={0} step="any" placeholder={`Transfer charge in ${baseCurrency}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-right text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                        </>
+                      ) : (
+                        <input name="feeAmount" type="number" min={0} step="any" placeholder="Transfer charge (optional)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-right text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                      )}
                       <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold">Record payment</SubmitButton>
                     </form>
                   </div>

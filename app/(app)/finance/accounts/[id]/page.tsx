@@ -90,7 +90,13 @@ export default async function AccountLedgerPage({
     orderBy: { journalEntry: { date: "asc" } },
   });
 
-  const currency = "UGX";
+  // The organisation's own currency, not a literal. A tenant whose books are
+  // kept in KES was shown every figure on this page labelled UGX.
+  const currency =
+    (await prisma.organization.findUnique({
+      where: { id: user.orgId ?? "" },
+      select: { baseCurrency: true },
+    }).catch(() => null))?.baseCurrency ?? "UGX";
   const isDebitNormal = account.type === "ASSET" || account.type === "EXPENSE";
 
   // Running balance from start up to filter start (opening balance for period)

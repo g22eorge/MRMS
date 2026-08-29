@@ -99,7 +99,7 @@ export default async function CashFlowPage({
     }).catch(() => []),
     prisma.supplierPayment.findMany({
       where: { orgId, paidAt: { gte: from, lte: to } },
-      select: { amount: true, currency: true },
+      select: { amount: true, currency: true, exchangeRateToBase: true, feeAmount: true },
     }).catch(() => []),
     prisma.bankTransaction.aggregate({
       where: { orgId, type: "CREDIT", date: { gte: from, lte: to } },
@@ -123,7 +123,7 @@ export default async function CashFlowPage({
     }).catch(() => []),
     prisma.supplierPayment.findMany({
       where: { orgId, paidAt: { gte: priorFrom, lte: priorTo } },
-      select: { amount: true, currency: true },
+      select: { amount: true, currency: true, exchangeRateToBase: true, feeAmount: true },
     }).catch(() => []),
     db.bankAccount.count().catch(() => 0),
   ]);
@@ -134,7 +134,13 @@ export default async function CashFlowPage({
   const totalInflow = invoicePaymentsTotal + salePaymentsTotal;
 
   const expensesTotal = expenses.reduce((s, e) => s + toBase(e), 0);
-  const supplierPaymentsTotal = supplierPayments.reduce((s, p) => s + p.amount, 0);
+  // Converted, like every other line on this report. Summing p.amount raw
+  // counted an AED 1,000 payment as 1,000 shillings — a plausible-looking number
+  // that understated the outflow roughly 3,800-fold. Transfer charges are added
+  // because they are cash that left the account, even though the ledger books
+  // them as a finance cost rather than as cost of sales.
+  const supplierPaymentsTotal = supplierPayments.reduce(
+    (s, p) => s + toBase(p) + (p.feeAmount ?? 0), 0);
   const totalOutflow = expensesTotal + supplierPaymentsTotal;
 
   const netOperating = totalInflow - totalOutflow;
@@ -175,7 +181,7 @@ export default async function CashFlowPage({
   const priorInvoiceTotal = priorInvoicePayments.reduce((s, p) => s + toBase(p), 0);
   const priorSaleTotal = priorSalePayments.reduce((s, p) => s + toBase(p), 0);
   const priorExpensesTotal = priorExpenses.reduce((s, e) => s + toBase(e), 0);
-  const priorSupplierTotal = priorSupplierPayments.reduce((s, p) => s + p.amount, 0);
+  const priorSupplierTotal = priorSupplierPayments.reduce((s, p) => s + toBase(p) + (p.feeAmount ?? 0), 0);
 
   const changeCell = (c: string | null, good: boolean) =>
     c ? (
