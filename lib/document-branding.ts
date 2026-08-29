@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { tableColumns } from "@/lib/db/introspect";
 
 export const defaultBranding = {
   id: "singleton",
@@ -131,10 +132,7 @@ async function ensureRawTable() {
 
   // Older installs may have the table without the newer template columns.
   // Keep this local to branding to avoid hard dependency on /api/admin/db-fix.
-  const cols = await prisma.$queryRaw<Array<{ name: string }>>`
-    PRAGMA table_info('DocumentBrandingSettings')
-  `.catch(() => []);
-  const colSet = new Set(cols.map((c) => c.name));
+  const colSet = await tableColumns("DocumentBrandingSettings");
 
   // Allowlist guards against accidental SQL injection if call sites ever change.
   const ADDABLE_COLUMNS: ReadonlySet<string> = new Set([

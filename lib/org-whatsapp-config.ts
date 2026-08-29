@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { tableColumns } from "@/lib/db/introspect";
 
 export interface OrgWhatsAppConfig {
   orgId: string;
@@ -31,13 +32,7 @@ async function ensureTable() {
     )
   `);
   // Safely add AT columns to existing tables
-  const existingColumns = new Set(
-    (
-      await prisma.$queryRaw<Array<{ name: string }>>`
-        PRAGMA table_info('OrgWhatsAppConfig')
-      `
-    ).map((column) => column.name),
-  );
+  const existingColumns = await tableColumns("OrgWhatsAppConfig");
   const atCols: [string, string][] = [
     ["atApiKey", "TEXT"],
     ["atUsername", "TEXT"],
