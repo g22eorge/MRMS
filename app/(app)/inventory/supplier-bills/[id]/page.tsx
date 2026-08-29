@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { landedCost } from "@/lib/inventory/landed-cost";
+import { settlementPremium } from "@/lib/currency/reference-rate";
 import { formatMoney } from "@/lib/currency";
 import { notFound, redirect } from "next/navigation";
 
@@ -65,6 +66,16 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
   const landedById = new Map(landed.lines.map((l) => [l.id, l]));
   const showLanded = feesBase > 0 || bill.currency !== baseCurrency;
 
+  // How this transfer compared with the published rate. Monitoring only — the
+  // figures above all come from what the bank statement showed. Null whenever
+  // the honest answer is "we cannot say": no cached rate, a stale one, or no
+  // settled rate on this bill.
+  const premium = await settlementPremium({
+    currency: bill.currency,
+    baseCurrency,
+    settledRate: settledRate,
+  }).catch(() => null);
+
   return (
     <div className="max-w-4xl space-y-6">
       <RecordActionBar
@@ -117,6 +128,17 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
                 : `Charges apportioned across lines by value.`}
               {" "}The books post charges as a finance cost, so this figure is deliberately higher than cost of sales.
             </p>
+            {premium ? (
+              <p className="mt-1.5 text-[0.75rem]">
+                <span className={premium.premiumPct > 5 ? "font-semibold text-amber-700" : "text-[var(--ink-muted)]"}>
+                  {premium.premiumPct >= 0 ? "+" : ""}{premium.premiumPct.toFixed(1)}% against the published rate
+                </span>
+                <span className="text-[var(--ink-muted)]">
+                  {" "}({premium.reference.rate.toLocaleString()} {baseCurrency}/{bill.currency}, {premium.reference.source}).
+                  {" "}For comparison only — nothing here is posted from it.
+                </span>
+              </p>
+            ) : null}
           </div>
         ) : null}
         <div className="px-5 py-3 border-b border-[var(--line)] flex flex-wrap items-center justify-between gap-2">

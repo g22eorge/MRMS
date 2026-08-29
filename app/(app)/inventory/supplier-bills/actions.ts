@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { effectiveRateFromSettlement } from "@/lib/currency";
+import { effectiveRateFromSettlement, readCurrencyAndRate, rowToBase, toBaseAmount } from "@/lib/currency";
 import { redirect } from "next/navigation";
 
 import { prisma, ensureMoneySchema } from "@/lib/prisma";
@@ -53,7 +53,15 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
   const poId = String(formData.get("poId") ?? "").trim() || null;
   const grnId = String(formData.get("grnId") ?? "").trim() || null;
   const supplierRef = String(formData.get("supplierRef") ?? "").trim() || null;
-  const currency = String(formData.get("currency") ?? org.baseCurrency).trim().toUpperCase() || org.baseCurrency;
+  // Validated, not trusted. This was free text, so "usdollar" would have been
+  // stored as a currency and every conversion against it silently scored zero.
+  const money = readCurrencyAndRate({
+    currency: String(formData.get("currency") ?? org.baseCurrency).trim().toUpperCase() || org.baseCurrency,
+    exchangeRate: formData.get("exchangeRate"),
+    baseCurrency: org.baseCurrency,
+  });
+  if (money.error) return { error: money.error };
+  const currency = money.currency;
   const taxAmount = Math.max(0, Number(String(formData.get("taxAmount") ?? "0").trim()) || 0);
   const issuedAtRaw = String(formData.get("issuedAt") ?? "").trim();
   const dueAtRaw = String(formData.get("dueAt") ?? "").trim();
@@ -91,15 +99,28 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
     if (dup) return { error: `This goods-received note is already billed on ${dup.billNumber}` };
   }
   if (poId) {
-    const [poItems, priorBills] = await Promise.all([
+    const [po, poItems, priorBills] = await Promise.all([
+      prisma.purchaseOrder.findUnique({ where: { id: poId }, select: { currency: true, exchangeRateToBase: true } }),
       prisma.purchaseOrderItem.findMany({ where: { poId }, select: { qtyOrdered: true, unitCost: true } }),
-      prisma.supplierBill.findMany({ where: { orgId, poId, status: { not: "CANCELLED" } }, select: { subtotal: true } }),
+      prisma.supplierBill.findMany({
+        where: { orgId, poId, status: { not: "CANCELLED" } },
+        select: { subtotal: true, currency: true, exchangeRateToBase: true },
+      }),
     ]);
-    const poValue = poItems.reduce((sum, i) => sum + i.qtyOrdered * i.unitCost, 0);
-    const alreadyBilled = priorBills.reduce((sum, b) => sum + b.subtotal, 0);
-    if (poValue > 0 && alreadyBilled + subtotal > poValue + 0.01) {
+    // Everything converted to base before comparing. These three figures can
+    // each be in a different currency — a shilling PO, an earlier USD bill and
+    // this AED one — and the old check added them together as bare numbers,
+    // then labelled the result with whichever currency happened to be current.
+    const base = org.baseCurrency;
+    const poValue = toBaseAmount({
+      amount: poItems.reduce((sum, i) => sum + i.qtyOrdered * i.unitCost, 0),
+      currency: po?.currency ?? base, baseCurrency: base, exchangeRateToBase: po?.exchangeRateToBase ?? null,
+    });
+    const alreadyBilled = priorBills.reduce((sum, b) => sum + rowToBase({ amount: b.subtotal, currency: b.currency, exchangeRateToBase: b.exchangeRateToBase }, base), 0);
+    const thisBillBase = toBaseAmount({ amount: subtotal, currency, baseCurrency: base, exchangeRateToBase: money.exchangeRateToBase });
+    if (poValue > 0 && alreadyBilled + thisBillBase > poValue + 0.01) {
       return {
-        error: `Billing ${currency} ${(alreadyBilled + subtotal).toLocaleString()} would exceed the PO value of ${currency} ${poValue.toLocaleString()} (already billed ${currency} ${alreadyBilled.toLocaleString()})`,
+        error: `Billing ${base} ${(alreadyBilled + thisBillBase).toLocaleString()} would exceed the PO value of ${base} ${poValue.toLocaleString()} (already billed ${base} ${alreadyBilled.toLocaleString()})`,
       };
     }
   }
@@ -115,6 +136,7 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
       poId,
       grnId,
       currency,
+      exchangeRateToBase: money.exchangeRateToBase,
       subtotal,
       taxAmount,
       totalAmount,

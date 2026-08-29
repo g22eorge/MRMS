@@ -1816,19 +1816,25 @@ model PurchaseRequestItem {
 }
 
 model PurchaseOrder {
-  id         String              @id @default(cuid())
-  orgId      String
-  org        Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  supplierId String
-  supplier   Supplier            @relation(fields: [supplierId], references: [id])
-  status     PurchaseOrderStatus @default(DRAFT)
-  reference  String?
-  orderedAt  DateTime?
-  expectedAt DateTime?
-  receivedAt DateTime?
-  notes      String?
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
+  id                 String              @id @default(cuid())
+  orgId              String
+  org                Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  supplierId         String
+  supplier           Supplier            @relation(fields: [supplierId], references: [id])
+  status             PurchaseOrderStatus @default(DRAFT)
+  /// A purchase order raised on a foreign supplier is priced in that supplier's
+  /// currency. It carried none, so a USD bill was compared against a shilling
+  /// PO value as though the two numbers were the same kind of thing.
+  currency           String              @default("UGX")
+  /// Units of base per 1 unit of `currency`, snapshotted when the PO was raised.
+  exchangeRateToBase Float?
+  reference          String?
+  orderedAt          DateTime?
+  expectedAt         DateTime?
+  receivedAt         DateTime?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   items              PurchaseOrderItem[]
   purchaseRequests   PurchaseRequest[]
@@ -3476,4 +3482,28 @@ model PaymentReminderSettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// A published reference exchange rate, cached for comparison only.
+///
+/// Never used to post or convert anything. What a business actually pays to
+/// move money abroad is a bureau's rate plus a spread that no feed publishes,
+/// so posting from here would make the books disagree with the bank while
+/// looking authoritative. Its only job is to answer "how far above the
+/// published rate did that transfer settle?" — which is the number that shows
+/// which channel is quietly expensive.
+model FxReferenceRate {
+  id        String   @id @default(cuid())
+  /// Currency being priced, e.g. AED.
+  base      String
+  /// Currency it is priced in, e.g. UGX.
+  quote     String
+  /// Units of `quote` per 1 unit of `base`.
+  rate      Float
+  /// Where it came from, so a suspect number can be traced.
+  source    String
+  fetchedAt DateTime @default(now())
+
+  @@unique([base, quote])
+  @@index([fetchedAt])
 }

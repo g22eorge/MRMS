@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
@@ -56,6 +57,9 @@ export function NewSupplierBillForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [showMore, setShowMore] = useState(false);
+  // The bill's own currency, so the rate field can appear only when it differs
+  // from the currency the books are kept in.
+  const [billCurrency, setBillCurrency] = useState(baseCurrency);
   const defaultGrn = goodsReceived.find((item) => item.id === (defaultGrnId ?? ""));
   const defaultPo = purchaseOrders.find((item) => item.id === (defaultPoId ?? defaultGrn?.poId ?? ""));
   const initialSupplierId = defaultSupplierId ?? defaultGrn?.supplierId ?? defaultPo?.supplierId ?? "";
@@ -259,8 +263,24 @@ export function NewSupplierBillForm({
             </label>
             <label className="block text-xs font-semibold text-[var(--ink-muted)]">
               Currency
-              <input name="currency" defaultValue={baseCurrency} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] uppercase text-[var(--ink)]" />
+              {/* A list, not free text. This accepted anything typed into it,
+                  so a bill could be stored against a currency that does not
+                  exist and every conversion against it would score zero. */}
+              <select name="currency" value={billCurrency} onChange={(e) => setBillCurrency(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] uppercase text-[var(--ink)]">
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>{c}{c === baseCurrency ? " · your books" : ""}</option>
+                ))}
+              </select>
             </label>
+            {billCurrency !== baseCurrency ? (
+              <label className="text-[0.75rem] font-semibold text-[var(--ink-muted)]">
+                Rate ({baseCurrency} per 1 {billCurrency})
+                <input name="exchangeRate" inputMode="decimal" placeholder={`e.g. 3750`} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
+                <span className="mt-1 block font-normal text-[var(--ink-muted)]">
+                  The expected rate. What you actually settle at is captured when you record the payment.
+                </span>
+              </label>
+            ) : null}
             <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] sm:col-span-2" />
           </div>
         </div>
