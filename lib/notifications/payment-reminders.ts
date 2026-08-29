@@ -1,4 +1,6 @@
 import { OutboundMessageType } from "@prisma/client";
+import { normalizePhoneForStorage } from "@/lib/phone";
+import { getWhatsAppConfigForOrg } from "@/lib/notifications/whatsapp";
 
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATDocDate } from "@/lib/date-eat";
@@ -108,6 +110,14 @@ export async function runPaymentReminders(params: {
     select: { name: true, baseCurrency: true },
   });
   if (!org) return [];
+
+  // The org's own WhatsApp line, canonicalised once, so no reminder can be
+  // addressed to the business itself. Null when WhatsApp is not configured,
+  // which simply means the check cannot fire.
+  const ownConfig = await getWhatsAppConfigForOrg(params.orgId);
+  const ownNumber = ownConfig?.businessNumber?.trim()
+    ? normalizePhoneForStorage(ownConfig.businessNumber)
+    : null;
 
   const invoices = await prisma.invoice.findMany({
     where: { orgId: params.orgId, status: { not: "VOID" } },
@@ -239,6 +249,19 @@ export async function runPaymentReminders(params: {
     const channel = invoice.client.phone ? "whatsapp" : invoice.client.email ? "email" : null;
     if (!channel) {
       push("skipped", "client has neither phone nor email");
+      continue;
+    }
+
+    // Never chase the business on its own line. A client record holding the
+    // org's own WhatsApp number turns every reminder into the shop dunning
+    // itself, and the ladder would keep climbing because nobody replies to
+    // themselves. care has such a record today — the owner's own customer row
+    // carries the configured business number — and it is only harmless because
+    // that customer has no invoices. This is the cheap guard, not a diagnosis:
+    // nothing has been misdirected yet. Compared canonically, since the config
+    // and a client record are almost never written the same way.
+    if (channel === "whatsapp" && ownNumber && normalizePhoneForStorage(invoice.client.phone!) === ownNumber) {
+      push("skipped", "client phone is the organisation's own WhatsApp number — correct the client record");
       continue;
     }
 

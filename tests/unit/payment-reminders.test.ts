@@ -7,6 +7,7 @@ import {
   stageDueNow,
   withinQuietHours,
 } from "../../lib/notifications/payment-reminder-schedule";
+import { normalizePhoneForStorage } from "../../lib/phone";
 
 const day = (iso: string) => new Date(`${iso}T12:00:00.000Z`);
 
@@ -156,5 +157,20 @@ describe("unreachable customers", () => {
   it("escalates only on the strength of what actually arrived", () => {
     // One delivered rung is enough to stop being a cold start.
     expect(stageDueNow(due, day("2026-10-20"), ["+3"])?.key).toBe("+10");
+  });
+});
+
+describe("never chase the business on its own line", () => {
+  it("treats the shop's own number and a client's copy of it as the same number", () => {
+    // The guard compares canonically because a client record and the WhatsApp
+    // config are almost never written the same way — one holds "+256772006344"
+    // and the other may hold "0772006344". A string comparison would miss the
+    // match and the guard would never fire.
+    expect(normalizePhoneForStorage("+256772006344")).toBe(normalizePhoneForStorage("0772006344"));
+    expect(normalizePhoneForStorage("0772 006 344")).toBe(normalizePhoneForStorage("+256772006344"));
+  });
+
+  it("still tells a real customer apart from the shop", () => {
+    expect(normalizePhoneForStorage("+256756844448")).not.toBe(normalizePhoneForStorage("0772006344"));
   });
 });
