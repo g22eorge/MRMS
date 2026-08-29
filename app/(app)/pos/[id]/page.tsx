@@ -329,15 +329,28 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     }
 
     await prisma.$transaction(async (tx) => {
+      // One read for every part on the sale rather than one per line. The
+      // quantities are then summed per part before a single update, which is
+      // not merely tidier: the same product can appear on two lines, and the
+      // per-line version only stayed correct because it re-read qtyOnHand each
+      // time and saw its own previous write. Batching the read without summing
+      // would have restored one line's stock and silently dropped the other.
+      const partIds = [...new Set(sale.items.map((i) => i.partId).filter((id): id is string => Boolean(id)))];
+      const parts = partIds.length
+        ? await tx.part.findMany({ where: { id: { in: partIds }, orgId }, select: { id: true, qtyOnHand: true } })
+        : [];
+      const partById = new Map(parts.map((p) => [p.id, p]));
+
+      const restoreByPart = new Map<string, number>();
       for (const item of sale.items) {
-        if (!item.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
-        if (!part) continue;
+        if (!item.partId || !partById.has(item.partId)) continue;
         const baseQty = Math.abs(item.quantity) * (item.saleUomFactor ?? 1);
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
+        restoreByPart.set(item.partId, (restoreByPart.get(item.partId) ?? 0) + baseQty);
+        // One ledger row per line, not per part: the reason names the line's
+        // own description, and that is the record of what was reversed.
         await tx.partStockTransaction.create({
           data: {
-            partId: part.id,
+            partId: item.partId,
             orgId,
             saleId: sale.id,
             type: "IN",
@@ -345,6 +358,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             reason: `POS sale deleted (${item.description})`,
             createdById: user.id,
           },
+        });
+      }
+
+      for (const [partId, restored] of restoreByPart) {
+        await tx.part.update({
+          where: { id: partId },
+          data: { qtyOnHand: partById.get(partId)!.qtyOnHand + restored },
         });
       }
       await tx.sale.deleteMany({ where: { id: sale.id, orgId } });
@@ -769,12 +789,27 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     await prisma.$transaction(async (tx) => {
       const items = await tx.creditNoteItem.findMany({ where: { creditNoteId }, select: { partId: true, quantity: true, description: true, saleUomFactor: true } });
 
+      // Same shape as the sale-deletion reversal above, and the same reason for
+      // summing rather than only batching: a credit note can return the same
+      // product on two lines, and reading each part once means one update must
+      // carry both quantities.
+      const returnedIds = [...new Set(items.map((i) => i.partId).filter((id): id is string => Boolean(id)))];
+      const returnedParts = returnedIds.length
+        ? await tx.part.findMany({
+            where: { id: { in: returnedIds }, orgId, isActive: true },
+            select: { id: true, qtyOnHand: true, sku: true, name: true },
+          })
+        : [];
+      const returnedById = new Map(returnedParts.map((p) => [p.id, p]));
+
+      const returnByPart = new Map<string, number>();
       for (const it of items) {
         if (!it.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, qtyOnHand: true, sku: true, name: true } });
+        const part = returnedById.get(it.partId);
         if (!part) continue;
         const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
+        returnByPart.set(part.id, (returnByPart.get(part.id) ?? 0) + baseQty);
+        // One ledger row per returned line, so the reason keeps naming the line.
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
@@ -785,6 +820,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             reason: `Return (${creditNote.creditNoteNumber}) ${it.description || part.name}`,
             createdById: session.user.id,
           },
+        });
+      }
+
+      for (const [partId, returned] of returnByPart) {
+        await tx.part.update({
+          where: { id: partId },
+          data: { qtyOnHand: returnedById.get(partId)!.qtyOnHand + returned },
         });
       }
 
