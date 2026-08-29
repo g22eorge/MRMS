@@ -51,6 +51,7 @@ import { clientDisplayName } from "@/lib/client-name";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
 
@@ -356,11 +357,11 @@ export default async function InvoicesPage({
   // Search in the DB, not in-memory over the top-150, so older invoices are findable.
   if (q) {
     where.OR = [
-      { invoiceNumber: { contains: q } },
-      { subject: { contains: q } },
-      { job: { jobNumber: { contains: q } } },
-      { job: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } },
-      { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
+      { invoiceNumber: icontains(q) },
+      { subject: icontains(q) },
+      { job: { jobNumber: icontains(q) } },
+      { job: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } },
+      { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
     ];
   }
 

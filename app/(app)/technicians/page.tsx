@@ -12,6 +12,7 @@ import { Role } from "@prisma/client";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { ServiceHubNav } from "@/components/service/ServiceHubNav";
 import { StatCards } from "@/components/ui/StatCards";
+import { icontains } from "@/lib/db/search";
 
 function deviceName(brand?: string | null, model?: string | null) {
   const b = brand && brand !== "Unknown" ? brand : "";
@@ -154,9 +155,9 @@ export default async function TechniciansPage({
       ...(filters.q
         ? {
             OR: [
-              { jobNumber: { contains: filters.q } },
-              { brand: { contains: filters.q } },
-              { model: { contains: filters.q } },
+              { jobNumber: icontains(filters.q) },
+              { brand: icontains(filters.q) },
+              { model: icontains(filters.q) },
             ],
           }
         : {}),

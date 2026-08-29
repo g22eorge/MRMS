@@ -26,6 +26,7 @@ import { clientDisplayName } from "@/lib/client-name";
 
 import { findRecentDuplicate } from "@/lib/dedup";
 import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 type SearchParams = {
   q?: string;
   tech?: string;
@@ -43,9 +44,9 @@ function buildJobSearch(q?: string): Prisma.JobWhereInput {
   if (!q) return {};
   return {
     OR: [
-      { jobNumber: { contains: q } },
-      { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
-      { assignedTo: { is: { name: { contains: q } } } },
+      { jobNumber: icontains(q) },
+      { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+      { assignedTo: { is: { name: icontains(q) } } },
     ],
   };
 }
@@ -54,9 +55,9 @@ function buildInvoiceSearch(q?: string): Prisma.InvoiceWhereInput {
   if (!q) return {};
   return {
     OR: [
-      { invoiceNumber: { contains: q } },
-      { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
-      { subject: { contains: q } },
+      { invoiceNumber: icontains(q) },
+      { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+      { subject: icontains(q) },
     ],
   };
 }
@@ -65,8 +66,8 @@ function buildBillSearch(q?: string): Prisma.SupplierBillWhereInput {
   if (!q) return {};
   return {
     OR: [
-      { billNumber: { contains: q } },
-      { supplier: { name: { contains: q } } },
+      { billNumber: icontains(q) },
+      { supplier: { name: icontains(q) } },
     ],
   };
 }

@@ -31,6 +31,7 @@ const STATUSES = Object.values(OutboundMessageStatus);
 const TYPES = Object.values(OutboundMessageType);
 
 import { PAGE_SIZE, parsePageSize } from "@/lib/pagination";
+import { icontains } from "@/lib/db/search";
 
 // Borderless status pills — semantic colour via tint + text, no ring.
 const STATUS_STYLES: Record<string, string> = {
@@ -105,10 +106,10 @@ export default async function OutboxPage({
     ...(q
       ? {
           OR: [
-            { id: { contains: q } },
-            { to: { contains: q } },
-            { providerMessageId: { contains: q } },
-            { lastError: { contains: q } },
+            { id: icontains(q) },
+            { to: icontains(q) },
+            { providerMessageId: icontains(q) },
+            { lastError: icontains(q) },
           ],
         }
       : {}),

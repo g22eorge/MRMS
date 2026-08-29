@@ -19,6 +19,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { PAGE_SIZE, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 
 import { clientDisplayName } from "@/lib/client-name";
+import { icontains } from "@/lib/db/search";
 type SearchParams = {
   status?: string;
   pricing?: string;
@@ -225,13 +226,13 @@ export default async function JobsPage({
           ...(q
             ? {
                 OR: [
-                  { jobNumber: { contains: q } },
+                  { jobNumber: icontains(q) },
                   // External techs can still search by device details.
-                  { brand: { contains: q } },
-                  { model: { contains: q } },
-                  { device: { brand: { contains: q } } },
-                  { device: { model: { contains: q } } },
-                  { serialOrImei: { contains: q } },
+                  { brand: icontains(q) },
+                  { model: icontains(q) },
+                  { device: { brand: icontains(q) } },
+                  { device: { model: icontains(q) } },
+                  { serialOrImei: icontains(q) },
                 ],
               }
             : {}),
@@ -241,16 +242,16 @@ export default async function JobsPage({
           ...(q
             ? {
                 OR: [
-                  { jobNumber: { contains: q } },
-                  { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
-                  { client: { phone: { contains: q } } },
+                  { jobNumber: icontains(q) },
+                  { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+                  { client: { phone: icontains(q) } },
                   // Support both the legacy Job.brand/model fields and the newer Device relation.
-                  { brand: { contains: q } },
-                  { model: { contains: q } },
-                  { device: { brand: { contains: q } } },
-                  { device: { model: { contains: q } } },
-                  { serialOrImei: { contains: q } },
-                  { issueDescription: { contains: q } },
+                  { brand: icontains(q) },
+                  { model: icontains(q) },
+                  { device: { brand: icontains(q) } },
+                  { device: { model: icontains(q) } },
+                  { serialOrImei: icontains(q) },
+                  { issueDescription: icontains(q) },
                 ],
               }
             : {}),

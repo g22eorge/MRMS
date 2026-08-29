@@ -34,6 +34,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 
 import { clientDisplayName } from "@/lib/client-name";
 import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 export const dynamic = "force-dynamic";
 
 export default async function CreditNotesPage({
@@ -660,13 +661,13 @@ export default async function CreditNotesPage({
           // Search by who as well as by number, across both kinds of parent —
           // people look for "Omega", not for INV-EIS-05/2025/0008.
           OR: [
-            { creditNoteNumber: { contains: q } },
-            { reason: { contains: q } },
-            { sale: { saleNumber: { contains: q } } },
-            { sale: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } },
-            { invoice: { invoiceNumber: { contains: q } } },
-            { invoice: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } },
-            { invoice: { job: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } },
+            { creditNoteNumber: icontains(q) },
+            { reason: icontains(q) },
+            { sale: { saleNumber: icontains(q) } },
+            { sale: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } },
+            { invoice: { invoiceNumber: icontains(q) } },
+            { invoice: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } },
+            { invoice: { job: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } } },
           ],
         }
       : {}),

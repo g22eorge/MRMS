@@ -30,6 +30,7 @@ import {
 } from "@/lib/phone";
 
 import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 const createClientSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(3),
@@ -67,11 +68,11 @@ export default async function ClientsPage({
     ...(filters.q
       ? {
           OR: [
-            { fullName: { contains: filters.q } },
-            { phone: { contains: filters.q } },
-            { email: { contains: filters.q } },
-            { organization: { contains: filters.q } },
-            { address: { contains: filters.q } },
+            { fullName: icontains(filters.q) },
+            { phone: icontains(filters.q) },
+            { email: icontains(filters.q) },
+            { organization: icontains(filters.q) },
+            { address: icontains(filters.q) },
           ],
         }
       : {}),

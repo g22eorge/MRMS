@@ -20,6 +20,7 @@ import { createLead, advanceLeadStageAction } from "./actions";
 import { clientDisplayName } from "@/lib/client-name";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { icontains } from "@/lib/db/search";
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
   CONTACTED: "Contacted",
@@ -131,9 +132,9 @@ export default async function SalesPage({
     ...(searchQ
       ? {
           OR: [
-            { quoteNumber: { contains: searchQ } },
-            { lead:   { fullName: { contains: searchQ } } },
-            { client: { OR: [{ fullName: { contains: searchQ } }, { organization: { contains: searchQ } }] } },
+            { quoteNumber: icontains(searchQ) },
+            { lead:   { fullName: icontains(searchQ) } },
+            { client: { OR: [{ fullName: icontains(searchQ) }, { organization: icontains(searchQ) }] } },
           ],
         }
       : {}),
@@ -152,9 +153,9 @@ export default async function SalesPage({
     ...(searchQ
       ? {
           OR: [
-            { fullName: { contains: searchQ } },
-            { phone:    { contains: searchQ } },
-            { organization: { contains: searchQ } },
+            { fullName: icontains(searchQ) },
+            { phone:    icontains(searchQ) },
+            { organization: icontains(searchQ) },
           ],
         }
       : {}),

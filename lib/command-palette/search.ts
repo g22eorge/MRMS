@@ -8,6 +8,7 @@ import { phoneLookupVariants } from "@/lib/phone";
 
 import type { CommandPaletteUser } from "./quick-actions";
 import type { CommandPaletteSearchHit } from "./types";
+import { icontains } from "@/lib/db/search";
 
 const RESULT_LIMIT = 5;
 
@@ -21,19 +22,19 @@ function buildJobWhere(params: {
   const phoneVariants = phoneLookupVariants(q);
 
   const textOr: Prisma.JobWhereInput[] = [
-    { jobNumber: { contains: q } },
-    { brand: { contains: q } },
-    { model: { contains: q } },
-    { serialOrImei: { contains: q } },
-    { device: { brand: { contains: q } } },
-    { device: { model: { contains: q } } },
+    { jobNumber: icontains(q) },
+    { brand: icontains(q) },
+    { model: icontains(q) },
+    { serialOrImei: icontains(q) },
+    { device: { brand: icontains(q) } },
+    { device: { model: icontains(q) } },
   ];
 
   if (user.role !== "TECHNICIAN_EXTERNAL") {
     textOr.push(
-      { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
-      { client: { phone: { contains: q } } },
-      { issueDescription: { contains: q } },
+      { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+      { client: { phone: icontains(q) } },
+      { issueDescription: icontains(q) },
     );
     for (const phone of phoneVariants) {
       textOr.push({ client: { phone: { contains: phone } } });
@@ -130,10 +131,10 @@ export async function searchCommandPalette(params: {
   if (can.viewClientInfo(params.user)) {
     const phoneVariants = phoneLookupVariants(q);
     const clientOr: Prisma.ClientWhereInput[] = [
-      { fullName: { contains: q } },
-      { phone: { contains: q } },
-      { email: { contains: q } },
-      { organization: { contains: q } },
+      { fullName: icontains(q) },
+      { phone: icontains(q) },
+      { email: icontains(q) },
+      { organization: icontains(q) },
     ];
     for (const phone of phoneVariants) {
       clientOr.push({ phone: { contains: phone } });
@@ -162,11 +163,11 @@ export async function searchCommandPalette(params: {
       where: {
         orgId: params.orgId,
         OR: [
-          { invoiceNumber: { contains: q } },
-          { subject: { contains: q } },
-          { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
-          { client: { phone: { contains: q } } },
-          { job: { jobNumber: { contains: q } } },
+          { invoiceNumber: icontains(q) },
+          { subject: icontains(q) },
+          { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+          { client: { phone: icontains(q) } },
+          { job: { jobNumber: icontains(q) } },
         ],
       },
       select: {
@@ -196,9 +197,9 @@ export async function searchCommandPalette(params: {
       where: {
         orgId: params.orgId,
         OR: [
-          { quoteNumber: { contains: q } },
-          { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
-          { job: { jobNumber: { contains: q } } },
+          { quoteNumber: icontains(q) },
+          { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+          { job: { jobNumber: icontains(q) } },
         ],
       },
       select: { id: true, quoteNumber: true, status: true, client: { select: { fullName: true, organization: true } }, job: { select: { jobNumber: true } } },
@@ -219,13 +220,13 @@ export async function searchCommandPalette(params: {
   if (can.manageInventory(params.user)) {
     const [products, suppliers] = await Promise.all([
       prisma.part.findMany({
-        where: { orgId: params.orgId, isActive: true, OR: [{ sku: { contains: q } }, { name: { contains: q } }] },
+        where: { orgId: params.orgId, isActive: true, OR: [{ sku: icontains(q) }, { name: icontains(q) }] },
         select: { id: true, sku: true, name: true, qtyOnHand: true },
         orderBy: { name: "asc" },
         take: RESULT_LIMIT,
       }),
       prisma.supplier.findMany({
-        where: { orgId: params.orgId, OR: [{ name: { contains: q } }, { phone: { contains: q } }, { email: { contains: q } }] },
+        where: { orgId: params.orgId, OR: [{ name: icontains(q) }, { phone: icontains(q) }, { email: icontains(q) }] },
         select: { id: true, name: true, phone: true },
         orderBy: { name: "asc" },
         take: RESULT_LIMIT,

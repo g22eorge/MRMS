@@ -27,6 +27,7 @@ import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSu
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { icontains } from "@/lib/db/search";
 const updateClientSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(4, "Enter a valid phone number"),
@@ -83,9 +84,9 @@ export default async function ClientDetailPage({
             ...(filters.q
               ? {
                   OR: [
-                    { jobNumber: { contains: filters.q } },
-                    { brand: { contains: filters.q } },
-                    { model: { contains: filters.q } },
+                    { jobNumber: icontains(filters.q) },
+                    { brand: icontains(filters.q) },
+                    { model: icontains(filters.q) },
                   ],
                 }
               : {}),
@@ -110,9 +111,9 @@ export default async function ClientDetailPage({
             ...(filters.q
               ? {
                   OR: [
-                    { jobNumber: { contains: filters.q } },
-                    { brand: { contains: filters.q } },
-                    { model: { contains: filters.q } },
+                    { jobNumber: icontains(filters.q) },
+                    { brand: icontains(filters.q) },
+                    { model: icontains(filters.q) },
                   ],
                 }
               : {}),

@@ -33,6 +33,7 @@ import { type SourceGroup } from "@/components/documents/DocumentSourcePicker";
 import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { CreateReceiptDialog, type ReceiptFormState } from "./CreateReceiptDialog";
 import { clientDisplayName } from "@/lib/client-name";
+import { icontains } from "@/lib/db/search";
 
 export default async function ReceiptsPage({
   searchParams,
@@ -312,10 +313,10 @@ export default async function ReceiptsPage({
   const searchWhere = q
     ? {
         OR: [
-          { reference: { contains: q } },
-          { note: { contains: q } },
-          { invoice: { invoiceNumber: { contains: q } } },
-          { sale: { saleNumber: { contains: q } } },
+          { reference: icontains(q) },
+          { note: icontains(q) },
+          { invoice: { invoiceNumber: icontains(q) } },
+          { sale: { saleNumber: icontains(q) } },
         ],
       }
     : {};

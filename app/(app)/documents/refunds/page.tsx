@@ -34,6 +34,7 @@ import { clientDisplayName } from "@/lib/client-name";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 export const dynamic = "force-dynamic";
 
 export default async function RefundsPage({
@@ -380,13 +381,13 @@ export default async function RefundsPage({
   else if (periodFilter === "last_month") baseWhere.refundedAt = { gte: lastMonthStart, lte: lastMonthEnd };
   if (q) {
     baseWhere.OR = [
-      { reference: { contains: q } },
-      { note: { contains: q } },
-      { invoice: { is: { invoiceNumber: { contains: q } } } },
-      { invoice: { is: { job: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } } } },
-      { sale: { is: { saleNumber: { contains: q } } } },
-      { sale: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } },
-      { creditNote: { is: { creditNoteNumber: { contains: q } } } },
+      { reference: icontains(q) },
+      { note: icontains(q) },
+      { invoice: { is: { invoiceNumber: icontains(q) } } },
+      { invoice: { is: { job: { is: { client: { is: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } } } } } },
+      { sale: { is: { saleNumber: icontains(q) } } },
+      { sale: { is: { client: { is: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } } } },
+      { creditNote: { is: { creditNoteNumber: icontains(q) } } },
     ];
   }
 

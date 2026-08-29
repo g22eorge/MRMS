@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requirePortalSession } from "@/lib/portal-auth";
 import { prisma } from "@/lib/prisma";
 import { PortalHeader } from "@/components/portal/PortalHeader";
+import { icontains } from "@/lib/db/search";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,10 @@ export default async function PortalRepairsPage({
       ...(query
         ? {
             OR: [
-              { jobNumber: { contains: query } },
-              { brand: { contains: query } },
-              { model: { contains: query } },
-              { serialOrImei: { contains: query } },
+              { jobNumber: icontains(query) },
+              { brand: icontains(query) },
+              { model: icontains(query) },
+              { serialOrImei: icontains(query) },
             ],
           }
         : {}),

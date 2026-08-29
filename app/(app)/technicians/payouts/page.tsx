@@ -9,6 +9,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { icontains } from "@/lib/db/search";
 
 type SearchParams = {
   q?: string;
@@ -61,9 +62,9 @@ export default async function TechnicianPayoutsPage({
       ...(filters.q
         ? {
             OR: [
-              { jobNumber: { contains: filters.q } },
-              { brand: { contains: filters.q } },
-              { model: { contains: filters.q } },
+              { jobNumber: icontains(filters.q) },
+              { brand: icontains(filters.q) },
+              { model: icontains(filters.q) },
             ],
           }
         : {}),

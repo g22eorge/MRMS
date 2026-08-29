@@ -33,6 +33,7 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shar
 import { clientDisplayName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 const DELIVERY_METHODS: DeliveryMethod[] = ["PICKUP", "DELIVERY", "COURIER"];
 
 export default async function DeliveryNotesPage({
@@ -235,20 +236,20 @@ export default async function DeliveryNotesPage({
 
   const searchOrPrimary: Prisma.DeliveryNoteWhereInput[] | undefined = q
     ? [
-        { deliveryNoteNumber: { contains: q } },
-        { invoice: { is: { invoiceNumber: { contains: q } } } },
-        { invoice: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } },
-        { sale: { is: { saleNumber: { contains: q } } } },
-        { sale: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } },
+        { deliveryNoteNumber: icontains(q) },
+        { invoice: { is: { invoiceNumber: icontains(q) } } },
+        { invoice: { is: { client: { is: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } } } },
+        { sale: { is: { saleNumber: icontains(q) } } },
+        { sale: { is: { client: { is: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } } } },
       ]
     : undefined;
   // Legacy deployments whose Prisma client predates DeliveryNote.invoice can't
   // filter on that relation — drop the invoice clauses for the fallback path.
   const searchOrFallback: Prisma.DeliveryNoteWhereInput[] | undefined = q
     ? [
-        { deliveryNoteNumber: { contains: q } },
-        { sale: { is: { saleNumber: { contains: q } } } },
-        { sale: { is: { client: { is: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } } } },
+        { deliveryNoteNumber: icontains(q) },
+        { sale: { is: { saleNumber: icontains(q) } } },
+        { sale: { is: { client: { is: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } } } },
       ]
     : undefined;
 

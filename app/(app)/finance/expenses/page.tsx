@@ -25,6 +25,7 @@ import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadg
 import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
+import { icontains } from "@/lib/db/search";
 
 export const dynamic = "force-dynamic";
 
@@ -117,9 +118,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
     ...(q
       ? {
           OR: [
-            { description: { contains: q } },
-            { expenseNumber: { contains: q } },
-            { reference: { contains: q } },
+            { description: icontains(q) },
+            { expenseNumber: icontains(q) },
+            { reference: icontains(q) },
           ],
         }
       : {}),

@@ -34,6 +34,7 @@ import { clientDisplayName } from "@/lib/client-name";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
   SENT: "sky",
@@ -63,20 +64,20 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   if (statusFilter !== "ALL") where.status = statusFilter as QuotationStatus;
   if (q) {
     where.OR = [
-      { quoteNumber: { contains: q } },
+      { quoteNumber: icontains(q) },
       // A quotation raised from a repair is looked for by the job it belongs to
       // at least as often as by its own number. Invoices already search this;
       // quotations did not, so the same search found the invoice and missed the
       // quote that produced it.
-      { job: { jobNumber: { contains: q } } },
-      { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
+      { job: { jobNumber: icontains(q) } },
+      { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
     ];
   }
 
   // KPI band reflects the whole org (all statuses), respecting only the search —
   // so the summary numbers stay stable as you flip the status filter.
   const kpiWhere: Prisma.QuotationWhereInput = { orgId: user.orgId };
-  if (q) kpiWhere.OR = [{ quoteNumber: { contains: q } }, { job: { jobNumber: { contains: q } } }, { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } }];
+  if (q) kpiWhere.OR = [{ quoteNumber: icontains(q) }, { job: { jobNumber: icontains(q) } }, { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } }];
 
   const [quotations, totalItems, statusGroups] = await Promise.all([
     db.quotation.findMany({

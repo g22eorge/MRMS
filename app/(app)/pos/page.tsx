@@ -27,6 +27,7 @@ import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
 import { clientDisplayName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 function saleStatusTone(status: string): BadgeTone {
   if (status === "PAID") return "success";
   if (status === "VOID") return "danger";
@@ -85,9 +86,9 @@ export default async function PosPage({
   const searchFilter: Prisma.SaleWhereInput = q
     ? {
         OR: [
-          { saleNumber: { contains: q } },
-          { notes: { contains: q } },
-          { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
+          { saleNumber: icontains(q) },
+          { notes: icontains(q) },
+          { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
         ],
       }
     : {};

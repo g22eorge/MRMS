@@ -26,6 +26,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { parsePeriodInt } from "@/lib/date-eat";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { icontains } from "@/lib/db/search";
 const MONTHS = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
@@ -204,9 +205,9 @@ export default async function JournalPage({
   const searchWhere = searchQ
     ? {
         OR: [
-          { description: { contains: searchQ } },
-          { reference:   { contains: searchQ } },
-          { entryNumber: { contains: searchQ } },
+          { description: icontains(searchQ) },
+          { reference:   icontains(searchQ) },
+          { entryNumber: icontains(searchQ) },
         ],
       }
     : {};

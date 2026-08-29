@@ -11,6 +11,7 @@ import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { ServiceHubNav } from "@/components/service/ServiceHubNav";
 import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
+import { icontains } from "@/lib/db/search";
 
 export const dynamic = "force-dynamic";
 
@@ -166,10 +167,10 @@ export default async function FieldPage({
     ...(!isManager ? { assignedToId: user.id } : {}),
     ...(q ? {
       OR: [
-        { visitNumber: { contains: q } },
-        { job: { jobNumber: { contains: q } } },
-        { job: { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } } },
-        { assignedTo: { name: { contains: q } } },
+        { visitNumber: icontains(q) },
+        { job: { jobNumber: icontains(q) } },
+        { job: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } },
+        { assignedTo: { name: icontains(q) } },
       ],
     } : {}),
   };

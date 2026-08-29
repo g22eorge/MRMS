@@ -62,6 +62,7 @@ function DeviceIcon({ type }: { type: string }) {
 type SearchParams = { q?: string; status?: string; period?: string; page?: string; size?: string };
 
 import { PAGE_SIZE, PAGE_SIZES, parsePageSize } from "@/lib/pagination";
+import { icontains } from "@/lib/db/search";
 
 export default async function JobCardsPage({
   searchParams,
@@ -115,10 +116,10 @@ export default async function JobCardsPage({
     ...(q
       ? {
           OR: [
-            { jobNumber: { contains: q } },
-            { client: { OR: [{ fullName: { contains: q } }, { organization: { contains: q } }] } },
-            { brand: { contains: q } },
-            { model: { contains: q } },
+            { jobNumber: icontains(q) },
+            { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+            { brand: icontains(q) },
+            { model: icontains(q) },
           ],
         }
       : {}),
