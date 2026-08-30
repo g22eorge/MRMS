@@ -26,6 +26,25 @@ export const dynamic = "force-dynamic";
  * one resolved, from where, and what the provider said about it.
  */
 
+/**
+ * Africa's Talking sender IDs are alphanumeric and at most 11 characters.
+ *
+ * Worth checking because the failure it catches is not "SMS is misconfigured"
+ * but "a value has been pasted into the wrong box" — and when the value that
+ * landed in the sender ID looks like a generated secret, the right response is
+ * to rotate it, not to correct a setting.
+ */
+function senderIdProblem(senderId: string | null | undefined): string | null {
+  if (!senderId) return null;
+  if (senderId.length > 11) {
+    return `"${senderId.length} characters" — Africa's Talking allows at most 11. This is not a valid sender ID.`;
+  }
+  if (!/^[A-Za-z0-9 ]+$/.test(senderId)) {
+    return "contains characters Africa's Talking does not accept — sender IDs are alphanumeric.";
+  }
+  return null;
+}
+
 type Verdict =
   | "READY"
   | "NO CREDENTIALS"
@@ -96,6 +115,25 @@ export async function GET() {
   if (verdict === "CREDENTIALS REJECTED") {
     blockers.push(`Africa's Talking rejected these credentials: ${providerError}`);
   }
+  // Said whatever the verdict, because a malformed sender ID explains a 401
+  // better than the 401 does: it means the fields were filled in wrongly.
+  const senderIdIssue = senderIdProblem(config?.senderId);
+  if (senderIdIssue) {
+    blockers.push(
+      `The stored sender ID is not a valid one — ${senderIdIssue} ` +
+        "If a credential was pasted into this field by mistake, treat it as exposed and rotate it.",
+    );
+  }
+
+  if (config && config.username.toLowerCase() === "sandbox") {
+    // The same trap that had the commercial deployment paying into Pesapal's
+    // sandbox for months, in a different provider.
+    blockers.push(
+      "The username is \"sandbox\", but this application always calls the live Africa's Talking host. " +
+        "Sandbox credentials are rejected there, which is exactly the 401 above. Use the live username and key.",
+    );
+  }
+
   if (verdict === "READY" && !config?.senderId) {
     // Not a blocker: AT sends from a shared shortcode without one.
     blockers.push(
@@ -114,6 +152,7 @@ export async function GET() {
       /** Distinguishes "never configured" from "configured but unreadable". */
       absenceIsTrustworthy: store.readable,
       senderId: config?.senderId ?? null,
+      senderIdLooksValid: config?.senderId ? senderIdProblem(config.senderId) === null : null,
       storedInDatabase: { apiKey: Boolean(dbKey), username: Boolean(dbUser), senderId: Boolean(dbSender) },
     },
     provider: {

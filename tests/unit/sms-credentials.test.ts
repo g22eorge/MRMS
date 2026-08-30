@@ -103,3 +103,59 @@ describe("there is now a way to tell whether they work", () => {
     expect(form).toContain("Saved is not the same as working");
   });
 });
+
+describe("it explains a 401 that a 401 cannot explain", () => {
+  const SRC = readFileSync("app/api/admin/sms-health/route.ts", "utf8");
+
+  /** Mirrors the route's rule; pinned against the source below. */
+  function senderIdProblem(senderId: string | null | undefined): string | null {
+    if (!senderId) return null;
+    if (senderId.length > 11) return "too long";
+    if (!/^[A-Za-z0-9 ]+$/.test(senderId)) return "bad characters";
+    return null;
+  }
+
+  it("rejects the value actually found stored on the live system", () => {
+    // "wecmys-piqcut-0biJvu" — twenty characters and hyphenated. Africa's
+    // Talking allows eleven, alphanumeric. A value shaped like a generated
+    // secret in the sender ID box means the fields were filled in wrongly, and
+    // that explains a 401 far better than the 401 does.
+    expect(senderIdProblem("wecmys-piqcut-0biJvu")).toBe("too long");
+  });
+
+  it("accepts a real one", () => {
+    for (const ok of ["DDUUKA", "EAGLEINFO", "Eagle Info"]) {
+      expect(senderIdProblem(ok)).toBeNull();
+    }
+  });
+
+  it("rejects hyphens and underscores at a legal length", () => {
+    expect(senderIdProblem("ab-cd")).toBe("bad characters");
+    expect(senderIdProblem("ab_cd")).toBe("bad characters");
+  });
+
+  it("treats an absent sender ID as fine, not as malformed", () => {
+    // Optional: AT sends from a shared shortcode without one.
+    expect(senderIdProblem(null)).toBeNull();
+    expect(senderIdProblem("")).toBeNull();
+  });
+
+  it("tells the reader to rotate, not merely to correct", () => {
+    // If a key landed in this field it has been stored, displayed and probably
+    // pasted somewhere. Fixing the field does not un-expose it.
+    expect(SRC).toContain("treat it as exposed and rotate it");
+  });
+
+  it("names the sandbox trap this system has already been caught by once", () => {
+    expect(SRC).toContain('config.username.toLowerCase() === "sandbox"');
+    expect(SRC).toContain("always calls the live Africa's Talking host");
+  });
+
+  it("reports the sender ID problem whatever the verdict", () => {
+    // Reporting it only on READY would hide it behind the 401 it explains.
+    const at = SRC.indexOf("const senderIdIssue");
+    const readyBlock = SRC.indexOf('verdict === "READY" && !config?.senderId');
+    expect(at).toBeGreaterThan(-1);
+    expect(at).toBeLessThan(readyBlock);
+  });
+});
