@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 // The real rule, not a copy of it — a mirrored validator in a test proves only
 // that the mirror is self-consistent.
-import { senderIdProblem } from "@/lib/notifications/sms";
+import { senderIdProblem, atApiBase, isSandboxUsername } from "@/lib/notifications/sms";
 
 /**
  * SMS credentials entered in the platform settings form, and never used.
@@ -62,8 +62,9 @@ describe("what the form writes is what the sender reads", () => {
 describe("there is now a way to tell whether they work", () => {
   it("asks the provider rather than the database", () => {
     // A tick on the settings page says a value was stored. Only Africa's
-    // Talking knows whether it is a real key.
-    expect(HEALTH).toContain("api.africastalking.com/version1/user");
+    // Talking knows whether it is a real key. The host is no longer a literal
+    // here — atApiBase picks live or sandbox from the username.
+    expect(HEALTH).toContain("atApiBase(config.username)}/version1/user");
   });
 
   it("checks with a read, so verifying costs nothing and sends nothing", () => {
@@ -156,8 +157,11 @@ describe("it explains a 401 that a 401 cannot explain", () => {
   });
 
   it("names the sandbox trap this system has already been caught by once", () => {
-    expect(SRC).toContain('config.username.toLowerCase() === "sandbox"');
-    expect(SRC).toContain("always calls the live Africa's Talking host");
+    // The wording moved on when the sandbox stopped being unreachable and
+    // started being merely useless for customers. The warning got louder, not
+    // quieter, which is the property worth pinning.
+    expect(SRC).toContain("isSandboxUsername(config?.username)");
+    expect(SRC).toContain("reach no real handset and no customer");
   });
 
   it("reports the sender ID problem whatever the verdict", () => {
@@ -204,7 +208,69 @@ describe("the form refuses what the check would only report", () => {
     // Two copies of this would drift, which is the defect this audit has now
     // found in prices, in job statuses, and in SMS credentials.
     for (const f of ["app/api/admin/sms-health/route.ts", "app/(platform)/platform/settings/actions.ts"]) {
-      expect(readFileSync(f, "utf8")).toContain('senderIdProblem } from "@/lib/notifications/sms"');
+      const src = readFileSync(f, "utf8");
+      // Matched on the import of the symbol from the one module that owns it,
+      // rather than an exact import line — the health route imports several
+      // names alongside it now.
+      expect(src).toMatch(/import \{[^}]*senderIdProblem[^}]*\} from "@\/lib\/notifications\/sms"/);
     }
+  });
+});
+
+describe("sandbox and live are different hosts, and only one reaches a customer", () => {
+  /**
+   * Africa's Talking runs the sandbox on its own host, and the sandbox app's
+   * username is always literally "sandbox" — so the credentials say where they
+   * belong and nothing extra needs configuring. Sending them to the live host
+   * returns 401 "The supplied authentication is invalid", which reads as a
+   * wrong key rather than a wrong address, and cost several rounds to
+   * recognise on this deployment.
+   */
+  it("routes by username, with no separate setting to forget", () => {
+    expect(atApiBase("sandbox")).toBe("https://api.sandbox.africastalking.com");
+    expect(atApiBase("eagleinfo")).toBe("https://api.africastalking.com");
+  });
+
+  it("is not fooled by case or padding", () => {
+    for (const u of ["Sandbox", "SANDBOX", "  sandbox  "]) {
+      expect(isSandboxUsername(u)).toBe(true);
+    }
+  });
+
+  it("treats an absent username as live, never as sandbox", () => {
+    // Guessing sandbox would silently route real traffic to the simulator.
+    expect(isSandboxUsername(null)).toBe(false);
+    expect(atApiBase(undefined)).toBe("https://api.africastalking.com");
+  });
+
+  it("uses the plain messaging endpoint, which the sandbox serves", () => {
+    // The /messaging/bulk variant is documented as not yet available on
+    // sandbox. This code does not use it, so that limitation does not apply.
+    const SMS_SRC = readFileSync("lib/notifications/sms.ts", "utf8");
+    expect(SMS_SRC).toContain("/version1/messaging`");
+    expect(SMS_SRC).not.toContain("/messaging/bulk");
+  });
+});
+
+describe("a working sandbox must never read as a working integration", () => {
+  const HEALTH_SRC = readFileSync("app/api/admin/sms-health/route.ts", "utf8");
+
+  it("never returns a plain READY on sandbox credentials", () => {
+    // This system has twice shown a green light for something that reached no
+    // customer. Making the sandbox reachable makes saying so louder, not
+    // quieter.
+    expect(HEALTH_SRC).toContain('verdict = isSandboxUsername(config.username) ? "READY — SANDBOX ONLY" : "READY"');
+  });
+
+  it("separates 'can send' from 'reaches a real customer'", () => {
+    expect(HEALTH_SRC).toContain('reachesRealCustomers: verdict === "READY"');
+  });
+
+  it("says plainly that no handset receives a sandbox message", () => {
+    expect(HEALTH_SRC).toContain("reach no real handset and no customer");
+  });
+
+  it("reports which host was actually contacted", () => {
+    expect(HEALTH_SRC).toContain("host: config ? atApiBase(config.username) : null");
   });
 });

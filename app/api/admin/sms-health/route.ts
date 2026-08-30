@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { getPlatformSetting, probePlatformSettingStore } from "@/lib/platform-settings";
-import { getAtConfig, senderIdProblem } from "@/lib/notifications/sms";
+import { getAtConfig, senderIdProblem, atApiBase, isSandboxUsername } from "@/lib/notifications/sms";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +28,8 @@ export const dynamic = "force-dynamic";
 
 type Verdict =
   | "READY"
+  /** Credentials work, against the simulator. No customer receives anything. */
+  | "READY — SANDBOX ONLY"
   | "NO CREDENTIALS"
   | "CREDENTIALS REJECTED"
   | "SETTINGS UNREADABLE";
@@ -66,8 +68,11 @@ export async function GET() {
   } else {
     // The provider is the only authority on whether a key is real.
     try {
+      // Whichever host these credentials belong to. Checking sandbox
+      // credentials against the live host returns a 401 that reads as a wrong
+      // key rather than a wrong address.
       const res = await fetch(
-        `https://api.africastalking.com/version1/user?username=${encodeURIComponent(config.username)}`,
+        `${atApiBase(config.username)}/version1/user?username=${encodeURIComponent(config.username)}`,
         { headers: { apiKey: config.apiKey, Accept: "application/json" } },
       );
       if (!res.ok) {
@@ -76,7 +81,10 @@ export async function GET() {
       } else {
         const data = (await res.json().catch(() => null)) as { UserData?: { balance?: string } } | null;
         balance = data?.UserData?.balance ?? null;
-        verdict = "READY";
+        // Never a plain READY on the sandbox. It can send, and no customer
+        // receives anything — a green light there is the same lie this system
+        // has already told twice about payments.
+        verdict = isSandboxUsername(config.username) ? "READY — SANDBOX ONLY" : "READY";
       }
     } catch (err) {
       providerError = err instanceof Error ? err.message.slice(0, 200) : "Africa's Talking did not answer";
@@ -106,12 +114,14 @@ export async function GET() {
     );
   }
 
-  if (config && config.username.toLowerCase() === "sandbox") {
-    // The same trap that had the commercial deployment paying into Pesapal's
-    // sandbox for months, in a different provider.
+  if (isSandboxUsername(config?.username)) {
+    // Now reachable rather than rejected — which makes saying this louder, not
+    // quieter. The same trap had the commercial deployment paying into Pesapal's
+    // sandbox for months.
     blockers.push(
-      "The username is \"sandbox\", but this application always calls the live Africa's Talking host. " +
-        "Sandbox credentials are rejected there, which is exactly the 401 above. Use the live username and key.",
+      "These are SANDBOX credentials, so this is checked against Africa's Talking' simulator. " +
+        "Messages sent with them reach no real handset and no customer. For SMS that actually arrives, " +
+        "create a live app in the Africa's Talking dashboard, use its username and key, and top it up.",
     );
   }
 
@@ -126,6 +136,9 @@ export async function GET() {
     readOnly: true,
     verdict,
     canSendSms: verdict === "READY",
+    /** Separate from canSendSms: the sandbox sends, but never to a customer. */
+    reachesRealCustomers: verdict === "READY",
+    environment: isSandboxUsername(config?.username) ? "sandbox" : "live",
     blockers,
     credentials: {
       resolved: Boolean(config),
@@ -147,6 +160,7 @@ export async function GET() {
     },
     provider: {
       name: "Africa's Talking",
+      host: config ? atApiBase(config.username) : null,
       checkedWith: "GET /version1/user — a balance read, not a send",
       accepted: config ? verdict === "READY" : null,
       accountBalance: balance,
