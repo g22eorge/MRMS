@@ -8,6 +8,7 @@ import { can } from "@/lib/permissions";
 
 import { NotificationPrefsForm } from "@/components/settings/NotificationPrefsForm";
 import { PaymentReminderSettingsCard } from "@/components/settings/PaymentReminderSettingsCard";
+import { WhatsAppReadinessNotice } from "@/components/notifications/WhatsAppReadinessNotice";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,10 @@ export default async function NotificationSettingsPage() {
 
   return (
     <div className="space-y-4">
+      {/* Said here because this is where reminders are switched on. Renders
+          nothing once WhatsApp is configured. */}
+      <WhatsAppReadinessNotice orgId={user.orgId ?? undefined} />
+
       {/* Header */}
       <div className="dc-card overflow-hidden px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">

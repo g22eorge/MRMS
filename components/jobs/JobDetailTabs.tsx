@@ -156,6 +156,7 @@ function DeliveryDot({ status }: { status: string | null }) {
 
 function MessagesTab({
   jobId,
+  whatsappReady,
   clientPhone,
   clientEmail,
   canSendQuote,
@@ -165,6 +166,8 @@ function MessagesTab({
   outbound,
 }: {
   jobId: string;
+  /** False when this org has no WhatsApp configuration — sends will not go out. */
+  whatsappReady: boolean;
   clientPhone: string | null | undefined;
   clientEmail: string | null | undefined;
   canSendQuote: boolean;
@@ -283,6 +286,20 @@ function MessagesTab({
           </button>
         ) : null}
       </div>
+
+      {/* This tab is where someone decides messaging is working. An empty list
+          and a list of silently-failed sends look identical here, so say which
+          it is before they conclude the client was contacted. */}
+      {!whatsappReady && (
+        <div role="status" className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+          <p className="text-[0.8125rem] font-semibold text-amber-500">
+            WhatsApp is not set up — messages queued for it will not reach the client
+          </p>
+          <a href="/settings/notifications/whatsapp" className="text-[0.75rem] font-semibold text-[var(--accent)] underline underline-offset-2">
+            Set up WhatsApp
+          </a>
+        </div>
+      )}
 
       {thread.length === 0 ? (
         <div className="px-6 py-10 text-center text-sm text-[var(--ink-muted)]">
@@ -598,9 +615,15 @@ type Props = {
   partsSlot?: ReactNode;
   moveSlot?: ReactNode;
   portalSlot?: ReactNode;
+  /**
+   * Whether this org can actually send over WhatsApp. Defaults to true so an
+   * un-updated caller shows nothing rather than a false alarm — a wrong warning
+   * on a working system trains people to ignore the right one.
+   */
+  whatsappReady?: boolean;
 };
 
-export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", initialTab, documentTimeline = [], assessmentSlot, partsSlot, moveSlot, portalSlot }: Props) {
+export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", initialTab, documentTimeline = [], assessmentSlot, partsSlot, moveSlot, portalSlot, whatsappReady = true }: Props) {
   const inboundMessages = job.inboundMessages ?? [];
   const outboundMessages = job.outboundMessages ?? [];
   const unreadCount = inboundMessages.filter((m) => !m.isRead).length;
@@ -2469,6 +2492,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       {segment === "history" && ["ADMIN", "OPS", "FRONT_DESK"].includes(role) ? (
         <MessagesTab
           jobId={job.id}
+          whatsappReady={whatsappReady}
           clientPhone={job.client?.phone ?? null}
           clientEmail={job.client?.email ?? null}
           canSendQuote={canGenerateQuotation && !isIntake}

@@ -34,6 +34,7 @@ import {
   InvoiceOverdueReminderBulkButton,
   InvoiceOverdueReminderButton,
 } from "@/components/documents/InvoiceOverdueReminderForms";
+import { WhatsAppReadinessNotice } from "@/components/notifications/WhatsAppReadinessNotice";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { BulkSelectionProvider } from "./BulkSelectionProvider";
 import { BulkActionBar } from "./BulkActionBar";
@@ -626,6 +627,10 @@ export default async function InvoicesPage({
   return (
     <InvoicePreviewProvider>
     <section className="space-y-4">
+      {/* Reminders and document sends on this page can go out over WhatsApp.
+          Compact, because this is a working list rather than a settings page. */}
+      <WhatsAppReadinessNotice orgId={user.orgId ?? undefined} compact />
+
       {errorParam && (
         <div className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-red-500" aria-hidden>

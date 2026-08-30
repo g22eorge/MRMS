@@ -18,6 +18,20 @@ function loadOrgModuleList(orgId: string): Promise<OrgModule[]> {
   return unstable_cache(
     async () => {
       try {
+        // A trial gets everything, whatever was picked at signup.
+        //
+        // Modules are chosen during onboarding, before anyone has seen the
+        // product, so the choice is a guess — and an under-selection is
+        // invisible: the feature they would have paid for simply is not there,
+        // and they never learn it existed. Opening the trial turns that guess
+        // into something they can answer from use rather than from a form, and
+        // the plan is then priced on what they actually reached for.
+        const org = await prisma.organization.findUnique({
+          where: { id: orgId },
+          select: { billingStatus: true },
+        });
+        if (org?.billingStatus === "TRIALING") return [...ALL_MODULES];
+
         const grants = await prisma.orgModuleGrant.findMany({ where: { orgId }, select: { module: true } });
         // No explicit grants = unrestricted (all modules on by default).
         return grants.length === 0 ? [...ALL_MODULES] : grants.map((g) => g.module);

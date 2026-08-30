@@ -16,6 +16,7 @@ import { loadJobDocumentTimeline } from "@/lib/jobs/job-document-timeline";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { getWhatsAppReadiness } from "@/lib/notifications/whatsapp-readiness";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { clientDisplayName } from "@/lib/client-name";
 
@@ -30,6 +31,8 @@ export default async function JobDetailPage({
   const { id } = await params;
   const { returnTo, returnLabel, tab, error: jobError } = await searchParams;
   const { session, user, orgId, org } = await requireOrgSession();
+  // Whether the Messages tab should say that WhatsApp sends will not arrive.
+  const { ready: whatsappReady } = await getWhatsAppReadiness(orgId);
   const safeReturnTo =
     returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
       ? returnTo
@@ -563,6 +566,7 @@ export default async function JobDetailPage({
     <>
     <FormErrorBanner message={jobError} />
     <JobDetailTabs
+      whatsappReady={whatsappReady}
       role={user.role}
       permissions={user.permissions}
       orgBaseCurrency={org.baseCurrency}
