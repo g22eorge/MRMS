@@ -106,14 +106,38 @@ run("node", ["scripts/assert-prisma-models.mjs"], { env: buildEnv });
 // ── Step 2: migrations + Next.js build ───────────────────────────────────────
 if (process.env.RUN_PRISMA_MIGRATE_DEPLOY === "1") {
   if (!realDatabaseUrl) {
-    console.error("RUN_PRISMA_MIGRATE_DEPLOY=1 requires DATABASE_URL or TURSO_DATABASE_URL.");
-    process.exit(1);
+    // Hard-failing here protects exactly one thing: a production deploy must
+    // never ship code against a database nobody migrated. It protects nothing
+    // on a preview, which has no database to migrate — and the flag is set for
+    // Preview as well as Production while the Turso variables are
+    // Production-only, so every preview build on the commercial project died
+    // here in eight seconds. That cost the ability to check anything on a real
+    // deployment before it reached the paying customers.
+    //
+    // Skip only where the target is positively known not to be production.
+    // An unknown environment keeps the old hard failure, because "not proven to
+    // be production" is not the same as "proven not to be".
+    const vercelEnv = process.env.VERCEL_ENV || "";
+    const knownNonProduction = vercelEnv !== "" && vercelEnv !== "production";
+
+    if (!knownNonProduction) {
+      console.error("RUN_PRISMA_MIGRATE_DEPLOY=1 requires DATABASE_URL or TURSO_DATABASE_URL.");
+      process.exit(1);
+    }
+
+    console.warn(
+      `[vercel-build] No DATABASE_URL/TURSO_DATABASE_URL on VERCEL_ENV=${vercelEnv}; ` +
+        "skipping prisma migrate deploy. The build continues, but this deployment has no " +
+        "database: pages that query one will fail at runtime. Give this environment its own " +
+        "database, or clear RUN_PRISMA_MIGRATE_DEPLOY for it, to make previews fully usable.",
+    );
+  } else {
+    process.env.DATABASE_URL = realDatabaseUrl;
+    if (realDatabaseUrl.startsWith("libsql:")) {
+      process.env.TURSO_DATABASE_URL = realDatabaseUrl;
+    }
+    run("bunx", ["prisma", "migrate", "deploy"]);
   }
-  process.env.DATABASE_URL = realDatabaseUrl;
-  if (realDatabaseUrl.startsWith("libsql:")) {
-    process.env.TURSO_DATABASE_URL = realDatabaseUrl;
-  }
-  run("bunx", ["prisma", "migrate", "deploy"]);
 }
 
 process.env.DATABASE_URL = buildDatabaseUrl;
