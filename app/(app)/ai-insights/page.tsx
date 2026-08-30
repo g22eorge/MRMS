@@ -81,7 +81,7 @@ export default async function AiInsightsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Business Insights"
+        title="AI Insights"
         actions={
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
             <Link href="/reports" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[var(--ink)] hover:border-[var(--accent)]/40">Operations Reports</Link>
@@ -98,7 +98,7 @@ export default async function AiInsightsPage() {
           tone={finance.cashReceived >= finance.cashReceivedPrev ? "good" : "risk"}
         />
         <KpiCard title="Cash Margin Signal" value={formatMoneyCompact(finance.cashMarginSignal, currency)} caption={`Expenses: ${formatMoneyCompact(finance.expenses, currency)} (${trendLabel(finance.expenses, finance.expensesPrev)})`} tone={finance.cashMarginSignal >= 0 ? "good" : "risk"} />
-        <KpiCard title="Open Repair Load" value={String(repairs.openJobs)} caption={`${repairs.overdueJobs} older than 7 days; ${repairs.staleJobs} stale updates`} tone={repairs.overdueJobs ? "risk" : "neutral"} />
+        <KpiCard title="Open Pipeline" value={String(repairs.openJobs)} caption={`${repairs.overdueJobs} older than 7 days; ${repairs.staleJobs} stale updates`} tone={repairs.overdueJobs ? "risk" : "neutral"} />
         <KpiCard title="Inventory Risk" value={String(inventory.lowStockParts)} caption={`${formatMoneyCompact(inventory.inventoryValue, currency)} stock value; ${inventory.openPurchaseOrders} open PO(s)`} tone={inventory.lowStockParts ? "risk" : "good"} />
       </section>
 

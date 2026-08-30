@@ -284,7 +284,7 @@ const GUIDE_INTENTS: GuideIntent[] = [
     answer: [
       "For management decision-making, use AI Insights rather than the general help guide:",
       "1. Open AI Insights from the sidebar, or go to /ai-insights.",
-      "2. Review the top KPI cards first: revenue signal, cash margin signal, open repair load, and inventory risk.",
+      "2. Review the top KPI cards first: revenue signal, cash margin signal, open pipeline, and inventory risk.",
       "3. Check Risks AI Should Escalate for overdue jobs, stale jobs, awaiting approvals, low stock, overdue invoices, and overdue supplier bills.",
       "4. Use Recommended Management Actions to decide what to assign today.",
       "5. Ask the AI Business Copilot questions like: What should management focus on today? Which repairs are stuck? What inventory risks should we fix first? Why is cash margin under pressure?",
