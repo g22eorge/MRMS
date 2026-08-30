@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PLAN_PRICES } from "@/lib/plan-prices";
 import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -162,9 +163,13 @@ const PRICING: Array<{
     href: "/register",
     features: ["2 team members", "20 jobs / month", "20 inventory items", "1 branch"],
   },
+  // Prices come from PLAN_PRICES. This block held its own formatted strings, so
+  // the public site advertised one ladder while checkout charged another the
+  // moment the table changed — the same drift as the two price tables that made
+  // every payment fail, now on the page a prospect reads before they trust you.
   {
     name: "Duuka Plus",
-    price: "35,000",
+    price: PLAN_PRICES.STANDARD.toLocaleString("en-US"),
     tagline: "For a growing shop",
     inherits: "Duuka",
     cta: "Get started",
@@ -173,7 +178,7 @@ const PRICING: Array<{
   },
   {
     name: "Duuka Pro",
-    price: "75,000",
+    price: PLAN_PRICES.GROWTH.toLocaleString("en-US"),
     tagline: "Best for most teams",
     inherits: "Duuka Plus",
     popular: true,
@@ -183,7 +188,7 @@ const PRICING: Array<{
   },
   {
     name: "Duuka Max",
-    price: "120,000",
+    price: PLAN_PRICES.PREMIUM.toLocaleString("en-US"),
     tagline: "For busy operations",
     inherits: "Duuka Pro",
     cta: "Get started",
@@ -192,7 +197,7 @@ const PRICING: Array<{
   },
   {
     name: "Duuka ProMax",
-    price: "200,000",
+    price: PLAN_PRICES.ENTERPRISE.toLocaleString("en-US"),
     tagline: "Unlimited scale",
     inherits: "Duuka Max",
     cta: "Talk to sales",

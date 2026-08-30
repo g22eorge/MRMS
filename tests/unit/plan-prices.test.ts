@@ -212,6 +212,34 @@ describe("nothing quotes a price from its own copy", () => {
     }
   });
 
+  it("the public pricing page reads the canonical table", () => {
+    // The sixth copy, and the worst place for one: it advertises a price to
+    // someone who has not signed up yet. It held formatted strings, so the site
+    // quoted the old ladder the moment the table changed.
+    const src = read("app/page.tsx");
+    expect(src).toContain("price: PLAN_PRICES.STANDARD");
+    expect(src).toContain("price: PLAN_PRICES.ENTERPRISE");
+  });
+
+  it("no purchasable figure appears as a literal on any pricing surface", () => {
+    // The earlier guard forbade reading PLAN_PRICES raw, which could not see a
+    // hardcoded number. Three copies hid behind exactly that gap: onboarding,
+    // the reconcile script, and the public page.
+    const surfaces = [
+      "app/page.tsx",
+      "app/(onboarding)/onboarding/OnboardingForm.tsx",
+      "app/(app)/settings/billing/page.tsx",
+    ];
+    for (const f of surfaces) {
+      const src = read(f);
+      for (const n of Object.values(PLAN_PRICES)) {
+        expect(src).not.toContain(String(n));                                   // 19900
+        expect(src).not.toContain(n.toLocaleString("en-US"));                   // 19,900
+        expect(src).not.toContain(n.toLocaleString("en-US").replace(/,/g, "_")); // 19_900
+      }
+    }
+  });
+
   it("the reconcile script's copy matches, since a .mjs cannot import the module", () => {
     // It is allowed to hold a copy; it is not allowed to disagree.
     const src = read("scripts/billing-reconcile.mjs");
