@@ -25,6 +25,12 @@ type Input = {
   expectedWebhookUrl: string;
 };
 
+/** Pesapal reports "1" for a live IPN; "Active" is the description field. */
+function isActiveIpn(status: unknown) {
+  const s = String(status ?? "").trim().toLowerCase();
+  return s === "1" || s === "active";
+}
+
 function verdictFor(i: Input) {
   const match = i.storedIpnId && i.registered ? i.registered.find((r) => r.ipn_id === i.storedIpnId) ?? null : null;
   const pointsHere = match ? match.url === i.expectedWebhookUrl : null;
@@ -33,7 +39,7 @@ function verdictFor(i: Input) {
   if (!i.haveCredentials) return "NO CREDENTIALS — CHECKOUT WILL FAIL";
   if (!i.authOk) return "CREDENTIALS REJECTED";
   if (!i.storedIpnId || (i.registered && !match)) return "NOTIFICATIONS NOT REGISTERED";
-  if (match && (match.status !== "Active" || !pointsHere)) return "NOTIFICATIONS GO SOMEWHERE ELSE";
+  if (match && (!isActiveIpn(match.status) || !pointsHere)) return "NOTIFICATIONS GO SOMEWHERE ELSE";
   return "READY";
 }
 
@@ -294,5 +300,44 @@ describe("it distinguishes 'never configured' from 'could not be read'", () => {
     // It must still block: unreadable is not evidence that checkout works.
     const idx = SRC.indexOf("if (!haveCredentials)");
     expect(SRC.slice(idx, idx + 700)).toContain("blockers.push");
+  });
+});
+
+describe("Pesapal reports IPN state as a code, not a word", () => {
+  const SRC = readFileSync("app/api/admin/pesapal-health/route.ts", "utf8");
+
+  /**
+   * Caught on the live deployment. Every IPN in the real account — including
+   * Pesapal's own invoicing endpoint — comes back with status "1". Comparing
+   * against the string "Active" blocked a correctly registered IPN and said
+   * "the registered IPN is 1, not Active", which reads as gibberish precisely
+   * when someone has just got everything else right.
+   */
+  it("accepts the numeric code the real API returns", () => {
+    expect(verdictFor({
+      ...healthy,
+      registered: [{ ipn_id: "ipn-1", url: HERE, status: "1" }],
+    })).toBe("READY");
+  });
+
+  it("still accepts the word, since the provider uses both", () => {
+    expect(isActiveIpn("Active")).toBe(true);
+    expect(isActiveIpn("active")).toBe(true);
+    expect(isActiveIpn("1")).toBe(true);
+  });
+
+  it("does not wave through an unknown status", () => {
+    // Failing open here would report a dead IPN as ready to take money.
+    for (const bad of ["0", "2", "Disabled", "", null, undefined]) {
+      expect(isActiveIpn(bad)).toBe(false);
+    }
+    expect(verdictFor({
+      ...healthy,
+      registered: [{ ipn_id: "ipn-1", url: HERE, status: "0" }],
+    })).toBe("NOTIFICATIONS GO SOMEWHERE ELSE");
+  });
+
+  it("says what active looks like when it complains", () => {
+    expect(SRC).toContain('Pesapal reports 1 (or "Active") for a live IPN');
   });
 });

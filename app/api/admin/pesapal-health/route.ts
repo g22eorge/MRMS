@@ -47,6 +47,22 @@ type Verdict =
 
 const WEBHOOK_PATH = "/api/webhooks/pesapal";
 
+/**
+ * Pesapal reports IPN state as a numeric code, not a word.
+ *
+ * GetIpnList returns status "1" for a live IPN — "Active" is the separate
+ * description field. Comparing against the word produced a false blocker on a
+ * correctly registered IPN, with the nonsensical message "the registered IPN is
+ * 1, not Active", on a deployment where everything else had just been made
+ * right. Both forms are accepted because the provider has used both across its
+ * API surface, and anything else is treated as not active rather than assumed
+ * fine.
+ */
+function isActiveIpn(status: unknown): boolean {
+  const s = String(status ?? "").trim().toLowerCase();
+  return s === "1" || s === "active";
+}
+
 export async function GET(req: Request) {
   const admin = await assertPlatformAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -141,8 +157,8 @@ export async function GET(req: Request) {
     blockers.push("No PESAPAL_IPN_ID is stored, so nothing tells Pesapal where to send the payment notification.");
   } else if (registered && !match) {
     blockers.push(`The stored IPN id ${storedIpnId} is not in this account's registered list. It belongs to a different Pesapal account or environment.`);
-  } else if (match && match.status !== "Active") {
-    blockers.push(`The registered IPN is ${match.status}, not Active.`);
+  } else if (match && !isActiveIpn(match.status)) {
+    blockers.push(`The registered IPN's status is "${match.status}", which is not active. Pesapal reports 1 (or "Active") for a live IPN.`);
   } else if (match && !pointsHere) {
     blockers.push(`Pesapal sends notifications to ${match.url}, which is not this deployment's webhook (${expectedWebhookUrl}). Every notification is delivered somewhere that cannot act on it.`);
   }
@@ -153,7 +169,7 @@ export async function GET(req: Request) {
   else if (!haveCredentials) verdict = "NO CREDENTIALS — CHECKOUT WILL FAIL";
   else if (!authOk) verdict = "CREDENTIALS REJECTED";
   else if (!storedIpnId || (registered && !match)) verdict = "NOTIFICATIONS NOT REGISTERED";
-  else if (match && (match.status !== "Active" || !pointsHere)) verdict = "NOTIFICATIONS GO SOMEWHERE ELSE";
+  else if (match && (!isActiveIpn(match.status) || !pointsHere)) verdict = "NOTIFICATIONS GO SOMEWHERE ELSE";
   else verdict = "READY";
 
   return NextResponse.json({
@@ -189,6 +205,7 @@ export async function GET(req: Request) {
       expectedWebhookUrl,
       registeredTo: match?.url ?? null,
       status: match?.status ?? null,
+      statusIsActive: match ? isActiveIpn(match.status) : null,
       pointsAtThisDeployment: pointsHere,
       allRegistered: registered?.map((i) => ({ id: i.ipn_id, url: i.url, status: i.status })) ?? null,
       lookupError: ipnLookupError,
