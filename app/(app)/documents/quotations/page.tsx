@@ -25,6 +25,8 @@ import { QuotationCreateDialog, QuotationCreateProvider, QuotationNewButton } fr
 import { DataTable, TablePagination, type DataTableColumn } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { QuoteFollowUpButton, QuoteFollowUpBulkButton, ExpireStaleDraftsButton } from "@/components/documents/QuotationFollowUpForms";
+import { DEFAULT_DRAFT_STALE_DAYS } from "@/lib/commercial/quote-followups";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { formatEATDate } from "@/lib/date-eat";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
@@ -104,6 +106,15 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   const statusCount = (s: string) => byStatus[s]?._count?._all ?? 0;
   const statusValue = (s: string) => byStatus[s]?._sum?.totalAmount ?? 0;
   const openQuoteValue = statusValue("DRAFT") + statusValue("SENT");
+
+  // Restored with the follow-up controls below. The bulk button needs the count
+  // of quotes awaiting a reply, which statusCount already has; the expiry
+  // button needs stale drafts, which is one indexed count.
+  const staleDraftCutoff = new Date(Date.now() - DEFAULT_DRAFT_STALE_DAYS * 86400000);
+  const staleDraftCount = await db.quotation
+    .count({ where: { status: "DRAFT", createdAt: { lt: staleDraftCutoff } } })
+    .catch(() => 0);
+  const followUpContext = { returnTo: "/documents/quotations" };
 
   const rows = quotations.map((q) => {
     const currency = normalizeCurrency(orgCurrency, normalizeCurrency(q.currency, "UGX"));
@@ -242,6 +253,24 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
 </form>
           </div>
 
+      {/* Restored. "Quote follow-up nudges + draft expiry policy" shipped whole
+          — engine, server actions, tests, documentation — and then a cleanup
+          commit removed QuotationFollowUpForms.tsx as an unused component. It
+          was unused because the page had already stopped rendering it, so the
+          cleanup cemented the loss rather than causing it. The engine and the
+          three actions were left behind, still tested, still passing, with no
+          way for anyone to reach them. */}
+      {(statusCount("SENT") > 0 || staleDraftCount > 0) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+          {statusCount("SENT") > 0 ? (
+            <QuoteFollowUpBulkButton count={statusCount("SENT")} context={followUpContext} />
+          ) : null}
+          {staleDraftCount > 0 ? (
+            <ExpireStaleDraftsButton count={staleDraftCount} context={followUpContext} />
+          ) : null}
+        </div>
+      )}
+
       <div>
   <BulkSelectionProvider pageIds={rows.map((r) => r.id)}>
     <BulkActionBar />
@@ -281,6 +310,9 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
             <input type="hidden" name="channel" value="whatsapp" />
             <MenuActionButton icon="whatsapp" tone="success">Send by WhatsApp</MenuActionButton>
           </form>
+          {row.status === "SENT" ? (
+            <QuoteFollowUpButton quotationId={row.id} context={followUpContext} compact />
+          ) : null}
           <MenuSection label="Danger zone" />
           {canDelete && (
             <MenuDestructiveRow>
