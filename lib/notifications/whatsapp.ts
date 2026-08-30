@@ -21,7 +21,7 @@ async function sendRenderedWhatsApp(
   if (!result.success && orgId) {
     const orgCfg = await getOrgWhatsAppConfig(orgId);
     if (orgCfg?.smsFallback) {
-      const atCfg = getAtConfig(orgCfg);
+      const atCfg = await getAtConfig(orgCfg);
       if (atCfg) {
         console.info("[WhatsApp→SMS] Falling back to Africa's Talking SMS for", phone.slice(0, -4) + "****");
         const smsResult = await sendSms(phone, rendered.body, atCfg, orgId);

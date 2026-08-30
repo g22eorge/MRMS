@@ -1,5 +1,6 @@
 import { checkSmsQuota, incrementSmsUsage } from "@/lib/notifications/sms-quota";
 import { normalizeUgPhone } from "@/lib/phone";
+import { getAtApiKey, getAtUsername, getAtSenderId } from "@/lib/platform-settings";
 
 export interface AtSmsConfig {
   apiKey: string;
@@ -7,9 +8,17 @@ export interface AtSmsConfig {
   senderId?: string;
 }
 
-export function getAtConfig(
+/**
+ * Async because the platform-settings tier is a database read.
+ *
+ * It used to consult only the per-org row and process.env, while the platform
+ * settings form wrote the credentials to the database — so a key entered there
+ * was stored, displayed as configured, and never used to send anything.
+ */
+export async function getAtConfig(
   orgCfg?: { atApiKey?: string | null; atUsername?: string | null; atSenderId?: string | null } | null,
-): AtSmsConfig | null {
+): Promise<AtSmsConfig | null> {
+  // A tenant's own credentials still win: their sender ID, their bill.
   if (orgCfg?.atApiKey && orgCfg?.atUsername) {
     return {
       apiKey: orgCfg.atApiKey,
@@ -17,17 +26,21 @@ export function getAtConfig(
       senderId: orgCfg.atSenderId ?? undefined,
     };
   }
-  const apiKey = process.env.AT_API_KEY;
-  const username = process.env.AT_USERNAME;
+
+  const [apiKey, username, senderId] = await Promise.all([
+    getAtApiKey(),
+    getAtUsername(),
+    getAtSenderId(),
+  ]);
   if (!apiKey || !username) return null;
   // Org's registered sender ID takes priority over the platform default
-  return { apiKey, username, senderId: orgCfg?.atSenderId ?? process.env.AT_SENDER_ID };
+  return { apiKey, username, senderId: orgCfg?.atSenderId ?? senderId ?? undefined };
 }
 
-export function smsIsConfigured(
+export async function smsIsConfigured(
   orgCfg?: { atApiKey?: string | null; atUsername?: string | null } | null,
-): boolean {
-  return Boolean(getAtConfig(orgCfg));
+): Promise<boolean> {
+  return Boolean(await getAtConfig(orgCfg));
 }
 
 export async function sendSms(
@@ -45,7 +58,7 @@ export async function sendSms(
     }
   }
 
-  const config = cfg ?? getAtConfig();
+  const config = cfg ?? (await getAtConfig());
   if (!config) return { success: false, error: "SMS not configured" };
 
   const to = normalizeUgPhone(phone, { format: "e164" });
@@ -84,7 +97,7 @@ export async function sendSms(
 export async function smsHealthCheck(
   cfg?: AtSmsConfig | null,
 ): Promise<{ ok: boolean; error?: string }> {
-  const config = cfg ?? getAtConfig();
+  const config = cfg ?? (await getAtConfig());
   if (!config) return { ok: false, error: "SMS not configured" };
 
   try {

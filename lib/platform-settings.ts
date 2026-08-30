@@ -93,6 +93,33 @@ export async function getPlatformSettings(keys: string[]): Promise<Record<string
 
 // ── Pesapal ──────────────────────────────────────────────────────────────────
 
+/**
+ * Africa's Talking credentials, from the database first.
+ *
+ * These were saved by the platform settings form into PlatformSetting and then
+ * read by nobody: getAtConfig consulted the per-org config row and
+ * process.env, never the database. So an administrator could enter a key,
+ * watch the page show it as configured — the page reads the same table the form
+ * wrote to — and send no SMS at all, with nothing anywhere saying why. Exactly
+ * the shape of the Pesapal defect, in the integration next to it.
+ *
+ * Same precedence as the Pesapal helpers below: stored value, then environment.
+ */
+export async function getAtApiKey(): Promise<string | null> {
+  const db = await getPlatformSetting("AT_API_KEY");
+  return db ?? process.env.AT_API_KEY ?? null;
+}
+
+export async function getAtUsername(): Promise<string | null> {
+  const db = await getPlatformSetting("AT_USERNAME");
+  return db ?? process.env.AT_USERNAME ?? null;
+}
+
+export async function getAtSenderId(): Promise<string | null> {
+  const db = await getPlatformSetting("AT_SENDER_ID");
+  return db ?? process.env.AT_SENDER_ID ?? null;
+}
+
 export async function getPesapalConsumerKey(): Promise<string | null> {
   const db = await getPlatformSetting("PESAPAL_CONSUMER_KEY");
   return db ?? process.env.PESAPAL_CONSUMER_KEY ?? null;

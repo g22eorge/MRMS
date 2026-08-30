@@ -95,6 +95,16 @@ export function ATSmsPlatformSettingsForm({ configured }: Props) {
         {saveState && !saveState.ok && <p className="text-xs text-red-600">{saveState.error ?? "Save failed"}</p>}
         {saveState?.ok && <p className="text-xs text-emerald-600">Settings saved successfully.</p>}
 
+        {/* A tick above means a value was stored, not that it works — the page
+            reads the same table the form wrote to. Only the provider knows. */}
+        <p className="text-[0.75rem] text-[var(--ink-muted)]">
+          Saved is not the same as working.{" "}
+          <a href="/api/admin/sms-health" className="font-semibold text-[var(--accent)] underline underline-offset-2">
+            Check these credentials against Africa&apos;s Talking
+          </a>{" "}
+          — it reads your account balance, sends nothing, and costs nothing.
+        </p>
+
         <SubmitButton bare disabled={saving}
  className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
           {saving ? "Saving…" : "Save SMS Settings"}
