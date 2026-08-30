@@ -12,6 +12,8 @@ import { routeLabel } from "@/lib/nav/registry";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
+import { readImpersonation, IMPERSONATION_MAX_AGE_MS } from "@/lib/platform/impersonation";
+import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 import { getOrgModules } from "@/lib/module-access";
 import { getActiveAnnouncements } from "@/lib/announcements";
 import { AnnouncementBanner } from "@/components/shared/AnnouncementBanner";
@@ -141,7 +143,20 @@ export default async function AppLayout({
 
   const procurementAttentionCount = purchaseRequestAttentionCount + purchaseOrderAttentionCount;
 
+  // Non-null only while a platform admin is viewing someone else's workspace.
+  const impersonating = await readImpersonation(user.email);
+
   return (
+    // The banner sits ABOVE the flex row, not inside it. Inside, it became a
+    // flex item beside the sidebar and painted a full-height column.
+    <>
+      {impersonating ? (
+        <ImpersonationBanner
+          orgName={org.name}
+          startedAt={impersonating.startedAt}
+          maxAgeMs={IMPERSONATION_MAX_AGE_MS}
+        />
+      ) : null}
     <div className="min-h-dvh overflow-x-clip md:flex md:h-screen md:overflow-hidden">
       <IdleLogout />
       <ClientOnlySidebar
@@ -216,6 +231,7 @@ export default async function AppLayout({
       </div>
       <CommandPalette role={user.role} />
     </div>
+    </>
   );
 }
 

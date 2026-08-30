@@ -10,6 +10,14 @@ import { hashPassword } from "better-auth/crypto";
 import { setOrgAtSenderId } from "@/lib/org-whatsapp-config";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { getCurrentUserRole } from "@/lib/session";
+import { PLATFORM_ROUTES } from "@/lib/platform/routes";
+import {
+  setImpersonationCookie,
+  clearImpersonationCookie,
+  readImpersonation,
+  IMPERSONATION_MAX_AGE_MS,
+} from "@/lib/platform/impersonation";
 import { revalidatePlatformHome, revalidatePlatformOrg, revalidatePlatformOrgAndHome } from "@/lib/platform/revalidate";
 
 export type PlatformResetState = { error?: string; success?: string };
@@ -320,4 +328,57 @@ export async function updateOrgDetailsAction(formData: FormData) {
     after: data,
   });
   revalidatePlatformOrg(orgId);
+}
+
+/**
+ * Look at a customer's workspace as they see it, read-only, for thirty minutes.
+ *
+ * The session is forced to accessMode READ_ONLY, which assertOrgCanMutate
+ * already enforces at every mutation site — so this grants sight, not reach.
+ * Both ends are audited: an impersonation nobody can date is what turns a
+ * support tool into a liability.
+ */
+export async function startImpersonationAction(formData: FormData) {
+  const admin = await requirePlatformAdmin();
+  const orgId = formData.get("orgId") as string;
+  if (!orgId) return;
+
+  const org = await prisma.organization
+    .findUnique({ where: { id: orgId }, select: { name: true } })
+    .catch(() => null);
+  if (!org) return;
+
+  await setImpersonationCookie(orgId);
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: admin.id,
+    entityType: "Organization",
+    entityId: orgId,
+    action: "PLATFORM_IMPERSONATION_STARTED",
+    summary: `${admin.email} began viewing ${org.name} read-only`,
+    after: { readOnly: true, expiresInMinutes: IMPERSONATION_MAX_AGE_MS / 60000 },
+  });
+  redirect("/dashboard");
+}
+
+export async function stopImpersonationAction() {
+  const { user } = await getCurrentUserRole();
+  // Deliberately not requirePlatformAdmin: stopping must work even if admin
+  // access was revoked mid-session, or the cookie would outlive the right to
+  // hold it with no way to put it down.
+  const current = await readImpersonation(user?.email);
+  await clearImpersonationCookie();
+
+  if (current) {
+    await writeSystemAuditEvent({
+      orgId: current.orgId,
+      actorUserId: user?.id ?? null,
+      entityType: "Organization",
+      entityId: current.orgId,
+      action: "PLATFORM_IMPERSONATION_ENDED",
+      summary: `${user?.email ?? "unknown"} stopped viewing this workspace after ${Math.round((Date.now() - current.startedAt) / 60000)} minute(s)`,
+      before: { startedAt: new Date(current.startedAt).toISOString() },
+    });
+  }
+  redirect(PLATFORM_ROUTES.home);
 }

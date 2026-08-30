@@ -9,6 +9,7 @@ import { requirePlatformAdmin } from "@/lib/platform-admin";
 import {
   setBillingStatusAction,
   setPlanAction,
+  startImpersonationAction,
   extendTrialAction,
   toggleOrgActive,
   setOrgSmsSenderAction,
@@ -158,6 +159,20 @@ export default async function OrgDetailPage({
           <Field label="Renews" value={fmt(org.planRenewsAt)} />
           <Field label="Pesapal ID" value={<span className="mono text-xs">{org.flwSubscriptionId ?? "—"}</span>} />
         </div>
+      </div>
+
+      {/* Support: view the workspace as the customer sees it */}
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3">
+        <SectionTitle>Support Access</SectionTitle>
+        <p className="text-xs leading-5 text-[var(--ink-muted)]">
+          Opens this organisation&rsquo;s workspace as they see it, read-only, for 30 minutes.
+          Nothing can be changed while viewing, a banner stays on screen throughout, and both
+          starting and stopping are written to the audit log.
+        </p>
+        <form action={startImpersonationAction}>
+          <input type="hidden" name="orgId" value={org.id} />
+          <SubmitButton variant="secondary" size="sm">View as this organisation</SubmitButton>
+        </form>
       </div>
 
       {/* Billing controls */}

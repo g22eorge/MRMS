@@ -7,6 +7,7 @@ import { getDeploymentContext } from "@/lib/deployment-context";
 import { isPlatformAdminEmail } from "@/lib/platform-admin";
 import { EIS_ORG_ID } from "@/lib/org";
 import { prisma } from "@/lib/prisma";
+import { readImpersonation } from "@/lib/platform/impersonation";
 
 function normalizeRole(role: Role): Role {
   // Keep legacy role values working with new UI language.
@@ -156,6 +157,26 @@ export async function getCurrentUserRole() {
   }
 
   await enforceDeploymentUser(user);
+
+  // Impersonation is applied here rather than in requireOrgSession, because
+  // requireOrgSession is not the only door: 28 pages read this user directly and
+  // pass user.orgId to orgDb(), which redirects to /onboarding when it is null.
+  // A platform admin has no orgId of their own, so overriding one layer up left
+  // those pages bouncing to onboarding mid-impersonation. Everything — pages,
+  // actions, requireOrgSession — comes through this function, so this is the
+  // only place the substitution is complete.
+  //
+  // READ_ONLY is forced alongside the org: assertOrgCanMutate already refuses
+  // every write for a read-only user at 65 call sites, so no mutation site needs
+  // to know impersonation exists. readImpersonation re-verifies platform-admin
+  // itself, so this is inert for everyone else.
+  const impersonating = await readImpersonation(user.email);
+  if (impersonating) {
+    return {
+      session,
+      user: { ...user, orgId: impersonating.orgId, accessMode: "READ_ONLY" as const },
+    };
+  }
 
   return { session, user };
 }
