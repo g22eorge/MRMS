@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 
 import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
-import { getPlatformSetting, getPesapalConsumerKey, getPesapalConsumerSecret } from "@/lib/platform-settings";
+import {
+  getPlatformSetting, getPesapalConsumerKey, getPesapalConsumerSecret, probePlatformSettingStore,
+} from "@/lib/platform-settings";
 import { PESAPAL_BASE, getAuthToken, getRegisteredIpns, getStoredIpnId, ipnSettingKey, IS_LIVE } from "@/lib/pesapal";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +70,12 @@ export async function GET(req: Request) {
   }
 
   // ── 2. Credentials, and from where ──────────────────────────────────────────
+  // Asked first, because getPlatformSetting returns null both when a value is
+  // absent and when the table cannot be read. Without this, "no credentials
+  // configured" and "the settings store is broken" are the same answer, and
+  // they call for completely different actions.
+  const store = await probePlatformSettingStore();
+
   const [dbKey, dbSecret, key, secret] = await Promise.all([
     getPlatformSetting("PESAPAL_CONSUMER_KEY").catch(() => null),
     getPlatformSetting("PESAPAL_CONSUMER_SECRET").catch(() => null),
@@ -77,7 +85,11 @@ export async function GET(req: Request) {
   const haveCredentials = Boolean(key && secret);
   const credentialSource = dbKey && dbSecret ? "platform settings" : haveCredentials ? "environment" : "none";
   if (!haveCredentials) {
-    blockers.push("No Pesapal consumer key/secret resolves, so submitting an order throws and the customer never reaches a payment page.");
+    blockers.push(
+      store.readable
+        ? "No Pesapal consumer key/secret resolves, and the settings store reads fine — so they were never configured. Submitting an order throws before Pesapal is contacted, and the customer never reaches a payment page."
+        : `No Pesapal consumer key/secret resolves, but the settings store could not be read (${store.error}). The credentials may exist and be unreachable — fix the store before concluding anything about them.`,
+    );
   }
 
   // ── 3. Are they accepted by that host ───────────────────────────────────────
@@ -154,9 +166,20 @@ export async function GET(req: Request) {
       baseUrl: PESAPAL_BASE,
       switchedBy: 'PESAPAL_ENV — anything other than "production" is the sandbox',
     },
+    settingsStore: {
+      readable: store.readable,
+      error: store.error,
+      keyCount: store.keys.length,
+      // Names only. These answer the question; the values are secrets.
+      keys: store.keys,
+      hasPesapalConsumerKey: store.keys.includes("PESAPAL_CONSUMER_KEY"),
+      hasPesapalConsumerSecret: store.keys.includes("PESAPAL_CONSUMER_SECRET"),
+    },
     credentials: {
       resolved: haveCredentials,
       source: credentialSource,
+      /** Distinguishes "never configured" from "configured but unreadable". */
+      absenceIsTrustworthy: store.readable,
       acceptedByProvider: haveCredentials ? authOk : null,
       error: authError,
     },

@@ -251,3 +251,48 @@ describe("it warns when the app URL is not the host customers use", () => {
     expect(SRC).toContain("lands on the login page instead of the confirmation");
   });
 });
+
+describe("it distinguishes 'never configured' from 'could not be read'", () => {
+  const SRC = readFileSync("app/api/admin/pesapal-health/route.ts", "utf8");
+  const STORE = readFileSync("lib/platform-settings.ts", "utf8");
+
+  /**
+   * getPlatformSetting catches every read error and returns null, so the check
+   * reported "NO CREDENTIALS" for two states that call for opposite actions:
+   * credentials that were never entered, and credentials that exist behind a
+   * broken settings table. Telling someone to go and enter keys they already
+   * have is the wrong answer, and there was no way to tell which it was.
+   */
+  it("asks the store directly rather than inferring from a null", () => {
+    expect(SRC).toContain("probePlatformSettingStore()");
+    expect(SRC).toContain("absenceIsTrustworthy: store.readable");
+  });
+
+  it("says something different for each case", () => {
+    expect(SRC).toContain("they were never configured");
+    expect(SRC).toContain("may exist and be unreachable");
+  });
+
+  it("reports key names, never values", () => {
+    expect(STORE).toContain("SELECT key FROM");
+    expect(STORE).not.toContain("SELECT key, value FROM");
+    expect(SRC).toContain("hasPesapalConsumerKey");
+    // The secret itself must never reach the response.
+    expect(SRC).not.toContain("value: secret");
+    expect(SRC).not.toContain("consumerSecret:");
+  });
+
+  it("stays a pure read — it does not create the table to answer whether it exists", () => {
+    // ensureTable() runs CREATE TABLE IF NOT EXISTS. Calling it here would make
+    // an unreadable store report as readable-and-empty.
+    const probe = STORE.slice(STORE.indexOf("export async function probePlatformSettingStore"));
+    const body = probe.slice(0, probe.indexOf("\n}\n"));
+    expect(body).not.toContain("ensureTable");
+  });
+
+  it("treats an unreadable store as a reason to distrust the answer, not to pass", () => {
+    // It must still block: unreadable is not evidence that checkout works.
+    const idx = SRC.indexOf("if (!haveCredentials)");
+    expect(SRC.slice(idx, idx + 700)).toContain("blockers.push");
+  });
+});

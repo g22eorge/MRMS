@@ -40,6 +40,41 @@ export async function deletePlatformSetting(key: string): Promise<void> {
   await prisma.$executeRaw`DELETE FROM "PlatformSetting" WHERE key = ${key}`;
 }
 
+/**
+ * Is the settings store readable, and which keys does it hold?
+ *
+ * getPlatformSetting catches every read error and returns null, so a missing
+ * value and an unreadable table are indistinguishable to every caller. That is
+ * usually the right trade — a settings lookup should not take a page down — but
+ * it makes "no Pesapal credentials configured" ambiguous exactly when someone
+ * is trying to find out why payments do not work.
+ *
+ * Returns key NAMES only, never values: the names answer the question and the
+ * values are secrets.
+ *
+ * Deliberately does not call ensureTable(), so this stays a pure read. If the
+ * table does not exist, saying so is the answer rather than a reason to create
+ * it.
+ */
+export async function probePlatformSettingStore(): Promise<{
+  readable: boolean;
+  keys: string[];
+  error: string | null;
+}> {
+  try {
+    const rows = await prisma.$queryRaw<Array<{ key: string }>>`
+      SELECT key FROM "PlatformSetting" ORDER BY key
+    `;
+    return { readable: true, keys: rows.map((r) => r.key), error: null };
+  } catch (err) {
+    return {
+      readable: false,
+      keys: [],
+      error: err instanceof Error ? err.message.slice(0, 200) : "PlatformSetting could not be read",
+    };
+  }
+}
+
 export async function getPlatformSettings(keys: string[]): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
   try {
