@@ -134,12 +134,17 @@ describe("it explains a 401 that a 401 cannot explain", () => {
   const SRC = readFileSync("app/api/admin/sms-health/route.ts", "utf8");
 
 
-  it("rejects the value actually found stored on the live system", () => {
-    // "wecmys-piqcut-0biJvu" — twenty characters and hyphenated. Africa's
-    // Talking allows eleven, alphanumeric. A value shaped like a generated
-    // secret in the sender ID box means the fields were filled in wrongly, and
-    // that explains a 401 far better than the 401 does.
-    expect(senderIdProblem("wecmys-piqcut-0biJvu")).toContain("20 characters");
+  it("rejects a value of the shape actually found stored on the live system", () => {
+    // Twenty characters and hyphenated, where Africa's Talking allows eleven
+    // alphanumeric. A value shaped like a generated secret sitting in the
+    // sender ID box means the fields were filled in wrongly, and that explains
+    // a 401 far better than the 401 does.
+    //
+    // The real value is deliberately not written here. An earlier version of
+    // this test carried it verbatim — after this audit had told the owner to
+    // treat it as exposed, which committing it to the repository made more
+    // true, not less. A placeholder of the same shape tests the same rule.
+    expect(senderIdProblem("aaaaaa-bbbbbb-0cDeFg")).toContain("20 characters");
   });
 
   it("accepts a real one", () => {

@@ -9,6 +9,28 @@ function run(command, args, options = {}) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+// ── Which database engine is this build for? ─────────────────────────────────
+//
+// Everything below assumed SQLite/Turso, because that is what this product has
+// always deployed on. A PostgreSQL deployment needs a different Prisma schema
+// (the provider is baked into the generated client, so a SQLite-provider client
+// cannot talk to Postgres however valid the connection string is), different
+// migrations, and none of the libSQL schema-healing.
+//
+// Chosen from the connection string rather than a separate flag, so there is no
+// second setting to forget — the mechanism that left PESAPAL_ENV unset for
+// months and pointed a live deployment at a sandbox.
+const rawDbUrl = (process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "").trim();
+const IS_POSTGRES = /^postgres(ql)?:\/\//i.test(rawDbUrl);
+const PG_SCHEMA = "prisma/schema.postgresql.prisma";
+
+if (IS_POSTGRES) {
+  console.log("[vercel-build] PostgreSQL connection string detected — building against", PG_SCHEMA);
+  // Regenerate it from schema.prisma first: it is derived, and a stale copy
+  // would deploy a schema that silently lags the source of truth.
+  run("node", ["scripts/pg-schema.mjs"]);
+}
+
 // ── Step 0: heal the production schema (additive, idempotent) ────────────────
 // Runs only on a real deploy (Turso env present), before the env below is
 // cleared for Prisma's SQLite build validation. Applies recent additive
@@ -18,7 +40,7 @@ function run(command, args, options = {}) {
 // never ship code against a stale prod schema. Set STRICT_SCHEMA_HEAL=0 to
 // revert to warn-and-continue (relying on /api/admin/db-fix as the manual
 // fallback) if a transient DB blip must not block an otherwise-fine deploy.
-if (process.env.TURSO_DATABASE_URL) {
+if (process.env.TURSO_DATABASE_URL && !IS_POSTGRES) {
   // sync-schema-to-db reconciles EVERY model/column from schema.prisma (creates
   // missing tables/columns/indexes); prod-job-column-safety then normalizes Job
   // data. Both idempotent.
@@ -76,7 +98,10 @@ if (process.env.TURSO_DATABASE_URL) {
 // cleared during the build process too; Vercel injects the real runtime env
 // when serving the deployed app.
 const realDatabaseUrl = process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL || "";
-const buildDatabaseUrl = "file:./dev.db";
+// On Postgres the real URL is already valid for the provider, so there is
+// nothing to substitute; the file: placeholder exists only because Prisma
+// refuses a libsql:// URL while validating a sqlite schema.
+const buildDatabaseUrl = IS_POSTGRES ? rawDbUrl : "file:./dev.db";
 
 // On Vercel the build must output to .next (what Vercel serves). Off Vercel —
 // i.e. the local commit gate — build into a separate dir so `next build` never
@@ -89,6 +114,7 @@ const buildEnv = {
   ...process.env,
   DATABASE_URL: buildDatabaseUrl,
   TURSO_DATABASE_URL: "",
+  ...(IS_POSTGRES ? { PRISMA_SCHEMA_PATH: PG_SCHEMA } : {}),
   // scripts/generate-prisma-clean.mjs does `rm -rf .next` when this is "1".
   // Off Vercel that would wipe the running dev server's cache and defeat the
   // NEXT_DIST_DIR isolation below, so clear it for the local gate. On Vercel
@@ -136,11 +162,13 @@ if (process.env.RUN_PRISMA_MIGRATE_DEPLOY === "1") {
     if (realDatabaseUrl.startsWith("libsql:")) {
       process.env.TURSO_DATABASE_URL = realDatabaseUrl;
     }
-    run("bunx", ["prisma", "migrate", "deploy"]);
+    run("bunx", IS_POSTGRES
+      ? ["prisma", "migrate", "deploy", "--schema", PG_SCHEMA]
+      : ["prisma", "migrate", "deploy"]);
   }
 }
 
 process.env.DATABASE_URL = buildDatabaseUrl;
-process.env.TURSO_DATABASE_URL = "";
+if (!IS_POSTGRES) process.env.TURSO_DATABASE_URL = "";
 
 run("next", ["build"], { env: buildEnv });
