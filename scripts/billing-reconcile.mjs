@@ -29,23 +29,61 @@
  * whose organisation never moved.
  */
 import { createClient } from "@libsql/client";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
-const envPath = process.argv[2] ?? "/tmp/prodenv";
-const env = Object.fromEntries(
-  readFileSync(envPath, "utf8")
-    .split("\n")
-    .filter((l) => l.includes("="))
-    .map((l) => {
-      const i = l.indexOf("=");
-      return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^"|"$/g, "")];
-    }),
-);
+/**
+ * Credentials come from the environment, or from an env file passed as the
+ * first argument. Nothing is scavenged from ambient locations: the Turso
+ * variables are marked sensitive on Vercel and `vercel env pull` returns them
+ * empty, so whoever runs this is expected to have them to hand.
+ */
+function loadEnv() {
+  const argPath = process.argv[2];
 
-const url = env.TURSO_DATABASE_URL;
-const authToken = env.TURSO_AUTH_TOKEN;
+  if (argPath) {
+    if (!existsSync(argPath)) {
+      console.error(`[reconcile] no such file: ${argPath}`);
+      console.error("");
+      console.error("That looks like the placeholder from the instructions rather than a real path.");
+      usage();
+      process.exit(1);
+    }
+    return Object.fromEntries(
+      readFileSync(argPath, "utf8")
+        .split("\n")
+        .filter((l) => l.includes("=") && !l.trim().startsWith("#"))
+        .map((l) => {
+          const i = l.indexOf("=");
+          return [l.slice(0, i).trim().replace(/^export\s+/, ""), l.slice(i + 1).trim().replace(/^["']|["']$/g, "")];
+        }),
+    );
+  }
+
+  // No file given — take them straight from the environment.
+  return process.env;
+}
+
+function usage() {
+  console.error("Give it the two Turso variables, either way round:");
+  console.error("");
+  console.error("  TURSO_DATABASE_URL='libsql://…' TURSO_AUTH_TOKEN='…' \\");
+  console.error("    node scripts/billing-reconcile.mjs");
+  console.error("");
+  console.error("  node scripts/billing-reconcile.mjs ./some-env-file");
+  console.error("");
+  console.error("Both are in the Vercel dashboard under the commercial project's");
+  console.error("environment variables, or from `turso db show <database>`.");
+  console.error("This only ever reads — every statement is a guarded SELECT.");
+}
+
+const env = loadEnv();
+const url = (env.TURSO_DATABASE_URL ?? "").trim();
+const authToken = (env.TURSO_AUTH_TOKEN ?? "").trim() || undefined;
+
 if (!url) {
-  console.error("[reconcile] no TURSO_DATABASE_URL. Pass an env file: node scripts/billing-reconcile.mjs <path>");
+  console.error("[reconcile] TURSO_DATABASE_URL is not set" + (process.argv[2] ? ` in ${process.argv[2]}` : "") + ".");
+  console.error("");
+  usage();
   process.exit(1);
 }
 
