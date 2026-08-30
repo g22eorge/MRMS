@@ -14,13 +14,11 @@ export const PESAPAL_BASE =
     : "https://cybqa.pesapal.com/pesapalv3";
 
 // ── Plan prices (UGX) ─────────────────────────────────────────────────────────
-
-export const PLAN_PRICES: Record<string, number> = {
-  STANDARD:   35_000,
-  GROWTH:     75_000,
-  PREMIUM:   120_000,
-  ENTERPRISE: 200_000,
-};
+// Declared in lib/plan-prices.ts and re-exported here, where callers already
+// expect to find them. This file never used the table — it only held it, and
+// holding it in two places is what let the webhook verify against a ladder the
+// product had stopped selling.
+export { PLAN_PRICES } from "@/lib/plan-prices";
 
 export const CURRENCY = "UGX";
 
