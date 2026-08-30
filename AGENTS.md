@@ -22,7 +22,7 @@ Primary stack:
 - Local development database is SQLite file URL.
 - Production runtime uses Turso/libSQL through `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
 - BetterAuth for auth/session.
-- Tailwind/shadcn-style UI, Sonner/toasts, React Hook Form/Zod where forms are client-driven.
+- Tailwind/shadcn-style UI, Sonner/toasts, and Zod for validation. Forms are server actions with native validation, not a client form library — React Hook Form was listed here but never imported, and has been removed along with @hookform/resolvers, kysely and a stray `install` package.
 - Bun is the package/runtime command used by this repo.
 
 ## Branch Policy
