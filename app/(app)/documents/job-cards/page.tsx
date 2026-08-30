@@ -198,7 +198,6 @@ export default async function JobCardsPage({
 
       {/* Action row */}
       <PageHeader
-        title="Job Cards"
         description={`${total} job card${total === 1 ? "" : "s"}`}
         actions={
           <Link

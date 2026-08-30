@@ -97,7 +97,6 @@ export default async function FinancePage() {
       {/* ══ DESKTOP HEADER ══ */}
       <div className="hidden lg:block">
         <PageHeader
-          title="Finance Hub"
           description={`Cash position for ${now.toLocaleDateString("en-UG", { month: "long", year: "numeric" })}`}
           actions={<Button href="/finance/reports/pl" variant="secondary" size="sm">P&amp;L →</Button>}
         />

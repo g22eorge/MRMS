@@ -449,7 +449,6 @@ export default async function PayoutFollowupsPage({
         <>
           <FormErrorBanner message={filters.error} />
           <PageHeader
-            title="Collections &amp; Payouts"
             description={
               totalReceivable > 0 || totalPayable > 0
                 ? `${formatMoneyCompact(totalReceivable, currency)} owed to you · ${formatMoneyCompact(totalPayable, currency)} you owe · net ${totalReceivable >= totalPayable ? "+" : "-"}${formatMoneyCompact(Math.abs(totalReceivable - totalPayable), currency)}`

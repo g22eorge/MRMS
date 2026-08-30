@@ -98,7 +98,6 @@ export default async function ServiceHubPage() {
       <ServiceHubNav />
 
       <PageHeader
-        title="Service Hub"
         kpis={[
           { label: "Open Jobs", value: openJobs ?? "—", sub: "in progress", tone: "accent", href: "/jobs" },
           { label: "Pending Intake", value: pendingIntake ?? "—", sub: "awaiting intake", tone: (pendingIntake ?? 0) > 0 ? "warn" : "neutral", href: "/intake" },

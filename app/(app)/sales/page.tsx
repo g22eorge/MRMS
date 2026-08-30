@@ -514,7 +514,6 @@ export default async function SalesPage({
           {/* ══ DESKTOP HEADER ══ */}
           <div className="hidden lg:block">
             <PageHeader
-              title="Sales"
               actions={
                 canNewLead ? (
                   <DisclosureTrigger

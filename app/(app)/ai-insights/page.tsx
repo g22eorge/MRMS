@@ -81,7 +81,6 @@ export default async function AiInsightsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="AI Insights"
         actions={
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
             <Link href="/reports" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[var(--ink)] hover:border-[var(--accent)]/40">Operations Reports</Link>

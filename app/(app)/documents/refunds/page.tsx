@@ -684,7 +684,6 @@ export default async function RefundsPage({
       ) : null}
       {/* Header + KPIs */}
       <PageHeader
-        title="Refunds"
         description="Money paid back on an invoice, sale or credit note. For a POS return that restocks items, use Credit Notes."
         actions={
           ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role) ? (

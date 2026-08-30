@@ -196,7 +196,6 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
       <QuotationCreateProvider>
       <section className="space-y-4">
         <PageHeader
-          title="Quotations"
           actions={
 canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold" />
           }

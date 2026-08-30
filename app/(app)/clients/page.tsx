@@ -10,7 +10,6 @@ import { z } from "zod";
 import { can } from "@/lib/permissions";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { orgDb } from "@/lib/db";
@@ -358,7 +357,6 @@ export default async function ClientsPage({
 
       {/* ══ DESKTOP: header ══ */}
       <div className="hidden lg:block">
-        <PageHeader eyebrow="Directory" title="Clients" />
       </div>
 
       {/* ══ DESKTOP: KPI cards ══ */}

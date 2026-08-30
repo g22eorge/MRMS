@@ -7,27 +7,12 @@ import { can } from "@/lib/permissions";
 import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { isEntityRecordId } from "@/lib/page-state/contract";
 
-function pageMeta(pathname: string, role: Role) {
+function pageMeta(pathname: string) {
   const parts = pathname.split("/").filter(Boolean);
 
-  if (pathname === "/dashboard") {
-    if (role === "TECHNICIAN_EXTERNAL") {
-      return { title: "Dashboard" };
-    }
-    if (role === "TECHNICIAN_INTERNAL") {
-      return { title: "Dashboard" };
-    }
-    if (role === "OPS") {
-      return { title: "Dashboard" };
-    }
-    if (role === "FRONT_DESK") {
-      return { title: "Dashboard" };
-    }
-    if (role === "ADMIN") {
-      return { title: "Dashboard" };
-    }
-    return { title: "Dashboard" };
-  }
+  // One title for every role. This branched six ways to vary a description
+  // that no longer exists, leaving six identical returns.
+  if (pathname === "/dashboard") return { title: "Dashboard" };
   if (pathname === "/jobs") return { title: "Jobs" };
   if (pathname === "/jobs/new") return { title: "New Job Intake" };
   if (parts[0] === "jobs" && parts[1] && parts[2] === "edit") {
@@ -145,7 +130,7 @@ function isMobileRootPage(pathname: string, role: Role, permissions: string[]) {
 
 export function PageThemeHeader({ role, permissions = [] }: { role: Role; permissions?: string[] }) {
   const pathname = usePathname();
-  const meta = pageMeta(pathname, role);
+  const meta = pageMeta(pathname);
   const [resolvedSubtitle, setResolvedSubtitle] = useState<{ path: string; text: string } | null>(null);
   const hideMobile = isMobileRootPage(pathname, role, permissions); // primary-tab pages have own native headers
 

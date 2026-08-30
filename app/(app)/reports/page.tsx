@@ -812,8 +812,10 @@ export default async function ReportsPage({
 
       {/* ── MOBILE METRICS SUMMARY (lg:hidden) ──────────────────────────────── */}
       <div className="lg:hidden space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black text-[var(--ink)]">Reports</h2>
+        {/* No heading: the layout header already says "Reports" on mobile too,
+            and this repeated it directly beneath. The period is the one thing
+            here the header does not carry. */}
+        <div className="flex items-center justify-end">
           <span className="text-xs font-medium text-[var(--ink-muted)]">{selectedMonthString}</span>
         </div>
         {/* 2×2 key metric tiles */}
@@ -853,7 +855,6 @@ export default async function ReportsPage({
       {/* ── HEADER (desktop) ─────────────────────────────────────────────────── */}
       <div className="hidden lg:block">
         <PageHeader
-          title="Reports"
           description={period === "year" ? `${selectedYear} Annual` : selectedMonthString}
           actions={
             <>
