@@ -11,6 +11,9 @@ export const defaultBranding = {
   companyEmail: "",
   companyWebsite: "",
   companyTaxId: "",
+  /// The organisation's own uploaded logo. Empty means it has none — which
+  /// prints no logo, never another tenant's.
+  companyLogoUrl: "",
   documentTitle: "Job Card",
   quotePrefix: "EIS",
   quoteFormat: "{PREFIX} {M}/{YYYY}/{SEQ}",
@@ -66,6 +69,7 @@ function coerceRow(row: Record<string, unknown>): BrandingSettings {
     companyEmail: row.companyEmail ? String(row.companyEmail) : "",
     companyWebsite: row.companyWebsite ? String(row.companyWebsite) : "",
     companyTaxId: row.companyTaxId ? String(row.companyTaxId) : "",
+    companyLogoUrl: row.companyLogoUrl ? String(row.companyLogoUrl) : "",
     documentTitle: String(row.documentTitle ?? defaultBranding.documentTitle),
     quotePrefix: String(row.quotePrefix ?? defaultBranding.quotePrefix),
     quoteFormat: String(row.quoteFormat ?? defaultBranding.quoteFormat),

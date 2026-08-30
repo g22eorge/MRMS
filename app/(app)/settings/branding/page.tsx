@@ -1,4 +1,4 @@
-import { access, stat, unlink, writeFile } from "node:fs/promises";
+import { access, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { revalidatePath } from "next/cache";
@@ -11,6 +11,8 @@ import { BankAccountsEditor } from "@/components/settings/BankAccountsEditor";
 import { parsePaymentAccounts, formatPaymentAccounts } from "@/lib/branding-accounts";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
+import { uploadOrgLogo, deleteBlobObject } from "@/lib/blob-storage";
 import { can } from "@/lib/permissions";
 import { planLabel, resolveTemplateKey, splitTemplatesByPlan } from "@/lib/pdf/templates";
 import { prisma } from "@/lib/prisma";
@@ -111,7 +113,20 @@ function renderQuotePreview(prefix: string, format: string, padLength: number) {
     .replaceAll("{SEQ}", sampleSeq);
 }
 
-async function resolveLogoPreview() {
+/**
+ * The organisation's own logo, falling back to a bundled file only on care.
+ *
+ * This used to scan public/ unconditionally, which is why every tenant saw
+ * Eagle Info's logo in their own branding preview — the same shared file the
+ * upload wrote to.
+ */
+async function resolveLogoPreview(orgLogoUrl?: string | null) {
+  if (orgLogoUrl) return orgLogoUrl;
+
+  const { getDeploymentContext } = await import("@/lib/deployment-context");
+  const deployment = await getDeploymentContext().catch(() => null);
+  if (!deployment || deployment.mode !== "CARE_SINGLE_TENANT") return null;
+
   for (const file of logoFiles) {
     const filePath = path.join(process.cwd(), "public", file.name);
     try {
@@ -125,12 +140,6 @@ async function resolveLogoPreview() {
   return null;
 }
 
-function extensionFromMime(mime: string) {
-  if (mime === "image/png") return "png";
-  if (mime === "image/jpeg") return "jpg";
-  if (mime === "image/webp") return "webp";
-  return null;
-}
 
 export default async function BrandingPage({
   searchParams,
@@ -143,10 +152,10 @@ export default async function BrandingPage({
   }
 
   const params = await searchParams;
-  const preview = await resolveLogoPreview();
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { plan: true } }).catch(() => null);
   const plan = org?.plan ?? "STARTER";
   const settings = await getDocumentBrandingSettings(orgId);
+  const preview = await resolveLogoPreview(settings.companyLogoUrl);
 
   const invoiceTemplates = splitTemplatesByPlan("INVOICE", plan);
   const quotationTemplates = splitTemplatesByPlan("QUOTATION", plan);
@@ -166,43 +175,75 @@ export default async function BrandingPage({
   async function uploadLogoAction(formData: FormData) {
     "use server";
 
-    const { user: currentUser } = await requireOrgSession();
+    const { user: currentUser, orgId: logoOrgId, org: sessionOrg } = await requireOrgSession();
     if (currentUser.role !== "ADMIN") {
       redirect("/dashboard");
     }
+    assertOrgCanMutate({
+      access: sessionOrg.access,
+      userRole: currentUser.role,
+      userAccessMode: currentUser.accessMode,
+      kind: "GENERAL",
+    });
 
     const file = formData.get("logo");
     if (!(file instanceof File) || file.size === 0) {
       redirect("/settings/branding?error=Select+a+logo+file");
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      redirect("/settings/branding?error=Logo+must+be+5MB+or+less");
+    // Per organisation, in blob storage. This used to write every upload to
+    // public/eagle-info-logo.png — one shared file with one tenant's name in it
+    // — so on the multi-tenant deployment a tenant uploading their logo
+    // replaced every other tenant's, and on a read-only serverless filesystem
+    // the write failed outright. Validation (type, size, magic bytes) lives in
+    // uploadOrgLogo alongside the job-photo path.
+    const result = await uploadOrgLogo(logoOrgId, file);
+    if (!result.ok) {
+      redirect(`/settings/branding?error=${encodeURIComponent(result.error)}`);
     }
 
-    const ext = extensionFromMime(file.type);
-    if (!ext) {
-      redirect("/settings/branding?error=Use+PNG,+JPEG,+or+WEBP");
-    }
-
-    const publicDir = path.join(process.cwd(), "public");
-    const targetName = `eagle-info-logo.${ext}`;
-    const targetPath = path.join(publicDir, targetName);
-
-    for (const candidate of logoFiles.map((f) => path.join(publicDir, f.name))) {
-      if (candidate === targetPath) continue;
-      try {
-        await unlink(candidate);
-      } catch {
-        // ignore if missing
-      }
-    }
-
-    const bytes = Buffer.from(await file.arrayBuffer());
-    await writeFile(targetPath, bytes);
+    const existing = await prisma.documentBrandingSettings
+      .findUnique({ where: { orgId: logoOrgId }, select: { companyLogoKey: true } })
+      .catch(() => null);
+    await prisma.documentBrandingSettings.update({
+      where: { orgId: logoOrgId },
+      data: { companyLogoUrl: result.image.url, companyLogoKey: result.image.key },
+    });
+    const previousKey = existing?.companyLogoKey ?? null;
+    // Only after the row points at the new one, so a failed delete cannot leave
+    // the organisation with no logo at all.
+    if (previousKey) void deleteBlobObject(previousKey);
 
     revalidatePath("/settings/branding");
     redirect(flash("/settings/branding?saved=1", "Saved"));
+  }
+
+  async function removeLogoAction() {
+    "use server";
+
+    const { user: currentUser, orgId: logoOrgId, org: sessionOrg } = await requireOrgSession();
+    if (currentUser.role !== "ADMIN") {
+      redirect("/dashboard");
+    }
+    assertOrgCanMutate({
+      access: sessionOrg.access,
+      userRole: currentUser.role,
+      userAccessMode: currentUser.accessMode,
+      kind: "GENERAL",
+    });
+
+    const existing = await prisma.documentBrandingSettings
+      .findUnique({ where: { orgId: logoOrgId }, select: { companyLogoKey: true } })
+      .catch(() => null);
+    await prisma.documentBrandingSettings.update({
+      where: { orgId: logoOrgId },
+      data: { companyLogoUrl: null, companyLogoKey: null },
+    });
+    const previousKey = existing?.companyLogoKey ?? null;
+    if (previousKey) void deleteBlobObject(previousKey);
+
+    revalidatePath("/settings/branding");
+    redirect(flash("/settings/branding?saved=1", "Logo removed"));
   }
 
   async function saveBrandingAction(formData: FormData) {
@@ -471,7 +512,10 @@ export default async function BrandingPage({
 
       <div className="dc-card overflow-hidden px-3 py-2.5">
         <p className="mb-2 text-sm font-semibold">Invoice Logo</p>
-        <p className="text-xs text-[var(--ink-muted)]">Accepted: PNG, JPEG, WEBP (max 5MB). Recommended wide aspect ratio.</p>
+        <p className="text-xs text-[var(--ink-muted)]">Accepted: PNG, JPEG or WebP, up to 2 MB. A wide aspect ratio reads best on a document.</p>
+        <p className="mt-1 text-xs text-[var(--ink-muted)]">
+          This logo belongs to your business alone and appears on your own quotations, invoices and receipts.
+        </p>
 
         <form action={uploadLogoAction} className="mt-3 grid gap-2 lg:flex lg:flex-wrap lg:items-end">
           <input
@@ -483,6 +527,14 @@ export default async function BrandingPage({
           />
           <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-sm">Upload Logo</SubmitButton>
         </form>
+
+        {settings.companyLogoUrl ? (
+          <form action={removeLogoAction} className="mt-2">
+            <SubmitButton bare className="text-xs font-semibold text-red-500 underline underline-offset-2">
+              Remove logo
+            </SubmitButton>
+          </form>
+        ) : null}
 
         <div className="mt-3">
           {preview ? (

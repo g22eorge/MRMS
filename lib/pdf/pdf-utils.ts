@@ -118,7 +118,30 @@ export async function resolvePdfLogo(): Promise<string | undefined> {
  * document with no logo is right and a document with somebody else's is not.
  * Until per-organisation logo storage exists, commercial documents print none.
  */
-export async function resolveInvoiceLogo(): Promise<string | undefined> {
+export async function resolveInvoiceLogo(orgId?: string | null): Promise<string | undefined> {
+  // Takes an orgId rather than a URL because several callers fetch branding in
+  // parallel with this and do not have it yet. One lookup here is cheaper than
+  // restructuring eight call sites into sequences.
+  let orgLogoUrl: string | null = null;
+  if (orgId) {
+    const { prisma } = await import("@/lib/prisma");
+    const row = await prisma.documentBrandingSettings
+      .findUnique({ where: { orgId }, select: { companyLogoUrl: true } })
+      .catch(() => null);
+    orgLogoUrl = row?.companyLogoUrl ?? null;
+  }
+
+  // The organisation's own logo wins, always. Everything below it is a
+  // deployment-wide fallback and can only ever be one tenant's.
+  if (orgLogoUrl) {
+    if (orgLogoUrl.startsWith("data:")) return orgLogoUrl;
+    const remote = await toDataUriFromRemote(orgLogoUrl);
+    if (remote) return remote;
+    // A stored logo that cannot be fetched prints nothing rather than falling
+    // through to a bundled file belonging to somebody else.
+    return undefined;
+  }
+
   const { getDeploymentContext } = await import("@/lib/deployment-context");
   const deployment = await getDeploymentContext().catch(() => null);
   // Fail closed: if the deployment cannot be identified, do not brand the

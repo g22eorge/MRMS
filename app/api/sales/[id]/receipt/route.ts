@@ -48,7 +48,7 @@ export async function GET(
 
   const [brandingRaw, logoUrl] = await Promise.all([
     getDocumentBrandingSettings(orgId).catch(() => null),
-    resolveInvoiceLogo().catch(() => undefined),
+    resolveInvoiceLogo(orgId).catch(() => undefined),
   ]);
   // The document logo isn't part of the stored branding row — resolve it and
   // merge it in so the receipt shows the same logo as invoices/quotes.

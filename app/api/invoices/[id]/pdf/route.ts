@@ -77,7 +77,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   });
   const InvoiceDoc = InvoiceTemplateComponent(templateKey);
   const { resolveInvoiceLogo } = await import("@/lib/pdf/pdf-utils");
-  const logoUrl = await resolveInvoiceLogo();
+  const logoUrl = await resolveInvoiceLogo(orgId);
 
   const subtotal = invoice.lines.reduce((s, l) => s + l.lineTotal, 0);
   const taxAmount = invoice.lines.reduce((s, l) => s + (l.taxAmount ?? 0), 0);

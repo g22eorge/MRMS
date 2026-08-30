@@ -116,7 +116,7 @@ export async function generateInvoiceBuffer(
   const issuedAtDate = new Date();
   const dueDate = new Date(issuedAtDate);
   dueDate.setDate(dueDate.getDate() + branding.quoteValidityDays);
-  const logoUrl = await resolveInvoiceLogo();
+  const logoUrl = await resolveInvoiceLogo(orgId);
   const normalizedFooterText = (branding.footerText ?? "").trim();
   // Print the quotation number the customer actually received, not a fresh
   // derivation of it — otherwise the invoice cites a quote number that was

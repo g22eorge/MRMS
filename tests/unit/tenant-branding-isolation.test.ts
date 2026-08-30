@@ -87,3 +87,93 @@ describe("the schema defaults are still Eagle Info's, and that is the remaining 
     expect(creates.length).toBe(1);
   });
 });
+
+describe("each organisation has its own logo, stored per organisation", () => {
+  const BLOB = readFileSync("lib/blob-storage.ts", "utf8");
+  const BRANDING_PAGE = readFileSync("app/(app)/settings/branding/page.tsx", "utf8");
+
+  /**
+   * What this replaced: uploadLogoAction wrote every upload to
+   * public/eagle-info-logo.<ext> — one shared path with one tenant's name in
+   * it. On the multi-tenant deployment a tenant uploading their logo replaced
+   * it for every other tenant, and on a read-only serverless filesystem the
+   * write failed outright. The feature was simultaneously broken and
+   * cross-tenant.
+   */
+  it("no longer writes a shared file into public/", () => {
+    expect(BRANDING_PAGE).not.toContain("eagle-info-logo.${ext}");
+    expect(BRANDING_PAGE).not.toContain("writeFile");
+  });
+
+  it("stores under a key scoped to the organisation", () => {
+    expect(BLOB).toContain("`org-logos/${orgId}/");
+  });
+
+  it("validates type, size and magic bytes before storing", () => {
+    // A renamed executable must not become a logo, and the declared MIME type
+    // is not evidence of anything.
+    expect(BLOB).toContain("LOGO_TYPES.has(file.type)");
+    expect(BLOB).toContain("LOGO_MAX_BYTES");
+    expect(BLOB).toContain("hasValidImageSignature(file.type, bytes)");
+  });
+
+  it("refuses SVG, which is a script-bearing format", () => {
+    const types = BLOB.slice(BLOB.indexOf("const LOGO_TYPES"), BLOB.indexOf("const LOGO_MAX_BYTES"));
+    expect(types).not.toContain("svg");
+    expect(types).toContain("image/png");
+  });
+
+  it("is admin-only and honours read-only access", () => {
+    expect(BRANDING_PAGE).toContain('currentUser.role !== "ADMIN"');
+    expect(BRANDING_PAGE).toContain("assertOrgCanMutate({");
+  });
+
+  it("replaces the row before deleting the old file", () => {
+    // The other order loses the logo entirely if the delete succeeds and the
+    // update then fails.
+    const upload = BRANDING_PAGE.slice(BRANDING_PAGE.indexOf("async function uploadLogoAction"));
+    const update = upload.indexOf("documentBrandingSettings.update");
+    const del = upload.indexOf("deleteBlobObject(previousKey)");
+    expect(update).toBeGreaterThan(-1);
+    expect(update).toBeLessThan(del);
+  });
+
+  it("can be removed, and the file removed with it", () => {
+    expect(BRANDING_PAGE).toContain("async function removeLogoAction");
+    expect(BRANDING_PAGE).toContain("companyLogoUrl: null, companyLogoKey: null");
+  });
+});
+
+describe("the document renderer prefers the organisation's own logo", () => {
+  const PDF_UTILS = readFileSync("lib/pdf/pdf-utils.ts", "utf8");
+
+  it("looks the logo up for the organisation it is rendering for", () => {
+    expect(PDF_UTILS).toContain("resolveInvoiceLogo(orgId?: string | null)");
+    expect(PDF_UTILS).toContain("select: { companyLogoUrl: true }");
+  });
+
+  it("prints nothing rather than a bundled logo when the org's cannot be fetched", () => {
+    // Falling through would put another business's mark on the document, which
+    // is the failure this whole entry exists for.
+    expect(PDF_UTILS).toContain("// A stored logo that cannot be fetched prints nothing rather than falling");
+  });
+
+  it("every document route asks for its own organisation", () => {
+    const routes = [
+      "app/api/invoices/[id]/pdf/route.ts",
+      "app/api/credit-notes/[id]/route.ts",
+      "app/api/sales/[id]/receipt/route.ts",
+      "app/api/refunds/[id]/route.ts",
+      "app/api/delivery-notes/[id]/route.ts",
+      "app/api/payments/[id]/receipt/route.ts",
+      "app/api/portal/receipt/[paymentId]/route.ts",
+      "lib/pdf/generate-invoice.ts",
+    ];
+    for (const f of routes) {
+      const src = readFileSync(f, "utf8");
+      expect(src).toMatch(/resolveInvoiceLogo\((orgId|session\.org\.id)\)/);
+      // The org-blind call is what stamped every tenant with the same logo.
+      expect(src).not.toContain("resolveInvoiceLogo()");
+    }
+  });
+});

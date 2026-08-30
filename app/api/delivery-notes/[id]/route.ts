@@ -81,7 +81,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const [branding, logoUrl] = await Promise.all([
     getDocumentBrandingSettings(orgId),
-    resolveInvoiceLogo(),
+    resolveInvoiceLogo(orgId),
   ]);
   const sourceRef = note.invoice?.invoiceNumber
     ? `${note.invoice.invoiceNumber}${note.invoice.job ? ` / ${note.invoice.job.jobNumber}` : ""}`

@@ -72,7 +72,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const [branding, logoUrl] = await Promise.all([
     getDocumentBrandingSettings(orgId),
-    resolveInvoiceLogo(),
+    resolveInvoiceLogo(orgId),
   ]);
   const receipt = await prisma.receipt.findFirst({
     where: { orgId, paymentId: payment.id },

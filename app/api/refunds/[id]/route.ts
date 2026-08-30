@@ -73,7 +73,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const [branding, logoUrl] = await Promise.all([
     getDocumentBrandingSettings(orgId),
-    resolveInvoiceLogo(),
+    resolveInvoiceLogo(orgId),
   ]);
   const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
   const recipient = refund.invoice?.job?.client

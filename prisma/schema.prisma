@@ -1487,6 +1487,15 @@ model DocumentBrandingSettings {
   // Nullable because an org that is not registered should print nothing rather
   // than an empty label.
   companyTaxId          String?
+  /// This organisation's own logo, stored in blob storage rather than on disk.
+  /// The previous mechanism wrote every upload to public/eagle-info-logo.png —
+  /// one shared file with a hardcoded name — so on the multi-tenant deployment
+  /// a tenant uploading their logo replaced it for every other tenant, and on a
+  /// read-only serverless filesystem the write failed outright.
+  companyLogoUrl        String?
+  /// The storage key, kept so a replaced or removed logo can be deleted rather
+  /// than orphaned in the bucket.
+  companyLogoKey        String?
   documentTitle         String        @default("Job Card")
   quotePrefix           String        @default("EIS")
   quoteFormat           String        @default("{PREFIX} {M}/{YYYY}/{SEQ}")

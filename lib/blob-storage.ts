@@ -201,6 +201,79 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
   }
 }
 
+/**
+ * Upload an organisation's document logo.
+ *
+ * Separate from uploadJobImage because the constraints differ and because the
+ * thing it replaces was dangerous: logo upload used to write every file to
+ * public/eagle-info-logo.png — one shared path, hardcoded to one tenant's name.
+ * On the multi-tenant deployment a tenant uploading their logo replaced it for
+ * every other tenant, and on a read-only serverless filesystem the write failed
+ * outright, so the feature was both broken and cross-tenant.
+ *
+ * Stored public-read on purpose: a logo is printed on documents the business
+ * hands to its own customers, so it is not a secret, and the PDF renderer needs
+ * to fetch it without carrying a credential. No HEIC — a logo comes from a
+ * design tool, not a phone camera, and skipping the decoder keeps this path
+ * small. No SVG either: it is a script-bearing format and this is rendered into
+ * documents and served to browsers.
+ */
+const LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+export async function uploadOrgLogo(
+  orgId: string,
+  file: File,
+): Promise<{ ok: true; image: UploadedImage } | { ok: false; error: string }> {
+  if (!photoStorageConfigured()) {
+    return { ok: false, error: "File storage is not configured yet (UPLOADTHING_TOKEN or BLOB_READ_WRITE_TOKEN)." };
+  }
+  if (!file || !file.size) return { ok: false, error: "Select a logo file." };
+  if (!LOGO_TYPES.has(file.type)) {
+    return { ok: false, error: `Use a PNG, JPEG or WebP image${file.type ? ` (got ${file.type})` : ""}.` };
+  }
+  if (file.size > LOGO_MAX_BYTES) return { ok: false, error: "The logo must be 2 MB or smaller." };
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  // Magic bytes, not the declared type: a renamed file would otherwise pass.
+  if (!hasValidImageSignature(file.type, bytes)) return { ok: false, error: "That file is not a valid image." };
+
+  const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1] || "png";
+  const key = `org-logos/${orgId}/${Date.now()}-${randomUUID()}.${ext}`;
+
+  if (uploadthingConfigured()) {
+    try {
+      const named = new File([bytes], `${orgId}-${Date.now()}.${ext}`, { type: file.type });
+      let res = await ut().uploadFiles(named, { acl: "public-read" });
+      if (res.error && isTransientUploadError(res.error)) {
+        res = await ut().uploadFiles(named, { acl: "public-read" });
+      }
+      if (!res.error && res.data) {
+        return { ok: true, image: { url: res.data.ufsUrl, key: res.data.key, mimeType: file.type, sizeBytes: bytes.length } };
+      }
+      if (!blobConfigured()) {
+        return { ok: false, error: `Upload failed: ${String(res.error?.message ?? "unknown error").slice(0, 140)}` };
+      }
+    } catch (e) {
+      if (!blobConfigured()) {
+        return { ok: false, error: `Upload failed: ${(e instanceof Error ? e.message : String(e)).slice(0, 140)}` };
+      }
+    }
+  }
+
+  try {
+    // Public here too, unlike job photos: the renderer fetches this by URL.
+    const res = await put(key, Buffer.from(bytes), {
+      access: "public",
+      contentType: file.type,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    return { ok: true, image: { url: res.url, key, mimeType: file.type, sizeBytes: bytes.length } };
+  } catch (e) {
+    return { ok: false, error: `Upload failed: ${(e instanceof Error ? e.message : String(e)).slice(0, 140)}` };
+  }
+}
+
 /** Best-effort deletion (by URL or key) from whichever backend holds it; never throws. */
 export async function deleteBlobObject(urlOrKey: string | null | undefined): Promise<void> {
   if (!urlOrKey) return;
