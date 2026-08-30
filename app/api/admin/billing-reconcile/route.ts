@@ -56,6 +56,13 @@ export async function GET() {
     select: {
       id: true, name: true, plan: true, billingStatus: true,
       trialEndsAt: true, planRenewsAt: true, createdAt: true,
+      // The two fields that say HOW an organisation became active. A successful
+      // callback writes planRenewsAt and stores the Pesapal orderTrackingId in
+      // flwSubscriptionId; setPlanAction and setBillingStatusAction, the manual
+      // routes, write neither. So the activation path is readable from here
+      // after all — and where a tracking id exists, it is the exact reference
+      // to look up rather than a name to search for.
+      flwSubscriptionId: true,
     },
     orderBy: { createdAt: "desc" },
     take: 1000,
@@ -126,6 +133,26 @@ export async function GET() {
       occurredAt: e.occurredAt,
     }));
 
+  // ── 4b. How each active organisation became active ───────────────────────
+  const activeOrgs = orgs
+    .filter((o) => o.billingStatus === "ACTIVE")
+    .map((o) => {
+      const paidThroughCallback = Boolean(o.flwSubscriptionId);
+      return {
+        name: o.name,
+        plan: o.plan,
+        // Present only when a payment actually completed through the callback.
+        pesapalOrderTrackingId: o.flwSubscriptionId ?? null,
+        planRenewsAt: o.planRenewsAt,
+        activatedBy: paidThroughCallback ? "payment (callback)" : "by hand — no payment recorded",
+        // A renewal date without a tracking id means someone set the plan and
+        // the date came from an earlier cycle; worth looking at either way.
+        note: paidThroughCallback
+          ? "Look this tracking id up in Pesapal to confirm the amount matches the plan."
+          : "No Pesapal reference on this organisation. It was activated by a platform admin, or by a payment that never reached the callback.",
+      };
+    });
+
   // ── 5. The list to take to Pesapal ───────────────────────────────────────
   // Anyone here with a completed Pesapal transaction paid and was not
   // activated. This database cannot make that distinction on its own.
@@ -176,9 +203,15 @@ export async function GET() {
     planMismatches,
     amountMismatches,
 
+    // Answers "who actually paid?" for the organisations that are live, which
+    // the earlier version of this route could not and said so.
+    activeOrgs,
+
     toCheckAgainstPesapal,
     counts: {
       organisations: orgs.length,
+      active: orgs.filter((o) => o.billingStatus === "ACTIVE").length,
+      activeWithPesapalReference: orgs.filter((o) => o.billingStatus === "ACTIVE" && o.flwSubscriptionId).length,
       events: events.length,
       planMismatches: planMismatches.length,
       amountMismatches: amountMismatches.length,
