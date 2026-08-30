@@ -341,3 +341,72 @@ describe("Pesapal reports IPN state as a code, not a word", () => {
     expect(SRC).toContain('Pesapal reports 1 (or "Active") for a live IPN');
   });
 });
+
+describe("it names the registrations that can never receive a notification", () => {
+  const SRC = readFileSync("app/api/admin/pesapal-health/route.ts", "utf8");
+
+  /**
+   * The live account holds 27 IPNs across several products, and more than half
+   * cannot be delivered to: eleven point at developer machines, three at a
+   * domain with a doubled TLD. Pesapal calls them faithfully and nothing
+   * answers. They cannot break this integration — they belong to others — but
+   * any payment relying on one is silently never confirmed.
+   */
+  function problem(url: string): string | null {
+    let host: string;
+    try { host = new URL(url).hostname.toLowerCase(); } catch { return "unparseable-url"; }
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1" || host.endsWith(".localhost")) {
+      return "points-at-a-developer-machine";
+    }
+    const labels = host.split(".");
+    if (labels.length > 2 && labels[labels.length - 1] === labels[labels.length - 2]) {
+      return "doubled-tld-probably-a-typo";
+    }
+    return null;
+  }
+
+  it("catches the developer-machine registrations, as found in the real account", () => {
+    for (const url of [
+      "http://localhost:3000/api/payment/ipn",
+      "http://localhost:3203/payment-callbacks/wallet-payment-status",
+      "http://127.0.0.1:3001/ipn",
+    ]) {
+      expect(problem(url)).toBe("points-at-a-developer-machine");
+    }
+  });
+
+  it("catches the doubled TLD, which is a typo rather than a domain", () => {
+    expect(problem("https://staging-commerce-api.maliyangu.com.com/payment-callbacks/wallet-payment-status"))
+      .toBe("doubled-tld-probably-a-typo");
+  });
+
+  it("leaves every legitimate registration alone", () => {
+    for (const url of [
+      "https://app.eagleinfosolutions.com/api/webhooks/pesapal",
+      "https://invoicing.pesapal.com/PaymentProcessed/payment",
+      "https://eaglestays.ug/api/bookings/pesapal-ipn/",
+      "https://commerceserver-staging.maliyangu.com/payment-callbacks/subscription-payment-status",
+      "https://server.nestlily.com/subscription-payment-status",
+    ]) {
+      expect(problem(url)).toBeNull();
+    }
+  });
+
+  it("does not mistake a two-label domain for a doubled TLD", () => {
+    // "com.com" as the whole host has no third label to compare against.
+    expect(problem("https://example.com/ipn")).toBeNull();
+  });
+
+  it("reports rather than deletes, and says why", () => {
+    // Pesapal v3 has RegisterIPN and GetIpnList and no delete of any kind, so
+    // an IPN can be created from here and never retired from here.
+    expect(SRC).toContain("undeliverableRegistrations");
+    expect(SRC).toContain("no delete-IPN endpoint");
+    expect(SRC).not.toContain("DeleteIpn");
+  });
+
+  it("keeps it out of the blockers, since these belong to other integrations", () => {
+    const idx = SRC.indexOf("undeliverableRegistrations");
+    expect(SRC.slice(Math.max(0, idx - 400), idx)).not.toContain("blockers.push");
+  });
+});

@@ -58,6 +58,38 @@ const WEBHOOK_PATH = "/api/webhooks/pesapal";
  * API surface, and anything else is treated as not active rather than assumed
  * fine.
  */
+/**
+ * IPNs in this account that can never receive a notification.
+ *
+ * The account is shared across several products and has accumulated
+ * registrations pointing at developer machines. Pesapal calls them faithfully
+ * and nothing answers, so any payment relying on one is silently never
+ * confirmed — the same failure the localhost guard in ipnCallbackUrl() now
+ * prevents this codebase from creating.
+ *
+ * Reported rather than removed: Pesapal's v3 API offers RegisterIPN and
+ * GetIpnList and no delete of any kind, so an IPN can be created from here but
+ * never retired from here. Clearing them is dashboard work; this exists so the
+ * result can be checked afterwards.
+ */
+function ipnProblem(url: string): string | null {
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return "unparseable-url";
+  }
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1" || host.endsWith(".localhost")) {
+    return "points-at-a-developer-machine";
+  }
+  // A doubled final label (…com.com) is a typo, not a domain.
+  const labels = host.split(".");
+  if (labels.length > 2 && labels[labels.length - 1] === labels[labels.length - 2]) {
+    return "doubled-tld-probably-a-typo";
+  }
+  return null;
+}
+
 function isActiveIpn(status: unknown): boolean {
   const s = String(status ?? "").trim().toLowerCase();
   return s === "1" || s === "active";
@@ -208,6 +240,17 @@ export async function GET(req: Request) {
       statusIsActive: match ? isActiveIpn(match.status) : null,
       pointsAtThisDeployment: pointsHere,
       allRegistered: registered?.map((i) => ({ id: i.ipn_id, url: i.url, status: i.status })) ?? null,
+      // Hygiene, not a blocker: these belong to other integrations on a shared
+      // account and cannot break this one. Listed so they can be cleared by
+      // hand and the result verified by re-running this.
+      undeliverableRegistrations: registered
+        ? registered
+            .map((i) => ({ id: i.ipn_id, url: i.url, problem: ipnProblem(i.url) }))
+            .filter((i) => i.problem !== null)
+        : null,
+      cleanupNote:
+        "Pesapal v3 has no delete-IPN endpoint — RegisterIPN and GetIpnList only — so these can be removed " +
+        "only from the Pesapal dashboard, not from here. Re-run this check afterwards to confirm.",
       lookupError: ipnLookupError,
       note: "Not checked when credentials fail, because the list cannot be fetched without a token.",
     },
