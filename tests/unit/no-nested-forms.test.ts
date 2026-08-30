@@ -63,13 +63,16 @@ describe("no form is nested inside another", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("the two cards that had it use formAction on the button instead", () => {
+  it("the two cards that had it no longer wrap the button in a form at all", () => {
     for (const f of [
       "components/platform/ATSmsPlatformSettingsForm.tsx",
       "components/platform/PesapalSettingsForm.tsx",
     ]) {
       const src = readFileSync(f, "utf8");
-      expect(src).toContain("formAction={clearAction}");
+      // formAction was the first fix and is no longer used for these: the
+      // button calls the server action directly, which has no form semantics
+      // to get wrong. See "the Clear control reports what happened" below.
+      expect(src).toContain('type="button"');
 
       // Scoped to inside the save form. Pesapal has a second Clear in the IPN
       // block below it, which is a standalone form and correct as it is — the
@@ -100,4 +103,46 @@ describe("the detector itself works", () => {
   it("does not mistake formAction for a form tag", () => {
     expect(maxFormDepth('<form action={a}><button formAction={b} /></form>')).toBe(1);
   });
+});
+
+describe("the Clear control reports what happened", () => {
+  const CARDS = [
+    "components/platform/ATSmsPlatformSettingsForm.tsx",
+    "components/platform/PesapalSettingsForm.tsx",
+  ];
+
+  /**
+   * Two attempts at this button both failed silently, and the silence is why
+   * they took three rounds each to notice. First it was a nested form, so the
+   * click ran the save action instead. Then it used formAction, which may well
+   * have worked — but the result was destructured away with `const [, action]`,
+   * so a success, a failure and a dead button all looked identical.
+   *
+   * A destructive control that cannot say whether it did anything is the
+   * defect, separately from whichever mechanism is underneath it.
+   */
+  for (const f of CARDS) {
+    const src = () => readFileSync(f, "utf8");
+
+    it(`${f} calls the action directly, with no form semantics to get wrong`, () => {
+      expect(src()).toContain('type="button"');
+      expect(src()).not.toContain("formAction={clearAction}");
+    });
+
+    it(`${f} keeps the result instead of discarding it`, () => {
+      expect(src()).toContain("setCleared({ key: f.key, ok: res.ok, error: res.error })");
+    });
+
+    it(`${f} renders that result where the button is`, () => {
+      const s = src();
+      expect(s).toContain("cleared?.key === f.key");
+      expect(s).toContain('"Cleared."');
+      expect(s).toContain("Could not clear.");
+    });
+
+    it(`${f} shows a pending state, so a slow clear is not read as a dead one`, () => {
+      expect(src()).toContain("setClearingKey(f.key)");
+      expect(src()).toContain('"Clearing…"');
+    });
+  }
 });
