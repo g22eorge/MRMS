@@ -3,32 +3,25 @@ import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import type { InvoiceStatus, InvoiceType, PaymentMethod } from "@prisma/client";
+import type { InvoiceStatus, InvoiceType } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
 import {
   formatMoney,
-  formatMoneyCompact,
-  isSupportedCurrency,
   normalizeCurrency,
   roundMoney,
 } from "@/lib/currency";
-import { canGenerateInvoiceForStatus } from "@/lib/documents";
 import { JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
-import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
-import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
+import { RowActionsMenu, MenuSection, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { computeVat } from "@/lib/commercial/vat";
 import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
-import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { PAYMENT_METHODS, parsePaymentMethod } from "@/lib/constants/payment-methods";
-import { formatEATDate, formatEATShortDate } from "@/lib/date-eat";
-import { sendInvoiceViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
+import { formatEATDate } from "@/lib/date-eat";
 import { shareInvoiceDocument } from "@/lib/notifications/share-document";
 import {
   InvoiceOverdueReminderBulkButton,
@@ -52,9 +45,9 @@ import { requireOrgSession } from "@/lib/org-context";
 import { clientDisplayName } from "@/lib/client-name";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { plural } from "@/lib/plural";
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
-const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
 
 export const dynamic = "force-dynamic";
@@ -478,30 +471,6 @@ export default async function InvoicesPage({
   const invoicesHref = pageHrefBuilder("/documents/invoices", invoicesHrefFilters);
   const invoicesHrefSize = sizeHrefBuilder("/documents/invoices", invoicesHrefFilters);
 
-  const readyJobs = await db.job
-    .findMany({
-      where: {
-        status: { in: ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"] },
-        invoiceIssuedAt: null,
-        ...(canManageInvoicePayments ? {} : { createdById: user.id }),
-      },
-      orderBy: { completedAt: "asc" }, // oldest first — most urgent to collect
-      take: 20,
-      select: {
-        id: true,
-        jobNumber: true,
-        status: true,
-        brand: true,
-        model: true,
-        clientBill: true,
-        completedAt: true,
-        receivedAt: true,
-        client: { select: { fullName: true, phone: true, organization: true } },
-      },
-    })
-    .catch(() => []);
-  const readyJobsTotal = readyJobs.reduce((s, j) => s + (j.clientBill ?? 0), 0);
-
   const [clients, invoiceParts, invoiceTaxRates, branding] = await Promise.all([
     db.client
       .findMany({
@@ -556,52 +525,9 @@ export default async function InvoicesPage({
 
   // ── Aging analysis ────────────────────────────────────────────────────────
   const outstanding = withAging.filter((i) => !i.isPaid && !i.isVoid);
-  const agingBands = [
-    {
-      label: "Current",
-      key: "current",
-      items: outstanding.filter((i) => i.daysOverdue <= 0),
-      color: "text-[var(--ink)]",
-      bg: "bg-[var(--panel)]",
-      border: "border-[var(--line)]",
-    },
-    {
-      label: "1–30 days",
-      key: "1-30",
-      items: outstanding.filter((i) => i.daysOverdue >= 1 && i.daysOverdue <= 30),
-      color: "text-amber-700",
-      bg: "bg-amber-500/8",
-      border: "border-amber-400/30",
-    },
-    {
-      label: "31–60 days",
-      key: "31-60",
-      items: outstanding.filter((i) => i.daysOverdue >= 31 && i.daysOverdue <= 60),
-      color: "text-amber-700",
-      bg: "bg-amber-500/8",
-      border: "border-amber-400/30",
-    },
-    {
-      label: "61+ days",
-      key: "61+",
-      items: outstanding.filter((i) => i.daysOverdue >= 61),
-      color: "text-red-700",
-      bg: "bg-red-500/10",
-      border: "border-red-400/30",
-    },
-  ];
 
-  const totalBilled = invoices.filter((i) => i.status !== "VOID").reduce((s, i) => s + i.totalAmount, 0);
   const totalCollected = invoices.filter((i) => i.status !== "VOID").reduce((s, i) => s + i.paidAmount, 0);
   const totalOutstanding = outstanding.reduce((s, i) => s + i.balance, 0);
-  const collectionRate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
-  const byType = INVOICE_TYPES.map((t) => ({
-    type: t,
-    count: invoices.filter((i) => i.invoiceType === t).length,
-  })).filter((x) => x.count > 0);
-  const criticalOverdue = [...agingBands[3].items, ...agingBands[2].items]
-    .sort((a, b) => b.daysOverdue - a.daysOverdue)
-    .slice(0, 5);
 
   const reminderReturnQuery = new URLSearchParams();
   if (typeFilter !== "all") reminderReturnQuery.set("type", typeFilter);
@@ -619,20 +545,6 @@ export default async function InvoicesPage({
       : null;
   const overdueInView = filtered.filter((i) => !i.isPaid && !i.isVoid && i.daysOverdue > 0);
 
-  const invoiceTypeTones: Record<string, BadgeTone> = {
-    REPAIR: "info",
-    SERVICE: "violet",
-    MERCHANDISE: "orange",
-    CONTRACT: "teal",
-    OTHER: "neutral",
-  };
-  const invoiceStatusTones: Record<string, BadgeTone> = {
-    Paid: "success",
-    Void: "danger",
-    Draft: "neutral",
-    Overdue: "danger",
-    Outstanding: "warning",
-  };
 
   return (
     <InvoicePreviewProvider>
@@ -651,6 +563,23 @@ export default async function InvoicesPage({
             <a href="/settings/notifications" className="font-semibold text-[var(--accent)] underline underline-offset-2">
               Reminder settings
             </a>
+          </p>
+        </div>
+      )}
+
+      {/* dbNeedsFix was set when the Invoice table is missing and then never
+          read, so that failure rendered as an ordinary empty list — "No invoices
+          found." on a database that cannot answer the question. The POS page
+          already surfaces the same signal this way. */}
+      {dbNeedsFix && (
+        <div role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <p className="text-[0.8125rem] font-semibold text-amber-500">The invoice tables are missing from this database.</p>
+          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
+            This list is empty because the table could not be read, not because there are no invoices.{" "}
+            <a href="/api/admin/db-fix" target="_blank" rel="noreferrer" className="font-semibold text-[var(--accent)] underline underline-offset-2">
+              Run DB Fix
+            </a>{" "}
+            as the platform admin.
           </p>
         </div>
       )}
@@ -753,6 +682,20 @@ export default async function InvoicesPage({
         </form>
       </div>
 
+      {/* The other half of the restored feature. bulkAgingBucket and
+          overdueInView are computed above and existed only to drive this, so
+          both were dead alongside it. Shown only when an aging filter is
+          active, which is what makes "all in this bucket" a defined set. */}
+      {bulkAgingBucket && overdueInView.length > 0 && canManageInvoicePayments ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">
+            {plural(overdueInView.length, "overdue invoice")} in the{" "}
+            <span className="font-semibold text-[var(--ink)]">{bulkAgingBucket === "61+" ? "61+ days" : `${bulkAgingBucket} days`}</span> bucket
+          </p>
+          <InvoiceOverdueReminderBulkButton aging={bulkAgingBucket} count={overdueInView.length} context={reminderContext} />
+        </div>
+      ) : null}
+
       <div>
         {(filtered as any[]).length > 0 ? (
           <BulkSelectionProvider pageIds={filtered.map((r: any) => r.id)}>
@@ -786,6 +729,16 @@ export default async function InvoicesPage({
                   id: inv.id,
                   invoiceNumber: inv.invoiceNumber,
                   client: clientName,
+                  // Carried onto the row because the actions menu below branches
+                  // on them. They were read there while this object never
+                  // produced them, so both guards saw `undefined`: every row —
+                  // paid and voided included — offered "Collect Payment" and
+                  // "View to Void". The row was cast to `any`, so nothing
+                  // complained. The server refuses both, so this misled the
+                  // reader rather than corrupting anything.
+                  isPaid: inv.isPaid,
+                  isVoid: inv.isVoid,
+                  isOverdue,
                   statusBadge: <StatusBadge tone={toneFor(INV_STATUS_TONES, statusLabel)}>{statusLabel}</StatusBadge>,
                   amount: formatMoney(inv.totalAmount, invoiceCurrency),
                   issued: inv.issuedAt ? formatEATDate(inv.issuedAt) : "—",
@@ -798,7 +751,11 @@ export default async function InvoicesPage({
                 };
               });
 
-              const actions = (row: any) => (
+              // Typed, not `any`: the missing-field bug above was invisible
+              // precisely because this parameter accepted anything. With the row
+              // type inferred from `rows`, reading a field that is not there is
+              // a compile error rather than a silently falsy branch.
+              const actions = (row: (typeof rows)[number]) => (
                 <RowActionsMenu label={`Invoice ${row.invoiceNumber}`}>
                   <MenuActionLink href={`/documents/invoices/${row.id}`} icon="open">View</MenuActionLink>
                   <PreviewButton invoiceId={row.id} />
@@ -821,6 +778,16 @@ export default async function InvoicesPage({
                     <input type="hidden" name="channel" value="whatsapp" />
                     <MenuActionButton icon="whatsapp" tone="success">Send by WhatsApp</MenuActionButton>
                   </form>
+                  {/* Restored. The overdue reminder shipped in "one-click overdue
+                      reminders via outbox", and the later rewrite of this page
+                      dropped the JSX while leaving the imports, the server
+                      actions and reminderContext in place — so a finished,
+                      org-guarded feature became unreachable and nothing said so.
+                      The AI insights page tells the reader their invoices are
+                      overdue; this is the control that acts on it. */}
+                  {row.isOverdue && canManageInvoicePayments ? (
+                    <InvoiceOverdueReminderButton invoiceId={row.id} context={reminderContext} compact />
+                  ) : null}
                   <MenuSection label="Danger zone" />
                   {row.isPaid ? (
                     <span className="px-3 py-1.5 text-[0.8125rem] text-[var(--ink-muted)]">Fully paid — no void</span>

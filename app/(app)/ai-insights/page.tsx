@@ -1,15 +1,11 @@
 import { redirect } from "next/navigation";
+import { plural } from "@/lib/plural";
 
 import { BusinessCopilot } from "@/components/ai-insights/BusinessCopilot";
 import { buildBusinessDataPack, pctChange, trendLabel } from "@/lib/ai/business-metrics";
 import { formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { getCurrentUserRole } from "@/lib/session";
-
-/** "1 job" / "2 jobs". The page previously wrote "job(s)", which no one says. */
-function plural(count: number, singular: string, pluralForm = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : pluralForm}`;
-}
 
 function statusLabel(status: string) {
   return status
