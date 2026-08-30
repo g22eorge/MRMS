@@ -256,6 +256,16 @@ bun run qa:rate-limit
 bun run predeploy:check
 ```
 
+Run unit tests with `bun run test:unit`, never `bun test tests/unit`. The bare
+command provisions no test database and, more importantly, does not isolate
+files: several suites call `mock.module("@/lib/prisma", ...)`, Bun's module
+mocks are process-global and are never unwound, so the first file to register a
+stub poisons every file loaded after it. The bare command reports around 34
+failures whose files all pass individually — none of them real. `test:unit`
+sets up `prisma/test.db` and runs each file in its own process via
+`scripts/run-unit-tests.mjs`; a green run there means something. `bun test
+<single-file>` is fine for one file.
+
 For deployment gate:
 
 ```bash
