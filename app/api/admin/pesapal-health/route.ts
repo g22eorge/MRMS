@@ -98,6 +98,18 @@ export async function GET(req: Request) {
   const requestOrigin = new URL(req.url).origin;
   const expectedWebhookUrl = `${configuredBase ?? requestOrigin}${WEBHOOK_PATH}`;
 
+  // NEXT_PUBLIC_APP_URL is not only the IPN address — it builds the
+  // post-payment redirect, every password-reset and invite link, document share
+  // links and notification deep links. When it names a different host than the
+  // one being served, a customer who pays is redirected across origins, does
+  // not carry their session cookie there, and lands on a login page instead of
+  // the confirmation. Notifications still arrive, so this warns rather than
+  // blocks — but it is the difference between a payment that worked and a
+  // payment the customer believes failed.
+  const configuredHost = configuredBase ? new URL(configuredBase).host : null;
+  const servedHost = new URL(requestOrigin).host;
+  const baseMismatch = Boolean(configuredHost && configuredHost !== servedHost);
+
   // Scoped to this environment: a sandbox id is not evidence of a live one.
   const storedIpnId = await getStoredIpnId().catch(() => null);
   let registered: Array<{ ipn_id: string; url: string; status: string }> | null = null;
@@ -159,6 +171,17 @@ export async function GET(req: Request) {
       lookupError: ipnLookupError,
       note: "Not checked when credentials fail, because the list cannot be fetched without a token.",
     },
-    deployment: { configuredBase, requestOrigin },
+    deployment: {
+      configuredBase,
+      requestOrigin,
+      baseMatchesServedHost: !baseMismatch,
+      warning: baseMismatch
+        ? `NEXT_PUBLIC_APP_URL is ${configuredBase}, but this was served from ${requestOrigin}. ` +
+          "A customer who completes payment is redirected to the other host, does not carry their " +
+          "session cookie across origins, and lands on the login page instead of the confirmation. " +
+          "The same value builds password-reset, invite, document-share and notification links. " +
+          "Set it to the host customers actually use, and register the IPN only after that."
+        : null,
+    },
   });
 }

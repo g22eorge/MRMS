@@ -207,3 +207,47 @@ describe("the IPN id is scoped to the Pesapal account that issued it", () => {
     expect(page).toContain("getStoredIpnId()");
   });
 });
+
+describe("it warns when the app URL is not the host customers use", () => {
+  const SRC = readFileSync("app/api/admin/pesapal-health/route.ts", "utf8");
+
+  /**
+   * Found on the live commercial deployment: NEXT_PUBLIC_APP_URL was
+   * https://mrms-apga.vercel.app while customers use
+   * app.eagleinfosolutions.com. The callback redirects a paying customer to the
+   * configured host, which is a different registrable domain, so the session
+   * cookie is not sent and they land on /login instead of the confirmation.
+   * They have paid, and every visible signal says they have not.
+   */
+  function mismatch(configured: string | null, served: string) {
+    const configuredHost = configured ? new URL(configured).host : null;
+    return Boolean(configuredHost && configuredHost !== new URL(served).host);
+  }
+
+  it("catches the vercel.app-versus-custom-domain case exactly as found", () => {
+    expect(mismatch("https://mrms-apga.vercel.app", "https://app.eagleinfosolutions.com")).toBe(true);
+  });
+
+  it("is quiet when they agree", () => {
+    expect(mismatch("https://app.eagleinfosolutions.com", "https://app.eagleinfosolutions.com")).toBe(false);
+  });
+
+  it("ignores a differing path or trailing slash, comparing hosts", () => {
+    expect(mismatch("https://app.eagleinfosolutions.com/", "https://app.eagleinfosolutions.com")).toBe(false);
+  });
+
+  it("is quiet when nothing is configured, which other checks already cover", () => {
+    expect(mismatch(null, "https://app.eagleinfosolutions.com")).toBe(false);
+  });
+
+  it("warns rather than blocks, because notifications still arrive", () => {
+    // It must not be a blocker: the IPN would work. What breaks is the
+    // customer's experience of a payment that in fact succeeded.
+    expect(SRC).toContain("baseMatchesServedHost");
+    expect(SRC).not.toContain("blockers.push(`NEXT_PUBLIC_APP_URL");
+  });
+
+  it("says what it costs, not just that it differs", () => {
+    expect(SRC).toContain("lands on the login page instead of the confirmation");
+  });
+});
