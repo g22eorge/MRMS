@@ -143,14 +143,30 @@ describe("it explains a 401 that a 401 cannot explain", () => {
   });
 
   it("accepts a real one", () => {
-    for (const ok of ["DDUUKA", "EAGLEINFO", "Eagle Info"]) {
+    // Hyphens and underscores are explicitly acceptable per the provider's
+    // guidance; the first version of this rule refused them.
+    for (const ok of ["DDUUKA", "EAGLEINFO", "Duuka-Pro", "Duuka_Pro", "DuukaProMx"]) {
       expect(senderIdProblem(ok)).toBeNull();
     }
   });
 
-  it("rejects hyphens and underscores at a legal length", () => {
-    expect(senderIdProblem("ab-cd")).toContain("alphanumeric");
-    expect(senderIdProblem("ab_cd")).toContain("alphanumeric");
+  it("rejects a space, which the provider does not allow", () => {
+    // "No spacing allowed but hyphens and underscores are acceptable." This
+    // rule was written inverted: it permitted spaces and refused hyphens, so a
+    // usable id was rejected and an unusable one stored — to fail later, per
+    // message, with 402, where nobody would see it.
+    expect(senderIdProblem("Duuka Pro")).toContain("does not allow spaces");
+  });
+
+  it("rejects punctuation that is neither hyphen nor underscore", () => {
+    for (const bad of ["Duuka.Pro", "Duuka!", "Duuka/Pro"]) {
+      expect(senderIdProblem(bad)).toContain("hyphens and underscores only");
+    }
+  });
+
+  it("still rejects anything over eleven characters", () => {
+    // "Duuka ProMax" was twelve, and would now fail on the space as well.
+    expect(senderIdProblem("DuukaProMax1")).toContain("12 characters");
   });
 
   it("treats an absent sender ID as fine, not as malformed", () => {

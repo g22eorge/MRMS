@@ -39,8 +39,16 @@ export function senderIdProblem(senderId: string | null | undefined): string | n
   if (senderId.length > 11) {
     return `it is ${senderId.length} characters and Africa's Talking allows at most 11`;
   }
-  if (!/^[A-Za-z0-9 ]+$/.test(senderId)) {
-    return "sender IDs are alphanumeric, and this contains other characters";
+  // Read off the provider's own guidance, which the first version of this had
+  // exactly inverted: "No spacing allowed but hyphens and underscores are
+  // acceptable". It permitted spaces and refused hyphens — so a legitimate
+  // "Duuka-Pro" would have been rejected while an unusable "Duuka Pro" was
+  // stored and then failed per message with 402, where nobody would see it.
+  if (senderId.includes(" ")) {
+    return "Africa's Talking does not allow spaces in a sender ID; hyphens and underscores are accepted";
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(senderId)) {
+    return "sender IDs allow letters, digits, hyphens and underscores only";
   }
   return null;
 }
