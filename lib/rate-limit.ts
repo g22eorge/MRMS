@@ -109,6 +109,18 @@ export const rateLimit = {
   jobCreate: (orgId: string) =>
     checkRateLimit(`job:${orgId}`, { limit: 60, windowMs: 60 * 60 * 1000 }),
 
+  /**
+   * Destructive platform-admin operations — 10 per 10 minutes per admin.
+   *
+   * The guard in front of these already restricts them to a platform admin, so
+   * this is not about keeping strangers out. It bounds what a hijacked admin
+   * session can do in a burst, and it stops a repeated click re-running a
+   * schema repair or a demo seed while the first is still working. Generous
+   * enough that no honest use will meet it.
+   */
+  platformAdmin: (userId: string) =>
+    checkRateLimit(`platform-admin:${userId}`, { limit: 10, windowMs: 10 * 60 * 1000 }),
+
   /** File uploads — 30 uploads per 10 minutes per user. */
   upload: (userId: string) =>
     checkRateLimit(`upload:${userId}`, { limit: 30, windowMs: 10 * 60 * 1000 }),

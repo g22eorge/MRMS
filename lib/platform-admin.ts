@@ -18,6 +18,8 @@
  *  • Require the user's role to be "ADMIN" — a matching email with a
  *    downgraded role must not gain platform access.
  *  • Fail closed: if PLATFORM_ADMIN_EMAIL is not configured, no one is admin.
+ *  • Accepts a comma-separated list, so access can be delegated without
+ *    sharing one mailbox. A single address still works unchanged.
  */
 
 import { redirect } from "next/navigation";
@@ -26,13 +28,32 @@ import { getCurrentUserRole } from "@/lib/session";
 type PlatformUser = Awaited<ReturnType<typeof getCurrentUserRole>>["user"];
 
 /** Shared check — returns the user if they are the platform admin, null otherwise. */
+/**
+ * The addresses allowed to act as platform admin.
+ *
+ * PLATFORM_ADMIN_EMAIL accepts a comma-separated list. It was a single address,
+ * which made one mailbox both the only way in and a single point of failure:
+ * with that person unavailable nobody could extend a trial, correct a plan or
+ * run a repair, and a compromise of that one account was a compromise of the
+ * whole platform.
+ *
+ * Still fails closed — an unset or empty variable means nobody is admin, and a
+ * list of blanks is an empty list rather than a wildcard.
+ */
+function platformAdminEmails(): string[] {
+  return (process.env.PLATFORM_ADMIN_EMAIL ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 async function checkPlatformAdmin(): Promise<NonNullable<PlatformUser> | null> {
   const { user } = await getCurrentUserRole();
-  const adminEmail = process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
+  const allowed = platformAdminEmails();
 
-  if (!adminEmail) return null;
+  if (allowed.length === 0) return null;
   if (!user?.email) return null;
-  if (user.email.toLowerCase() !== adminEmail) return null;
+  if (!allowed.includes(user.email.toLowerCase())) return null;
   if (user.role !== "ADMIN") return null;
 
   return user as NonNullable<PlatformUser>;
@@ -69,8 +90,8 @@ export async function assertPlatformAdmin(): Promise<NonNullable<PlatformUser> |
  * mutate platform data must use requirePlatformAdmin()/assertPlatformAdmin().
  */
 export function checkIsPlatformAdmin(email: string): boolean {
-  const adminEmail = process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
-  return Boolean(adminEmail && email.toLowerCase() === adminEmail);
+  const allowed = platformAdminEmails();
+  return allowed.length > 0 && allowed.includes(email.toLowerCase());
 }
 
 /** Alias used by session/deployment guards when only the email is known. */

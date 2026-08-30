@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { assertPlatformAdmin } from "@/lib/platform-admin";
+import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { sendCustomWhatsAppMessage, whatsappIsConfigured } from "@/lib/notifications/whatsapp";
 import { prisma } from "@/lib/prisma";
 
@@ -11,6 +12,7 @@ export async function GET() {
   if (!user) {
     return NextResponse.redirect(new URL("/login", process.env.BETTER_AUTH_URL ?? "http://localhost:3000"));
   }
+
 
   const html = `<!doctype html>
 <html lang="en">
@@ -76,6 +78,16 @@ export async function POST(request: NextRequest) {
   const user = await assertPlatformAdmin();
   if (!user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Bounds what a hijacked admin session can do in a burst, and stops a
+  // repeated click re-running this while the first run is still working.
+  const rl = await rateLimit.platformAdmin(user.id);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many admin operations. Wait a moment and retry." },
+      { status: 429, headers: rateLimitHeaders(rl.retryAfterMs) },
+    );
   }
 
   if (!whatsappIsConfigured()) {

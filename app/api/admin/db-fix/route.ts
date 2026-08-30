@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { assertPlatformAdmin } from "@/lib/platform-admin";
+import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -583,9 +584,22 @@ async function runRecentAdditiveSchemaRepair(changes: Array<{ kind: string; deta
 }
 
 async function runDbFix() {
+  // The guard lives here rather than in POST, one level up — worth knowing,
+  // because from the handler this function looks unauthenticated.
   const user = await assertPlatformAdmin();
   if (!user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // The most destructive operation on the platform: table rebuilds, INSERT OR
+  // REPLACE, foreign keys switched off for the batch. A repeated click while
+  // the first run is still working is the realistic hazard, not an attacker.
+  const rl = await rateLimit.platformAdmin(user.id);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many admin operations. Wait a moment and retry." },
+      { status: 429, headers: rateLimitHeaders(rl.retryAfterMs) },
+    );
   }
 
   const changes: Array<{ kind: string; detail: string }> = [];
