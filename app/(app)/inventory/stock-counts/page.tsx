@@ -66,7 +66,6 @@ export default async function StockCountsPage({
     <ListPageLayout
       topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
-        eyebrow: "Inventory",
         title: "Stock Counts",
         description: `${countsTotal} counts`,
         actions: (

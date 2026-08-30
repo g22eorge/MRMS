@@ -170,7 +170,6 @@ export default async function ComplaintsPage({
     <ListPageLayout
       topBar={<ServiceHubNav />}
       header={{
-        eyebrow: "Service",
         title: "Complaints",
         actions: (
           <>

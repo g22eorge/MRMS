@@ -53,7 +53,6 @@ export default async function SuppliersPage({
     <ListPageLayout
       topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
-        eyebrow: "Inventory",
         title: "Suppliers",
         description: `${suppliersTotal} registered`,
         actions: (

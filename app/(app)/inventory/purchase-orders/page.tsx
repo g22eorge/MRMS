@@ -110,7 +110,6 @@ export default async function PurchaseOrdersPage({
   return (
     <ListPageLayout
       header={{
-        eyebrow: "Procurement",
         title: "Purchase Orders",
         actions: (
           <>

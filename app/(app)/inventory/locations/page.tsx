@@ -94,7 +94,6 @@ export default async function StockLocationsPage({
     <ListPageLayout
       topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
-        eyebrow: "Inventory",
         title: "Stock Locations",
         kpis: [
           { label: "Total", value: locationsTotal, sub: "locations" },

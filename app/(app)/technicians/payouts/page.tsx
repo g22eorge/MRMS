@@ -132,7 +132,6 @@ export default async function TechnicianPayoutsPage({
   return (
     <ListPageLayout
       header={{
-        eyebrow: "Service",
         title: "My Payouts",
         kpis: [
           { label: "Total in view", value: formatMoney(total, currency), sub: `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"}` },

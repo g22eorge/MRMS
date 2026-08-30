@@ -262,7 +262,6 @@ export default async function TechniciansPage({
     <ListPageLayout
       topBar={<ServiceHubNav />}
       header={{
-        eyebrow: "Service",
         title: "Technicians",
         description: "Active assignments and repair board",
         actions: <Link href="/settings/users" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem]">Manage staff →</Link>,

@@ -199,7 +199,6 @@ export default async function FieldPage({
     <ListPageLayout
       topBar={<ServiceHubNav />}
       header={{
-        eyebrow: "Service",
         title: "Field Visits",
         description: isManager ? "All scheduled field visits" : "Your assigned field visits",
         kpis: [

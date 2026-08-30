@@ -102,7 +102,6 @@ export default async function PurchaseRequestsPage({
   return (
     <ListPageLayout
       header={{
-        eyebrow: "Procurement",
         title: "Purchase Requests",
         description: `${total} requests`,
         actions: (

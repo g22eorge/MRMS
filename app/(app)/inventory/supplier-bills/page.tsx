@@ -75,7 +75,6 @@ export default async function SupplierBillsPage({
     <ListPageLayout
       topBar={<FormErrorBanner message={params.error} />}
       header={{
-        eyebrow: "Procurement",
         title: "Supplier Bills",
         actions: (
           <>

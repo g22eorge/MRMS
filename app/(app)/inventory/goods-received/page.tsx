@@ -51,7 +51,6 @@ export default async function GoodsReceivedPage({
   return (
     <ListPageLayout
       header={{
-        eyebrow: "Procurement",
         title: "Goods Received",
         kpis: [
           { label: "Total GRNs", value: notesTotal, sub: "received notes" },

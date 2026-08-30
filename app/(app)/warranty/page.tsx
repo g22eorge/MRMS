@@ -107,7 +107,6 @@ export default async function WarrantyClaimsPage({
   return (
     <ListPageLayout
       header={{
-        eyebrow: "Service",
         title: "Warranty claims",
         description: "Repairs customers have brought back, and how each was settled.",
       }}
