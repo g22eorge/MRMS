@@ -1,7 +1,7 @@
 "use server";
 
 import { setPlatformSetting, deletePlatformSetting } from "@/lib/platform-settings";
-import { registerIpn, getRegisteredIpns } from "@/lib/pesapal";
+import { registerIpn, getRegisteredIpns, ipnCallbackUrl } from "@/lib/pesapal";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { revalidatePlatformSettings } from "@/lib/platform/revalidate";
 
@@ -80,8 +80,7 @@ export async function registerIpnAction(
 ): Promise<{ ok: boolean; ipnId?: string; error?: string }> {
   await requirePlatformAdmin();
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const ipnUrl = `${baseUrl}/api/webhooks/pesapal`;
+    const ipnUrl = ipnCallbackUrl();
 
     // Check if already registered
     const existing = await getRegisteredIpns().catch(() => []);

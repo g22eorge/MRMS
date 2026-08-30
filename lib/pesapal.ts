@@ -83,14 +83,35 @@ export async function getRegisteredIpns(): Promise<IpnEntry[]> {
   return pesapalFetch<IpnEntry[]>("/api/URLSetup/GetIpnList");
 }
 
+/**
+ * The URL Pesapal is told to call back.
+ *
+ * Registration happens once and the resulting id is stored forever — nothing
+ * re-checks where it points. So a registration made while NEXT_PUBLIC_APP_URL
+ * was unset would pin every future payment notification to localhost, where it
+ * is delivered to nothing, and the only symptom is payments that never
+ * activate. Refusing here costs one loud failure; allowing it costs silent
+ * ones for the life of the deployment.
+ */
+export function ipnCallbackUrl(): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const local = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(baseUrl);
+  if (process.env.NODE_ENV === "production" && local) {
+    throw new Error(
+      "Refusing to register a localhost IPN URL in production: set NEXT_PUBLIC_APP_URL to the public app URL first. " +
+        "Pesapal stores this address permanently, and notifications sent to localhost are lost.",
+    );
+  }
+  return `${baseUrl}/api/webhooks/pesapal`;
+}
+
 /** Get the stored IPN ID, or auto-register one if not yet stored. */
 export async function getOrCreateIpnId(): Promise<string> {
   const { getPlatformSetting, setPlatformSetting } = await import("@/lib/platform-settings");
   const stored = await getPlatformSetting("PESAPAL_IPN_ID");
   if (stored) return stored;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const ipnId = await registerIpn(`${baseUrl}/api/webhooks/pesapal`);
+  const ipnId = await registerIpn(ipnCallbackUrl());
   await setPlatformSetting("PESAPAL_IPN_ID", ipnId);
   return ipnId;
 }

@@ -91,7 +91,7 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-3 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">IPN (Webhook) URL</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">IPN (Webhook) URL — expected</p>
             <p className="mt-0.5 mono text-xs text-[var(--ink)] break-all">{webhookUrl}</p>
           </div>
         </div>
@@ -125,6 +125,16 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
         <p className="text-[0.75rem] text-[var(--ink-muted)]">
           Register this URL in your Pesapal dashboard, or click &quot;Register IPN&quot; above to do it automatically via the API.
           Set <code className="mono">PESAPAL_ENV=production</code> in env vars for live payments.
+        </p>
+        {/* An ID here means one was stored, not that it points at the URL above.
+            Nothing re-checks that after the first registration, so the check is
+            offered rather than implied. */}
+        <p className="text-[0.75rem] text-[var(--ink-muted)]">
+          An ID above only means one was stored. To confirm Pesapal actually sends notifications to
+          that URL — and that this deployment can take real money —{" "}
+          <a href="/api/admin/pesapal-health" className="underline underline-offset-2 text-[var(--accent)]">
+            run the payment readiness check
+          </a>.
         </p>
       </div>
     </div>
