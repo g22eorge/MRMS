@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { getPlatformSetting, probePlatformSettingStore } from "@/lib/platform-settings";
-import { getAtConfig } from "@/lib/notifications/sms";
+import { getAtConfig, senderIdProblem } from "@/lib/notifications/sms";
 
 export const dynamic = "force-dynamic";
 
@@ -25,25 +25,6 @@ export const dynamic = "force-dynamic";
  * Read-only, platform-admin only, and no credential is returned — only whether
  * one resolved, from where, and what the provider said about it.
  */
-
-/**
- * Africa's Talking sender IDs are alphanumeric and at most 11 characters.
- *
- * Worth checking because the failure it catches is not "SMS is misconfigured"
- * but "a value has been pasted into the wrong box" — and when the value that
- * landed in the sender ID looks like a generated secret, the right response is
- * to rotate it, not to correct a setting.
- */
-function senderIdProblem(senderId: string | null | undefined): string | null {
-  if (!senderId) return null;
-  if (senderId.length > 11) {
-    return `"${senderId.length} characters" — Africa's Talking allows at most 11. This is not a valid sender ID.`;
-  }
-  if (!/^[A-Za-z0-9 ]+$/.test(senderId)) {
-    return "contains characters Africa's Talking does not accept — sender IDs are alphanumeric.";
-  }
-  return null;
-}
 
 type Verdict =
   | "READY"
@@ -120,7 +101,7 @@ export async function GET() {
   const senderIdIssue = senderIdProblem(config?.senderId);
   if (senderIdIssue) {
     blockers.push(
-      `The stored sender ID is not a valid one — ${senderIdIssue} ` +
+      `The stored sender ID is not a valid one — ${senderIdIssue}. ` +
         "If a credential was pasted into this field by mistake, treat it as exposed and rotate it.",
     );
   }

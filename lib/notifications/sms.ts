@@ -15,6 +15,26 @@ export interface AtSmsConfig {
  * settings form wrote the credentials to the database — so a key entered there
  * was stored, displayed as configured, and never used to send anything.
  */
+/**
+ * Whether a string can be an Africa's Talking sender ID at all.
+ *
+ * Alphanumeric, eleven characters at most. Shared by the settings form, which
+ * refuses to store anything else, and the health check, which reports a stored
+ * value that should never have got in. Both matter: validating only at the
+ * point of entry leaves existing bad values invisible, and validating only in
+ * the check lets new ones be created.
+ */
+export function senderIdProblem(senderId: string | null | undefined): string | null {
+  if (!senderId) return null;
+  if (senderId.length > 11) {
+    return `it is ${senderId.length} characters and Africa's Talking allows at most 11`;
+  }
+  if (!/^[A-Za-z0-9 ]+$/.test(senderId)) {
+    return "sender IDs are alphanumeric, and this contains other characters";
+  }
+  return null;
+}
+
 export async function getAtConfig(
   orgCfg?: { atApiKey?: string | null; atUsername?: string | null; atSenderId?: string | null } | null,
 ): Promise<AtSmsConfig | null> {

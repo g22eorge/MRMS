@@ -1,6 +1,10 @@
 import { describe, it, expect } from "bun:test";
 import { readFileSync } from "node:fs";
 
+// The real rule, not a copy of it — a mirrored validator in a test proves only
+// that the mirror is self-consistent.
+import { senderIdProblem } from "@/lib/notifications/sms";
+
 /**
  * SMS credentials entered in the platform settings form, and never used.
  *
@@ -107,20 +111,13 @@ describe("there is now a way to tell whether they work", () => {
 describe("it explains a 401 that a 401 cannot explain", () => {
   const SRC = readFileSync("app/api/admin/sms-health/route.ts", "utf8");
 
-  /** Mirrors the route's rule; pinned against the source below. */
-  function senderIdProblem(senderId: string | null | undefined): string | null {
-    if (!senderId) return null;
-    if (senderId.length > 11) return "too long";
-    if (!/^[A-Za-z0-9 ]+$/.test(senderId)) return "bad characters";
-    return null;
-  }
 
   it("rejects the value actually found stored on the live system", () => {
     // "wecmys-piqcut-0biJvu" — twenty characters and hyphenated. Africa's
     // Talking allows eleven, alphanumeric. A value shaped like a generated
     // secret in the sender ID box means the fields were filled in wrongly, and
     // that explains a 401 far better than the 401 does.
-    expect(senderIdProblem("wecmys-piqcut-0biJvu")).toBe("too long");
+    expect(senderIdProblem("wecmys-piqcut-0biJvu")).toContain("20 characters");
   });
 
   it("accepts a real one", () => {
@@ -130,8 +127,8 @@ describe("it explains a 401 that a 401 cannot explain", () => {
   });
 
   it("rejects hyphens and underscores at a legal length", () => {
-    expect(senderIdProblem("ab-cd")).toBe("bad characters");
-    expect(senderIdProblem("ab_cd")).toBe("bad characters");
+    expect(senderIdProblem("ab-cd")).toContain("alphanumeric");
+    expect(senderIdProblem("ab_cd")).toContain("alphanumeric");
   });
 
   it("treats an absent sender ID as fine, not as malformed", () => {
@@ -157,5 +154,30 @@ describe("it explains a 401 that a 401 cannot explain", () => {
     const readyBlock = SRC.indexOf('verdict === "READY" && !config?.senderId');
     expect(at).toBeGreaterThan(-1);
     expect(at).toBeLessThan(readyBlock);
+  });
+});
+
+describe("the form refuses what the check would only report", () => {
+  const ACTIONS_SRC = readFileSync("app/(platform)/platform/settings/actions.ts", "utf8");
+
+  it("validates before writing, so a bad value is never stored", () => {
+    // Reporting it afterwards is second best: once saved it is displayed,
+    // returned by the health check, and pasted onward before anyone notices.
+    const check = ACTIONS_SRC.indexOf("const badSender = senderIdProblem(senderId)");
+    const write = ACTIONS_SRC.indexOf('setPlatformSetting("AT_SENDER_ID"');
+    expect(check).toBeGreaterThan(-1);
+    expect(check).toBeLessThan(write);
+  });
+
+  it("tells the person to rotate the key, not just retype the field", () => {
+    expect(ACTIONS_SRC).toContain("rotate that key");
+  });
+
+  it("uses the same rule the health check uses", () => {
+    // Two copies of this would drift, which is the defect this audit has now
+    // found in prices, in job statuses, and in SMS credentials.
+    for (const f of ["app/api/admin/sms-health/route.ts", "app/(platform)/platform/settings/actions.ts"]) {
+      expect(readFileSync(f, "utf8")).toContain('senderIdProblem } from "@/lib/notifications/sms"');
+    }
   });
 });

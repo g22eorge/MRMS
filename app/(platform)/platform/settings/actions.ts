@@ -2,6 +2,7 @@
 
 import { setPlatformSetting, deletePlatformSetting } from "@/lib/platform-settings";
 import { registerIpn, getRegisteredIpns, ipnCallbackUrl, ipnSettingKey } from "@/lib/pesapal";
+import { senderIdProblem } from "@/lib/notifications/sms";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { revalidatePlatformSettings } from "@/lib/platform/revalidate";
 
@@ -66,6 +67,21 @@ export async function saveAtSettingsAction(
   const apiKey = (formData.get("AT_API_KEY") as string | null)?.trim() ?? "";
   const username = (formData.get("AT_USERNAME") as string | null)?.trim() ?? "";
   const senderId = (formData.get("AT_SENDER_ID") as string | null)?.trim() ?? "";
+
+  // Refused rather than stored. A value of the wrong shape here is not a typo
+  // to be corrected later — it is usually a credential pasted into the wrong
+  // box, and once saved it is displayed, returned by the health check, and
+  // pasted onward before anyone notices. The cheapest place to stop that is
+  // before it is written.
+  const badSender = senderIdProblem(senderId);
+  if (badSender) {
+    return {
+      ok: false,
+      error:
+        `That sender ID cannot be right — ${badSender}. Leave it blank to send from a shared ` +
+        "shortcode. If you have pasted an API key here by mistake, rotate that key: it has been submitted.",
+    };
+  }
 
   try {
     if (apiKey) await setPlatformSetting("AT_API_KEY", apiKey);
