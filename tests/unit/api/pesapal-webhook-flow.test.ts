@@ -106,7 +106,7 @@ beforeEach(() => {
   updates = [];
   billingRows = [];
   tx = {
-    payment_method: "MPESA", amount: 200_000, created_date: "2026-08-30T00:00:00Z",
+    payment_method: "MPESA", amount: 99_900, created_date: "2026-08-30T00:00:00Z",
     confirmation_code: "CONF-1", payment_status_description: "Completed",
     merchant_reference: "org_1-12345-ENT", payment_status_code: "1", currency: "UGX",
     error: { error_type: null, code: null, message: null },
@@ -115,8 +115,9 @@ beforeEach(() => {
 
 describe("a customer pays for ENTERPRISE — the case that always failed", () => {
   it("activates them", async () => {
-    // 200,000 is what checkout charges. The verifier used to hold 120,000 for
-    // ENTERPRISE and rejected this exact notification every time.
+    // 99,900 is what checkout charges today. ENTERPRISE is the tier the old
+    // verifier held at the wrong figure and rejected every time, whatever the
+    // ladder happened to be — which is why it stays the worked example here.
     const res = await GET(notification());
     expect(res.status).toBe(200);
     expect(org.billingStatus).toBe("ACTIVE");
@@ -141,18 +142,21 @@ describe("a customer pays for ENTERPRISE — the case that always failed", () =>
 });
 
 describe("the amount is still checked — the fix is not 'accept everything'", () => {
-  it("refuses an ENTERPRISE notification paying the old expected figure", async () => {
-    // 120,000 was what the broken verifier expected. Now it is simply wrong.
-    tx.amount = 120_000;
+  it("refuses an ENTERPRISE notification paying a superseded price", async () => {
+    // 200,000 was the ENTERPRISE price until the ladder was reset to attract
+    // sign-ups. A payment at yesterday's figure is a mismatch today, and the
+    // point of the assertion is that the verifier follows the table rather than
+    // remembering a number.
+    tx.amount = 200_000;
     await GET(notification());
     expect(org.billingStatus).toBe("TRIALING");
     expect(updates).toHaveLength(0);
   });
 
   it("says why, instead of vanishing", async () => {
-    tx.amount = 120_000;
+    tx.amount = 200_000;
     await GET(notification());
-    expect(billingRows.some((r) => r.includes("amount-mismatch-paid-120000-expected-200000"))).toBe(true);
+    expect(billingRows.some((r) => r.includes("amount-mismatch-paid-200000-expected-99900"))).toBe(true);
   });
 
   it("refuses a foreign currency at the right number", async () => {
@@ -165,10 +169,10 @@ describe("the amount is still checked — the fix is not 'accept everything'", (
 
 describe("every plan the billing page sells now completes", () => {
   const cases = [
-    ["STD", "STANDARD", 35_000],
-    ["GRW", "GROWTH", 75_000],
-    ["PRM", "PREMIUM", 120_000],
-    ["ENT", "ENTERPRISE", 200_000],
+    ["STD", "STANDARD", 19_900],
+    ["GRW", "GROWTH", 39_900],
+    ["PRM", "PREMIUM", 69_900],
+    ["ENT", "ENTERPRISE", 99_900],
   ] as const;
 
   for (const [code, plan, price] of cases) {

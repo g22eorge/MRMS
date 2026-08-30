@@ -1,6 +1,8 @@
 import { describe, it, expect } from "bun:test";
 import { readFileSync } from "node:fs";
 
+import { PLAN_PRICES } from "@/lib/plan-prices";
+
 /**
  * Deciding whether a customer is owed money.
  *
@@ -15,9 +17,10 @@ import { readFileSync } from "node:fs";
  * what keep the two from drifting apart.
  */
 
-const PLAN_PRICES: Record<string, number> = {
-  STANDARD: 35_000, GROWTH: 75_000, PREMIUM: 120_000, ENTERPRISE: 200_000,
-};
+// The real table, not a copy. This mirrored it and therefore kept passing
+// through a pricing change that made every figure in it wrong — proving only
+// that the mirror agreed with itself, which is the same fault the route it
+// tests was written to catch.
 const CURRENCY = "UGX";
 
 function verdictFor(tx: { status: string; amount: number; currency: string; plan: string | null },
@@ -41,7 +44,7 @@ const ID = "track-abc";
 describe("the verdict that decides whether money is owed", () => {
   it("owes nothing when the payment reached the organisation", () => {
     expect(verdictFor(
-      { status: "Completed", amount: 75_000, currency: "UGX", plan: "GROWTH" },
+      { status: "Completed", amount: PLAN_PRICES.GROWTH, currency: "UGX", plan: "GROWTH" },
       { flwSubscriptionId: ID }, ID,
     )).toBe("PAID AND ACTIVATED");
   });
@@ -49,7 +52,7 @@ describe("the verdict that decides whether money is owed", () => {
   it("flags money taken with nothing delivered — the case this exists for", () => {
     // Completed at Pesapal, and the organisation carries no trace of it.
     expect(verdictFor(
-      { status: "Completed", amount: 200_000, currency: "UGX", plan: "ENTERPRISE" },
+      { status: "Completed", amount: PLAN_PRICES.ENTERPRISE, currency: "UGX", plan: "ENTERPRISE" },
       { flwSubscriptionId: null }, ID,
     )).toBe("PAID BUT NEVER ACTIVATED");
   });
@@ -59,7 +62,7 @@ describe("the verdict that decides whether money is owed", () => {
     // not evidence that THIS one was honoured — a customer who paid twice is
     // owed for the second.
     expect(verdictFor(
-      { status: "Completed", amount: 75_000, currency: "UGX", plan: "GROWTH" },
+      { status: "Completed", amount: PLAN_PRICES.GROWTH, currency: "UGX", plan: "GROWTH" },
       { flwSubscriptionId: "a-different-tracking-id" }, ID,
     )).toBe("PAID BUT NEVER ACTIVATED");
   });
@@ -67,7 +70,7 @@ describe("the verdict that decides whether money is owed", () => {
   it("owes nothing for a payment that never completed", () => {
     for (const status of ["Failed", "Reversed", "Pending", "Invalid"]) {
       expect(verdictFor(
-        { status, amount: 75_000, currency: "UGX", plan: "GROWTH" },
+        { status, amount: PLAN_PRICES.GROWTH, currency: "UGX", plan: "GROWTH" },
         { flwSubscriptionId: null }, ID,
       )).toBe("NOT COMPLETED");
     }
@@ -75,7 +78,7 @@ describe("the verdict that decides whether money is owed", () => {
 
   it("says so when the organisation is gone rather than guessing", () => {
     expect(verdictFor(
-      { status: "Completed", amount: 75_000, currency: "UGX", plan: "GROWTH" },
+      { status: "Completed", amount: PLAN_PRICES.GROWTH, currency: "UGX", plan: "GROWTH" },
       null, ID,
     )).toBe("ORGANISATION GONE");
   });
@@ -83,21 +86,21 @@ describe("the verdict that decides whether money is owed", () => {
   it("separates an activated payment whose amount is wrong from a clean one", () => {
     // Underpaid but activated: not owed a refund, but not nothing either.
     expect(verdictFor(
-      { status: "Completed", amount: 35_000, currency: "UGX", plan: "ENTERPRISE" },
+      { status: "Completed", amount: PLAN_PRICES.STANDARD, currency: "UGX", plan: "ENTERPRISE" },
       { flwSubscriptionId: ID }, ID,
     )).toBe("PAID, ACTIVATED, WRONG AMOUNT");
   });
 
   it("treats a foreign currency as a mismatch even at the right number", () => {
     expect(verdictFor(
-      { status: "Completed", amount: 200_000, currency: "KES", plan: "ENTERPRISE" },
+      { status: "Completed", amount: PLAN_PRICES.ENTERPRISE, currency: "KES", plan: "ENTERPRISE" },
       { flwSubscriptionId: ID }, ID,
     )).toBe("PAID, ACTIVATED, WRONG AMOUNT");
   });
 
   it("refuses to attribute a payment whose reference cannot be read", () => {
     expect(verdictFor(
-      { status: "Completed", amount: 75_000, currency: "UGX", plan: null },
+      { status: "Completed", amount: PLAN_PRICES.GROWTH, currency: "UGX", plan: null },
       null, ID,
     )).toBe("UNREADABLE REFERENCE");
   });

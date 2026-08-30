@@ -135,7 +135,10 @@ const money = (n) => (n == null ? "—" : `UGX ${Number(n).toLocaleString()}`);
 const rule = (t) => console.log(`\n${t}\n${"─".repeat(t.length)}`);
 
 // The prices checkout actually charges, for comparing against recorded events.
-const CHARGED = { STANDARD: 35_000, GROWTH: 75_000, PREMIUM: 120_000, ENTERPRISE: 200_000 };
+// A copy, because this is a plain .mjs script and cannot import the TypeScript
+// module that owns them. Kept honest by a test that reads both files and fails
+// if they disagree — the drift this whole section exists because of.
+const CHARGED = { STANDARD: 19_900, GROWTH: 39_900, PREMIUM: 69_900, ENTERPRISE: 99_900 };
 
 try {
   rule("1. Subscription state across the customer base");

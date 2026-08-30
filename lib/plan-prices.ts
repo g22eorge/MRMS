@@ -38,10 +38,10 @@ import { getPlatformSetting } from "@/lib/platform-settings";
  * STARTER is absent on purpose: it is free.
  */
 export const PLAN_PRICES: Record<string, number> = {
-  STANDARD:   35_000,
-  GROWTH:     75_000,
-  PREMIUM:   120_000,
-  ENTERPRISE: 200_000,
+  STANDARD:   19_900,
+  GROWTH:     39_900,
+  PREMIUM:    69_900,
+  ENTERPRISE: 99_900,
 };
 
 /**

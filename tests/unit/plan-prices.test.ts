@@ -1,4 +1,5 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { readFileSync } from "node:fs";
 
 // ── Mock the DB-dependent module BEFORE importing plan-prices ────────────────
 const mockGetPlatformSetting = mock(async (_key: string): Promise<string | null> => null);
@@ -8,7 +9,7 @@ mock.module("@/lib/platform-settings", () => ({
 }));
 
 // Dynamic import so the mock is in place before the module is evaluated.
-const { FALLBACK_PLAN_PRICES, getEffectivePlanPrices, getEffectivePlanPrice } =
+const { PLAN_PRICES, FALLBACK_PLAN_PRICES, getEffectivePlanPrices, getEffectivePlanPrice } =
   await import("@/lib/plan-prices");
 
 // ── FALLBACK_PLAN_PRICES ─────────────────────────────────────────────────────
@@ -18,10 +19,12 @@ describe("FALLBACK_PLAN_PRICES", () => {
   // 120K, which is why the defect survived: a test existed and it pinned the
   // wrong ladder. PROFESSIONAL is not a plan this product sells.
   it("matches the ladder customers are actually charged", () => {
-    expect(FALLBACK_PLAN_PRICES.STANDARD).toBe(35_000);
-    expect(FALLBACK_PLAN_PRICES.GROWTH).toBe(75_000);
-    expect(FALLBACK_PLAN_PRICES.PREMIUM).toBe(120_000);
-    expect(FALLBACK_PLAN_PRICES.ENTERPRISE).toBe(200_000);
+    // Reset to attract sign-ups: 19,900 to enter, 99,900 at the top, with the
+    // two middle rungs chosen to keep each step a real upgrade.
+    expect(FALLBACK_PLAN_PRICES.STANDARD).toBe(19_900);
+    expect(FALLBACK_PLAN_PRICES.GROWTH).toBe(39_900);
+    expect(FALLBACK_PLAN_PRICES.PREMIUM).toBe(69_900);
+    expect(FALLBACK_PLAN_PRICES.ENTERPRISE).toBe(99_900);
   });
 
   it("covers exactly the four paid tiers", () => {
@@ -108,10 +111,10 @@ describe("getEffectivePlanPrice()", () => {
   });
 
   it("returns the fallback price for every purchasable plan when DB is empty", async () => {
-    expect(await getEffectivePlanPrice("STANDARD")).toBe(35_000);
-    expect(await getEffectivePlanPrice("GROWTH")).toBe(75_000);
-    expect(await getEffectivePlanPrice("PREMIUM")).toBe(120_000);
-    expect(await getEffectivePlanPrice("ENTERPRISE")).toBe(200_000);
+    expect(await getEffectivePlanPrice("STANDARD")).toBe(19_900);
+    expect(await getEffectivePlanPrice("GROWTH")).toBe(39_900);
+    expect(await getEffectivePlanPrice("PREMIUM")).toBe(69_900);
+    expect(await getEffectivePlanPrice("ENTERPRISE")).toBe(99_900);
   });
 
   it("returns null for a plan with no price, which the webhook treats as do-not-activate", async () => {
@@ -131,7 +134,7 @@ describe("getEffectivePlanPrice()", () => {
 
   it("ignores zero stored value and falls back for known plans", async () => {
     mockGetPlatformSetting.mockImplementation(async () => "0");
-    expect(await getEffectivePlanPrice("STANDARD")).toBe(35_000);
+    expect(await getEffectivePlanPrice("STANDARD")).toBe(19_900);
   });
 });
 
@@ -178,5 +181,47 @@ describe("checkout and the webhook agree on every purchasable plan", () => {
     const offered = [...src.matchAll(/price:\s*prices\.([A-Z]+)/g)].map((m) => m[1]).sort();
     expect(offered).toEqual([...PURCHASABLE].sort());
     expect(Object.keys(FALLBACK_PLAN_PRICES).sort()).toEqual([...PURCHASABLE].sort());
+  });
+});
+
+describe("nothing quotes a price from its own copy", () => {
+  /**
+   * The pricing change that set this ladder found two more tables nobody had
+   * noticed: the onboarding form, which quotes a prospect at signup, and the
+   * billing-reconcile script, which decides whether a recorded amount looks
+   * wrong. Neither used PLAN_PRICES, so the test forbidding raw reads of it
+   * could not see them — they held literals instead.
+   *
+   * Editing only the canonical table would have left a prospect quoted 35,000
+   * and charged 19,900, on the screen where they decide to buy.
+   */
+  const read = (f: string) => readFileSync(f, "utf8");
+
+  it("the onboarding form reads the canonical table", () => {
+    const src = read("app/(onboarding)/onboarding/OnboardingForm.tsx");
+    expect(src).toContain("price: PLAN_PRICES.STANDARD");
+    expect(src).toContain("price: PLAN_PRICES.ENTERPRISE");
+  });
+
+  it("no purchasable price appears as a literal in the onboarding form", () => {
+    const src = read("app/(onboarding)/onboarding/OnboardingForm.tsx");
+    for (const n of Object.values(PLAN_PRICES)) {
+      const grouped = n.toLocaleString("en-US").replace(/,/g, "_");
+      expect(src).not.toContain(grouped);
+      expect(src).not.toContain(String(n));
+    }
+  });
+
+  it("the reconcile script's copy matches, since a .mjs cannot import the module", () => {
+    // It is allowed to hold a copy; it is not allowed to disagree.
+    const src = read("scripts/billing-reconcile.mjs");
+    const m = src.match(/const CHARGED = \{([^}]*)\}/);
+    expect(m).not.toBeNull();
+    const copied: Record<string, number> = {};
+    for (const pair of m![1].split(",")) {
+      const [k, v] = pair.split(":").map((x) => x.trim());
+      if (k) copied[k] = Number(v.replace(/_/g, ""));
+    }
+    expect(copied).toEqual(PLAN_PRICES);
   });
 });
