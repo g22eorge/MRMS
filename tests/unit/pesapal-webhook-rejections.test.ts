@@ -20,7 +20,17 @@ import { readFileSync } from "node:fs";
  */
 const RAW = readFileSync("app/api/webhooks/pesapal/route.ts", "utf8");
 /** Comments describe the old pattern by name, so they must not be counted as it. */
-const SRC = RAW.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/[^\n]*$/gm, "");
+const strip = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/[^\n]*$/gm, "");
+const SRC = strip(RAW);
+/**
+ * Verification and application are now shared with the browser callback, which
+ * fires for the same transaction and used to verify differently. The reasons
+ * moved there with them, so the property spans both files — the handler still
+ * has to route every path through the recorder, and the reasons still have to
+ * be distinct and named.
+ */
+const SHARED = strip(readFileSync("lib/billing/apply-payment.ts", "utf8"));
+const BOTH = SRC + SHARED;
 
 describe("no path acknowledges without recording", () => {
   it("returns the bare acknowledgment only where it is the last line", () => {
@@ -32,10 +42,14 @@ describe("no path acknowledges without recording", () => {
   });
 
   it("routes every rejection through the recorder", () => {
-    // One per: missing identifiers, unparseable reference, forged reference,
-    // amount mismatch, unknown organisation, unactioned status, exception.
+    // Six call sites now cover the same seven-plus reasons: the forgery, price,
+    // currency and amount checks were consolidated behind one verify call, and
+    // organisation-not-found behind the apply call, each of which returns its
+    // own named reason straight into the recorder.
     const calls = SRC.match(/rejectAndAck\(\{/g) ?? [];
-    expect(calls.length).toBeGreaterThanOrEqual(7);
+    expect(calls.length).toBeGreaterThanOrEqual(6);
+    expect(SRC).toContain("reason: verified.reason");
+    expect(SRC).toContain("reason: application.reason");
   });
 
   it("names a distinct reason for each, rather than a single 'rejected'", () => {
@@ -50,7 +64,7 @@ describe("no path acknowledges without recording", () => {
       "status-not-actioned-",
       "exception-during-verification",
     ]) {
-      expect(SRC).toContain(reason);
+      expect(BOTH).toContain(reason);
     }
   });
 
@@ -62,7 +76,9 @@ describe("no path acknowledges without recording", () => {
 
   it("still records the successful activation", () => {
     expect(SRC).toContain('event: "charge.completed"');
-    expect(SRC).toContain("flwSubscriptionId: orderTrackingId");
+    // The stamp moved into the shared applier, which is also where the guard
+    // that stops a redelivery applying it twice now lives.
+    expect(SHARED).toContain("flwSubscriptionId: orderTrackingId");
   });
 });
 

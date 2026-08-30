@@ -10,14 +10,42 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTransactionStatus, parseMerchantRef, PLAN_PRICES, CURRENCY } from "@/lib/pesapal";
+import { getTransactionStatus, parseMerchantRef } from "@/lib/pesapal";
 import { OrgPlan } from "@prisma/client";
 import { sendPaymentConfirmation } from "@/lib/email";
+import { recordBillingEvent } from "@/lib/billing-events";
+import { verifyPaymentAgainstPlan, applyPaymentToOrg } from "@/lib/billing/apply-payment";
 
-function addOneMonth(from: Date) {
-  const d = new Date(from);
-  d.setMonth(d.getMonth() + 1);
-  return d;
+/**
+ * Send the customer back, and leave a record of why.
+ *
+ * Every refusal here used to redirect to ?payment=failed and write nothing —
+ * the same silent rejection that hid the price-table defect on the webhook for
+ * the life of the deployment, still present on this path after that one was
+ * fixed. The customer sees the same page either way; the difference is whether
+ * anyone can afterwards say what happened.
+ */
+async function refuse(base: string, reason: string, ctx: {
+  orgId?: string | null; plan?: string | null; amount?: number | null;
+  currency?: string | null; txRef?: string | null; orderTrackingId: string;
+}, outcome: "failed" | "cancelled" = "failed") {
+  try {
+    await recordBillingEvent({
+      orgId: ctx.orgId ?? "",
+      event: `charge.rejected.${reason}`,
+      amount: ctx.amount ?? 0,
+      currency: ctx.currency ?? "",
+      status: "rejected",
+      txRef: ctx.txRef,
+      plan: ctx.plan,
+      idempotencyKey: `pesapal-callback:${ctx.orderTrackingId}:${reason}`,
+    });
+  } catch (err) {
+    // Never let bookkeeping strand the customer on a blank page.
+    console.error("[billing/callback] could not record rejection", reason, err);
+  }
+  console.warn(`[billing/callback] rejected: ${reason}`, { orderTrackingId: ctx.orderTrackingId, txRef: ctx.txRef });
+  return NextResponse.redirect(`${base}/settings/billing?payment=${outcome}`);
 }
 
 export async function GET(req: NextRequest) {
@@ -33,45 +61,38 @@ export async function GET(req: NextRequest) {
   try {
     const tx = await getTransactionStatus(orderTrackingId);
 
-    if (tx.payment_status_description !== "Completed") {
-      return NextResponse.redirect(`${base}/settings/billing?payment=failed`);
-    }
+    const ctx = {
+      amount: tx.amount, currency: tx.currency,
+      txRef: merchantReference, orderTrackingId,
+    };
 
-    // Prevent forged merchantReference activating other orgs.
-    if (tx.merchant_reference !== merchantReference) {
-      return NextResponse.redirect(`${base}/settings/billing?payment=failed`);
+    if (tx.payment_status_description !== "Completed") {
+      return refuse(base, `status-not-actioned-${tx.payment_status_description ?? "unknown"}`, ctx);
     }
 
     const parsed = parseMerchantRef(merchantReference);
-    if (!parsed) return NextResponse.redirect(`${base}/settings/billing?payment=failed`);
+    if (!parsed) return refuse(base, "merchant-reference-unparseable", ctx);
     const { orgId, plan } = parsed;
 
-    // Ensure the paid amount matches the intended plan.
-    const expectedAmount = PLAN_PRICES[plan];
-    if (tx.currency !== CURRENCY || typeof expectedAmount !== "number" || tx.amount !== expectedAmount) {
-      return NextResponse.redirect(`${base}/settings/billing?payment=failed`);
+    // Shared with the webhook, which fires for this same transaction. These
+    // two used to verify differently: the webhook honoured a platform price
+    // override and this path did not, so a custom price made the customer's
+    // own browser refuse a payment the server had already accepted.
+    const verified = await verifyPaymentAgainstPlan({ plan, merchantReference, tx });
+    if (!verified.ok) return refuse(base, verified.reason, { ...ctx, orgId, plan });
+
+    const application = await applyPaymentToOrg({ orgId, plan, orderTrackingId });
+    if (!application.applied && !application.alreadyApplied) {
+      return refuse(base, application.reason, { ...ctx, orgId, plan });
     }
 
-    const org = await prisma.organization.findUnique({
-      where: { id: orgId },
-      select: { id: true, name: true, planRenewsAt: true },
-    });
-    if (!org) return NextResponse.redirect(`${base}/settings/billing?payment=failed`);
-
-    const baseDate = org.planRenewsAt && org.planRenewsAt > new Date() ? org.planRenewsAt : new Date();
-    const renewsAt = addOneMonth(baseDate);
-
-    const updatedOrg = await prisma.organization.update({
-      where: { id: orgId },
-      data: {
-        plan: plan as OrgPlan,
-        billingStatus: "ACTIVE",
-        planRenewsAt: renewsAt,
-        planCancelledAt: null,
-        flwSubscriptionId: orderTrackingId,
-      },
-      select: { name: true },
-    });
+    // alreadyApplied means the webhook got here first with this same
+    // transaction — the normal case, since both paths run for every payment.
+    // The customer still gets the success page; nothing is granted twice.
+    const updatedOrg = { name: application.orgName };
+    if (!application.applied) {
+      return NextResponse.redirect(`${base}/settings/billing?payment=success`);
+    }
 
     const admin = await prisma.user.findFirst({
       where: { orgId, role: "ADMIN" },
@@ -81,9 +102,23 @@ export async function GET(req: NextRequest) {
       void sendPaymentConfirmation(admin.email, admin.name, updatedOrg.name, plan as OrgPlan, tx.amount);
     }
 
+    // Deliberately the same idempotency key the webhook uses, so the ledger
+    // gets exactly one entry per transaction whichever path arrives first —
+    // and still gets one if the webhook never arrives at all.
+    void recordBillingEvent({
+      orgId, event: "charge.completed", amount: tx.amount, currency: tx.currency ?? "",
+      status: "successful", confirmationCode: tx.confirmation_code,
+      txRef: merchantReference, plan,
+      idempotencyKey: `pesapal:${orderTrackingId}:completed`,
+    });
+
     return NextResponse.redirect(`${base}/settings/billing?payment=success`);
   } catch (err) {
     console.error("[billing/callback]", err);
-    return NextResponse.redirect(`${base}/settings/billing?payment=failed`);
+    // The last silent path on this route: a thrown verification left the
+    // customer on ?payment=failed with nothing written down anywhere.
+    return refuse(base, "exception-during-verification", {
+      orderTrackingId: orderTrackingId ?? "", txRef: merchantReference,
+    });
   }
 }

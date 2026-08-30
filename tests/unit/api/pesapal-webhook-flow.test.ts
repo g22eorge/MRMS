@@ -35,6 +35,20 @@ mock.module("@/lib/prisma", () => ({
         org = { ...org, ...(data as Partial<OrgRow>) };
         return org;
       },
+      // Activation goes through a conditional update so a transaction cannot be
+      // applied twice; the guard is in the WHERE clause, so the mock has to
+      // honour it or the idempotency tests would pass for the wrong reason.
+      updateMany: async ({ where, data }: {
+        where: { id: string; OR?: Array<{ flwSubscriptionId: null | { not: string } }> };
+        data: Record<string, unknown>;
+      }) => {
+        const guard = where.OR?.[1]?.flwSubscriptionId;
+        const alreadyThis = org.flwSubscriptionId === (guard && "not" in guard ? guard.not : null);
+        if (where.id !== org.id || alreadyThis) return { count: 0 };
+        updates.push(data);
+        org = { ...org, ...(data as Partial<OrgRow>) };
+        return { count: 1 };
+      },
     },
     user: { findFirst: async () => ({ email: "admin@customer.test", name: "Customer Admin" }) },
     // recordBillingEvent writes through raw SQL to a lazily created table.
@@ -189,4 +203,55 @@ describe("a payment that did not complete changes nothing", () => {
       expect(org.flwSubscriptionId).toBeNull();
     });
   }
+});
+
+describe("one payment grants one month, however many times it is delivered", () => {
+  /**
+   * The defect this closes was not an edge case. Pesapal redirects the
+   * customer's browser to /api/billing/callback AND sends a server-to-server
+   * notification to this webhook, for the same transaction, on every single
+   * successful payment. Both paths extended planRenewsAt from its current
+   * value and neither checked whether the transaction had already been
+   * applied, so every payment bought two months. Retries added more.
+   */
+  it("does not extend twice for the same transaction", async () => {
+    await GET(notification("track-same"));
+    const afterFirst = (org.planRenewsAt as Date).getTime();
+
+    await GET(notification("track-same"));
+    expect((org.planRenewsAt as Date).getTime()).toBe(afterFirst);
+  });
+
+  it("still activates on the redelivery rather than reverting anything", async () => {
+    await GET(notification("track-same"));
+    await GET(notification("track-same"));
+    expect(org.billingStatus).toBe("ACTIVE");
+    expect(org.flwSubscriptionId).toBe("track-same");
+  });
+
+  it("writes nothing at all the second time", async () => {
+    await GET(notification("track-same"));
+    const writes = updates.length;
+    await GET(notification("track-same"));
+    expect(updates.length).toBe(writes);
+  });
+
+  it("survives a burst of redeliveries", async () => {
+    // Pesapal retries when it does not get a clean acknowledgment.
+    await GET(notification("track-same"));
+    const afterFirst = (org.planRenewsAt as Date).getTime();
+    for (let i = 0; i < 5; i++) await GET(notification("track-same"));
+    expect((org.planRenewsAt as Date).getTime()).toBe(afterFirst);
+  });
+
+  it("but a genuinely new transaction does extend — this is not just a freeze", () => {
+    // The guard keys on the tracking id, so next month's payment still counts.
+    // Without this the fix would quietly break renewals instead of double-billing.
+    return (async () => {
+      await GET(notification("track-month-1"));
+      const afterFirst = (org.planRenewsAt as Date).getTime();
+      await GET(notification("track-month-2"));
+      expect((org.planRenewsAt as Date).getTime()).toBeGreaterThan(afterFirst);
+    })();
+  });
 });

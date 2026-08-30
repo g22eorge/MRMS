@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTransactionStatus, parseMerchantRef, CURRENCY } from "@/lib/pesapal";
-import { getEffectivePlanPrice } from "@/lib/plan-prices";
+import { verifyPaymentAgainstPlan, applyPaymentToOrg } from "@/lib/billing/apply-payment";
 import { OrgPlan } from "@prisma/client";
 import { recordBillingEvent } from "@/lib/billing-events";
 import { sendPaymentConfirmation, sendPaymentFailedAlert } from "@/lib/email";
@@ -66,12 +66,6 @@ async function rejectAndAck(params: {
   return NextResponse.json(params.ack);
 }
 
-function addOneMonth(from: Date) {
-  const d = new Date(from);
-  d.setMonth(d.getMonth() + 1);
-  return d;
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const orderTrackingId = searchParams.get("OrderTrackingId") ?? "";
@@ -102,58 +96,28 @@ export async function GET(req: NextRequest) {
     }
     const { orgId, plan } = parsed;
 
-    // Prevent forged merchantReference activating other orgs. This one is not
-    // a mishap — it is somebody trying to activate an organisation they did not
-    // pay for, and it used to leave no trace whatsoever.
-    if (tx.merchant_reference !== merchantReference) {
+    // Forgery, price and currency checks are shared with the browser callback,
+    // which fires for the same transaction and used to verify differently.
+    const verified = await verifyPaymentAgainstPlan({ plan, merchantReference, tx });
+    if (!verified.ok) {
       return rejectAndAck({
-        ack, reason: "merchant-reference-mismatch-possible-forgery", orgId, plan,
-        orderTrackingId, txRef: merchantReference, amount: tx.amount, currency: tx.currency,
-      });
-    }
-
-    // Ensure the paid amount matches the intended plan (Zoho-synced or fallback price).
-    const expectedAmount = await getEffectivePlanPrice(plan);
-    if (tx.currency !== CURRENCY || typeof expectedAmount !== "number" || tx.amount !== expectedAmount) {
-      // The path the price-table defect took, every time, for every plan.
-      const reason = typeof expectedAmount !== "number"
-        ? `no-price-configured-for-${plan}`
-        : tx.currency !== CURRENCY
-          ? `currency-mismatch-${tx.currency}-expected-${CURRENCY}`
-          : `amount-mismatch-paid-${tx.amount}-expected-${expectedAmount}`;
-      return rejectAndAck({
-        ack, reason, orgId, plan, orderTrackingId,
+        ack, reason: verified.reason, orgId, plan, orderTrackingId,
         txRef: merchantReference, amount: tx.amount, currency: tx.currency,
       });
     }
 
     if (tx.payment_status_description === "Completed") {
-      const org = await prisma.organization.findUnique({
-        where: { id: orgId },
-        select: { id: true, name: true, planRenewsAt: true },
-      });
-      if (!org) {
-        // Paid for an organisation that no longer exists — money in, nothing to
-        // credit it to, and previously no record that it happened.
+      const application = await applyPaymentToOrg({ orgId, plan, orderTrackingId });
+      if (!application.applied && !application.alreadyApplied) {
         return rejectAndAck({
-          ack, reason: "organisation-not-found", orgId, plan, orderTrackingId,
+          ack, reason: application.reason, orgId, plan, orderTrackingId,
           txRef: merchantReference, amount: tx.amount, currency: tx.currency,
         });
       }
-
-      const baseDate = org.planRenewsAt && org.planRenewsAt > new Date() ? org.planRenewsAt : new Date();
-      const renewsAt = addOneMonth(baseDate);
-
-      await prisma.organization.update({
-        where: { id: orgId },
-        data: {
-          plan: plan as OrgPlan,
-          billingStatus: "ACTIVE",
-          planRenewsAt: renewsAt,
-          planCancelledAt: null,
-          flwSubscriptionId: orderTrackingId,
-        },
-      });
+      // alreadyApplied means the browser callback got here first with this same
+      // transaction. Both paths run for every payment, so this is the normal
+      // case rather than an error — acknowledge and add nothing.
+      const org = { name: application.orgName };
 
       void recordBillingEvent({
         orgId,
