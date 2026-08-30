@@ -6,6 +6,11 @@ import { formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { getCurrentUserRole } from "@/lib/session";
 
+/** "1 job" / "2 jobs". The page previously wrote "job(s)", which no one says. */
+function plural(count: number, singular: string, pluralForm = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
+
 function statusLabel(status: string) {
   return status
     .toLowerCase()
@@ -54,15 +59,15 @@ export default async function AiInsightsPage() {
   const targetProgress = sales.targetProgressPct !== null ? Math.min(999, sales.targetProgressPct) : null;
 
   const risks = [
-    repairs.overdueJobs ? `${repairs.overdueJobs} open repair job(s) are older than 7 days. Prioritise diagnosis, approvals, parts, or technician reassignment.` : null,
-    repairs.staleJobs ? `${repairs.staleJobs} open job(s) have not been updated for 3+ days. Ask owners to add notes or move status.` : null,
-    repairs.awaitingApproval ? `${repairs.awaitingApproval} job(s) are awaiting client approval. Follow up before they become stale.` : null,
-    repairs.waitingForParts ? `${repairs.waitingForParts} job(s) are waiting for parts. Check low-stock items and pending purchase orders.` : null,
+    repairs.overdueJobs ? `${plural(repairs.overdueJobs, "open repair job")} ${repairs.overdueJobs === 1 ? "is" : "are"} older than 7 days. Prioritise diagnosis, approvals, parts, or technician reassignment.` : null,
+    repairs.staleJobs ? `${plural(repairs.staleJobs, "open job")} ${repairs.staleJobs === 1 ? "has" : "have"} not been updated for 3+ days. Ask owners to add notes or move status.` : null,
+    repairs.awaitingApproval ? `${plural(repairs.awaitingApproval, "job")} ${repairs.awaitingApproval === 1 ? "is" : "are"} awaiting client approval. Follow up before they become stale.` : null,
+    repairs.waitingForParts ? `${plural(repairs.waitingForParts, "job")} ${repairs.waitingForParts === 1 ? "is" : "are"} waiting for parts. Check low-stock items and pending purchase orders.` : null,
     inventory.lowStockParts ? `${inventory.lowStockParts} active part(s) are at or below reorder level. Review Stock Alerts and create purchase requests/orders.` : null,
-    finance.overdueInvoices ? `${finance.overdueInvoices} invoice(s) are overdue. Receivables at risk: ${formatMoneyCompact(finance.receivables, currency)}.` : null,
-    finance.overdueSupplierBills ? `${finance.overdueSupplierBills} supplier bill(s) are overdue. Payables outstanding: ${formatMoneyCompact(finance.payables, currency)}.` : null,
+    finance.overdueInvoices ? `${plural(finance.overdueInvoices, "invoice")} ${finance.overdueInvoices === 1 ? "is" : "are"} overdue. Receivables at risk: ${formatMoneyCompact(finance.receivables, currency)}.` : null,
+    finance.overdueSupplierBills ? `${plural(finance.overdueSupplierBills, "supplier bill")} ${finance.overdueSupplierBills === 1 ? "is" : "are"} overdue. Payables outstanding: ${formatMoneyCompact(finance.payables, currency)}.` : null,
     finance.cashReceived < finance.cashReceivedPrev ? `Cash received is down ${Math.abs(pctChange(finance.cashReceived, finance.cashReceivedPrev)).toFixed(1)}% versus last month. Review collections, POS sales, and invoice payments.` : null,
-    finance.cashMarginSignal < 0 ? `Cash margin signal is negative after expenses and external repair costs. Reduce discretionary spend or accelerate collections.` : null,
+    finance.cashMarginSignal < 0 ? `You are spending more than you are taking in, once expenses and external repair costs are counted. Cut non-essential spend or chase collections.` : null,
   ].filter((item): item is string => Boolean(item));
 
   const recommendations = [
@@ -87,14 +92,14 @@ export default async function AiInsightsPage() {
         />
         <KpiCard title="Cash after costs" value={formatMoneyCompact(finance.cashMarginSignal, currency)} caption={`Expenses: ${formatMoneyCompact(finance.expenses, currency)} (${trendLabel(finance.expenses, finance.expensesPrev)})`} tone={finance.cashMarginSignal >= 0 ? "good" : "risk"} />
         <KpiCard title="Open Pipeline" value={String(repairs.openJobs)} caption={`${repairs.overdueJobs} older than 7 days; ${repairs.staleJobs} stale updates`} tone={repairs.overdueJobs ? "risk" : "neutral"} />
-        <KpiCard title="Low stock" value={String(inventory.lowStockParts)} caption={`${formatMoneyCompact(inventory.inventoryValue, currency)} stock value; ${inventory.openPurchaseOrders} open PO(s)`} tone={inventory.lowStockParts ? "risk" : "good"} />
+        <KpiCard title="Low stock" value={String(inventory.lowStockParts)} caption={`${formatMoneyCompact(inventory.inventoryValue, currency)} stock value; ${plural(inventory.openPurchaseOrders, "open purchase order")}`} tone={inventory.lowStockParts ? "risk" : "good"} />
       </section>
 
       <BusinessCopilot />
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <InsightCard title="Risks AI Should Escalate" items={risks} empty="No major cross-module risks detected from the current data." />
-        <InsightCard title="Recommended Management Actions" items={recommendations} empty="No immediate management actions detected. Keep monitoring daily activity." />
+        <InsightCard title="Needs your attention" items={risks} empty="Nothing needs chasing right now." />
+        <InsightCard title="What to do next" items={recommendations} empty="Nothing to act on today." />
       </div>
 
       <section className="grid gap-4 xl:grid-cols-4">
@@ -163,7 +168,7 @@ export default async function AiInsightsPage() {
                 <span className="shrink-0 text-[var(--ink-muted)]">{part.qtyOnHand}/{part.reorderLevel}</span>
               </div>
             ))}
-            {!inventory.lowStockParts ? <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink-muted)]">No low-stock parts detected.</p> : null}
+            {!inventory.lowStockParts ? <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink-muted)]">Every part is above its reorder level.</p> : null}
           </div>
         </div>
       </section>
