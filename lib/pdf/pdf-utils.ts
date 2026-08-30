@@ -102,8 +102,29 @@ export async function resolvePdfLogo(): Promise<string | undefined> {
   return undefined;
 }
 
-/** Resolve logo for invoice PDFs — also checks invoice-logo variants and INVOICE_LOGO_URL env. */
+/**
+ * Resolve the logo for a document PDF.
+ *
+ * The bundled files here are Eagle Info's, shipped in public/. This function
+ * takes no organisation and never did, so on the commercial deployment every
+ * tenant's quotations, invoices and receipts carried Eagle Info's logo — a new
+ * repair shop's first quotation went to their client under another business's
+ * mark. The company name, address and telephone numbers had the same fault
+ * through the branding defaults, so the document was another business's
+ * letterhead entirely.
+ *
+ * A bundled fallback is correct on care, which IS Eagle Info and has exactly
+ * one tenant. It is never correct on the commercial deployment: there, a
+ * document with no logo is right and a document with somebody else's is not.
+ * Until per-organisation logo storage exists, commercial documents print none.
+ */
 export async function resolveInvoiceLogo(): Promise<string | undefined> {
+  const { getDeploymentContext } = await import("@/lib/deployment-context");
+  const deployment = await getDeploymentContext().catch(() => null);
+  // Fail closed: if the deployment cannot be identified, do not brand the
+  // document with a logo that may belong to someone else.
+  if (!deployment || deployment.mode !== "CARE_SINGLE_TENANT") return undefined;
+
   const local = await firstExistingLogo([
     ...DOC_LOGO_FIRST,
     { file: path.join(process.cwd(), "public", "eagle-info-logo.png"), type: "image/png" },
