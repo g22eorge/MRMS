@@ -138,10 +138,18 @@ export async function GET() {
     );
   }
 
-  if (verdict === "READY" && !config?.senderId) {
-    // Not a blocker: AT sends from a shared shortcode without one.
+  if (!config?.senderId && (verdict === "READY" || verdict === "READY — SANDBOX ONLY")) {
+    // Corrected against the provider's own overview, which is narrower than it
+    // is usually summarised: the default Africa's Talking sender ID works "only
+    // in Kenya and available for only Airtel Numbers". This product normalises
+    // Ugandan numbers, so for its actual recipients a blank sender ID is not a
+    // cosmetic choice — it is the difference between delivery and none, and the
+    // API answers it with 402 InvalidSenderId per message rather than at setup.
     blockers.push(
-      "No sender ID is set, so messages arrive from a shared shortcode rather than the business's name. Sending still works.",
+      "No sender ID is set. Africa's Talking only allows its default sender ID for Kenyan Airtel " +
+        "numbers, so messages to Ugandan recipients need a sender ID registered and approved through " +
+        "the Africa's Talking dashboard. Without one, sends are rejected per message with 402 " +
+        "InvalidSenderId rather than failing here.",
     );
   }
 

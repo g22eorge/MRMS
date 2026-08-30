@@ -1,6 +1,6 @@
 import { checkSmsQuota, incrementSmsUsage } from "@/lib/notifications/sms-quota";
 import { normalizeUgPhone } from "@/lib/phone";
-import { atApiBase } from "@/lib/notifications/sms-format";
+import { atApiBase, atStatusAccepted, atStatusExplanation } from "@/lib/notifications/sms-format";
 import { getAtApiKey, getAtUsername, getAtSenderId } from "@/lib/platform-settings";
 
 export interface AtSmsConfig {
@@ -96,11 +96,17 @@ export async function sendSms(
 
     const data = await res.json();
     const recipient = data?.SMSMessageData?.Recipients?.[0];
-    if (recipient?.statusCode === 101) {
+    // 100 Processed, 101 Sent and 102 Queued are all acceptances. Only 101 used
+    // to count, so a queued message — which is the default, enqueue being 1 —
+    // was recorded as a failure though it had been accepted and would deliver.
+    if (atStatusAccepted(recipient?.statusCode)) {
       if (orgId) void incrementSmsUsage(orgId);
       return { success: true, messageId: String(recipient.messageId) };
     }
-    return { success: false, error: recipient?.status ?? "Unknown SMS error" };
+    return {
+      success: false,
+      error: atStatusExplanation(recipient?.statusCode, recipient?.status),
+    };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }

@@ -6,7 +6,9 @@ import { readFileSync } from "node:fs";
 // From the pure module, not the sender: importing sms.ts reaches platform
 // settings and therefore Prisma, and a live client in the test process passed
 // every assertion and then aborted on exit.
-import { senderIdProblem, atApiBase, isSandboxUsername } from "@/lib/notifications/sms-format";
+import {
+  senderIdProblem, atApiBase, isSandboxUsername, atStatusAccepted, atStatusExplanation,
+} from "@/lib/notifications/sms-format";
 
 /**
  * SMS credentials entered in the platform settings form, and never used.
@@ -80,10 +82,14 @@ describe("there is now a way to tell whether they work", () => {
     expect(HEALTH).toContain("SETTINGS UNREADABLE");
   });
 
-  it("treats a missing sender ID as a note, not a failure", () => {
-    // Africa's Talking sends from a shared shortcode without one, so blocking
-    // on it would report a working integration as broken.
-    expect(HEALTH).toContain("Sending still works");
+  it("treats a missing sender ID as a delivery problem for these recipients", () => {
+    // This assertion previously said the opposite, encoding a belief the
+    // provider's own overview contradicts: the default sender ID is allowed
+    // "only in Kenya and available for only Airtel Numbers". This product
+    // normalises Ugandan numbers, so a blank sender ID means no delivery — and
+    // it fails per message with 402, never at setup, which is why the check has
+    // to say it.
+    expect(HEALTH).toContain("only allows its default sender ID for Kenyan Airtel");
   });
 
   it("shows the username and the key's length, but never the key", () => {
@@ -170,8 +176,9 @@ describe("it explains a 401 that a 401 cannot explain", () => {
   it("reports the sender ID problem whatever the verdict", () => {
     // Reporting it only on READY would hide it behind the 401 it explains.
     const at = SRC.indexOf("const senderIdIssue");
-    const readyBlock = SRC.indexOf('verdict === "READY" && !config?.senderId');
+    const readyBlock = SRC.indexOf('!config?.senderId && (verdict === "READY"');
     expect(at).toBeGreaterThan(-1);
+    expect(readyBlock).toBeGreaterThan(-1);
     expect(at).toBeLessThan(readyBlock);
   });
 });
@@ -312,5 +319,62 @@ describe("an email address is not a username", () => {
     const email = SRC.indexOf('config?.username?.includes("@")');
     const sandbox = SRC.indexOf("isSandboxUsername(config?.username)");
     expect(email).toBeLessThan(sandbox);
+  });
+});
+
+describe("what Africa's Talking calls success", () => {
+  /**
+   * Checked against the provider's own reference rather than assumed. Three
+   * codes mean accepted — 100 Processed, 101 Sent, 102 Queued — and queueing is
+   * the default, since enqueue defaults to 1 and the API stores messages then
+   * delivers them asynchronously.
+   *
+   * Only 101 counted, so ordinary successful sends were recorded as failures:
+   * this system's usual defect running backwards, an outbox full of red for
+   * messages that had gone.
+   */
+  it("accepts all three acceptance codes, not just Sent", () => {
+    for (const code of [100, 101, 102]) expect(atStatusAccepted(code)).toBe(true);
+  });
+
+  it("accepts a queued message, which is the default outcome", () => {
+    expect(atStatusAccepted(102)).toBe(true);
+  });
+
+  it("still rejects every documented failure", () => {
+    for (const code of [401, 402, 403, 404, 405, 406, 407, 409, 500, 501, 502]) {
+      expect(atStatusAccepted(code)).toBe(false);
+    }
+  });
+
+  it("does not treat a missing or junk code as success", () => {
+    for (const bad of [undefined, null, "", "abc", 0]) expect(atStatusAccepted(bad)).toBe(false);
+  });
+
+  it("explains a failure instead of echoing a bare word", () => {
+    expect(atStatusExplanation(405)).toContain("top the account up");
+    expect(atStatusExplanation(402)).toContain("registered and approved");
+    expect(atStatusExplanation(409)).toContain("Do-Not-Disturb");
+  });
+
+  it("falls back to the provider's own text for an undocumented code", () => {
+    expect(atStatusExplanation(999, "SomethingNew")).toBe("SomethingNew");
+  });
+});
+
+describe("the sender ID guidance matches the provider, not the usual summary", () => {
+  const SRC = readFileSync("app/api/admin/sms-health/route.ts", "utf8");
+
+  it("says a blank sender ID does not deliver to Ugandan numbers", () => {
+    // The documentation is narrower than "it sends from a shared shortcode":
+    // the default sender ID is Kenya-and-Airtel only. This product normalises
+    // Ugandan numbers, so for its recipients a blank sender ID means no
+    // delivery — and it fails per message with 402, not at setup.
+    expect(SRC).toContain("only allows its default sender ID for Kenyan Airtel");
+    expect(SRC).toContain("402");
+  });
+
+  it("says it on the sandbox verdict too, where it is equally true", () => {
+    expect(SRC).toContain('verdict === "READY" || verdict === "READY — SANDBOX ONLY"');
   });
 });

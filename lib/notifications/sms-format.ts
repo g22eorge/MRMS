@@ -44,3 +44,44 @@ export function senderIdProblem(senderId: string | null | undefined): string | n
   }
   return null;
 }
+
+/**
+ * What Africa's Talking says it did with each recipient.
+ *
+ * Three codes mean accepted, not one. 101 is "Sent", but 102 is "Queued" and
+ * 100 is "Processed" — and queueing is the *default*, since the enqueue flag
+ * defaults to 1 and the API stores messages then delivers them asynchronously.
+ * Treating only 101 as success therefore recorded ordinary, successful sends as
+ * failures, which is this system's usual defect running backwards: an outbox
+ * full of red for messages that actually went.
+ *
+ * Codes and meanings from the provider's own reference.
+ */
+export const AT_ACCEPTED_STATUS_CODES = [100, 101, 102] as const;
+
+export function atStatusAccepted(statusCode: unknown): boolean {
+  return (AT_ACCEPTED_STATUS_CODES as readonly number[]).includes(Number(statusCode));
+}
+
+/** Actionable text for the documented failures, rather than a bare word. */
+export const AT_STATUS_MEANING: Record<number, string> = {
+  100: "Processed",
+  101: "Sent",
+  102: "Queued — accepted and will be delivered asynchronously",
+  401: "Held for risk review by Africa's Talking",
+  402: "Invalid sender ID — it must be registered and approved for this account",
+  403: "Invalid phone number",
+  404: "Unsupported number type",
+  405: "Insufficient balance — top the account up",
+  406: "Recipient is on the account blacklist",
+  407: "Could not route to this network",
+  409: "Rejected by the recipient's Do-Not-Disturb setting",
+  500: "Africa's Talking internal error",
+  501: "Gateway error",
+  502: "Rejected by the gateway",
+};
+
+export function atStatusExplanation(statusCode: unknown, fallback?: string | null): string {
+  const code = Number(statusCode);
+  return AT_STATUS_MEANING[code] ?? fallback ?? `Unknown SMS status ${statusCode}`;
+}
