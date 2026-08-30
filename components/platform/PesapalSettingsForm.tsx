@@ -65,12 +65,26 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId, ipnKey }: P
                   className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
                 />
                 {isInDb && (
-                  <form action={clearAction}>
-                    <input type="hidden" name="key" value={f.key} />
-                    <SubmitButton bare className="rounded-md px-2.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">
-                      Clear
-                    </SubmitButton>
-                  </form>
+                  // formAction on the button, not a nested <form>. HTML forbids
+                  // nesting forms: the parser dropped the inner one and this
+                  // button submitted the SAVE action instead, with empty text
+                  // boxes — which skips every field and keeps the existing
+                  // values. Clear silently did nothing.
+                  //
+                  // The key rides on the button rather than a hidden input,
+                  // because every row would otherwise contribute one named
+                  // "key" to the same form and formData.get("key") would return
+                  // the first — clearing the wrong setting. Only the clicked
+                  // submitter's name/value is sent.
+                  <button
+                    type="submit"
+                    formAction={clearAction}
+                    name="key"
+                    value={f.key}
+                    className="rounded-md px-2.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Clear
+                  </button>
                 )}
               </div>
               <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{f.hint}</p>
