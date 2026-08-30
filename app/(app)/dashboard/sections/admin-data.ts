@@ -57,6 +57,7 @@ export async function loadAdminDashboardData(orgId: string | null) {
     overdueJobsCount,
     jobsNoClientUpdateCount,
     completedUnpaidCount,
+    jobsNeedingActionCount,
     payoutDueJobs,
     // Sales funnel
     leadFunnel,
@@ -121,6 +122,34 @@ export async function loadAdminDashboardData(orgId: string | null) {
     prisma.job.count({ where: { ...orgFilter, status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] }, receivedAt: { lt: new Date(today.getTime() - 7 * 86_400_000) } } }).catch(() => 0),
     prisma.job.count({ where: { ...orgFilter, status: { in: filterSupportedJobStatuses(["DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] }, lastClientContactAt: null } }).catch(() => 0),
     prisma.job.count({ where: { ...orgFilter, status: "COMPLETED", clientBill: { gt: 0 }, clientPaid: false } }).catch(() => 0),
+
+    // How many JOBS need attention, counted once each.
+    //
+    // The five job rows in "Needs action" overlap heavily by construction: a
+    // job awaiting approval, eight days old and never contacted, satisfies
+    // three of them at once. Summing the row counts therefore produced a
+    // headline that could be several times the real amount of work — 119 on a
+    // book that held far fewer jobs than that. The rows are right; the total
+    // was not, and a number nobody can reconcile is worse than no number.
+    prisma.job.count({
+      where: {
+        ...orgFilter,
+        OR: [
+          { status: "AWAITING_APPROVAL" },
+          { status: "READY_FOR_PICKUP" },
+          { status: "COMPLETED", clientBill: { gt: 0 }, clientPaid: false },
+          {
+            status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] },
+            receivedAt: { lt: new Date(today.getTime() - 7 * 86_400_000) },
+          },
+          {
+            status: { in: filterSupportedJobStatuses(["DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] },
+            lastClientContactAt: null,
+          },
+        ],
+      },
+    }).catch(() => 0),
+
     prisma.job.findMany({ where: { ...orgFilter, repairPath: "EXTERNAL", status: { in: ["COMPLETED", "DELIVERED"] }, externalPaid: false }, select: { id: true, externalTechFee: true, externalTechBill: true } }).catch(() => [] as { id: string; externalTechFee: number | null; externalTechBill: number | null }[]),
 
     prisma.lead.groupBy({ by: ["status"], where: orgFilter, _count: { status: true } }).catch(() => [] as { status: string; _count: { status: number } }[]),
@@ -312,6 +341,7 @@ export async function loadAdminDashboardData(orgId: string | null) {
     overdueJobsCount,
     jobsNoClientUpdateCount,
     completedUnpaidCount,
+    jobsNeedingActionCount,
     failedOutboxCount,
     failedOutboxLabel,
     // Pipeline

@@ -28,7 +28,7 @@ export async function AdminDashboard({
     intakePendingCount, cashTodayValue, cashYesterdayValue, salesTodayValue,
     expensesTodayValue,
     revenueTodayValue,
-    outstandingValue, outstandingCount, completedUnpaidCount, awaitingApprovalCount,
+    outstandingValue, outstandingCount, completedUnpaidCount, jobsNeedingActionCount, awaitingApprovalCount,
     overdueJobsCount, inRepairCount, readyForPickupCount, jobsNoClientUpdateCount,
     failedOutboxCount, statusCount, statusData, conversionRate,
     repairsMtd, productsMtd, corporateMtd, totalMtd, revenueTrend,
@@ -88,7 +88,13 @@ export async function AdminDashboard({
     { label: "Ready — nudge pickup", sub: "No collection yet", count: readyForPickupCount, sev: "info", href: "/jobs?status=READY_FOR_PICKUP" },
     { label: "Intake queue", sub: "Pending front desk", count: intakePendingCount, sev: "info", href: "/intake" },
   ] as const;
-  const needsOpen = needs.reduce((s, n) => s + n.count, 0);
+  // Not a sum of the rows above. Five of them are job queries that overlap by
+  // construction — one job awaiting approval, eight days old and never
+  // contacted satisfies three at once — so adding them counted the same work
+  // several times over. jobsNeedingActionCount is those five as a single
+  // distinct query; failed messages and the intake queue are different tables
+  // and cannot double up with jobs or each other.
+  const needsOpen = jobsNeedingActionCount + failedOutboxCount + intakePendingCount;
   // Rows with nothing to do sink to the bottom (stable sort keeps the
   // severity order above), so the eye lands on real work first instead of a
   // wall of zeros. The top row then carries a "Start here" cue — on a busy
