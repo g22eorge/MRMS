@@ -84,7 +84,10 @@ describe("the script matches the rule tested here", () => {
     // The migrate must not sit after the guard where a skipped build reaches
     // it anyway — that would run `migrate deploy` against the build's throwaway
     // SQLite file and report success for a migration nothing applied.
-    const migrateAt = GATE.indexOf('run("bunx", ["prisma", "migrate", "deploy"])');
+    // Matched loosely: the call is now conditional on the engine, passing
+    // --schema for PostgreSQL. The property under test is unchanged — the
+    // migrate must sit inside the else-branch, not after the guard.
+    const migrateAt = GATE.search(/run\("bunx",\s*(IS_POSTGRES|\[)/);
     const elseAt = GATE.indexOf("} else {");
     expect(elseAt).toBeGreaterThan(-1);
     expect(migrateAt).toBeGreaterThan(elseAt);
