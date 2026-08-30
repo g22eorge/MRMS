@@ -167,6 +167,21 @@ describe("the form refuses what the check would only report", () => {
     const write = ACTIONS_SRC.indexOf('setPlatformSetting("AT_SENDER_ID"');
     expect(check).toBeGreaterThan(-1);
     expect(check).toBeLessThan(write);
+    expect(ACTIONS_SRC).toContain("if (senderId && !badSender)");
+  });
+
+  it("still saves the credentials when only the sender ID is wrong", () => {
+    // The three fields are independent. Rejecting the whole save would discard
+    // a corrected API key because the sender ID beside it was bad — trapping
+    // someone in the loop they were trying to leave. Caught before it shipped.
+    const write = ACTIONS_SRC.indexOf('setPlatformSetting("AT_API_KEY"');
+    const refuse = ACTIONS_SRC.indexOf("if (badSender) {");
+    expect(write).toBeLessThan(refuse);
+  });
+
+  it("says which fields were saved and which was not", () => {
+    expect(ACTIONS_SRC).toContain("The sender ID was not saved");
+    expect(ACTIONS_SRC).toContain("Saved the ${saved}");
   });
 
   it("tells the person to rotate the key, not just retype the field", () => {

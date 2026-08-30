@@ -68,30 +68,38 @@ export async function saveAtSettingsAction(
   const username = (formData.get("AT_USERNAME") as string | null)?.trim() ?? "";
   const senderId = (formData.get("AT_SENDER_ID") as string | null)?.trim() ?? "";
 
-  // Refused rather than stored. A value of the wrong shape here is not a typo
-  // to be corrected later — it is usually a credential pasted into the wrong
-  // box, and once saved it is displayed, returned by the health check, and
-  // pasted onward before anyone notices. The cheapest place to stop that is
-  // before it is written.
+  // A value of the wrong shape here is usually not a typo to be corrected later
+  // — it is a credential pasted into the wrong box, and once saved it is
+  // displayed, returned by the health check, and pasted onward before anyone
+  // notices. So it is refused before it is written.
+  //
+  // Only it, though. These three fields are independent, and rejecting the
+  // whole save would discard a corrected API key because the sender ID beside
+  // it was wrong — trapping someone in the exact loop they were trying to
+  // escape, with the credentials still broken and nothing saying why.
   const badSender = senderIdProblem(senderId);
-  if (badSender) {
-    return {
-      ok: false,
-      error:
-        `That sender ID cannot be right — ${badSender}. Leave it blank to send from a shared ` +
-        "shortcode. If you have pasted an API key here by mistake, rotate that key: it has been submitted.",
-    };
-  }
 
   try {
     if (apiKey) await setPlatformSetting("AT_API_KEY", apiKey);
     if (username) await setPlatformSetting("AT_USERNAME", username);
-    if (senderId) await setPlatformSetting("AT_SENDER_ID", senderId);
+    if (senderId && !badSender) await setPlatformSetting("AT_SENDER_ID", senderId);
     revalidatePlatformSettings();
-    return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed" };
   }
+
+  if (badSender) {
+    const saved = [apiKey && "API key", username && "username"].filter(Boolean).join(" and ");
+    return {
+      ok: false,
+      error:
+        (saved ? `Saved the ${saved}. ` : "") +
+        `The sender ID was not saved — ${badSender}. Leave it blank to send from a shared shortcode. ` +
+        "If you pasted an API key here by mistake, rotate that key: it has already been submitted.",
+    };
+  }
+
+  return { ok: true };
 }
 
 export async function registerIpnAction(
