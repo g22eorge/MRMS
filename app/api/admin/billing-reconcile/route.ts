@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { assertPlatformAdmin } from "@/lib/platform-admin";
+import { getDeploymentContext } from "@/lib/deployment-context";
 import { prisma } from "@/lib/prisma";
 import { PLAN_PRICES } from "@/lib/plan-prices";
 
@@ -37,6 +38,15 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  // This code ships to both deployments, and the answer only means something on
+  // one of them. care is Eagle Info's own repair business — single tenant, no
+  // subscriptions, nothing to reconcile — so its single organisation would
+  // otherwise appear in the "check against Pesapal" list and read as a customer
+  // who might have paid. Say which deployment answered, and on care say plainly
+  // that the question does not apply here.
+  const deployment = await getDeploymentContext();
+  const appliesHere = deployment.mode === "COMMERCIAL_MULTI_TENANT";
 
   // The plans a customer can actually buy. STARTER is free and has no price.
   const PURCHASABLE = Object.keys(PLAN_PRICES);
@@ -134,6 +144,16 @@ export async function GET() {
   return NextResponse.json({
     readOnly: true,
     generatedAt: new Date().toISOString(),
+
+    deployment: deployment.mode === "CARE_SINGLE_TENANT" ? "care (single tenant)" : "commercial (multi tenant)",
+    appliesHere,
+    ...(appliesHere ? {} : {
+      note:
+        "This is the single-tenant care deployment, which takes no subscriptions — there is " +
+        "nothing here to reconcile. Run this on app.eagleinfosolutions.com, where the " +
+        "commercial product bills customers. The figures below describe this deployment's own " +
+        "organisation and are not evidence of a missed payment.",
+    }),
 
     whatThisCanTellYou:
       "The webhook returned before recording anything, so a payment that failed verification " +
