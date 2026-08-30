@@ -30,7 +30,7 @@ export async function AdminDashboard({
     revenueTodayValue,
     outstandingValue, outstandingCount, completedUnpaidCount, jobsNeedingActionCount, awaitingApprovalCount,
     overdueJobsCount, inRepairCount, readyForPickupCount, jobsNoClientUpdateCount,
-    failedOutboxCount, statusCount, statusData, conversionRate,
+    failedOutboxCount, statusCount, statusData, activeJobsCount, conversionRate,
     repairsMtd, productsMtd, corporateMtd, totalMtd, revenueTrend,
     totalBankBalance, payablesValue, expensesValue, technicianPayoutsDue,
     leadCountMap, lowStockItems, outOfStockCount, techLeaderboard,
@@ -74,7 +74,6 @@ export async function AdminDashboard({
 
   // Jobs actually in play — same definition the mobile home screen uses, so the
   // two dashboards can never disagree about what "Active" means.
-  const activeJobsCount = (statusCount.get("RECEIVED") ?? 0) + inRepairCount + awaitingApprovalCount;
 
   const canCreateJob = can.createJob(permissionUser) && enabledModules.has("JOBS");
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBadge";
-import { JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus, ACTIVE_JOB_STATUSES } from "@/lib/job-status";
 import { formatEATDate } from "@/lib/date-eat";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -243,7 +243,7 @@ export default async function TechniciansPage({
     .filter(
       (job) =>
         !dismissedSpotlightIds.has(job.id) &&
-        ["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status),
+        (ACTIVE_JOB_STATUSES as readonly string[]).includes(job.status),
     )
     .slice(0, 3);
   const spotlightJobIds = new Set(spotlightJobs.map((j) => j.id));
