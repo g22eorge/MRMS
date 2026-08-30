@@ -32,7 +32,6 @@ const FIELDS: { key: "PESAPAL_CONSUMER_KEY" | "PESAPAL_CONSUMER_SECRET"; label: 
 
 export function PesapalSettingsForm({ configured, webhookUrl, ipnId, ipnKey }: Props) {
   const [saveState, saveAction, saving] = useActionState<{ ok: boolean; error?: string } | null, FormData>(savePesapalSettingsAction, null);
-  const [, clearAction] = useActionState<{ ok: boolean; error?: string } | null, FormData>(clearPesapalKeyAction, null);
   // The row Clear buttons call the action directly and keep the result.
   // Discarding it is what made a broken Clear indistinguishable from a working
   // one for three rounds.
@@ -151,11 +150,33 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId, ipnKey }: P
             </SubmitButton>
           </form>
           {configured.PESAPAL_IPN_ID_inDb && (
-            <form action={clearAction}>
-              {/* Scoped, so Clear removes the id for this environment only. */}
-              <input type="hidden" name="key" value={ipnKey} />
-              <SubmitButton bare className="text-[0.75rem] text-red-500 underline underline-offset-2">Clear</SubmitButton>
-            </form>
+            // Same direct call as the field Clears above. This one was a
+            // standalone form and did run — but its result went to the
+            // discarded first element of useActionState, so a failure was
+            // indistinguishable from a success, which is the half of that
+            // defect that actually cost the time.
+            <button
+              type="button"
+              disabled={clearing === ipnKey}
+              onClick={() => {
+                setCleared(null);
+                setClearingKey(ipnKey);
+                startClear(async () => {
+                  const data = new FormData();
+                  data.set("key", ipnKey);
+                  const res = await clearPesapalKeyAction(null, data);
+                  setCleared({ key: ipnKey, ok: res.ok, error: res.error });
+                });
+              }}
+              className="text-[0.75rem] text-red-500 underline underline-offset-2 disabled:opacity-50"
+            >
+              {clearing === ipnKey ? "Clearing…" : "Clear"}
+            </button>
+          )}
+          {cleared?.key === ipnKey && (
+            <span className={`text-[0.75rem] font-semibold ${cleared.ok ? "text-emerald-600" : "text-red-600"}`}>
+              {cleared.ok ? "Cleared." : cleared.error ?? "Could not clear."}
+            </span>
           )}
         </div>
 

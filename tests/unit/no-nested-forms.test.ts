@@ -146,3 +146,35 @@ describe("the Clear control reports what happened", () => {
     });
   }
 });
+
+describe("no action result is thrown away", () => {
+  /**
+   * The other half of the Clear-button defect, and the more expensive half.
+   * `const [, action] = useActionState(...)` discards the state, so a failure
+   * renders exactly like a success and exactly like a dead control. Two
+   * mechanisms were tried under that button and both failed silently; the
+   * silence is what cost three rounds each time.
+   *
+   * A scan, because the pattern is one character away from correct and reads as
+   * deliberate.
+   */
+  const files = [...tsxFiles("app"), ...tsxFiles("components")];
+
+  it("finds no discarded useActionState result", () => {
+    const offenders = files.filter((f) =>
+      /const\s*\[\s*,\s*[A-Za-z_$][\w$]*\s*\]\s*=\s*useActionState/.test(readFileSync(f, "utf8")),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("the detector recognises the pattern it is looking for", () => {
+    // Guards the guard: a regex that matches nothing would pass forever.
+    const sample = "const [, doThing] = useActionState(action, null);";
+    expect(/const\s*\[\s*,\s*[A-Za-z_$][\w$]*\s*\]\s*=\s*useActionState/.test(sample)).toBe(true);
+  });
+
+  it("does not flag a kept result", () => {
+    const sample = "const [state, doThing] = useActionState(action, null);";
+    expect(/const\s*\[\s*,\s*[A-Za-z_$][\w$]*\s*\]\s*=\s*useActionState/.test(sample)).toBe(false);
+  });
+});
