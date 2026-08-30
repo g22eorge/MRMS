@@ -50,6 +50,29 @@ export default async function PaymentsPage({
         <p className="mt-1 text-sm text-[var(--ink-muted)]">Payment events recorded from Pesapal webhooks</p>
       </div>
 
+      {/* These three answer the questions this table cannot: whether the
+          deployment can take money at all, what the organisations look like
+          against their subscriptions, and whether a specific Pesapal
+          transaction was actually honoured. They were reachable only by typing
+          the URL, which is the same as not existing. */}
+      <div className="flex flex-wrap gap-2">
+        <a href="/api/admin/pesapal-health"
+           className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--ink)] hover:border-[var(--accent)] transition-colors">
+          Payment readiness check
+          <span className="block text-[0.75rem] font-normal text-[var(--ink-muted)]">Can this deployment take a real payment?</span>
+        </a>
+        <a href="/api/admin/billing-reconcile"
+           className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--ink)] hover:border-[var(--accent)] transition-colors">
+          Billing reconciliation
+          <span className="block text-[0.75rem] font-normal text-[var(--ink-muted)]">Subscriptions against recorded events</span>
+        </a>
+        <a href="/api/admin/verify-payments"
+           className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--ink)] hover:border-[var(--accent)] transition-colors">
+          Verify Pesapal transactions
+          <span className="block text-[0.75rem] font-normal text-[var(--ink-muted)]">Paste tracking ids — was each one honoured?</span>
+        </a>
+      </div>
+
       {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4">
