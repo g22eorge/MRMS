@@ -82,6 +82,18 @@ describe("there is now a way to tell whether they work", () => {
     expect(HEALTH).toContain("Sending still works");
   });
 
+  it("shows the username and the key's length, but never the key", () => {
+    // A 401 is most often a key from one Africa's Talking app paired with
+    // another app's username, and that is invisible unless the username sent is
+    // shown. The length distinguishes a real key from a pasted password without
+    // disclosing anything usable — the endpoint is platform-admin only, and the
+    // admin owns the key.
+    const body = HEALTH.slice(HEALTH.lastIndexOf("return NextResponse.json({"));
+    expect(body).toContain("username: config?.username ?? null");
+    expect(body).toContain("apiKeyLength: config?.apiKey?.length ?? null");
+    expect(body).not.toContain("apiKey: config.apiKey");
+  });
+
   it("returns no credential, only whether one resolved and from where", () => {
     // lastIndexOf, not indexOf: the early 403 and 429 returns are also
     // NextResponse.json, so indexOf sliced from the top of the function and the

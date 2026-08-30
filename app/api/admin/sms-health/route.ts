@@ -133,6 +133,15 @@ export async function GET() {
       /** Distinguishes "never configured" from "configured but unreadable". */
       absenceIsTrustworthy: store.readable,
       senderId: config?.senderId ?? null,
+      // The username is an account name, not a secret, and a 401 is most often
+      // a key belonging to a different app than the username beside it — which
+      // nobody can spot without seeing which username was actually sent.
+      username: config?.username ?? null,
+      // The key's length, never the key. A freshly issued Africa's Talking key
+      // is long; a value in the sixties or shorter is usually an account
+      // password or a truncated paste, and that is visible from the number
+      // alone without disclosing anything usable.
+      apiKeyLength: config?.apiKey?.length ?? null,
       senderIdLooksValid: config?.senderId ? senderIdProblem(config.senderId) === null : null,
       storedInDatabase: { apiKey: Boolean(dbKey), username: Boolean(dbUser), senderId: Boolean(dbSender) },
     },
