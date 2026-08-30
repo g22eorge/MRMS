@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { getDeploymentContext } from "@/lib/deployment-context";
 import { prisma } from "@/lib/prisma";
-import { PLAN_PRICES } from "@/lib/plan-prices";
+import { getEffectivePlanPrices } from "@/lib/plan-prices";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +48,13 @@ export async function GET() {
   const deployment = await getDeploymentContext();
   const appliesHere = deployment.mode === "COMMERCIAL_MULTI_TENANT";
 
+  // The prices actually in force, override included — so a mismatch reported
+  // here means a real one rather than this route reading a different table
+  // from the one the webhook verified against.
+  const prices = await getEffectivePlanPrices();
+
   // The plans a customer can actually buy. STARTER is free and has no price.
-  const PURCHASABLE = Object.keys(PLAN_PRICES);
+  const PURCHASABLE = Object.keys(prices);
 
   // ── 1. The shape of the customer base ────────────────────────────────────
   const orgs = await prisma.organization.findMany({
@@ -131,12 +136,12 @@ export async function GET() {
 
   // ── 4. A recorded amount that is not a price we charge ───────────────────
   const amountMismatches = events
-    .filter((e) => e.plan && e.amount != null && PLAN_PRICES[e.plan] != null && e.amount !== PLAN_PRICES[e.plan])
+    .filter((e) => e.plan && e.amount != null && prices[e.plan] != null && e.amount !== prices[e.plan])
     .map((e) => ({
       org: orgById.get(e.orgId)?.name ?? e.orgId,
       plan: e.plan,
       recorded: e.amount,
-      charged: e.plan ? PLAN_PRICES[e.plan] : null,
+      charged: e.plan ? prices[e.plan] : null,
       occurredAt: e.occurredAt,
     }));
 
@@ -196,7 +201,7 @@ export async function GET() {
       "customer who paid and was never activated. The merchant reference carries the orgId and " +
       "the intended plan, so it identifies both sides.",
 
-    pricesCharged: PLAN_PRICES,
+    pricesCharged: prices,
 
     subscriptionStates,
 

@@ -169,9 +169,13 @@ describe("checkout and the webhook agree on every purchasable plan", () => {
   });
 
   it("the billing page and the price table offer the same set of plans", async () => {
+    // Matches `price: prices.X` rather than `price: PLAN_PRICES.X`: the page now
+    // reads the override-aware prices, because charging the base table while the
+    // webhook verified against an override would reject every payment. The
+    // property is unchanged — the page must offer exactly the purchasable plans.
     const { readFileSync } = await import("node:fs");
     const src = readFileSync("app/(app)/settings/billing/page.tsx", "utf8");
-    const offered = [...src.matchAll(/price:\s*PLAN_PRICES\.([A-Z]+)/g)].map((m) => m[1]).sort();
+    const offered = [...src.matchAll(/price:\s*prices\.([A-Z]+)/g)].map((m) => m[1]).sort();
     expect(offered).toEqual([...PURCHASABLE].sort());
     expect(Object.keys(FALLBACK_PLAN_PRICES).sort()).toEqual([...PURCHASABLE].sort());
   });

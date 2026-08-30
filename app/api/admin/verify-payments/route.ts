@@ -4,7 +4,7 @@ import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { getTransactionStatus, parseMerchantRef, CURRENCY } from "@/lib/pesapal";
-import { PLAN_PRICES } from "@/lib/plan-prices";
+import { getEffectivePlanPrice } from "@/lib/plan-prices";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +72,11 @@ async function verify(trackingId: string) {
     })
     .catch(() => null);
 
-  const expected = PLAN_PRICES[plan] ?? null;
+  // The override, so this agrees with what the webhook actually verified
+  // against. Reading the base table here would report a correctly-honoured
+  // payment as the wrong amount, on the one tool whose job is deciding whether
+  // a customer is owed money.
+  const expected = await getEffectivePlanPrice(plan);
   const amountMatches = expected != null && tx.amount === expected && tx.currency === CURRENCY;
   // The tracking id is written to flwSubscriptionId only by a successful
   // callback, so its presence is what "we acted on this payment" looks like.
