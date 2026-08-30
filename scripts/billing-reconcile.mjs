@@ -87,7 +87,40 @@ if (!url) {
   process.exit(1);
 }
 
-const raw = createClient({ url, authToken });
+// A placeholder that reaches createClient throws deep inside the libsql URL
+// parser, and the stack points at node:internal/url — which tells you nothing
+// about what you actually did wrong. Catch the shapes a placeholder takes.
+const PLACEHOLDER = /[…]|\.\.\.|^libsql:\/\/$|your-|example\.|<.*>|xxx/i;
+if (PLACEHOLDER.test(url)) {
+  console.error(`[reconcile] that is a placeholder, not a database URL: ${url}`);
+  console.error("");
+  console.error("The '…' in the instructions stands for the real value — it is not part of it.");
+  console.error("A Turso URL looks like libsql://something-yourname.turso.io");
+  console.error("");
+  usage();
+  process.exit(1);
+}
+if (!/^(libsql|https?|file|ws|wss):/.test(url)) {
+  console.error(`[reconcile] TURSO_DATABASE_URL does not look like a URL: ${url}`);
+  console.error("Expected it to start with libsql:// (or file: for a local database).");
+  console.error("");
+  usage();
+  process.exit(1);
+}
+if (authToken && PLACEHOLDER.test(authToken)) {
+  console.error("[reconcile] TURSO_AUTH_TOKEN is a placeholder too — same thing, the '…' is not part of it.");
+  process.exit(1);
+}
+
+let raw;
+try {
+  raw = createClient({ url, authToken });
+} catch (e) {
+  console.error(`[reconcile] could not open that database: ${e.message}`);
+  console.error("");
+  usage();
+  process.exit(1);
+}
 
 /** Refuses anything that is not a single SELECT. The guard is the point. */
 async function read(sql, args = []) {
