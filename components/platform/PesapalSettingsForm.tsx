@@ -13,7 +13,7 @@ type Configured = {
   PESAPAL_IPN_ID_inDb: boolean;
 };
 
-type Props = { configured: Configured; webhookUrl: string; ipnId: string | null };
+type Props = { configured: Configured; webhookUrl: string; ipnId: string | null; ipnKey: string };
 
 const FIELDS: { key: "PESAPAL_CONSUMER_KEY" | "PESAPAL_CONSUMER_SECRET"; label: string; placeholder: string; hint: string }[] = [
   {
@@ -30,7 +30,7 @@ const FIELDS: { key: "PESAPAL_CONSUMER_KEY" | "PESAPAL_CONSUMER_SECRET"; label: 
   },
 ];
 
-export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
+export function PesapalSettingsForm({ configured, webhookUrl, ipnId, ipnKey }: Props) {
   const [saveState, saveAction, saving] = useActionState<{ ok: boolean; error?: string } | null, FormData>(savePesapalSettingsAction, null);
   const [, clearAction] = useActionState<{ ok: boolean; error?: string } | null, FormData>(clearPesapalKeyAction, null);
   const [ipnState, ipnAction, registering] = useActionState<{ ok: boolean; ipnId?: string; error?: string } | null, FormData>(registerIpnAction, null);
@@ -113,7 +113,8 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
           </form>
           {configured.PESAPAL_IPN_ID_inDb && (
             <form action={clearAction}>
-              <input type="hidden" name="key" value="PESAPAL_IPN_ID" />
+              {/* Scoped, so Clear removes the id for this environment only. */}
+              <input type="hidden" name="key" value={ipnKey} />
               <SubmitButton bare className="text-[0.75rem] text-red-500 underline underline-offset-2">Clear</SubmitButton>
             </form>
           )}

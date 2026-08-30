@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { getPlatformSetting, getPesapalConsumerKey, getPesapalConsumerSecret } from "@/lib/platform-settings";
-import { PESAPAL_BASE, getAuthToken, getRegisteredIpns } from "@/lib/pesapal";
+import { PESAPAL_BASE, getAuthToken, getRegisteredIpns, getStoredIpnId, ipnSettingKey, IS_LIVE } from "@/lib/pesapal";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,7 @@ export async function GET(req: Request) {
   const blockers: string[] = [];
 
   // ── 1. Which Pesapal ────────────────────────────────────────────────────────
-  const live = PESAPAL_BASE.includes("pay.pesapal.com");
+  const live = IS_LIVE;
   if (!live) {
     blockers.push(
       "PESAPAL_ENV is not \"production\", so orders go to Pesapal's sandbox. Sandbox transactions move no real money and do not appear in the live merchant dashboard.",
@@ -98,7 +98,8 @@ export async function GET(req: Request) {
   const requestOrigin = new URL(req.url).origin;
   const expectedWebhookUrl = `${configuredBase ?? requestOrigin}${WEBHOOK_PATH}`;
 
-  const storedIpnId = await getPlatformSetting("PESAPAL_IPN_ID").catch(() => null);
+  // Scoped to this environment: a sandbox id is not evidence of a live one.
+  const storedIpnId = await getStoredIpnId().catch(() => null);
   let registered: Array<{ ipn_id: string; url: string; status: string }> | null = null;
   let ipnLookupError: string | null = null;
   if (authOk) {
@@ -149,6 +150,7 @@ export async function GET(req: Request) {
     },
     notifications: {
       storedIpnId: storedIpnId ?? null,
+      storedUnder: ipnSettingKey(),
       expectedWebhookUrl,
       registeredTo: match?.url ?? null,
       status: match?.status ?? null,

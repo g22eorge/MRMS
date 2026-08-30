@@ -1,8 +1,8 @@
-import { getPlatformSettings, getPlatformSetting } from "@/lib/platform-settings";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { PesapalSettingsForm } from "@/components/platform/PesapalSettingsForm";
 import { ATSmsPlatformSettingsForm } from "@/components/platform/ATSmsPlatformSettingsForm";
-import { PLAN_PRICES } from "@/lib/pesapal";
+import { PLAN_PRICES, getStoredIpnId, ipnSettingKey } from "@/lib/pesapal";
 import { formatMoney } from "@/lib/currency";
 
 export const dynamic = "force-dynamic";
@@ -10,25 +10,28 @@ export const dynamic = "force-dynamic";
 export default async function PlatformSettingsPage() {
   await requirePlatformAdmin();
 
+  // The IPN id is read through getStoredIpnId so the page shows the one that
+  // applies to the current environment, not a sandbox id while running live.
+  const ipnKey = ipnSettingKey();
   const [stored, ipnId] = await Promise.all([
     getPlatformSettings([
       "PESAPAL_CONSUMER_KEY",
       "PESAPAL_CONSUMER_SECRET",
-      "PESAPAL_IPN_ID",
+      ipnKey,
       "AT_API_KEY",
       "AT_USERNAME",
       "AT_SENDER_ID",
     ]),
-    getPlatformSetting("PESAPAL_IPN_ID"),
+    getStoredIpnId(),
   ]);
 
   const configured = {
     PESAPAL_CONSUMER_KEY: !!stored.PESAPAL_CONSUMER_KEY || !!process.env.PESAPAL_CONSUMER_KEY,
     PESAPAL_CONSUMER_SECRET: !!stored.PESAPAL_CONSUMER_SECRET || !!process.env.PESAPAL_CONSUMER_SECRET,
-    PESAPAL_IPN_ID: !!stored.PESAPAL_IPN_ID,
+    PESAPAL_IPN_ID: !!ipnId,
     PESAPAL_CONSUMER_KEY_inDb: !!stored.PESAPAL_CONSUMER_KEY,
     PESAPAL_CONSUMER_SECRET_inDb: !!stored.PESAPAL_CONSUMER_SECRET,
-    PESAPAL_IPN_ID_inDb: !!stored.PESAPAL_IPN_ID,
+    PESAPAL_IPN_ID_inDb: !!stored[ipnKey],
   };
 
   const atConfigured = {
@@ -52,7 +55,7 @@ export default async function PlatformSettingsPage() {
         </p>
       </div>
 
-      <PesapalSettingsForm configured={configured} webhookUrl={webhookUrl} ipnId={ipnId} />
+      <PesapalSettingsForm configured={configured} webhookUrl={webhookUrl} ipnId={ipnId} ipnKey={ipnKey} />
 
       <ATSmsPlatformSettingsForm configured={atConfigured} />
 

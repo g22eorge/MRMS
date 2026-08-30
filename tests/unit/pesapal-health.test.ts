@@ -146,3 +146,64 @@ describe("the check itself changes nothing", () => {
     expect(SRC).toContain("rateLimit.platformAdmin");
   });
 });
+
+describe("the IPN id is scoped to the Pesapal account that issued it", () => {
+  const SRC = readFileSync("lib/pesapal.ts", "utf8");
+
+  /**
+   * The trap in the go-live change. An IPN id belongs to the account that
+   * registered it, and sandbox and live are different accounts. This deployment
+   * has only ever run against the sandbox, so a single un-namespaced key could
+   * only ever hold a sandbox id — which would then be handed to the live host
+   * as notification_id the moment PESAPAL_ENV was set. Going live would silently
+   * not work, in exactly the shape of the defect it was meant to end.
+   */
+  function keyFor(live: boolean) {
+    return live ? "PESAPAL_IPN_ID_LIVE" : "PESAPAL_IPN_ID_SANDBOX";
+  }
+  function storedFor(live: boolean, settings: Record<string, string>) {
+    const scoped = settings[keyFor(live)];
+    if (scoped) return scoped;
+    return live ? null : settings.PESAPAL_IPN_ID ?? null;
+  }
+
+  it("does not hand a sandbox id to the live account", () => {
+    // The state this deployment is actually in today.
+    const settings = { PESAPAL_IPN_ID: "sandbox-ipn-from-today" };
+    expect(storedFor(false, settings)).toBe("sandbox-ipn-from-today");
+    expect(storedFor(true, settings)).toBeNull();
+  });
+
+  it("so flipping the environment registers a fresh one instead of reusing it", () => {
+    // null is what makes getOrCreateIpnId register against the live account.
+    expect(storedFor(true, { PESAPAL_IPN_ID: "sandbox-ipn" })).toBeNull();
+  });
+
+  it("keeps each environment's id, so switching back does not re-register", () => {
+    const settings = { PESAPAL_IPN_ID_SANDBOX: "s-1", PESAPAL_IPN_ID_LIVE: "l-1" };
+    expect(storedFor(false, settings)).toBe("s-1");
+    expect(storedFor(true, settings)).toBe("l-1");
+  });
+
+  it("reads the legacy key only in sandbox, which is the only place it is sound", () => {
+    // Every value ever written under the old key was written while pointing at
+    // the sandbox, so honouring it there is correct and honouring it live is not.
+    expect(SRC).toContain('return IS_LIVE ? null : getPlatformSetting("PESAPAL_IPN_ID");');
+  });
+
+  it("is what every read and write goes through", () => {
+    const page = readFileSync("app/(platform)/platform/settings/page.tsx", "utf8");
+    const actions = readFileSync("app/(platform)/platform/settings/actions.ts", "utf8");
+    const health = readFileSync("app/api/admin/pesapal-health/route.ts", "utf8");
+    for (const src of [page, health]) {
+      expect(src).not.toContain('"PESAPAL_IPN_ID"');
+    }
+    // The Clear action allow-lists keys server-side, so the scoped names have
+    // to be on it or clearing silently fails with "Invalid key".
+    expect(actions).toContain('"PESAPAL_IPN_ID_SANDBOX"');
+    expect(actions).toContain('"PESAPAL_IPN_ID_LIVE"');
+    expect(actions).toContain("setPlatformSetting(ipnSettingKey()");
+    expect(health).toContain("getStoredIpnId()");
+    expect(page).toContain("getStoredIpnId()");
+  });
+});

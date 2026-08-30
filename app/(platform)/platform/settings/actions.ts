@@ -1,7 +1,7 @@
 "use server";
 
 import { setPlatformSetting, deletePlatformSetting } from "@/lib/platform-settings";
-import { registerIpn, getRegisteredIpns, ipnCallbackUrl } from "@/lib/pesapal";
+import { registerIpn, getRegisteredIpns, ipnCallbackUrl, ipnSettingKey } from "@/lib/pesapal";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { revalidatePlatformSettings } from "@/lib/platform/revalidate";
 
@@ -33,6 +33,10 @@ export async function clearPlatformKeyAction(
   const allowed = [
     "PESAPAL_CONSUMER_KEY",
     "PESAPAL_CONSUMER_SECRET",
+    // Both scoped keys, plus the legacy one so a value stored before the
+    // environments were separated can still be cleared.
+    "PESAPAL_IPN_ID_SANDBOX",
+    "PESAPAL_IPN_ID_LIVE",
     "PESAPAL_IPN_ID",
     "AT_API_KEY",
     "AT_USERNAME",
@@ -86,13 +90,13 @@ export async function registerIpnAction(
     const existing = await getRegisteredIpns().catch(() => []);
     const found = existing.find((i) => i.url === ipnUrl && i.status === "Active");
     if (found) {
-      await setPlatformSetting("PESAPAL_IPN_ID", found.ipn_id);
+      await setPlatformSetting(ipnSettingKey(), found.ipn_id);
       revalidatePlatformSettings();
       return { ok: true, ipnId: found.ipn_id };
     }
 
     const ipnId = await registerIpn(ipnUrl);
-    await setPlatformSetting("PESAPAL_IPN_ID", ipnId);
+    await setPlatformSetting(ipnSettingKey(), ipnId);
     revalidatePlatformSettings();
     return { ok: true, ipnId };
   } catch (err) {
