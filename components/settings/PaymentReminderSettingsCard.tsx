@@ -4,6 +4,7 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { reminderState } from "@/lib/notifications/reminder-state";
 
 /**
  * The switch for automatic payment reminders.
@@ -72,6 +73,8 @@ export function PaymentReminderSettingsCard({ orgId, settings }: { orgId: string
     revalidatePath("/settings/notifications");
   }
 
+  const state = reminderState(settings);
+
   return (
     <form action={saveAction} className="dc-card overflow-hidden">
       <div className="border-b border-[var(--line)] px-4 py-3">
@@ -82,6 +85,32 @@ export function PaymentReminderSettingsCard({ orgId, settings }: { orgId: string
           invoice still unpaid three weeks past its due date is left for a person rather than chased
           again.
         </p>
+      </div>
+
+      {/* What the two switches below currently add up to. Each explains itself;
+          neither said what the pair amounts to, and "on but still previewing"
+          is the combination a business is most likely to misread as working. */}
+      <div
+        className={`border-b px-4 py-2.5 ${
+          state.mode === "live"
+            ? "border-emerald-500/30 bg-emerald-500/10"
+            : state.looksOnButSendsNothing
+              ? "border-amber-500/30 bg-amber-500/10"
+              : "border-[var(--line)] bg-[var(--panel-strong)]"
+        }`}
+      >
+        <p
+          className={`text-[0.8125rem] font-semibold ${
+            state.mode === "live"
+              ? "text-emerald-500"
+              : state.looksOnButSendsNothing
+                ? "text-amber-500"
+                : "text-[var(--ink-muted)]"
+          }`}
+        >
+          {state.headline}
+        </p>
+        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{state.detail}</p>
       </div>
 
       <div className="space-y-3 px-4 py-3">

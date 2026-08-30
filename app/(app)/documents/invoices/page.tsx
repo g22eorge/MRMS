@@ -35,6 +35,7 @@ import {
   InvoiceOverdueReminderButton,
 } from "@/components/documents/InvoiceOverdueReminderForms";
 import { WhatsAppReadinessNotice } from "@/components/notifications/WhatsAppReadinessNotice";
+import { reminderState } from "@/lib/notifications/reminder-state";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { BulkSelectionProvider } from "./BulkSelectionProvider";
 import { BulkActionBar } from "./BulkActionBar";
@@ -77,6 +78,15 @@ export default async function InvoicesPage({
   const orgRow = user.orgId
     ? await prisma.organization.findUnique({ where: { id: user.orgId }, select: { baseCurrency: true } }).catch(() => null)
     : null;
+
+  // Whether the automatic ladder is actually chasing these invoices.
+  const reminderStatus = reminderState(
+    user.orgId
+      ? await prisma.paymentReminderSettings
+          .findUnique({ where: { orgId: user.orgId }, select: { enabled: true, dryRun: true } })
+          .catch(() => null)
+      : null,
+  );
   const orgCurrency = normalizeCurrency(orgRow?.baseCurrency, "UGX");
 
   const params = await searchParams;
@@ -630,6 +640,20 @@ export default async function InvoicesPage({
       {/* Reminders and document sends on this page can go out over WhatsApp.
           Compact, because this is a working list rather than a settings page. */}
       <WhatsAppReadinessNotice orgId={user.orgId ?? undefined} compact />
+
+      {/* Said here because this is the page where someone looks at overdue
+          invoices and decides whether the automatic ladder has them covered. */}
+      {reminderStatus.looksOnButSendsNothing && (
+        <div role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <p className="text-[0.8125rem] font-semibold text-amber-500">{reminderStatus.headline}</p>
+          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
+            These invoices still need chasing by hand until preview is cleared.{" "}
+            <a href="/settings/notifications" className="font-semibold text-[var(--accent)] underline underline-offset-2">
+              Reminder settings
+            </a>
+          </p>
+        </div>
+      )}
 
       {errorParam && (
         <div className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5">
