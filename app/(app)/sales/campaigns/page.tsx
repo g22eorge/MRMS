@@ -378,7 +378,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           {/* ══ DESKTOP HEADER ══ */}
           <div className="hidden lg:block">
             <PageHeader
-              eyebrow="Sales"
               title="Campaigns"
               description="Outreach campaigns for leads and clients"
               actions={

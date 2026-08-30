@@ -307,7 +307,6 @@ export default async function JournalPage({
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <PageHeader
-        eyebrow="Finance"
         title="Journal Entries"
         description="Double-entry ledger — every entry's debits must equal its credits"
         actions={

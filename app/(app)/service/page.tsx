@@ -98,7 +98,6 @@ export default async function ServiceHubPage() {
       <ServiceHubNav />
 
       <PageHeader
-        eyebrow="Service"
         title="Service Hub"
         description="Field visits, technicians, and complaints"
         kpis={[

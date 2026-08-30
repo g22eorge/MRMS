@@ -73,7 +73,6 @@ export default async function TrialBalancePage({
     <div className="print-area space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <PageHeader
-        eyebrow="Finance · Reports"
         title="Trial Balance"
         description={`As of ${MONTHS[month - 1]} ${year}`}
         actions={

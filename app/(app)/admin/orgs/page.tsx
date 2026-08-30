@@ -37,7 +37,6 @@ export default async function AdminOrgsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Admin"
         title="Organisation Module Access"
         description="Toggle which modules each org can access"
         actions={

@@ -323,7 +323,6 @@ export default async function RecurringInvoicesPage({
       {/* Header */}
       <FormErrorBanner message={sp.error} />
       <PageHeader
-        eyebrow="Finance"
         title="Recurring Invoices"
         description={`${activeCount} active${dueNow > 0 ? ` · ${dueNow} due` : ""} — templates that auto-generate or remind you to issue invoices on schedule.`}
         kpis={[

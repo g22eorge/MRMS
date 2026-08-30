@@ -145,7 +145,6 @@ export default async function BalanceSheetPage({
     <div className="print-area space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <PageHeader
-        eyebrow="Finance · Reports"
         title="Balance Sheet"
         description={`As of ${MONTHS[month - 1]} ${year}`}
         actions={

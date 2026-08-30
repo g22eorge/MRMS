@@ -66,7 +66,6 @@ export default async function FinanceReportsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Finance"
         title="Financial Reports"
         description="Statements, analysis and export tools"
       />

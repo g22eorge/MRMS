@@ -408,7 +408,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
       ) : null}
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <PageHeader
-        eyebrow="Finance"
         title="Expenses"
         description={`${total} record${total !== 1 ? "s" : ""}`}
         actions={

@@ -398,7 +398,6 @@ export default async function PosPage({
           {/* ══ DESKTOP HEADER ══ */}
           <div className="hidden lg:block">
             <PageHeader
-              eyebrow="Point of Sale"
               title="Sales"
               description="Walk-in and retail transactions"
             />

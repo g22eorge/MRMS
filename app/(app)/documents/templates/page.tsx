@@ -155,7 +155,6 @@ export default async function DocumentTemplatesPage() {
   return (
     <div className="min-w-0 space-y-4">
       <PageHeader
-        eyebrow="Documents"
         title="Document Templates"
         description={`Default template per document type · your plan: ${planLabel(plan)}`}
         actions={<Button href="/settings/branding" variant="secondary" size="sm">Branding settings</Button>}

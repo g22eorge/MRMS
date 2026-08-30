@@ -514,7 +514,6 @@ export default async function SalesPage({
           {/* ══ DESKTOP HEADER ══ */}
           <div className="hidden lg:block">
             <PageHeader
-              eyebrow="CRM"
               title="Sales"
               description="Leads pipeline and quotations"
               actions={

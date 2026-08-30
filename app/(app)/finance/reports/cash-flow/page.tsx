@@ -313,7 +313,6 @@ export default async function CashFlowPage({
     <div className="print-area space-y-4">
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <PageHeader
-        eyebrow="Finance · Reports"
         title="Cash Flow Statement"
         description={periodLabel}
         actions={

@@ -707,7 +707,6 @@ export default async function InvoicesPage({
 
       <PageHeader
         title="Invoices"
-        eyebrow="Documents"
         actions={
                   canCreateInvoice && (
                     <InvoiceNewButton />

@@ -198,7 +198,6 @@ export default async function TargetsPage({ searchParams }: { searchParams: Sear
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Analytics"
         title="Targets & Productivity"
         description={`${periodLabel} — ${label}`}
         actions={

@@ -233,7 +233,6 @@ export default async function BankPage({
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <FormErrorBanner message={sp.error} />
       <PageHeader
-        eyebrow="Finance"
         title="Bank & cash"
         description="Track the money in your bank and cash accounts."
         actions={

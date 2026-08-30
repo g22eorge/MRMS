@@ -150,7 +150,6 @@ export default async function InventoryPage({
       <HubTabs items={INVENTORY_TABS} />
 
       <PageHeader
-        eyebrow="Inventory"
         title="Items"
         description="See what you have, what is running low, and what it is worth."
         actions={canManage ? (

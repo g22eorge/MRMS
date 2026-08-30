@@ -81,7 +81,6 @@ export default async function AiInsightsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="AI · Analytics"
         title="Business Insights"
         actions={
           <div className="flex flex-wrap gap-2 text-xs font-semibold">

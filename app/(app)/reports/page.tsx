@@ -853,7 +853,6 @@ export default async function ReportsPage({
       {/* ── HEADER (desktop) ─────────────────────────────────────────────────── */}
       <div className="hidden lg:block">
         <PageHeader
-          eyebrow="Analytics"
           title="Reports"
           description={period === "year" ? `${selectedYear} Annual` : selectedMonthString}
           actions={

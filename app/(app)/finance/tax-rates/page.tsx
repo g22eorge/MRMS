@@ -168,7 +168,6 @@ export default async function TaxRatesPage({
       {/* Header */}
       <FormErrorBanner message={sp.error} />
       <PageHeader
-        eyebrow="Finance"
         title="Tax Rates"
         description={`${taxRates.length} configured — VAT, WHT, and other tax codes applied to invoices and purchases.`}
         kpis={[

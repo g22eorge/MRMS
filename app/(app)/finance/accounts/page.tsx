@@ -267,7 +267,6 @@ export default async function ChartOfAccountsPage({
     <div className="space-y-4">
       <FormErrorBanner message={acctParams.error} />
       <PageHeader
-        eyebrow="Finance"
         title="Accounts"
         description="The categories your money flows through. Click any account to see its history."
         actions={

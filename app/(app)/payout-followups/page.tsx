@@ -449,7 +449,6 @@ export default async function PayoutFollowupsPage({
         <>
           <FormErrorBanner message={filters.error} />
           <PageHeader
-            eyebrow="Finance"
             title="Collections &amp; Payouts"
             description={
               totalReceivable > 0 || totalPayable > 0
