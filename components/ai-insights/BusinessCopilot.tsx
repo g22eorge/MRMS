@@ -84,12 +84,11 @@ function FormattedText({ text }: { text: string }) {
 
 export function BusinessCopilot() {
   const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      text: "Ask a management question about repairs, sales, finance, inventory, targets, receivables, or operational risks.\n\nI answer using your live business data only — no client PII, no invented numbers.",
-    },
-  ]);
+  // No seeded greeting. It listed the domains the suggested prompts below
+  // demonstrate by example, repeated the input's own placeholder, and stated
+  // the privacy claim already in the header — three ways of saying what one
+  // line and seven examples say better.
+  const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -157,20 +156,17 @@ export function BusinessCopilot() {
             </svg>
           </span>
           <div>
-            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">AI Business Copilot</p>
-            <p className="text-[0.75rem] text-[var(--ink-muted)]">Live data · no client PII</p>
+            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Business Copilot</p>
+            <p className="text-[0.75rem] text-[var(--ink-muted)]">Reads your live data. No client details, no invented figures.</p>
           </div>
         </div>
-        <span className="rounded-full border border-slate-400/30 bg-slate-500/10 px-2.5 py-0.5 text-[0.75rem] font-semibold text-slate-600 dark:text-slate-400">
-          Aggregate only
-        </span>
       </div>
 
       {/* Message thread */}
       <div
         ref={scrollRef}
-        className="flex-1 space-y-4 overflow-y-auto px-4 py-4"
-        style={{ minHeight: 240, maxHeight: 420 }}
+        className={`space-y-4 overflow-y-auto px-4 ${messages.length ? "flex-1 py-4" : "py-0"}`}
+        style={messages.length ? { minHeight: 240, maxHeight: 420 } : undefined}
       >
         {messages.map((msg, index) => (
           <div key={index} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
@@ -246,7 +242,7 @@ export function BusinessCopilot() {
       </div>
 
       {/* Suggested questions */}
-      <div className="flex gap-2 overflow-x-auto border-t border-[var(--line)] px-4 py-2.5 scrollbar-none">
+      <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-4 py-2.5">
         {SUGGESTED.map((q) => (
           <button
             key={q}
