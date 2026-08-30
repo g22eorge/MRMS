@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 
 // The real rule, not a copy of it — a mirrored validator in a test proves only
 // that the mirror is self-consistent.
-import { senderIdProblem, atApiBase, isSandboxUsername } from "@/lib/notifications/sms";
+// From the pure module, not the sender: importing sms.ts reaches platform
+// settings and therefore Prisma, and a live client in the test process passed
+// every assertion and then aborted on exit.
+import { senderIdProblem, atApiBase, isSandboxUsername } from "@/lib/notifications/sms-format";
 
 /**
  * SMS credentials entered in the platform settings form, and never used.
@@ -212,7 +215,7 @@ describe("the form refuses what the check would only report", () => {
       // Matched on the import of the symbol from the one module that owns it,
       // rather than an exact import line — the health route imports several
       // names alongside it now.
-      expect(src).toMatch(/import \{[^}]*senderIdProblem[^}]*\} from "@\/lib\/notifications\/sms"/);
+      expect(src).toMatch(/import \{[^}]*senderIdProblem[^}]*\} from "@\/lib\/notifications\/sms-format"/);
     }
   });
 });
@@ -249,6 +252,9 @@ describe("sandbox and live are different hosts, and only one reaches a customer"
     const SMS_SRC = readFileSync("lib/notifications/sms.ts", "utf8");
     expect(SMS_SRC).toContain("/version1/messaging`");
     expect(SMS_SRC).not.toContain("/messaging/bulk");
+    // The rules live apart from the sender, so neither the form nor the tests
+    // need a database connection to use them.
+    expect(readFileSync("lib/notifications/sms-format.ts", "utf8")).not.toContain("prisma");
   });
 });
 

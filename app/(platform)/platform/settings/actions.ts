@@ -2,7 +2,7 @@
 
 import { setPlatformSetting, deletePlatformSetting } from "@/lib/platform-settings";
 import { registerIpn, getRegisteredIpns, ipnCallbackUrl, ipnSettingKey } from "@/lib/pesapal";
-import { senderIdProblem } from "@/lib/notifications/sms";
+import { senderIdProblem } from "@/lib/notifications/sms-format";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { revalidatePlatformSettings } from "@/lib/platform/revalidate";
 

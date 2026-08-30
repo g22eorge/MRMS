@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { getPlatformSetting, probePlatformSettingStore } from "@/lib/platform-settings";
-import { getAtConfig, senderIdProblem, atApiBase, isSandboxUsername } from "@/lib/notifications/sms";
+import { getAtConfig } from "@/lib/notifications/sms";
+import { senderIdProblem, atApiBase, isSandboxUsername } from "@/lib/notifications/sms-format";
 
 export const dynamic = "force-dynamic";
 
