@@ -274,3 +274,37 @@ describe("a working sandbox must never read as a working integration", () => {
     expect(HEALTH_SRC).toContain("host: config ? atApiBase(config.username) : null");
   });
 });
+
+describe("an email address is not a username", () => {
+  const SRC = readFileSync("app/api/admin/sms-health/route.ts", "utf8");
+
+  /**
+   * Found on the live system: the stored username was g22eorge@gmail.com — the
+   * address used to sign in to the dashboard, not the account username beside
+   * it. Africa's Talking answers that with a bare 401 naming no field, and the
+   * key length of 77 showed the key itself was plausible, so the fault was
+   * invisible until the username was displayed.
+   *
+   * It is also why the sandbox check never fired: it compared against
+   * "sandbox" while an email sat in the field.
+   */
+  it("flags a username containing @", () => {
+    expect(SRC).toContain('config?.username?.includes("@")');
+  });
+
+  it("says what to use instead, not merely that it is wrong", () => {
+    expect(SRC).toContain("account or app username shown in the dashboard");
+  });
+
+  it("attributes the 401 to it, since it is sufficient on its own", () => {
+    expect(SRC).toContain("This alone produces the 401 above");
+  });
+
+  it("is reported before the sandbox check, which an email would mask", () => {
+    // With an email stored, isSandboxUsername is false and the sandbox warning
+    // stays silent — so the email must be named or the real cause is hidden.
+    const email = SRC.indexOf('config?.username?.includes("@")');
+    const sandbox = SRC.indexOf("isSandboxUsername(config?.username)");
+    expect(email).toBeLessThan(sandbox);
+  });
+});

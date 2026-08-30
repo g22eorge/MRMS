@@ -114,6 +114,18 @@ export async function GET() {
     );
   }
 
+  // An email address is what you sign in to the dashboard with; the API
+  // username is the account or app name beside it. They are easy to confuse
+  // because only one of them is ever typed anywhere else, and the provider
+  // answers the mistake with a bare 401 that names no field.
+  if (config?.username?.includes("@")) {
+    blockers.push(
+      `The username is "${config.username}", which is an email address. Africa's Talking wants the ` +
+        "account or app username shown in the dashboard — for the sandbox app that is literally " +
+        "\"sandbox\" — not the address you sign in with. This alone produces the 401 above.",
+    );
+  }
+
   if (isSandboxUsername(config?.username)) {
     // Now reachable rather than rejected — which makes saying this louder, not
     // quieter. The same trap had the commercial deployment paying into Pesapal's
