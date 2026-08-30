@@ -77,8 +77,12 @@ export async function GET() {
   ).map(([state, count]) => ({ state, count })).sort((a, b) => b.count - a.count);
 
   // ── 2. What payment events exist at all ──────────────────────────────────
-  // On a healthy system there would be one per activation. None at all is
-  // consistent with the defect rather than reassuring.
+  // BillingEvent, not OrgSubscriptionEvent. This route first queried the
+  // latter and reported "no payment events at all" — from a table payments
+  // never write to. recordBillingEvent inserts into "BillingEvent", a raw
+  // table created lazily and absent from schema.prisma, which is why the
+  // mistake typechecked and read as a finding. On a healthy system there is
+  // one row per activation; none is meaningful only when read here.
   type EventRow = {
     orgId: string; plan: string | null; status: string | null;
     amount: number | null; currency: string | null; eventType: string;
@@ -87,16 +91,19 @@ export async function GET() {
   let events: EventRow[] = [];
   let eventsReadable = true;
   try {
-    events = await prisma.orgSubscriptionEvent.findMany({
-      select: {
-        orgId: true, plan: true, status: true, amount: true,
-        currency: true, eventType: true, occurredAt: true,
-      },
-      orderBy: { occurredAt: "desc" },
-      take: 500,
-    });
+    const rows = await prisma.$queryRaw<Array<{
+      orgId: string; plan: string | null; status: string | null;
+      amount: number | null; currency: string | null; event: string; createdAt: Date;
+    }>>`
+      SELECT orgId, plan, status, amount, currency, event, createdAt
+      FROM "BillingEvent" ORDER BY createdAt DESC LIMIT 500
+    `;
+    events = rows.map((r) => ({
+      orgId: r.orgId, plan: r.plan, status: r.status, amount: r.amount,
+      currency: r.currency, eventType: r.event, occurredAt: r.createdAt,
+    }));
   } catch {
-    // The table is created lazily by recordBillingEvent; absent is a finding.
+    // Lazily created, so absent means nothing has ever been recorded.
     eventsReadable = false;
   }
 
@@ -195,13 +202,26 @@ export async function GET() {
 
     paymentEvents: eventsReadable ? paymentEvents : null,
     paymentEventsNote: !eventsReadable
-      ? "OrgSubscriptionEvent could not be read — the table is created lazily and may not exist."
+      ? "The BillingEvent table does not exist yet — it is created on the first recorded event, so nothing has ever been written."
       : paymentEvents.length === 0
-        ? "No payment events recorded at all. Consistent with the defect: no webhook activation has ever been written here."
+        ? "No payment events recorded at all. Read from BillingEvent, which is where payments are written."
         : null,
 
     planMismatches,
     amountMismatches,
+
+    // Notifications Pesapal delivered that were not acted on, and why. Before
+    // these were recorded, every one of them was indistinguishable from a
+    // payment that never arrived.
+    rejections: events
+      .filter((e) => e.eventType === "charge.rejected")
+      .map((e) => ({
+        org: orgById.get(e.orgId)?.name ?? e.orgId ?? "(unattributed)",
+        reason: e.status,
+        plan: e.plan,
+        amount: e.amount,
+        at: e.occurredAt,
+      })),
 
     // Answers "who actually paid?" for the organisations that are live, which
     // the earlier version of this route could not and said so.
