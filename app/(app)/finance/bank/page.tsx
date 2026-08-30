@@ -234,7 +234,6 @@ export default async function BankPage({
       <FormErrorBanner message={sp.error} />
       <PageHeader
         title="Bank & cash"
-        description="Track the money in your bank and cash accounts."
         actions={
           <Link
             href="/finance/accounts"

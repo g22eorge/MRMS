@@ -38,7 +38,6 @@ export default async function AdminOrgsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Organisation Module Access"
-        description="Toggle which modules each org can access"
         actions={
           <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[0.75rem] font-semibold text-amber-700 dark:text-amber-400">
             Platform Admin

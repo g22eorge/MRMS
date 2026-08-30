@@ -379,7 +379,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           <div className="hidden lg:block">
             <PageHeader
               title="Campaigns"
-              description="Outreach campaigns for leads and clients"
               actions={
                 <DisclosureTrigger
                   className={buttonClasses("primary", "sm", { className: "px-4 font-bold" })}

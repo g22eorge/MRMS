@@ -99,7 +99,6 @@ export default async function ServiceHubPage() {
 
       <PageHeader
         title="Service Hub"
-        description="Field visits, technicians, and complaints"
         kpis={[
           { label: "Open Jobs", value: openJobs ?? "—", sub: "in progress", tone: "accent", href: "/jobs" },
           { label: "Pending Intake", value: pendingIntake ?? "—", sub: "awaiting intake", tone: (pendingIntake ?? 0) > 0 ? "warn" : "neutral", href: "/intake" },

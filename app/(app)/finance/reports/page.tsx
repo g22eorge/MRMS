@@ -67,7 +67,6 @@ export default async function FinanceReportsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Financial Reports"
-        description="Statements, analysis and export tools"
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {reports.map((r) => (
