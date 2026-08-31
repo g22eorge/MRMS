@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { plural } from "@/lib/plural";
 
@@ -45,11 +46,15 @@ const SEVERITY: Record<Severity, { label: string; dot: string; stripe: string; c
  * printed, being scanned, and being read by someone who cannot see the hue.
  */
 function KpiCard({
-  title, value, caption, tone = "neutral",
-}: { title: string; value: string; caption: string; tone?: Severity }) {
+  title, value, caption, tone = "neutral", href,
+}: { title: string; value: string; caption: string; tone?: Severity; href?: string }) {
   const s = SEVERITY[tone];
+  const Wrapper = (href ? Link : "section") as React.ElementType;
   return (
-    <section className="dc-card relative overflow-hidden px-3 py-2.5 pl-4">
+    <Wrapper
+      {...(href ? { href } : {})}
+      className={`dc-card relative block overflow-hidden px-3 py-2.5 pl-4 ${href ? "transition-colors hover:border-[var(--accent)]/40" : ""}`}
+    >
       {/* A severity stripe, so the state is legible before any text is read. */}
       <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] ${s.stripe}`} />
       {/* Title, value, then state. Stacked rather than title-and-chip on one
@@ -65,7 +70,7 @@ function KpiCard({
         </span>
       ) : null}
       <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{caption}</p>
-    </section>
+    </Wrapper>
   );
 }
 
@@ -101,7 +106,7 @@ function TodayStrip({
       </p>
       <div className="mt-2.5 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
         <div className="min-w-0">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Collected</p>
+          <Link href="/finance" className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)] transition-colors hover:text-[var(--accent)]">Collected</Link>
           <p className="mt-0.5 text-lg font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(today.collected, currency)}</p>
           <p className="text-[0.75rem] text-[var(--ink-muted)]">
             {today.collectedYesterday === 0 && today.collected === 0
@@ -111,7 +116,7 @@ function TodayStrip({
         </div>
 
         <div className="min-w-0">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Spent</p>
+          <Link href="/finance/expenses" className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)] transition-colors hover:text-[var(--accent)]">Spent</Link>
           <p className="mt-0.5 text-lg font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(today.spent, currency)}</p>
           <p className="text-[0.75rem] text-[var(--ink-muted)]">
             {formatMoneyCompact(today.expensesPaid, currency)} expenses · {formatMoneyCompact(today.supplierPaid, currency)} suppliers
@@ -126,6 +131,66 @@ function TodayStrip({
       </div>
     </section>
   );
+}
+
+/**
+ * A summary card whose rows go where the number came from.
+ *
+ * A page that reports "9 invoices overdue" and then makes you find the invoice
+ * list yourself is wasting its own insight. Every figure that has somewhere to
+ * act on it is a link now, and the row is the target rather than the number —
+ * a four-character count is a poor thing to ask anyone to hit.
+ *
+ * Rows without a destination stay plain text. An underline that leads nowhere
+ * is worse than no underline, and "Avg turnaround" is a fact rather than a
+ * place.
+ */
+function SummaryCard({ title, href, children }: { title: string; href?: string; children: React.ReactNode }) {
+  return (
+    <div className="dc-card px-3 py-2.5">
+      {href ? (
+        <Link href={href} className="group inline-flex items-center gap-1 text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)] transition-colors hover:text-[var(--accent)]">
+          {title}
+          <span aria-hidden className="opacity-0 transition-opacity group-hover:opacity-100">→</span>
+        </Link>
+      ) : (
+        <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title}</p>
+      )}
+      <dl className="mt-2 divide-y divide-[var(--line)]/60">{children}</dl>
+    </div>
+  );
+}
+
+/**
+ * One label-and-figure row.
+ *
+ * Values are right-aligned and tabular so the digits form a column the eye can
+ * run down — previously each row set its own number wherever the text ended,
+ * which is why the cards read as a wall.
+ */
+function Stat({ label, value, sub, href }: { label: string; value: string; sub?: string; href?: string }) {
+  const body = (
+    <>
+      <dt className="min-w-0 truncate text-[0.8125rem] text-[var(--ink-muted)] group-hover:text-[var(--ink)]">{label}</dt>
+      <dd className="shrink-0 text-right">
+        <span className="text-[0.8125rem] font-semibold tabular-nums text-[var(--ink)]">{value}</span>
+        {sub ? <span className="ml-1.5 text-[0.6875rem] font-medium tabular-nums text-[var(--ink-muted)]">{sub}</span> : null}
+      </dd>
+    </>
+  );
+  if (!href) return <div className="flex items-baseline justify-between gap-3 py-1.5">{body}</div>;
+  return (
+    <Link href={href} className="group -mx-1.5 flex items-baseline justify-between gap-3 rounded-md px-1.5 py-1.5 transition-colors hover:bg-[var(--panel-strong)]">
+      {body}
+    </Link>
+  );
+}
+
+/** A short delta, for beside a figure. The long form wrapped every first row. */
+function delta(current: number, previous: number): string | undefined {
+  if (previous === 0 && current === 0) return undefined;
+  const change = pctChange(current, previous);
+  return `${change >= 0 ? "+" : "−"}${Math.abs(change).toFixed(0)}%`;
 }
 
 /**
@@ -251,14 +316,15 @@ export default async function AiInsightsPage() {
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
+          href="/finance"
           title="Cash Received"
           value={formatMoneyCompact(finance.cashReceived, currency)}
           caption={`${trendLabel(finance.cashReceived, finance.cashReceivedPrev)} · ${formatMoneyCompact(finance.completedRepairValue, currency)} completed repair value`}
           tone={finance.cashReceived >= finance.cashReceivedPrev ? "good" : "serious"}
         />
-        <KpiCard title="Cash after costs" value={formatMoneyCompact(finance.cashMarginSignal, currency)} caption={`Expenses: ${formatMoneyCompact(finance.expenses, currency)} (${trendLabel(finance.expenses, finance.expensesPrev)})`} tone={finance.cashMarginSignal >= 0 ? "good" : "critical"} />
-        <KpiCard title="Open Pipeline" value={String(repairs.openJobs)} caption={`${repairs.overdueJobs} older than 7 days; ${repairs.staleJobs} stale updates`} tone={repairs.overdueJobs ? "serious" : "neutral"} />
-        <KpiCard title="Low stock" value={String(inventory.lowStockParts)} caption={`${formatMoneyCompact(inventory.inventoryValue, currency)} stock value; ${plural(inventory.openPurchaseOrders, "open purchase order")}`} tone={inventory.lowStockParts ? "warning" : "good"} />
+        <KpiCard href="/finance" title="Cash after costs" value={formatMoneyCompact(finance.cashMarginSignal, currency)} caption={`Expenses: ${formatMoneyCompact(finance.expenses, currency)} (${trendLabel(finance.expenses, finance.expensesPrev)})`} tone={finance.cashMarginSignal >= 0 ? "good" : "critical"} />
+        <KpiCard href="/jobs" title="Open Pipeline" value={String(repairs.openJobs)} caption={`${repairs.overdueJobs} older than 7 days; ${repairs.staleJobs} stale updates`} tone={repairs.overdueJobs ? "serious" : "neutral"} />
+        <KpiCard href="/inventory" title="Low stock" value={String(inventory.lowStockParts)} caption={`${formatMoneyCompact(inventory.inventoryValue, currency)} stock value; ${plural(inventory.openPurchaseOrders, "open purchase order")}`} tone={inventory.lowStockParts ? "warning" : "good"} />
       </section>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -267,52 +333,44 @@ export default async function AiInsightsPage() {
       </div>
 
       <section className="grid gap-4 xl:grid-cols-4">
-        <div className="dc-card px-3 py-2.5">
-          <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Repairs</p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">New jobs</dt><dd className="font-semibold text-[var(--ink)]">{repairs.jobsThisMonth} <span className="text-[0.75rem] font-medium text-[var(--ink-muted)]">({trendLabel(repairs.jobsThisMonth, repairs.jobsPrevMonth)})</span></dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Completed</dt><dd className="font-semibold text-[var(--ink)]">{repairs.completedThisMonth}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Avg turnaround</dt><dd className="font-semibold text-[var(--ink)]">{repairs.averageTurnaroundDays.toFixed(1)} days</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Completed repair value</dt><dd className="font-semibold text-[var(--ink)]">{formatMoneyCompact(finance.completedRepairValue, currency)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Repair collections</dt><dd className="font-semibold text-[var(--ink)]">{formatMoneyCompact(finance.cashReceivedByChannel.repairs, currency)}</dd></div>
-          </dl>
-        </div>
+        {/* Destinations are only attached where the route is known to show that
+            figure. Rows without one — an average, a value that is not itself a
+            list — stay plain, because a link that lands on an unfiltered page is
+            a small betrayal each time someone follows it. */}
+        <SummaryCard title="Repairs" href="/jobs">
+          <Stat label="New jobs" value={String(repairs.jobsThisMonth)} sub={delta(repairs.jobsThisMonth, repairs.jobsPrevMonth)} href="/jobs" />
+          <Stat label="Completed" value={String(repairs.completedThisMonth)} href="/jobs" />
+          <Stat label="Avg turnaround" value={`${repairs.averageTurnaroundDays.toFixed(1)} days`} />
+          <Stat label="Completed repair value" value={formatMoneyCompact(finance.completedRepairValue, currency)} />
+          <Stat label="Repair collections" value={formatMoneyCompact(finance.cashReceivedByChannel.repairs, currency)} />
+        </SummaryCard>
 
-        <div className="dc-card px-3 py-2.5">
-          <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Sales</p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">POS cash received</dt><dd className="font-semibold text-[var(--ink)]">{formatMoneyCompact(sales.posCashReceived, currency)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Invoice payments</dt><dd className="font-semibold text-[var(--ink)]">{formatMoneyCompact(sales.invoiceCashReceived, currency)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Open leads</dt><dd className="font-semibold text-[var(--ink)]">{sales.openLeads}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Pipeline value</dt><dd className="font-semibold text-[var(--ink)]">{formatMoneyCompact(sales.pipelineValue, currency)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Won leads</dt><dd className="font-semibold text-[var(--ink)]">{sales.wonLeads}</dd></div>
-          </dl>
-        </div>
+        <SummaryCard title="Sales" href="/sales">
+          <Stat label="POS cash received" value={formatMoneyCompact(sales.posCashReceived, currency)} href="/pos" />
+          <Stat label="Invoice payments" value={formatMoneyCompact(sales.invoiceCashReceived, currency)} href="/documents/invoices" />
+          <Stat label="Open leads" value={String(sales.openLeads)} href="/sales/leads" />
+          <Stat label="Pipeline value" value={formatMoneyCompact(sales.pipelineValue, currency)} href="/sales/leads" />
+          <Stat label="Won leads" value={String(sales.wonLeads)} href="/sales/leads" />
+        </SummaryCard>
 
-        <div className="dc-card px-3 py-2.5">
-          <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Finance</p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Expenses</dt><dd className="font-semibold text-[var(--ink)]">{formatMoneyCompact(finance.expenses, currency)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Receivables</dt><dd className="font-semibold text-[var(--ink)]">{formatMoneyCompact(finance.receivables, currency)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Payables</dt><dd className="font-semibold text-[var(--ink)]">{formatMoneyCompact(finance.payables, currency)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Target progress</dt><dd className="font-semibold text-[var(--ink)]">{targetProgress === null ? "No target" : `${targetProgress.toFixed(1)}%`}</dd></div>
-          </dl>
-        </div>
+        <SummaryCard title="Finance" href="/finance">
+          <Stat label="Expenses" value={formatMoneyCompact(finance.expenses, currency)} href="/finance/expenses" />
+          <Stat label="Receivables" value={formatMoneyCompact(finance.receivables, currency)} href="/documents/invoices" />
+          <Stat label="Payables" value={formatMoneyCompact(finance.payables, currency)} href="/finance" />
+          <Stat label="Target progress" value={targetProgress === null ? "No target" : `${targetProgress.toFixed(1)}%`} href="/targets" />
+        </SummaryCard>
 
-        <div className="dc-card px-3 py-2.5">
-          <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Active parts</dt><dd className="font-semibold text-[var(--ink)]">{inventory.activeParts}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Low stock</dt><dd className="font-semibold text-[var(--ink)]">{inventory.lowStockParts}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Stock value</dt><dd className="font-semibold text-[var(--ink)]">{formatMoneyCompact(inventory.inventoryValue, currency)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-[var(--ink-muted)]">Open POs</dt><dd className="font-semibold text-[var(--ink)]">{inventory.openPurchaseOrders}</dd></div>
-          </dl>
-        </div>
+        <SummaryCard title="Inventory" href="/inventory">
+          <Stat label="Active parts" value={String(inventory.activeParts)} href="/inventory" />
+          <Stat label="Low stock" value={String(inventory.lowStockParts)} href="/inventory" />
+          <Stat label="Stock value" value={formatMoneyCompact(inventory.inventoryValue, currency)} href="/inventory" />
+          <Stat label="Open POs" value={String(inventory.openPurchaseOrders)} href="/inventory/purchase-orders" />
+        </SummaryCard>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="dc-card px-3 py-2.5">
-          <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Job Status Distribution</p>
+          <Link href="/jobs" className="group inline-flex items-center gap-1 text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)] transition-colors hover:text-[var(--accent)]">Job Status Distribution<span aria-hidden className="opacity-0 transition-opacity group-hover:opacity-100">→</span></Link>
           {/* A distribution, drawn as one. As nine "status: count" rows you had
               to read every number and hold them in your head to see where work
               was piling up; the bar shows that shape before you read anything.
@@ -344,7 +402,7 @@ export default async function AiInsightsPage() {
         </div>
 
         <div className="dc-card px-3 py-2.5">
-          <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Top Low-Stock Parts</p>
+          <Link href="/inventory" className="group inline-flex items-center gap-1 text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)] transition-colors hover:text-[var(--accent)]">Top Low-Stock Parts<span aria-hidden className="opacity-0 transition-opacity group-hover:opacity-100">→</span></Link>
           {/* Not a distribution — a quantity against a threshold. "12/20" makes
               you do the arithmetic for every row; the bar shows how far below
               reorder level each part is, which is the actual question.
