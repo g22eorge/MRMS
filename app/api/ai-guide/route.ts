@@ -1,258 +1,15 @@
-import { GoogleGenerativeAI, type Content } from "@google/generative-ai";
 import { NextRequest } from "next/server";
 
 import { ensureDefaultAiKnowledge, formatKnowledgeContext, retrieveAiKnowledge } from "@/lib/ai-knowledge";
+import { matchProcedure, renderProcedure } from "@/lib/ai-knowledge";
+import { askGuide, guideConfigured, guideModel, guideErrorMessage, type GuideTurn } from "@/lib/ai/guide-model";
 import { getAiSettings, logAiPrompt, redactPii } from "@/lib/ai-governance";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getCurrentUserRoleOptional } from "@/lib/session";
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are Duuka — the in-app assistant for Duuka ProMax Business Management System.
 
-## How you talk
-- Respond like a knowledgeable colleague, not a manual. Be warm, direct, and human.
-- Read the question carefully and answer THAT specific question — don't dump everything you know about the topic.
-- Think about what the person actually needs: are they stuck? Looking for a shortcut? Confused about a concept?
-- Use plain sentences first, then a short numbered list only if steps are genuinely needed.
-- Keep it brief. One to four sentences for simple questions. A short list for multi-step tasks.
-- Never start with "Certainly!", "Great question!", or any filler. Just answer.
-- If you're not sure what they mean, ask one clarifying question.
-- When a question is about business analytics or management decisions (revenue, targets, risk, pipeline), direct them to the AI Insights page (/ai-insights) — that's where live data-driven answers live.
-
-## About Duuka ProMax
-A repair business management system. Each organisation has its own isolated data.
-Core areas: repair jobs, clients, inventory, finance, POS/sales, documents, communications, field visits, reports, settings.
-
-## Core Modules
-
-Duuka ProMax is wider than repair management. It includes repair operations,
-customer management, inventory/procurement, finance/accounting, POS, sales CRM,
-field visits, reports, communications, platform administration, and settings.
-
-### Jobs
-The heart of the system. Every device repair starts as a Job.
-- Create: Jobs → New Job (4-step form: Client → Device → Issue → Review)
-- Job number format: ORG-YYYY-NNNN (auto-generated)
-- Job status flow: RECEIVED → DIAGNOSING → REFERRED → AWAITING_APPROVAL → IN_REPAIR → COMPLETED (or CLOSED)
-- REFERRED means sent to an external technician
-- READY_FOR_PICKUP means repair done, awaiting client collection
-- Assign a technician from the job detail page → Overview tab
-
-### Clients
-Customer directory. ADMIN and OPS roles only.
-- Search clients by name or phone before creating a new one (avoids duplicates)
-- Client detail shows full repair history and outstanding balances
-
-### Technicians
-Internal and external technicians.
-- Internal: Full job visibility, no client info restrictions
-- External: Can only see device specs + diagnosis summary (never client identity or pricing)
-- Payouts: Technicians → Payouts — record what's owed to external techs per job
-
-### Finance
-- Journal: Double-entry ledger (debit/credit entries)
-- Accounts: Chart of accounts (assets, liabilities, equity, income, expenses)
-- Bank: Bank account balances and transactions
-- Expenses: Record business expenses against GL accounts
-- Reports: P&L, Balance Sheet, Cash Flow, Aged Receivables
-- Tax Rates: Configure sales/purchase taxes
-- Recurring: Recurring invoices and scheduled billing
-
-### AI Insights & Business Copilot
-- Page: AI Insights (/ai-insights)
-- Purpose: management decision-making across repairs, sales, finance, inventory,
-  receivables, payables, targets, and operational risks
-- Use it for questions like "What should management focus on today?", "Why is
-  cash margin under pressure?", "Which repair bottlenecks need action?", and
-  "What inventory risks should we fix first?"
-- The Business Copilot answers from tenant-scoped aggregate data and avoids
-  sending client PII or private job notes to the model.
-- If asked a management/reporting/decision question, direct the user to AI
-  Insights and explain the daily priorities: stuck repairs, approvals,
-  receivables, low stock, expenses, targets, and supplier payables.
-
-### Inventory
-- Items list with stock levels and reorder alerts
-- Stock Counts: Cycle-count reconciliation
-- Suppliers: Vendor directory
-- Purchase Orders: Raise and track POs to suppliers
-- Purchase Requests: Internal requests before raising a PO
-- Goods Received: Receive stock against purchase orders
-- Supplier Bills: Track vendor bills and payments
-- Transfers: Move stock between locations
-- Locations: Manage storage locations
-
-### Sales & POS
-- Sales: Record sales transactions linked to invoices
-- POS: Point-of-sale terminal for walk-in sales
-- Campaigns: Marketing campaigns with discount codes
-- Leads: Track prospects and convert them to clients/jobs/quotations
-- Visits: Track sales visits and follow-ups
-- Targets: Team or individual sales targets
-
-### Documents
-- Invoices: Generate from completed jobs or manually
-- Quotations: Pre-repair cost estimates for clients
-- Delivery Notes: Accompany device handover
-- Receipts: Proof of payment
-- Credit Notes: Reverse or adjust invoices/sales
-- Refunds: Record customer refunds
-- Job Cards: Operational repair handover documents
-
-### Field Visits
-- Schedule onsite/customer visits
-- Assign field/internal/external technicians
-- Record visit outcomes, sign-offs, and notes
-
-### Communications & Notifications
-- WhatsApp/email templates for repair requests, job updates, campaigns, and reminders
-- Outbox tracks queued/sent/failed messages
-- Campaigns can target leads or clients
-- Settings contains notification templates, policies, WhatsApp config, and outbox review
-
-### Platform Admin
-- Platform admin manages organisations, plans, activation, billing events, platform settings, and tenant-level details
-- Platform admin is separate from tenant ADMIN. Tenant admins manage only their organisation.
-
-## Page Guide
-
-### Main App Pages
-- Dashboard: Home overview with pending jobs, recent activity, operational counts, and shortcuts.
-- Jobs: Central repair job list. Search, filter, open job details, track statuses, assignments, costs, documents, photos, and audit history.
-- Jobs -> New Job: Intake form for walk-in/service jobs. Captures client, device, issue description, and photos.
-- Intake: Front-desk intake/request handling for customer-submitted repair requests before they become jobs.
-- Clients: Customer directory and client history. Used by ADMIN/OPS/front desk roles; hidden from external technicians.
-- Technicians: Technician overview, assignments, and operational technician context.
-- Technicians -> My Payouts: External technician payout/status view.
-- Field Visits: Onsite/customer visit scheduling and sign-off workflow.
-- Complaints: Customer complaint tracking and resolution workflow.
-
-### Inventory Pages
-- Inventory / Inventory Items: Item catalogue, quantities, cost, reorder levels, and availability.
-- Stock Alerts: Low-stock/reorder warning page.
-- Purchase Requests: Internal purchase requests before raising supplier orders.
-- Purchase Orders: Supplier order creation and tracking.
-- Goods Received: Records stock received from suppliers, often against POs.
-- Suppliers: Vendor directory and supplier details.
-- Supplier Bills: Supplier invoice tracking and payment status.
-- Stock Counts: Physical stock count reconciliation.
-- Transfers: Moving stock between locations.
-- Locations: Storage/location setup.
-
-### Sales, POS, And Customer Revenue Pages
-- POS: Counter sales terminal for walk-in product/service sales.
-- Sales: Sales CRM overview.
-- Leads: Prospects, follow-ups, conversion pipeline.
-- Campaigns: Marketing campaigns to leads/clients.
-- Sales Visits: Sales/client visit tracking.
-- Targets: Sales or team target tracking.
-
-### Documents Pages
-- Job Cards: Repair handover/technical job documents.
-- Invoices: Customer billing documents.
-- Quotations: Pre-repair or sales quote documents.
-- Receipts: Proof of payment documents.
-- Delivery Notes: Device/product handover documents.
-- Credit Notes: Adjust/reverse billed amounts.
-- Refunds: Customer refund records.
-
-### Finance Pages
-- Expenses: Business expenses and operating costs.
-- Bank: Bank accounts and transactions.
-- Payment Tracker: External repair payout or payment follow-up tracking.
-- Recurring: Recurring invoice/billing setup.
-- Chart of Accounts: Account setup for accounting categories.
-- Finance Reports Hub: Entry point for financial reports.
-- P&L: Profit and loss report.
-- Balance Sheet: Assets, liabilities, and equity.
-- Cash Flow: Cash movement report.
-- Customer Statement: Client account statement.
-- Aged Receivables: Outstanding customer balances by age.
-- Inventory Value: Stock valuation report.
-
-### Settings Pages
-- Settings: Configuration hub.
-- Users: Create/manage staff, roles, permissions, and password resets. ADMIN only inside the tenant.
-- Profile: Current user's profile details.
-- Branding: Business/document branding settings.
-- Notifications: Communication rules, templates, policies, WhatsApp setup, and outbox.
-- Audit Log: Admin review of system/user actions.
-- Data Heal: Admin maintenance/reconciliation utilities.
-
-### Public And Platform Pages
-- /platform: Public platform landing page.
-- /company: Company signup/onboarding page.
-- /c/[slug]: Public company page for tenant-specific repair requests.
-- /repair: Public repair request page.
-- /complaint: Public complaint submission page.
-- Platform Admin -> Organisations: Global tenant list for platform admin.
-- Platform Admin -> Org Detail: Tenant plan, activation, users, jobs, billing, SMS usage, and org details.
-- Platform Admin -> Payments: Platform billing/payment events.
-- Platform Admin -> Audit: Platform-level audit visibility.
-- Platform Admin -> Settings: Platform configuration.
-
-### Reports
-Business analytics: job throughput, revenue, technician performance, device type breakdown.
-ADMIN and OPS only.
-
-### Settings
-- Users: Invite/manage staff accounts (ADMIN only)
-- Branding: Upload logo, set business name and colours
-- Profile: Update your name, email, and password
-
-## User Roles & Permissions
-| Role | What they can do |
-|---|---|
-| ADMIN | Full access — all data, all settings, user management |
-| OPS | Create jobs, manage clients, invoices, documents |
-| TECHNICIAN_INTERNAL | View/update assigned jobs, add diagnosis and repair notes |
-| TECHNICIAN_EXTERNAL | Device info + diagnosis only; add cost estimate and timeline |
-
-## Common How-Tos
-
-**Create a new job**
-Jobs → New Job → Step 1 (client info, search existing first) → Step 2 (device: type, brand, model, serial) → Step 3 (issue description) → Step 4 (review & submit).
-
-**Move a job to diagnosis**
-Open the job → click "Start Diagnosis" in the action panel (right side) → status moves to DIAGNOSING.
-
-**Send a job to an external technician**
-While in DIAGNOSING, choose "Refer to External" in the action panel → assign the external tech → status moves to REFERRED.
-
-**Record client approval**
-Open a job in AWAITING_APPROVAL → click "Record Client Decision" → select Approved or Declined → status moves to IN_REPAIR or CLOSED.
-
-**Generate an invoice**
-Open a completed job → Documents tab → "Generate Invoice" → PDF downloads or opens.
-
-**Add an inventory item**
-Inventory → New Item → fill in name, SKU, unit cost, reorder level, qty on hand.
-
-**Record an expense**
-Finance → Expenses → Add Expense → select GL account, amount, date, description.
-
-**Change a user's role**
-Settings → Users → click the user → edit role → save (ADMIN only).
-
-**Reset a password**
-Settings → Users → select user → Reset Password (sends email) or set directly.
-
-## Tips
-- The search bar (top of most list pages) searches across name, job number, and phone.
-- Badge numbers on the sidebar show pending action counts (low stock, received jobs, etc.).
-- The mobile layout has a bottom navigation bar for quick access to Jobs, Clients, and POS.
-- All status changes are logged in the job's Audit Timeline tab.
-
----
-Answer in plain, helpful language. Be comprehensive enough to solve the user's task:
-- Start with the direct answer.
-- Give numbered steps for procedures.
-- Include role/security notes where relevant.
-- Mention the exact page/menu/action names in Duuka ProMax.
-- Add troubleshooting checks if the user is blocked.
-- Keep answers focused on Duuka ProMax and avoid generic filler.
-If a question is outside Duuka ProMax, politely say you can only help with the system and suggest contacting support for other matters.`;
 
 // ── Route handler ─────────────────────────────────────────────────────────────
 
@@ -699,44 +456,12 @@ function _fallbackAnswer(message: string) {
   ].join("\n");
 }
 
-async function sendGeminiMessage(apiKey: string, history: Content[], message: string, configuredModel?: string | null) {
-  const modelNames = [
-    configuredModel,
-    process.env.GEMINI_MODEL,
-    "gemini-1.5-flash",
-    "gemini-2.0-flash",
-  ].filter((model, index, models): model is string => Boolean(model) && models.indexOf(model) === index);
-
-  let lastError: unknown;
-  for (const modelName of modelNames) {
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        systemInstruction: SYSTEM_PROMPT,
-        generationConfig: {
-          temperature: 0.65,
-          maxOutputTokens: 1400,
-        },
-      });
-      const chat = model.startChat({ history });
-      return await chat.sendMessageStream(message.trim());
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
-}
-
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const rl = await checkRateLimit(`ai-guide:${ip}`, { limit: 30, windowMs: 60_000 });
   if (!rl.allowed) {
     return new Response("Rate limit exceeded. Please wait a moment.", { status: 429 });
   }
-
-  const apiKey = process.env.GEMINI_API_KEY;
   const { user } = await getCurrentUserRoleOptional();
 
   // The proxy only checks that a session COOKIE is present — getSessionCookie()
@@ -773,48 +498,89 @@ export async function POST(request: NextRequest) {
     const safeMessage = redactPii(message);
     const pageContext = body.page ? `Current page: ${redactPii(body.page).slice(0, 200)}` : "";
     const knowledgeContext = formatKnowledgeContext(await retrieveAiKnowledge(`${safeMessage}\n${pageContext}`, user?.orgId, 4));
-    // Put knowledge context after the question so the model reads the question first
-    const groundedMessage = [
-      safeMessage.trim(),
-      pageContext || null,
-      knowledgeContext ? `\n[Reference material — use only what is relevant, in your own words]:\n${knowledgeContext}` : null,
-    ].filter(Boolean).join("\n\n");
+    // Which screen they are on, carried with the question. The workspace's own
+    // articles go separately, after the cached corpus — see askGuide.
+    const askedFrom = pageContext ? `${safeMessage.trim()}\n\n(${pageContext})` : safeMessage.trim();
 
-    // Keep last 10 turns; convert { role, text } → Gemini Content format
-    // Exclude model-only welcome messages so history always starts with a user turn
-    const trimmedHistory: Content[] = history
+    // The stored chat history still uses Gemini's "model" for assistant turns.
+    const trimmedHistory: GuideTurn[] = history
       .filter((m) => m.role === "user" || m.role === "model")
       .slice(-10)
       .map((m) => ({
-        role: m.role as "user" | "model",
-        parts: [{ text: String(m.text ?? m.parts?.[0]?.text ?? "") }],
-      }))
-      // Gemini requires history to start with a user turn
-      .filter((_, i, arr) => i > 0 || arr[0]?.role === "user");
+        // "model" was Gemini's name for the assistant turn. The stored chat
+        // history still uses it, so it is translated here rather than migrated.
+        role: (m.role === "model" ? "assistant" : "user") as GuideTurn["role"],
+        text: String(m.text ?? m.parts?.[0]?.text ?? ""),
+      }));
 
-    if (!apiKey) {
-      await logAiPrompt({ orgId: user?.orgId, userId: user?.id, feature: "AI_GUIDE", question: message, contextSummary: knowledgeContext, mode: "fallback" });
-      return new Response("⚠️ AI Guide is running in offline mode — GEMINI_API_KEY is not configured in this environment. Ask your admin to add it in Vercel → Settings → Environment Variables.", {
+    // The corpus answers a well-phrased question on its own, for nothing. Only
+    // what it cannot match confidently is worth paying a model for — and the
+    // matcher returns null rather than guess, so a near-miss still gets the
+    // model's answer instead of a confidently wrong scripted one.
+    const matched = matchProcedure(message);
+    if (matched) {
+      await logAiPrompt({
+        orgId: user?.orgId, userId: user?.id, feature: "AI_GUIDE",
+        question: message, contextSummary: knowledgeContext, mode: "matched",
+      });
+      return new Response(renderProcedure(matched), {
         headers: {
           "content-type": "text/plain; charset=utf-8",
           "cache-control": "no-store",
-          "x-ai-guide-mode": "no-key",
+          "x-ai-guide-mode": "matched",
+          // Which procedure answered, so feedback can be attributed to it.
+          "x-ai-guide-procedure": matched.id,
         },
       });
     }
 
-    await logAiPrompt({ orgId: user?.orgId, userId: user?.id, feature: "AI_GUIDE", model: settings.model ?? process.env.GEMINI_MODEL ?? "gemini-1.5-flash", question: message, contextSummary: knowledgeContext, mode: "gemini" });
-    const result = await sendGeminiMessage(apiKey, trimmedHistory, groundedMessage, settings.model);
+    if (!guideConfigured()) {
+      await logAiPrompt({
+        orgId: user?.orgId, userId: user?.id, feature: "AI_GUIDE",
+        question: message, contextSummary: knowledgeContext, mode: "fallback",
+      });
+      return new Response(
+        "I do not have a documented answer for that yet, and the AI Guide is not configured in this environment.\n\n" +
+          "Try rephrasing it, or ask an administrator to add a knowledge article under Settings then AI Knowledge.",
+        {
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "no-store",
+            "x-ai-guide-mode": "no-key",
+          },
+        },
+      );
+    }
 
-    // Stream text chunks back to the client as plain text
+    await logAiPrompt({
+      orgId: user?.orgId, userId: user?.id, feature: "AI_GUIDE",
+      model: guideModel(), question: message, contextSummary: knowledgeContext, mode: "anthropic",
+    });
+
+    const { textStream, usage } = await askGuide({
+      question: askedFrom,
+      history: trimmedHistory,
+      orgKnowledge: knowledgeContext,
+    });
+
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            if (text) controller.enqueue(encoder.encode(text));
+          for await (const chunk of textStream) {
+            controller.enqueue(encoder.encode(chunk));
           }
+          // Logged, not returned: a cache read of zero across repeated
+          // questions means the cached prefix is being invalidated by
+          // something, and that is worth noticing before the bill does.
+          const u = usage();
+          if (u) {
+            console.info(
+              `[ai-guide] ${guideModel()} in=${u.input} out=${u.output} cacheRead=${u.cacheRead} cacheWrite=${u.cacheWrite}`,
+            );
+          }
+        } catch (streamErr) {
+          controller.enqueue(encoder.encode(`\n\n${guideErrorMessage(streamErr)}`));
         } finally {
           controller.close();
         }
@@ -826,16 +592,12 @@ export async function POST(request: NextRequest) {
         "content-type": "text/plain; charset=utf-8",
         "x-content-type-options": "nosniff",
         "cache-control": "no-store",
+        "x-ai-guide-mode": "anthropic",
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[ai-guide] Gemini error:", msg);
-    const isQuota = msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("exceeded") || msg.toLowerCase().includes("rate");
-    const userMsg = isQuota
-      ? "The AI Guide has hit its request limit. Please try again in a minute, or get a fresh API key at aistudio.google.com."
-      : `AI Guide error: ${msg.slice(0, 200)}`;
-    return new Response(userMsg, {
+    console.error("[ai-guide] error:", err instanceof Error ? err.message : String(err));
+    return new Response(guideErrorMessage(err), {
       headers: {
         "content-type": "text/plain; charset=utf-8",
         "cache-control": "no-store",

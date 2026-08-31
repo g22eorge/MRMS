@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest } from "next/server";
 
 import { ensureDefaultAiKnowledge, formatKnowledgeContext, retrieveAiKnowledge } from "@/lib/ai-knowledge";
 import { buildBusinessDataPack, changePhrase, type BusinessDataPack } from "@/lib/ai/business-metrics";
+import { askCopilot, copilotConfigured, copilotModel, copilotErrorNote } from "@/lib/ai/copilot-model";
 import { getAiSettings, logAiPrompt, redactPii } from "@/lib/ai-governance";
 import { can } from "@/lib/permissions";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -10,22 +10,7 @@ import { getCurrentUserRoleOptional } from "@/lib/session";
 
 export const runtime = "nodejs";
 
-const SYSTEM_PROMPT = `You are the Duuka ProMax Business Copilot for owners and managers.
 
-The user can already see the raw numbers on their dashboard — do NOT restate them.
-Your only job is to INTERPRET the data: spot what is abnormal, explain why it matters,
-and recommend specific actions.
-
-Rules:
-- Never repeat or summarise numbers the manager already sees on screen.
-- Skip generic phrases like "revenue is X" or "you have Y open jobs" — they already know.
-- Lead with the most important insight or risk, not a data recap.
-- Be direct and specific. Name the pattern, the risk, and the action.
-- Use only the supplied tenant-scoped metrics. Never invent data, client names, or job notes.
-- If a metric is zero or healthy, skip it — only flag what needs attention.
-- Respond in plain language with short sections. Use Risks and Recommended Actions only
-  when there are real issues. If everything is healthy, say so in one sentence.
-- If data is insufficient, name exactly which Duuka ProMax page has the missing information.`;
 
 function formatAmount(value: number, currency: string) {
   return `${currency} ${Math.round(value).toLocaleString()}`;
@@ -158,37 +143,6 @@ function fallbackAnswer(question: string, data: BusinessDataPack) {
   return lines.filter((l) => l !== undefined).join("\n\n");
 }
 
-async function askGemini(apiKey: string, question: string, dataPack: BusinessDataPack, knowledgeContext = "", configuredModel?: string | null) {
-  const modelNames = [
-    configuredModel,
-    process.env.GEMINI_MODEL,
-    "gemini-1.5-flash",
-    "gemini-2.0-flash",
-  ].filter((model, index, models): model is string => Boolean(model) && models.indexOf(model) === index);
-
-  let lastError: unknown;
-  for (const modelName of modelNames) {
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        systemInstruction: SYSTEM_PROMPT,
-        generationConfig: { temperature: 0.2, maxOutputTokens: 1600 },
-      });
-      const result = await model.generateContent([
-        `Manager question: ${question}`,
-        knowledgeContext ? `Relevant Duuka ProMax knowledge base articles:\n${knowledgeContext}` : "",
-        `Tenant-scoped aggregate metrics JSON:\n${JSON.stringify(dataPack, null, 2)}`,
-      ].filter(Boolean));
-      return result.response.text().trim();
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
-}
-
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const rl = await checkRateLimit(`ai-business-copilot:${ip}`, { limit: 20, windowMs: 60_000 });
@@ -213,11 +167,13 @@ export async function POST(request: NextRequest) {
   if (question.length > 1200) return new Response("Question is too long (max 1200 characters).", { status: 400 });
 
   const dataPack = await buildBusinessDataPack(user.orgId);
-  const apiKey = process.env.GEMINI_API_KEY;
   await ensureDefaultAiKnowledge();
   const knowledgeContext = formatKnowledgeContext(await retrieveAiKnowledge(question, user.orgId, 4));
 
-  if (!apiKey) {
+  // The rules-based answer is always available and costs nothing. It is the
+  // answer when the model is not configured, and the answer when it fails —
+  // so this feature degrades to something useful rather than to an error.
+  if (!copilotConfigured()) {
     await logAiPrompt({ orgId: user.orgId, userId: user.id, feature: "AI_BUSINESS_COPILOT", question, contextSummary: knowledgeContext, mode: "fallback" });
     return new Response(fallbackAnswer(question, dataPack), {
       headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-ai-mode": "fallback" },
@@ -225,21 +181,33 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await logAiPrompt({ orgId: user.orgId, userId: user.id, feature: "AI_BUSINESS_COPILOT", model: settings.model ?? process.env.GEMINI_MODEL ?? "gemini-1.5-flash", question, contextSummary: knowledgeContext, mode: "gemini" });
-    const text = await askGemini(apiKey, question, dataPack, knowledgeContext, settings.model);
-    return new Response(text || fallbackAnswer(question, dataPack), {
-      headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+    await logAiPrompt({
+      orgId: user.orgId, userId: user.id, feature: "AI_BUSINESS_COPILOT",
+      model: copilotModel(), question, contextSummary: knowledgeContext, mode: "anthropic",
     });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error("[ai-business-copilot] Gemini error:", msg);
-    const isQuota = msg.includes("429") || msg.toLowerCase().includes("quota");
-    if (isQuota) {
-      return new Response("The AI Copilot has hit its request limit. Please try again in a minute, or check the Gemini API quota at aistudio.google.com.", {
-        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-ai-mode": "quota" },
+
+    const result = await askCopilot({ question, dataPack, orgKnowledge: knowledgeContext });
+    if (!result) {
+      // No usable answer — the rules know the same numbers.
+      return new Response(fallbackAnswer(question, dataPack), {
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-ai-mode": "fallback" },
       });
     }
-    return new Response(fallbackAnswer(question, dataPack), {
+
+    // A cache read of zero across repeated questions means the stable prefix is
+    // being invalidated by something, which is worth noticing before the bill.
+    const u = result.usage;
+    console.info(
+      `[ai-copilot] ${copilotModel()} in=${u.input} out=${u.output} cacheRead=${u.cacheRead} cacheWrite=${u.cacheWrite}`,
+    );
+
+    return new Response(result.text, {
+      headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-ai-mode": "anthropic" },
+    });
+  } catch (error) {
+    console.error("[ai-copilot] error:", error instanceof Error ? error.message : String(error));
+    const note = copilotErrorNote(error);
+    return new Response(note ? `${note}\n\n${fallbackAnswer(question, dataPack)}` : fallbackAnswer(question, dataPack), {
       headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-ai-mode": "fallback" },
     });
   }
