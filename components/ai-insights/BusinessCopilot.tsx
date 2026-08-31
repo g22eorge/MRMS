@@ -144,7 +144,7 @@ export function BusinessCopilot() {
   }
 
   return (
-    <section className="dc-card flex flex-col overflow-hidden">
+    <section className="dc-card flex h-full flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--panel-strong)]/60 px-4 py-3">
         <div className="flex items-center gap-2.5">
@@ -165,8 +165,15 @@ export function BusinessCopilot() {
       {/* Message thread */}
       <div
         ref={scrollRef}
-        className={`space-y-4 overflow-y-auto px-4 ${messages.length ? "flex-1 py-4" : "py-0"}`}
-        style={messages.length ? { minHeight: 240, maxHeight: 420 } : undefined}
+        // flex-1 always, so an empty thread is what pushes the starters and
+        // the composer to the bottom of the panel. min-h-0 is what lets a flex
+        // child scroll instead of growing past its parent.
+        //
+        // The height cap applies to the stacked layout only: there the card
+        // sits in normal flow with no height to fill, so an uncapped thread
+        // would grow without bound. In the panel the panel supplies the height.
+        className={`min-h-0 flex-1 space-y-4 overflow-y-auto px-4 max-h-[420px] xl:max-h-none ${messages.length ? "py-4" : "py-0"}`}
+        style={messages.length ? { minHeight: 240 } : undefined}
       >
         {messages.map((msg, index) => (
           <div key={index} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
@@ -241,8 +248,18 @@ export function BusinessCopilot() {
         )}
       </div>
 
-      {/* Suggested questions */}
-      <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-4 py-2.5">
+      {/* Conversation starters.
+          Shown only before the conversation begins. Seven of them are a way in
+          when the panel is empty; once you are three questions deep they are
+          clutter sitting between you and the thread you are reading. A label
+          says what they are, so they read as offered rather than as controls
+          you were meant to have pressed. */}
+      {messages.length === 0 ? (
+      <div className="border-t border-[var(--line)] px-4 py-3">
+        <p className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">
+          Start with
+        </p>
+        <div className="flex flex-wrap gap-1.5">
         {SUGGESTED.map((q) => (
           <button
             key={q}
@@ -259,7 +276,9 @@ export function BusinessCopilot() {
             {q}
           </button>
         ))}
+        </div>
       </div>
+      ) : null}
 
       {/* Input */}
       <form onSubmit={submit} className="flex items-end gap-2 border-t border-[var(--line)] px-4 py-3">

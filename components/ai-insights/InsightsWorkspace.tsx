@@ -47,10 +47,17 @@ export function InsightsWorkspace({
           useDefaultLayout hook with a storage implementation, which needs care
           around server rendering — worth adding deliberately rather than
           bolting on here unverified. */}
-      <div className="hidden xl:block">
+      <div className="hidden h-[calc(100vh-11rem)] xl:block">
         <ResizablePanelGroup
           orientation="horizontal"
-          className="min-h-[calc(100vh-11rem)] items-stretch"
+          // No height class here: the library sets height:100% inline on the
+          // group, and an inline style beats a class — so h-* on this element
+          // is silently ignored. The height lives on the wrapper above, which
+          // is what that 100% then resolves against. Without it the group
+          // takes its height from the left column's content (measured at
+          // 1284px against a 720px window) and the composer lands below the
+          // fold.
+          className="items-stretch"
         >
           <ResizablePanel defaultSize="62%" minSize="40%" className="min-w-0">
             <div className="h-full overflow-y-auto pr-1">
