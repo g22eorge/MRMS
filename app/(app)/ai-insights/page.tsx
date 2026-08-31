@@ -70,6 +70,65 @@ function KpiCard({
 }
 
 /**
+ * Today, at the top, because it is the question asked most often.
+ *
+ * "How much have I collected today?" is what someone asks at closing time, and
+ * until now the page could not answer it — every figure was a calendar month,
+ * so the smallest window was "this month so far".
+ *
+ * Deliberately without severity chips, unlike everything below it. A partial
+ * day cannot be judged: at nine in the morning you have collected nothing and
+ * spent nothing, and painting that red would be noise that teaches people to
+ * ignore the colours that do mean something. Today is reported; the month is
+ * assessed.
+ */
+function TodayStrip({
+  today, currency,
+}: {
+  today: { date: string; collected: number; collectedYesterday: number; spent: number; expensesPaid: number; supplierPaid: number; netCash: number };
+  currency: string;
+}) {
+  const vsYesterday = today.collected - today.collectedYesterday;
+  const day = new Date(`${today.date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  return (
+    <section className="dc-card px-4 py-3">
+      {/* The date is a header, and the three figures a grid — as an inline flex
+          row the fourth item wrapped alone onto its own line, which read as a
+          mistake rather than a layout. A grid wraps two-and-two, which looks
+          deliberate at any width. */}
+      <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+        Today <span className="ml-1.5 font-normal normal-case tracking-normal text-[var(--ink-muted)]/80">{day}</span>
+      </p>
+      <div className="mt-2.5 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+        <div className="min-w-0">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Collected</p>
+          <p className="mt-0.5 text-lg font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(today.collected, currency)}</p>
+          <p className="text-[0.75rem] text-[var(--ink-muted)]">
+            {today.collectedYesterday === 0 && today.collected === 0
+              ? "nothing yesterday either"
+              : `${vsYesterday >= 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(vsYesterday), currency)} vs yesterday`}
+          </p>
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Spent</p>
+          <p className="mt-0.5 text-lg font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(today.spent, currency)}</p>
+          <p className="text-[0.75rem] text-[var(--ink-muted)]">
+            {formatMoneyCompact(today.expensesPaid, currency)} expenses · {formatMoneyCompact(today.supplierPaid, currency)} suppliers
+          </p>
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Net</p>
+          <p className="mt-0.5 text-lg font-bold tabular-nums text-[var(--ink)]">{formatMoneyCompact(today.netCash, currency)}</p>
+          <p className="text-[0.75rem] text-[var(--ink-muted)]">collected less spent</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
  * The risk list: ordered by severity, and showing it.
  *
  * Previously every item was an identical bordered box, so nine overdue invoices
@@ -188,6 +247,8 @@ export default async function AiInsightsPage() {
       copilot={<BusinessCopilot />}
       figures={
         <>
+      <TodayStrip today={data.today} currency={currency} />
+
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           title="Cash Received"
