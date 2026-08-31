@@ -329,9 +329,9 @@ export default async function AiInsightsPage() {
                 {rows.map((item) => (
                   <div key={item.status} className="flex items-center gap-2.5 text-sm">
                     <span className="w-[42%] shrink-0 truncate text-[0.8125rem] text-[var(--ink-muted)]">{statusLabel(item.status)}</span>
-                    <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--panel-strong)]">
+                    <span className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--panel-strong)] ring-1 ring-inset ring-[var(--line)]">
                       <span
-                        className="block h-full rounded-full bg-[var(--accent)]/70"
+                        className="block h-full rounded-full bg-[var(--accent)]"
                         style={{ width: `${Math.max(item.count > 0 ? 6 : 0, (item.count / max) * 100)}%` }}
                       />
                     </span>
@@ -366,10 +366,10 @@ export default async function AiInsightsPage() {
                       {out ? "Out of stock" : `${part.qtyOnHand} of ${part.reorderLevel}`}
                     </span>
                   </div>
-                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-strong)]">
+                  <span className="mt-1 block h-2 w-full overflow-hidden rounded-full bg-[var(--panel-strong)] ring-1 ring-inset ring-[var(--line)]">
                     <span
                       className={`block h-full rounded-full ${out ? "bg-red-500" : "bg-amber-500"}`}
-                      style={{ width: `${out ? 100 : Math.max(4, pct)}%`, opacity: out ? 0.35 : 1 }}
+                      style={{ width: `${out ? 100 : Math.max(4, pct)}%` }}
                     />
                   </span>
                 </div>
