@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { plural } from "@/lib/plural";
 
 import { BusinessCopilot } from "@/components/ai-insights/BusinessCopilot";
+import { InsightsWorkspace } from "@/components/ai-insights/InsightsWorkspace";
 import { buildBusinessDataPack, pctChange, trendLabel } from "@/lib/ai/business-metrics";
 import { formatMoneyCompact } from "@/lib/currency";
 import { can } from "@/lib/permissions";
@@ -78,7 +79,10 @@ export default async function AiInsightsPage() {
   ].filter((item): item is string => Boolean(item));
 
   return (
-    <div className="space-y-4">
+    <InsightsWorkspace
+      copilot={<BusinessCopilot />}
+      figures={
+        <>
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           title="Cash Received"
@@ -90,8 +94,6 @@ export default async function AiInsightsPage() {
         <KpiCard title="Open Pipeline" value={String(repairs.openJobs)} caption={`${repairs.overdueJobs} older than 7 days; ${repairs.staleJobs} stale updates`} tone={repairs.overdueJobs ? "risk" : "neutral"} />
         <KpiCard title="Low stock" value={String(inventory.lowStockParts)} caption={`${formatMoneyCompact(inventory.inventoryValue, currency)} stock value; ${plural(inventory.openPurchaseOrders, "open purchase order")}`} tone={inventory.lowStockParts ? "risk" : "good"} />
       </section>
-
-      <BusinessCopilot />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <InsightCard title="Needs your attention" items={risks} empty="Nothing needs chasing right now." />
@@ -168,6 +170,8 @@ export default async function AiInsightsPage() {
           </div>
         </div>
       </section>
-    </div>
+        </>
+      }
+    />
   );
 }
