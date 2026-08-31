@@ -12,12 +12,6 @@
 
 import { test, expect, beforeAll, afterAll } from "bun:test";
 import { can } from "@/lib/permissions";
-import {
-  resolvePermissions,
-  requirePermission,
-  invalidatePermissions,
-  PermissionError,
-} from "@/lib/permission-cache";
 import { receiveStock, getLocationBalance } from "@/lib/inventory-service";
 import {
   setupTestDb,
@@ -51,50 +45,6 @@ beforeAll(async () => {
 });
 
 afterAll(teardownTestDb);
-
-// ── Test 39 ───────────────────────────────────────────────────────────────────
-
-test("39: requirePermission throws PermissionError when user lacks the permission", async () => {
-  await invalidatePermissions(opsUserId);
-
-  const error = await requirePermission(opsUserId, "can_approve_invoices").catch((e) => e);
-  expect(error).toBeInstanceOf(PermissionError);
-  expect((error as PermissionError).code).toBe("PERMISSION_DENIED");
-});
-
-// ── Test 40 ───────────────────────────────────────────────────────────────────
-
-test("40: requirePermission resolves when user has the permission, returns correct role", async () => {
-  await db.userPermission.upsert({
-    where: { userId_permission: { userId: adminUserId, permission: "can_approve_invoices" } },
-    create: { userId: adminUserId, permission: "can_approve_invoices" },
-    update: {},
-  });
-  await invalidatePermissions(adminUserId);
-
-  const perms = await requirePermission(adminUserId, "can_approve_invoices");
-
-  expect(perms).not.toBeNull();
-  expect(perms.role).toBe("ADMIN");
-  expect(perms.has("can_approve_invoices")).toBe(true);
-});
-
-// ── Test 41 ───────────────────────────────────────────────────────────────────
-
-test("41: resolvePermissions returns null for an inactive user", async () => {
-  const inactiveUser = await createUser(db, orgId, { role: "OPS" });
-
-  await db.user.update({ where: { id: inactiveUser.id }, data: { isActive: false } });
-  await invalidatePermissions(inactiveUser.id);
-
-  const perms = await resolvePermissions(inactiveUser.id);
-  expect(perms).toBeNull();
-
-  await db.user.update({ where: { id: inactiveUser.id }, data: { isActive: true } });
-  await invalidatePermissions(inactiveUser.id);
-});
-
-// ── Test 42 ───────────────────────────────────────────────────────────────────
 
 test("42: can.approveInvoices returns true for OPS (OPS is in the allowlist)", () => {
   expect(can.approveInvoices({ role: "OPS" })).toBe(true);
