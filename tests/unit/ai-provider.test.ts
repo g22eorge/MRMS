@@ -7,11 +7,17 @@ import { copilotModel, copilotConfigured } from "@/lib/ai/copilot-model";
 /**
  * One provider, and a cache that actually engages.
  *
- * Both the AI Guide and the Business Copilot ran on Gemini, and
- * GEMINI_API_KEY had never been set in any environment — local, preview or
- * production. The guide told users to ask an administrator for a key; the
- * copilot silently returned a keyword-matched canned answer with no sign that
- * no model had been called. Two vendors, one of which had never once run.
+ * Both the AI Guide and the Business Copilot ran on Gemini while assessment
+ * drafting ran on Claude — two vendors, two keys, two ways to be misconfigured.
+ *
+ * The two deployments were configured differently, which is what made the
+ * split expensive. care (mrms) had GEMINI_API_KEY and ANTHROPIC_API_KEY, so
+ * everything worked there. app (mrms-apga), the commercial product, had
+ * neither: the guide told paying customers to ask an administrator for a key,
+ * and the copilot silently returned a keyword-matched canned answer with no
+ * indication that no model had been called. One provider means one variable to
+ * get right per environment instead of two, and one failure mode instead of
+ * a matrix of them.
  *
  * These tests hold the port in place. The caching assertions matter most: a
  * cache breakpoint is easy to break by accident and the failure is invisible —

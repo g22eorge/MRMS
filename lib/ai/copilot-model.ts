@@ -5,9 +5,10 @@ import type { BusinessDataPack } from "@/lib/ai/business-metrics";
 /**
  * The Business Copilot's model call: Claude, over the workspace's own numbers.
  *
- * Ported off Gemini alongside the AI Guide, for the same reason — that path had
- * never been configured in any environment, so every question fell through to
- * the rules-based answer while looking like a model had replied.
+ * Ported off Gemini alongside the AI Guide, for the same reason. The Gemini key
+ * existed on the care deployment but not on the commercial one, so on app this
+ * fell through to the rules-based answer on every question while looking like a
+ * model had replied — the worst of the two failure modes, because it was silent.
  *
  * Caching works differently here than it does for the guide, and it is worth
  * being straight about why. The guide sends a ~14k-token corpus that is

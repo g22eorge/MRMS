@@ -5,11 +5,12 @@ import { corpusForModel } from "@/lib/ai-knowledge";
 /**
  * The AI Guide's model call: Claude, with the how-to corpus cached.
  *
- * Replaces a Gemini path that had never been configured in any environment —
- * local or production — so every request fell through to a canned message
- * telling the user to ask their admin for an API key. Consolidating on
- * Anthropic leaves one provider, one key and one failure mode, and removes a
- * live footgun: AiOrgSettings.model holds a *Gemini* model name, and
+ * Replaces a Gemini path. It worked on the care deployment, which had a Gemini
+ * key, and did nothing on the commercial one, which had neither key — so the
+ * guide told paying customers to ask an administrator for an API key while the
+ * same code answered fine next door. Consolidating on Anthropic leaves one
+ * provider and one variable to get right per environment, and removes a live
+ * footgun: AiOrgSettings.model holds a *Gemini* model name, and
  * lib/ai/assessment.ts carries a comment warning that it must never be handed
  * to Anthropic.
  *
