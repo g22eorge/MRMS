@@ -313,25 +313,68 @@ export default async function AiInsightsPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="dc-card px-3 py-2.5">
           <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Job Status Distribution</p>
-          <div className="mt-3 space-y-2">
-            {repairs.statusDistribution.map((item) => (
-              <div key={item.status} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm">
-                <span className="text-[var(--ink-muted)]">{statusLabel(item.status)}</span>
-                <span className="font-semibold text-[var(--ink)]">{item.count}</span>
+          {/* A distribution, drawn as one. As nine "status: count" rows you had
+              to read every number and hold them in your head to see where work
+              was piling up; the bar shows that shape before you read anything.
+              Sorted by size for the same reason — the pile is the question.
+
+              One series, so no legend: the card title names it. The count stays
+              in ink beside the bar rather than inside it, because a number on a
+              coloured fill stops being legible the moment the bar is short. */}
+          {(() => {
+            const rows = [...repairs.statusDistribution].sort((a, b) => b.count - a.count);
+            const max = Math.max(1, ...rows.map((r) => r.count));
+            return (
+              <div className="mt-3 space-y-1.5">
+                {rows.map((item) => (
+                  <div key={item.status} className="flex items-center gap-2.5 text-sm">
+                    <span className="w-[42%] shrink-0 truncate text-[0.8125rem] text-[var(--ink-muted)]">{statusLabel(item.status)}</span>
+                    <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--panel-strong)]">
+                      <span
+                        className="block h-full rounded-full bg-[var(--accent)]/70"
+                        style={{ width: `${Math.max(item.count > 0 ? 6 : 0, (item.count / max) * 100)}%` }}
+                      />
+                    </span>
+                    <span className="w-7 shrink-0 text-right text-[0.8125rem] font-semibold tabular-nums text-[var(--ink)]">{item.count}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </div>
 
         <div className="dc-card px-3 py-2.5">
           <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Top Low-Stock Parts</p>
+          {/* Not a distribution — a quantity against a threshold. "12/20" makes
+              you do the arithmetic for every row; the bar shows how far below
+              reorder level each part is, which is the actual question.
+
+              The fill is capped at the reorder level, so a full bar means "at
+              the line" rather than "plenty". Out of stock is the reserved
+              critical colour and says so in words, because a bar of zero width
+              is indistinguishable from a bar that failed to render. */}
           <div className="mt-3 space-y-2">
-            {inventory.topLowStockParts.slice(0, 8).map((part) => (
-              <div key={part.sku} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm">
-                <span className="min-w-0 truncate text-[var(--ink)]">{part.name}</span>
-                <span className="shrink-0 text-[var(--ink-muted)]">{part.qtyOnHand}/{part.reorderLevel}</span>
-              </div>
-            ))}
+            {inventory.topLowStockParts.slice(0, 8).map((part) => {
+              const level = Math.max(1, part.reorderLevel);
+              const pct = Math.min(100, (part.qtyOnHand / level) * 100);
+              const out = part.qtyOnHand <= 0;
+              return (
+                <div key={part.sku} className="text-sm">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 truncate text-[0.8125rem] text-[var(--ink)]">{part.name}</span>
+                    <span className={`shrink-0 text-[0.75rem] font-semibold tabular-nums ${out ? "text-red-600 dark:text-red-400" : "text-[var(--ink-muted)]"}`}>
+                      {out ? "Out of stock" : `${part.qtyOnHand} of ${part.reorderLevel}`}
+                    </span>
+                  </div>
+                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-strong)]">
+                    <span
+                      className={`block h-full rounded-full ${out ? "bg-red-500" : "bg-amber-500"}`}
+                      style={{ width: `${out ? 100 : Math.max(4, pct)}%`, opacity: out ? 0.35 : 1 }}
+                    />
+                  </span>
+                </div>
+              );
+            })}
             {!inventory.lowStockParts ? <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink-muted)]">Every part is above its reorder level.</p> : null}
           </div>
         </div>
