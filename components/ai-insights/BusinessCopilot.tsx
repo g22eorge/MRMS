@@ -249,7 +249,12 @@ export function BusinessCopilot() {
             type="button"
             onClick={() => ask(q)}
             disabled={isPending}
-            className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.75rem] font-medium text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] disabled:opacity-50"
+            // Quiet by default. These were filled pills, and seven of them stacked
+            // in a narrow panel read as the loudest thing on the page — louder
+            // than the figures they are meant to help you ask about. Now an
+            // outline that recedes until hovered: suggestions should be
+            // available, not insistent.
+            className="shrink-0 rounded-full border border-[var(--line)]/60 px-3 py-1.5 text-[0.75rem] font-normal text-[var(--ink-muted)]/80 transition hover:border-[var(--accent)]/40 hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] disabled:opacity-50"
           >
             {q}
           </button>
