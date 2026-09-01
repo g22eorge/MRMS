@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { SEVERITY, ToneNote, rateTone, type Severity } from "@/components/insights/severity";
 import { INCOMING_PAYMENT } from "@/lib/finance/payment-kinds";
 import { redirect } from "next/navigation";
 
@@ -54,6 +56,62 @@ function yearOptions(startYear: number, endYear: number) {
     out.push({ value: String(year), label: `${year} Annual Package` });
   }
   return out;
+}
+
+/**
+ * The six statuses that make a job "open", matching the openJobs query below.
+ *
+ * Shared with the scorecard's link so the destination shows the same jobs the
+ * figure counted. When the two drift the tile becomes a lie that is very hard
+ * to notice, because both halves look right on their own.
+ */
+const OPEN_JOB_STATUSES = [
+  "RECEIVED",
+  "DIAGNOSING",
+  "REFERRED",
+  "AWAITING_APPROVAL",
+  "IN_REPAIR",
+  "READY_FOR_PICKUP",
+] as const;
+
+/**
+ * One cell of the executive scorecard.
+ *
+ * These were six copies of the same markup, which is why the label styling had
+ * drifted and why not one of them was clickable. The scorecard is the first
+ * thing anyone reads and was a dead end — you could learn that eleven jobs were
+ * aging and then had to go and find them yourself.
+ */
+function ScoreTile({
+  title, href, tone = "neutral", children,
+}: { title: string; href?: string; tone?: Severity; children: ReactNode }) {
+  const Wrapper = (href ? Link : "div") as React.ElementType;
+  /* Only the tiles that want something get a stripe. Six stripes is wallpaper;
+     one or two is a place for the eye to land. */
+  const marked = tone === "critical" || tone === "serious";
+  return (
+    <Wrapper
+      {...(href ? { href } : {})}
+      className={`relative flex flex-col gap-1 px-4 py-3 ${href ? "group transition-colors hover:bg-[var(--panel-strong)]" : ""}`}
+    >
+      {marked ? <span aria-hidden className={`absolute inset-x-0 top-0 h-[2px] ${SEVERITY[tone].stripe}`} /> : null}
+      <p className="flex items-center gap-1 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
+        {title}
+        {href ? <span aria-hidden className="opacity-0 transition-opacity group-hover:opacity-100">&rarr;</span> : null}
+      </p>
+      {children}
+    </Wrapper>
+  );
+}
+
+/**
+ * The figure itself, always in ink — the state is said beside it, not in it.
+ *
+ * nowrap because "UGX 4.8M" was breaking after the currency whenever a
+ * sparkline shared the row, which reads as two figures rather than one.
+ */
+function TileValue({ children }: { children: ReactNode }) {
+  return <p className="whitespace-nowrap text-xl font-black tabular-nums text-[var(--ink)]">{children}</p>;
 }
 
 /**
@@ -231,16 +289,7 @@ export default async function ReportsPage({
     prisma.job.findMany({
       where: {
         orgId,
-        status: {
-          in: filterSupportedJobStatuses([
-            "RECEIVED",
-            "DIAGNOSING",
-            "REFERRED",
-            "AWAITING_APPROVAL",
-            "IN_REPAIR",
-            "READY_FOR_PICKUP",
-          ]) as JobStatus[],
-        },
+        status: { in: filterSupportedJobStatuses([...OPEN_JOB_STATUSES]) as JobStatus[] },
       },
       select: { id: true, jobNumber: true, status: true, receivedAt: true, updatedAt: true },
     }),
@@ -505,11 +554,20 @@ export default async function ReportsPage({
   })();
 
   const nowTs = new Date();
-  const delayedJobs = openJobs
+  const agingJobs = openJobs
     .map((j) => ({ ...j, ageDays: Math.floor((nowTs.getTime() - j.receivedAt.getTime()) / 86400000) }))
     .filter((j) => j.ageDays >= 3)
-    .sort((a, b) => b.ageDays - a.ageDays)
-    .slice(0, 8);
+    .sort((a, b) => b.ageDays - a.ageDays);
+  /**
+   * The full count, kept apart from the rows.
+   *
+   * The scorecard reported `delayedJobs.length` while delayedJobs was already
+   * sliced for the table below it, so the headline read "8 aging 3+ days"
+   * whether eight jobs were stuck or eighty — and the worse the backlog got the
+   * more reassuring the number looked, because it stopped moving.
+   */
+  const agingCount = agingJobs.length;
+  const delayedJobs = agingJobs.slice(0, 8);
 
   const approvalDelays = approvalDelayJobs.map((j) => ({
     ...j,
@@ -914,71 +972,78 @@ export default async function ReportsPage({
             Executive Overview &middot; {period === "year" ? String(selectedYear) : selectedMonthString}
           </p>
           {teamTargetPct !== null && (
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${teamTargetPct >= 100 ? "bg-emerald-500/15 text-emerald-600" : teamTargetPct >= 80 ? "bg-amber-500/15 text-amber-600" : "bg-red-500/15 text-red-600"}`}>
-              {teamTargetPct}% of revenue target
-            </span>
+            <ToneNote tone={rateTone(teamTargetPct, 100, 80)}>
+              {teamTargetPct}% of revenue target &middot; {teamTargetPct >= 100 ? "met" : teamTargetPct >= 80 ? "close" : "behind"}
+            </ToneNote>
           )}
         </div>
         <div className="grid grid-cols-3 divide-x divide-[var(--line)] lg:grid-cols-6">
           {/* Revenue + sparkline */}
-          <div className="px-4 py-3">
-            <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Cash received</p>
-            <div className="mt-1 flex items-end justify-between gap-2">
-              <p className="text-xl font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(totalAllChannels, currency)}</p>
+          <ScoreTile title="Cash received" href="/finance">
+            <div className="flex items-end justify-between gap-2">
+              <TileValue>{formatMoneyCompact(totalAllChannels, currency)}</TileValue>
               {sparklineMonths.some((m) => m.revenue > 0) && (
                 <SparkLine values={sparklineMonths.map((m) => m.revenue)} positive={true} />
               )}
             </div>
             {revenuePrev > 0 ? (
-              <p className={`mt-1 text-[0.75rem] font-semibold ${revenueDelta >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              <p className={`text-[0.75rem] font-semibold ${revenueDelta >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                 {revenueDelta >= 0 ? "▲" : "▼"} {Math.abs(Math.round((revenueDelta / revenuePrev) * 100))}% vs prior
               </p>
             ) : (
-              <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">6-month trend</p>
+              <p className="text-[0.75rem] text-[var(--ink-muted)]">6-month trend</p>
             )}
-          </div>
+          </ScoreTile>
           {/* Net Profit */}
-          <div className="px-4 py-3">
-            <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Net Profit</p>
-            <p className={`mt-1 text-xl font-black tabular-nums ${netProfit >= 0 ? "text-[var(--ink)]" : "text-red-500"}`}>{formatMoneyCompact(netProfit, currency)}</p>
-            <p className={`mt-1 text-[0.75rem] font-semibold ${grossMarginPct >= 60 ? "text-emerald-500" : grossMarginPct >= 40 ? "text-amber-500" : "text-red-500"}`}>
-              {grossMarginPct}% gross margin
-            </p>
-          </div>
+          <ScoreTile title="Net Profit" href="/finance/reports/pl" tone={rateTone(grossMarginPct, 60, 40)}>
+            <TileValue>{formatMoneyCompact(netProfit, currency)}</TileValue>
+            {/* Margin graded in words. Three hues on the identical sentence
+                "{n}% gross margin" told a reader who does not separate red from
+                green precisely nothing. */}
+            <ToneNote tone={rateTone(grossMarginPct, 60, 40)}>
+              {grossMarginPct}% margin &middot; {grossMarginPct >= 60 ? "healthy" : grossMarginPct >= 40 ? "thin" : "low"}
+            </ToneNote>
+          </ScoreTile>
           {/* Jobs Completed */}
-          <div className="px-4 py-3">
-            <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Jobs Completed</p>
-            <p className="mt-1 text-xl font-black tabular-nums text-[var(--ink)]">{completedSelected.length}</p>
+          <ScoreTile title="Jobs Completed" href="/jobs?status=COMPLETED">
+            <TileValue>{completedSelected.length}</TileValue>
             {completedPrev.length > 0 ? (
-              <p className={`mt-1 text-[0.75rem] font-semibold ${completedSelected.length >= completedPrev.length ? "text-emerald-500" : "text-red-500"}`}>
+              /* Left in colour deliberately: the triangle and the number carry
+                 the direction on their own, so the hue is emphasis rather than
+                 the whole message. */
+              <p className={`text-[0.75rem] font-semibold ${completedSelected.length >= completedPrev.length ? "text-emerald-500" : "text-red-500"}`}>
                 {completedSelected.length >= completedPrev.length ? "▲" : "▼"} {Math.abs(completedSelected.length - completedPrev.length)} vs prior
               </p>
             ) : (
-              <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">this period</p>
+              <p className="text-[0.75rem] text-[var(--ink-muted)]">this period</p>
             )}
-          </div>
-          {/* Avg Job Value */}
-          <div className="px-4 py-3">
-            <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Avg Job Value</p>
-            <p className="mt-1 text-xl font-black tabular-nums text-[var(--ink)]">{avgJobValue > 0 ? formatMoneyCompact(avgJobValue, currency) : "—"}</p>
-            <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">revenue per repair</p>
-          </div>
+          </ScoreTile>
+          {/* Avg Job Value — no filtered destination exists for "the average",
+              so it stays plain text rather than linking somewhere approximate. */}
+          <ScoreTile title="Avg Job Value">
+            <TileValue>{avgJobValue > 0 ? formatMoneyCompact(avgJobValue, currency) : "—"}</TileValue>
+            <p className="text-[0.75rem] text-[var(--ink-muted)]">revenue per repair</p>
+          </ScoreTile>
           {/* Open Pipeline */}
-          <div className="px-4 py-3">
-            <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Open Pipeline</p>
-            <p className={`mt-1 text-xl font-black tabular-nums ${delayedJobs.length > 0 ? "text-amber-500" : "text-[var(--ink)]"}`}>{openJobs.length}</p>
-            <p className={`mt-1 text-[0.75rem] font-semibold ${delayedJobs.length > 0 ? "text-red-500" : "text-[var(--ink-muted)]"}`}>
-              {delayedJobs.length > 0 ? `${delayedJobs.length} aging 3+ days` : "no aging jobs"}
-            </p>
-          </div>
+          <ScoreTile title="Open Pipeline" href={`/jobs?status=${OPEN_JOB_STATUSES.join(",")}`} tone={agingCount === 0 ? "neutral" : agingCount >= 5 ? "critical" : "serious"}>
+            <TileValue>{openJobs.length}</TileValue>
+            {agingCount > 0 ? (
+              <ToneNote tone={agingCount >= 5 ? "critical" : "serious"}>{agingCount} aging 3+ days</ToneNote>
+            ) : (
+              <p className="text-[0.75rem] text-[var(--ink-muted)]">no aging jobs</p>
+            )}
+          </ScoreTile>
           {/* Repeat Client Rate */}
-          <div className="px-4 py-3">
-            <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Repeat Clients</p>
-            <p className={`mt-1 text-xl font-black tabular-nums ${repeatClientRate >= 50 ? "text-emerald-500" : repeatClientRate >= 25 ? "text-[var(--ink)]" : "text-amber-500"}`}>
-              {uniqueClientsCount > 0 ? `${repeatClientRate}%` : "—"}
-            </p>
-            <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{returningClientRows.length} of {uniqueClientsCount} returning</p>
-          </div>
+          <ScoreTile title="Repeat Clients" href="/clients" tone={uniqueClientsCount > 0 ? rateTone(repeatClientRate, 50, 25) : "neutral"}>
+            <TileValue>{uniqueClientsCount > 0 ? `${repeatClientRate}%` : "—"}</TileValue>
+            {uniqueClientsCount > 0 ? (
+              <ToneNote tone={rateTone(repeatClientRate, 50, 25)}>
+                {returningClientRows.length} of {uniqueClientsCount} returning
+              </ToneNote>
+            ) : (
+              <p className="text-[0.75rem] text-[var(--ink-muted)]">no clients yet</p>
+            )}
+          </ScoreTile>
         </div>
       </section>
       </div>
@@ -1028,19 +1093,27 @@ export default async function ReportsPage({
                 { key: "netProfit", label: "Net Profit", hint: "Revenue − costs − expenses − refunds", period: netProfit, ytd: ytdNetProfit, kind: "total" },
               ];
 
+              /**
+               * Costs are marked by the minus sign, not by being red.
+               *
+               * Every positive figure here used to be emerald, so a healthy P&L
+               * was a wall of green in which nothing stood out — and green on
+               * "Cost of Goods Sold" is not good news, it is just a number that
+               * happens to be above zero. Loss keeps its red, because a
+               * negative gross profit or net profit is the one thing on this
+               * table that genuinely needs to be seen from across the room.
+               */
               function amountCell(row: PlRow, value: number) {
                 if (row.kind === "negative") {
-                  return <span className="text-red-500">− {formatMoneyCompact(value, currency)}</span>;
+                  return (
+                    <span className="tabular-nums text-[var(--ink-muted)]">
+                      &minus; {formatMoneyCompact(value, currency)}
+                    </span>
+                  );
                 }
-                const tone = value >= 0 ? "text-emerald-600" : "text-red-500";
-                if (row.kind === "total") {
-                  return <span className={`font-black tabular-nums ${tone}`}>{formatMoneyCompact(value, currency)}</span>;
-                }
-                return (
-                  <span className={`font-bold tabular-nums ${row.key === "revenue" ? "text-[var(--ink)]" : tone}`}>
-                    {formatMoneyCompact(value, currency)}
-                  </span>
-                );
+                const weight = row.kind === "total" ? "font-black" : "font-bold";
+                const ink = value < 0 ? "text-red-500" : "text-[var(--ink)]";
+                return <span className={`${weight} tabular-nums ${ink}`}>{formatMoneyCompact(value, currency)}</span>;
               }
 
               return (
@@ -1065,6 +1138,44 @@ export default async function ReportsPage({
                           {row.hint ? <p className="text-[0.75rem] text-[var(--ink-muted)]">{row.hint}</p> : null}
                         </>
                       ),
+                    },
+                    /**
+                     * Each line as a share of revenue, drawn.
+                     *
+                     * The table gave eight exact figures and no shape, so
+                     * working out whether wages or parts were eating the month
+                     * meant doing arithmetic on every row. The bar answers that
+                     * before anything is read; the exact numbers are still
+                     * right there for when the shape raises a question.
+                     *
+                     * Everything is scaled against revenue, so bars are
+                     * comparable down the column — scaling each to its own row
+                     * would make the smallest cost look identical to the
+                     * largest.
+                     */
+                    {
+                      key: "share",
+                      header: "Share of revenue",
+                      className: "hidden w-40 md:table-cell",
+                      cell: (row) => {
+                        if (totalAllChannels <= 0 || row.key === "revenue") return null;
+                        const pct = Math.min(100, (Math.abs(row.period) / totalAllChannels) * 100);
+                        if (pct <= 0) return <span className="text-[0.75rem] text-[var(--ink-muted)]">—</span>;
+                        const cost = row.kind === "negative";
+                        return (
+                          <span className="flex items-center gap-2">
+                            <span className="block h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel-strong)] ring-1 ring-inset ring-[var(--line)]">
+                              <span
+                                className={`block h-full rounded-full ${cost ? "bg-[var(--ink-muted)]/60" : row.period < 0 ? "bg-red-500" : "bg-[var(--accent)]"}`}
+                                style={{ width: `${Math.max(3, pct)}%` }}
+                              />
+                            </span>
+                            <span className="w-9 shrink-0 text-right text-[0.6875rem] tabular-nums text-[var(--ink-muted)]">
+                              {Math.round(pct)}%
+                            </span>
+                          </span>
+                        );
+                      },
                     },
                     {
                       key: "period",
@@ -1095,10 +1206,12 @@ export default async function ReportsPage({
             </div>
             <div className="dc-card px-3 py-2.5">
               <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Repeat Clients</p>
-              <p className={`mt-1 text-lg font-bold ${repeatClientRate >= 50 ? "text-emerald-500" : repeatClientRate >= 25 ? "text-[var(--ink)]" : "text-amber-500"}`}>
-                {uniqueClientsCount > 0 ? `${repeatClientRate}%` : "—"}
-              </p>
-              <p className="mt-1 text-xs text-[var(--ink-muted)]">{returningClientRows.length} returning of {uniqueClientsCount} clients</p>
+              <p className="mt-1 text-lg font-bold text-[var(--ink)]">{uniqueClientsCount > 0 ? `${repeatClientRate}%` : "—"}</p>
+              {uniqueClientsCount > 0 ? (
+                <span className="mt-1 block"><ToneNote tone={rateTone(repeatClientRate, 50, 25)}>{returningClientRows.length} of {uniqueClientsCount} returning</ToneNote></span>
+              ) : (
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">no clients yet</p>
+              )}
             </div>
             <div className="dc-card px-3 py-2.5">
               <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">YTD Revenue</p>
@@ -1408,7 +1521,14 @@ export default async function ReportsPage({
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-[var(--ink-muted)]">Items at or Below Reorder</p>
-                  <p className={`text-sm font-bold ${lowStockItems.length > 0 ? "text-red-500" : "text-emerald-500"}`}>{lowStockItems.length} of {lowStockParts.length}</p>
+                  {/* No emerald on zero: "0 of 140" already says everything
+                      good, and a green figure that appears whenever nothing is
+                      wrong trains the eye to skip the row it lives in. */}
+                  {lowStockItems.length > 0 ? (
+                    <ToneNote tone="critical">{lowStockItems.length} of {lowStockParts.length} &middot; reorder</ToneNote>
+                  ) : (
+                    <p className="text-sm font-bold tabular-nums text-[var(--ink)]">0 of {lowStockParts.length}</p>
+                  )}
                 </div>
               </div>
               <div className="mt-4 flex gap-3">
@@ -1437,8 +1557,12 @@ export default async function ReportsPage({
             </div>
             <div className="dc-card px-3 py-2.5">
               <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Lead Conversion</p>
-              <p className={`mt-1 text-lg font-bold ${leadConversion >= 50 ? "text-emerald-500" : leadConversion >= 25 ? "text-amber-500" : "text-[var(--ink)]"}`}>{totalLeads > 0 ? `${leadConversion}%` : "—"}</p>
-              <p className="mt-1 text-xs text-[var(--ink-muted)]">{wonLeads} won of {totalLeads} leads</p>
+              <p className="mt-1 text-lg font-bold text-[var(--ink)]">{totalLeads > 0 ? `${leadConversion}%` : "—"}</p>
+              {totalLeads > 0 ? (
+                <span className="mt-1 block"><ToneNote tone={rateTone(leadConversion, 50, 25)}>{wonLeads} won of {totalLeads} leads</ToneNote></span>
+              ) : (
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">no leads this period</p>
+              )}
             </div>
             <div className="dc-card px-3 py-2.5">
               <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">New Clients</p>
@@ -1461,7 +1585,13 @@ export default async function ReportsPage({
               </div>
               <div className="text-right">
                 <p className="text-[0.6875rem] text-[var(--ink-muted)]">Conversion rate</p>
-                <p className={`text-lg font-black ${leadConversion >= 50 ? "text-emerald-600" : leadConversion >= 25 ? "text-amber-500" : "text-red-500"}`}>{totalLeads > 0 ? `${leadConversion}%` : "—"}</p>
+                {/* Graded through rateTone with the same thresholds as the KPI
+                    strip above. The two renderings of this one number had
+                    drifted — 20% showed as plain ink there and red here. */}
+                <p className="text-lg font-black tabular-nums text-[var(--ink)]">{totalLeads > 0 ? `${leadConversion}%` : "—"}</p>
+                {totalLeads > 0 ? (
+                  <span className="mt-0.5 flex justify-end"><ToneNote tone={rateTone(leadConversion, 50, 25)}>{leadConversion >= 50 ? "strong" : leadConversion >= 25 ? "fair" : "low"}</ToneNote></span>
+                ) : null}
               </div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2">
@@ -1517,8 +1647,13 @@ export default async function ReportsPage({
                   <p className="mt-0.5 text-[0.75rem] font-bold uppercase tracking-wide text-red-600">Expired</p>
                 </div>
                 <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-3 text-center">
-                  <p className={`text-xl font-bold ${quotationConversionPct >= 60 ? "text-emerald-600" : quotationConversionPct >= 40 ? "text-amber-500" : "text-red-500"}`}>{quotationConversionPct}%</p>
+                  <p className="text-xl font-bold tabular-nums text-[var(--ink)]">{quotationConversionPct}%</p>
                   <p className="mt-0.5 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Conversion</p>
+                  <span className="mt-1 flex justify-center">
+                    <ToneNote tone={rateTone(quotationConversionPct, 60, 40)}>
+                      {quotationConversionPct >= 60 ? "strong" : quotationConversionPct >= 40 ? "fair" : "low"}
+                    </ToneNote>
+                  </span>
                 </div>
               </div>
             </section>
@@ -1552,7 +1687,13 @@ export default async function ReportsPage({
                       cell: (row) => {
                         const pct = row.target > 0 ? Math.round((row.total / row.target) * 100) : null;
                         return pct !== null ? (
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.75rem] font-bold ${pct >= 100 ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"}`}>{pct}%</span>
+                          /* A chip in a table row has no space for a word, so
+                             the state goes in the glyph: met or short. */
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.75rem] font-bold tabular-nums ${pct >= 100 ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"}`}>
+                            <span aria-hidden>{pct >= 100 ? "✓" : "↓"}</span>
+                            <span className="sr-only">{pct >= 100 ? "Target met — " : "Below target — "}</span>
+                            {pct}%
+                          </span>
                         ) : (
                           <span className="text-[0.75rem] text-[var(--ink-muted)]">—</span>
                         );
@@ -1610,7 +1751,9 @@ export default async function ReportsPage({
                         header: "Rate",
                         align: "right",
                         cell: (t) => (
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.75rem] font-bold ${t.completionRate >= 80 ? "bg-emerald-500/15 text-emerald-600" : t.completionRate >= 50 ? "bg-amber-500/15 text-amber-600" : "bg-red-500/15 text-red-600"}`}>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.75rem] font-bold tabular-nums ${t.completionRate >= 80 ? "bg-emerald-500/15 text-emerald-600" : t.completionRate >= 50 ? "bg-amber-500/15 text-amber-600" : "bg-red-500/15 text-red-600"}`}>
+                            <span aria-hidden>{t.completionRate >= 80 ? "✓" : t.completionRate >= 50 ? "~" : "↓"}</span>
+                            <span className="sr-only">{t.completionRate >= 80 ? "On track — " : t.completionRate >= 50 ? "Mixed — " : "Behind — "}</span>
                             {Math.round(t.completionRate)}%
                           </span>
                         ),

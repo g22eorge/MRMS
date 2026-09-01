@@ -37,6 +37,44 @@ export const SEVERITY: Record<Severity, { label: string; dot: string; stripe: st
 
 export const SEVERITY_ORDER: Severity[] = ["critical", "serious", "warning", "good", "neutral"];
 
+/**
+ * A rate graded against two thresholds.
+ *
+ * Ten places in Reports had written this out as a nested ternary picking a
+ * hex — margin, conversion, target attainment, completion rate — each with its
+ * own thresholds and each rendering the same sentence in three different
+ * colours. The grading is fine; expressing it as a colour is what made it
+ * unreadable to anyone who does not see the hue.
+ *
+ * Returns a Severity so the caller renders through ToneNote and gets the word
+ * for free. Note the deliberate absence of "warning": a rate is good, middling
+ * or poor, and inventing a fourth band per call site is how ten variants
+ * happened in the first place.
+ */
+export function rateTone(pct: number, good: number, fair: number): Severity {
+  if (pct >= good) return "good";
+  if (pct >= fair) return "serious";
+  return "critical";
+}
+
+/**
+ * The state, said in words, next to a dot.
+ *
+ * The caller supplies the word because the right one depends on the sentence:
+ * SEVERITY.label is a task ("Act today"), which fits a queue of work but
+ * overclaims badly on a measurement — a 38% gross margin is thin, not an
+ * emergency. Passing the word in keeps the colour and the language agreeing.
+ */
+export function ToneNote({ tone, children }: { tone: Severity; children: ReactNode }) {
+  const s = SEVERITY[tone];
+  return (
+    <span className={`flex items-center gap-1 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] ${s.chip}`}>
+      <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${s.dot}`} />
+      {children}
+    </span>
+  );
+}
+
 /** A headline figure, its state, and where to act on it. */
 export function KpiCard({
   title, value, caption, tone = "neutral", href,
@@ -54,12 +92,7 @@ export function KpiCard({
           than none — it still takes the space and the attention. */}
       <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title}</p>
       <p className="mt-1 text-xl font-bold tracking-tight tabular-nums text-[var(--ink)]">{value}</p>
-      {s.label ? (
-        <span className={`mt-1 flex items-center gap-1 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] ${s.chip}`}>
-          <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${s.dot}`} />
-          {s.label}
-        </span>
-      ) : null}
+      {s.label ? <span className="mt-1 block"><ToneNote tone={tone}>{s.label}</ToneNote></span> : null}
       {caption ? <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{caption}</p> : null}
     </Wrapper>
   );
