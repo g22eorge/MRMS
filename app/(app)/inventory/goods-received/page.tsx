@@ -6,6 +6,8 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { HubTabs } from "@/components/shared/HubTabs";
+import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { RowActionsMenu, MenuActionLink } from "@/components/shared/RowActionsMenu";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 
@@ -50,6 +52,7 @@ export default async function GoodsReceivedPage({
 
   return (
     <ListPageLayout
+      topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
         title: "Goods Received",
         kpis: [

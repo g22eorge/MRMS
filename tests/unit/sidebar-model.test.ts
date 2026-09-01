@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import type { Role } from "@prisma/client";
 
 import {
@@ -60,15 +61,46 @@ describe("sidebar model — super-groups", () => {
     expect(h).not.toContain("/documents/invoices"); // leaves are not duplicated in the sidebar
   });
 
-  it("routes inventory/procurement into the stock group", () => {
+  it("carries the inventory hub only, with its leaves left to the tab bar", () => {
+    // Inventory is now arranged like Documents, and this asserts the same rule
+    // the documents test above does: the section is in the sidebar, and its
+    // pages are tabs on the hub. Previously both carried purchase orders, goods
+    // received, supplier bills, stock counts and suppliers — the same page with
+    // two routes to it a few centimetres apart, neither aware of the other.
     const { sections } = buildSidebarModel("ADMIN", []);
     const stock = sections.find((s) => s.group === "inventory");
     expect(stock).toBeTruthy();
-    expect(hrefs(stock!.items)).toEqual(
-      expect.arrayContaining(["/inventory", "/inventory/purchase-orders", "/inventory/supplier-bills"]),
-    );
+    expect(hrefs(stock!.items)).toContain("/inventory");
+    for (const leaf of [
+      "/inventory/purchase-orders",
+      "/inventory/supplier-bills",
+      "/inventory/goods-received",
+      "/inventory/stock-counts",
+      "/inventory/suppliers",
+    ]) {
+      expect(hrefs(stock!.items)).not.toContain(leaf);
+    }
     // the /procurement desk was removed from the sidebar
     expect(hrefs(stock!.items)).not.toContain("/procurement");
+  });
+
+  it("keeps every sidebar-dropped inventory page reachable as a tab", () => {
+    // Guards the guard: dropping a leaf from the sidebar is only safe because
+    // the hub tabs carry it. If a tab is removed without restoring the sidebar
+    // entry, the page becomes reachable only by typing its URL.
+    const tabHrefs = INVENTORY_TABS.map((t) => t.href);
+    for (const leaf of [
+      "/inventory/purchase-orders",
+      "/inventory/supplier-bills",
+      "/inventory/goods-received",
+      "/inventory/stock-counts",
+      "/inventory/suppliers",
+      "/inventory/purchase-requests",
+      "/inventory/transfers",
+      "/inventory/locations",
+    ]) {
+      expect(tabHrefs).toContain(leaf);
+    }
   });
 
   it("puts settings in the workspace group (communications absorbed into settings)", () => {

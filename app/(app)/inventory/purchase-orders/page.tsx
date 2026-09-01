@@ -6,6 +6,8 @@ import { can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/currency";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { HubTabs } from "@/components/shared/HubTabs";
+import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
@@ -109,6 +111,7 @@ export default async function PurchaseOrdersPage({
 
   return (
     <ListPageLayout
+      topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
         title: "Purchase Orders",
         actions: (
