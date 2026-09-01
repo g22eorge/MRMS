@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { KpiCard } from "@/components/insights/severity";
 import React from "react";
 
 import { MobileHomeDashboard } from "@/components/mobile/MobileHomeDashboard";
@@ -208,29 +210,36 @@ export async function AdminDashboard({
               </p>
             </Link>
 
-            {([
-              {
-                k: "Active", v: String(activeJobsCount), href: "/jobs",
-                tone: activeJobsCount > 0 ? "text-sky-400" : "text-[var(--dc-ink-3)]",
-                foot: `${receivedToday} in · ${completedToday} done today`,
-              },
-              {
-                k: "Due", v: formatMoneyCompact(outstandingValue, currency), href: "/documents/invoices?status=ISSUED",
-                tone: outstandingValue > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink-3)]",
-                foot: `${completedUnpaidCount} completed & unpaid`,
-              },
-              {
-                k: "Ready", v: String(readyForPickupCount), href: "/jobs?status=READY_FOR_PICKUP",
-                tone: readyForPickupCount > 0 ? "text-[var(--dc-accent-2)]" : "text-[var(--dc-ink-3)]",
-                foot: "awaiting pickup",
-              },
-            ] as const).map((kpi) => (
-              <Link key={kpi.k} href={kpi.href} className="dc-card dc-lift block px-5 py-[18px]">
-                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.03em] text-[var(--dc-ink-3)]">{kpi.k}</p>
-                <p className={`mt-1.5 text-[1.875rem] font-bold leading-none tracking-[-0.025em] tabular-nums ${kpi.tone}`}>{kpi.v}</p>
-                <p className="mt-1.5 text-[0.71875rem] text-[var(--dc-ink-3)]">{kpi.foot}</p>
-              </Link>
-            ))}
+            {/* Severity, not a text colour. These carried state only as the
+                hue of the number — invisible to roughly one man in twelve, and
+                to anyone scanning rather than reading, which is everyone
+                glancing at a dashboard. KpiCard adds a stripe and a word and
+                puts the figure back in ink.
+
+                Active is neutral on purpose: having jobs in progress is the
+                normal state of a repair shop, and colouring it teaches people
+                to ignore the colours that do mean something. */}
+            <KpiCard
+              title="Active"
+              value={String(activeJobsCount)}
+              caption={`${receivedToday} in · ${completedToday} done today`}
+              tone="neutral"
+              href="/jobs"
+            />
+            <KpiCard
+              title="Due"
+              value={formatMoneyCompact(outstandingValue, currency)}
+              caption={`${completedUnpaidCount} completed & unpaid`}
+              tone={outstandingValue > 0 ? "serious" : "good"}
+              href="/documents/invoices?status=ISSUED"
+            />
+            <KpiCard
+              title="Ready"
+              value={String(readyForPickupCount)}
+              caption="awaiting pickup"
+              tone={readyForPickupCount > 0 ? "warning" : "good"}
+              href="/jobs?status=READY_FOR_PICKUP"
+            />
           </div>
         </section>
 

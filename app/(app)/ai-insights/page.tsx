@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KpiCard, Stat, SummaryCard, SEVERITY, SEVERITY_ORDER, type Severity } from "@/components/insights/severity";
 import { redirect } from "next/navigation";
 import { plural } from "@/lib/plural";
 
@@ -17,62 +18,10 @@ function statusLabel(status: string) {
     .join(" ");
 }
 
-/**
- * Severity, carried as data.
- *
- * Status is never colour alone. A hue is invisible to roughly one man in twelve,
- * and it is invisible to everyone scanning a page quickly — so each level ships
- * with a word and a shape as well. The colours are the reserved status palette:
- * they mean state, and are never reused to distinguish one series from another.
- */
-type Severity = "critical" | "serious" | "warning" | "good" | "neutral";
+// Risk carries a severity assigned where it is built, from the condition that
+// produced it — not inferred from its wording later.
 type Risk = { severity: Severity; text: string };
 const r = (severity: Severity, text: string): Risk => ({ severity, text });
-
-const SEVERITY: Record<Severity, { label: string; dot: string; stripe: string; chip: string }> = {
-  critical: { label: "Act today", dot: "bg-red-500",     stripe: "bg-red-500",     chip: "text-red-600 dark:text-red-400" },
-  serious:  { label: "This week", dot: "bg-amber-500",   stripe: "bg-amber-500",   chip: "text-amber-700 dark:text-amber-400" },
-  warning:  { label: "Watch",     dot: "bg-sky-500",     stripe: "bg-sky-500",     chip: "text-sky-700 dark:text-sky-400" },
-  good:     { label: "Healthy",   dot: "bg-emerald-500", stripe: "bg-emerald-500", chip: "text-emerald-700 dark:text-emerald-400" },
-  neutral:  { label: "",          dot: "bg-[var(--ink-muted)]/40", stripe: "bg-[var(--line)]", chip: "text-[var(--ink-muted)]" },
-};
-
-/**
- * A figure, and what it means.
- *
- * The value stays in ink rather than wearing the status colour: colour on a
- * number reads as decoration and stops being a signal once several numbers have
- * it. The state is carried beside it by a dot and a word, which survives being
- * printed, being scanned, and being read by someone who cannot see the hue.
- */
-function KpiCard({
-  title, value, caption, tone = "neutral", href,
-}: { title: string; value: string; caption: string; tone?: Severity; href?: string }) {
-  const s = SEVERITY[tone];
-  const Wrapper = (href ? Link : "section") as React.ElementType;
-  return (
-    <Wrapper
-      {...(href ? { href } : {})}
-      className={`dc-card relative block overflow-hidden px-3 py-2.5 pl-4 ${href ? "transition-colors hover:border-[var(--accent)]/40" : ""}`}
-    >
-      {/* A severity stripe, so the state is legible before any text is read. */}
-      <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] ${s.stripe}`} />
-      {/* Title, value, then state. Stacked rather than title-and-chip on one
-          row: four tiles across a half-width pane leaves no room for both, and
-          the chip truncated to "This w.." — a status label that cannot be read
-          is worse than none, since it still takes the space and the attention. */}
-      <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title}</p>
-      <p className="mt-1 text-xl font-bold tracking-tight tabular-nums text-[var(--ink)]">{value}</p>
-      {s.label ? (
-        <span className={`mt-1 flex items-center gap-1 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] ${s.chip}`}>
-          <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${s.dot}`} />
-          {s.label}
-        </span>
-      ) : null}
-      <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{caption}</p>
-    </Wrapper>
-  );
-}
 
 /**
  * Today, at the top, because it is the question asked most often.
@@ -133,58 +82,7 @@ function TodayStrip({
   );
 }
 
-/**
- * A summary card whose rows go where the number came from.
- *
- * A page that reports "9 invoices overdue" and then makes you find the invoice
- * list yourself is wasting its own insight. Every figure that has somewhere to
- * act on it is a link now, and the row is the target rather than the number —
- * a four-character count is a poor thing to ask anyone to hit.
- *
- * Rows without a destination stay plain text. An underline that leads nowhere
- * is worse than no underline, and "Avg turnaround" is a fact rather than a
- * place.
- */
-function SummaryCard({ title, href, children }: { title: string; href?: string; children: React.ReactNode }) {
-  return (
-    <div className="dc-card px-3 py-2.5">
-      {href ? (
-        <Link href={href} className="group inline-flex items-center gap-1 text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)] transition-colors hover:text-[var(--accent)]">
-          {title}
-          <span aria-hidden className="opacity-0 transition-opacity group-hover:opacity-100">→</span>
-        </Link>
-      ) : (
-        <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">{title}</p>
-      )}
-      <dl className="mt-2 divide-y divide-[var(--line)]/60">{children}</dl>
-    </div>
-  );
-}
 
-/**
- * One label-and-figure row.
- *
- * Values are right-aligned and tabular so the digits form a column the eye can
- * run down — previously each row set its own number wherever the text ended,
- * which is why the cards read as a wall.
- */
-function Stat({ label, value, sub, href }: { label: string; value: string; sub?: string; href?: string }) {
-  const body = (
-    <>
-      <dt className="min-w-0 truncate text-[0.8125rem] text-[var(--ink-muted)] group-hover:text-[var(--ink)]">{label}</dt>
-      <dd className="shrink-0 text-right">
-        <span className="text-[0.8125rem] font-semibold tabular-nums text-[var(--ink)]">{value}</span>
-        {sub ? <span className="ml-1.5 text-[0.6875rem] font-medium tabular-nums text-[var(--ink-muted)]">{sub}</span> : null}
-      </dd>
-    </>
-  );
-  if (!href) return <div className="flex items-baseline justify-between gap-3 py-1.5">{body}</div>;
-  return (
-    <Link href={href} className="group -mx-1.5 flex items-baseline justify-between gap-3 rounded-md px-1.5 py-1.5 transition-colors hover:bg-[var(--panel-strong)]">
-      {body}
-    </Link>
-  );
-}
 
 /** A short delta, for beside a figure. The long form wrapped every first row. */
 function delta(current: number, previous: number): string | undefined {
@@ -201,7 +99,6 @@ function delta(current: number, previous: number): string | undefined {
  * list is now sorted worst-first and each row carries a stripe, a dot and a
  * word — the same three encodings as the tiles, so the two agree.
  */
-const SEVERITY_ORDER: Severity[] = ["critical", "serious", "warning", "good", "neutral"];
 
 function RiskCard({ title, items, empty }: { title: string; items: Risk[]; empty: string }) {
   const sorted = [...items].sort(
