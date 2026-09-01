@@ -135,8 +135,11 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
 
   async function convertToInvoiceAction() {
     "use server";
-    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    const { user: actor, orgId: actorOrg, org: actorOrgRec } = await requireOrgSession();
     if (!can.createInvoices(actor)) redirect("/dashboard");
+    // Creating an invoice must stop for a read-only user and for a suspended
+    // workspace. can.createInvoices covers neither.
+    assertOrgCanMutate({ access: actorOrgRec.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const orgRec = await prisma.organization.findUnique({ where: { id: actorOrg }, select: { baseCurrency: true } });
     const cur = normalizeCurrency(orgRec?.baseCurrency, "UGX");
     const invoice = await prisma.$transaction((tx) => ensureInvoiceFromQuotation(tx, { orgId: actorOrg, quotationId: id, currency: cur }));

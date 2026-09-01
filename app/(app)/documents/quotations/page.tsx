@@ -151,9 +151,16 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
 
   async function convertToInvoiceAction(formData: FormData) {
     "use server";
-    const { user } = await getCurrentUserRole();
+    // requireOrgSession, not getCurrentUserRole: the latter cannot see
+    // org.access, so this action had no way to know the workspace was
+    // suspended. Converting a quotation creates an invoice — a financial
+    // document — and a permission check alone does not cover the two states
+    // that must stop it: a READ_ONLY user, and an organisation whose
+    // subscription has lapsed. deleteQuotationAction beside it already guards
+    // both; this did not, in all three places the conversion exists.
+    const { user, orgId, org } = await requireOrgSession();
     if (!can.createInvoices(user)) redirect("/dashboard");
-    const orgId = user.orgId;
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     if (!orgId) redirect("/dashboard");
     const id = String(formData.get("id") ?? "").trim();
     if (!id) redirect("/documents/quotations");

@@ -17,6 +17,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 import { formatMoney } from "@/lib/currency";
 import {
@@ -204,6 +205,9 @@ export default async function QuotationDetailPage({
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     if (!can.createInvoices(user)) redirect(`/sales/quotations/${id}`);
+    // A permission check does not cover a read-only user or a suspended
+    // workspace, and this creates a financial document.
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     const quotation = await prisma.quotation.findFirst({
       where: {
@@ -240,6 +244,7 @@ export default async function QuotationDetailPage({
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     if (!can.approveQuotations(user) || !can.createInvoices(user)) redirect(`/sales/quotations/${id}`);
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     // Accept implicitly, then convert — collapses SENT → (accept) → ACCEPTED →
     // (convert) into one click. updateQuotationStatus validates the transition.
