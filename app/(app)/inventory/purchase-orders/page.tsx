@@ -121,12 +121,16 @@ export default async function PurchaseOrdersPage({
             <Link href="/inventory/purchase-orders/new" className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">New PO</Link>
           </>
         ),
+        // Tones and destinations, where before every figure looked the same and
+        // went nowhere. Overdue is the only one that means something is wrong;
+        // total and open are the normal state of a buying desk, and colouring
+        // the normal state is how a reader learns to ignore the colours.
         kpis: [
-          { label: "Total", value: total },
-          { label: "Open", value: openCount },
-          { label: "Receiving", value: receivingCount },
-          { label: "Overdue", value: overdueCount },
-          { label: "Pending", value: formatMoney(pendingValue) },
+          { label: "Total", value: total, href: "/inventory/purchase-orders" },
+          { label: "Open", value: openCount, muted: openCount === 0 },
+          { label: "Receiving", value: receivingCount, muted: receivingCount === 0, href: "/inventory/goods-received" },
+          { label: "Overdue", value: overdueCount, tone: overdueCount > 0 ? "crit" as const : "good" as const, muted: overdueCount === 0 },
+          { label: "Pending", value: formatMoney(pendingValue), sub: "awaiting receipt", muted: pendingValue === 0 },
         ],
       }}
       footer={total > 0 ? (

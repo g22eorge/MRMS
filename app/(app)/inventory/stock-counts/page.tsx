@@ -75,7 +75,9 @@ export default async function StockCountsPage({
           { label: "Total Counts", value: countsTotal, sub: "all time" },
           { label: "In Progress", value: inProgressCount, sub: "draft or submitted" },
           { label: "Completed This Month", value: completedThisMonth, sub: "approved counts" },
-          { label: "Variance Items", value: varianceCount, sub: "counted ≠ expected" },
+          // A variance is stock the books cannot account for. It is the one
+          // figure on this page that asks for someone's attention.
+          { label: "Variance Items", value: varianceCount, sub: "counted ≠ expected", tone: varianceCount > 0 ? "warn" as const : "good" as const, muted: varianceCount === 0 },
         ],
       }}
     >

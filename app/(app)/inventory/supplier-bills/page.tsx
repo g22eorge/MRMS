@@ -91,7 +91,9 @@ export default async function SupplierBillsPage({
         ),
         kpis: [
           { label: "Total Bills", value: total, sub: "recorded" },
-          { label: "Outstanding", value: totalOutstanding.toLocaleString(), sub: "posted or part-paid", valueClass: "text-amber-600" },
+          // valueClass was hand-colouring the figure amber — colour with no
+          // word and no rail, which is the thing tones exist to do properly.
+          { label: "Outstanding", value: totalOutstanding.toLocaleString(), sub: "posted or part-paid", tone: totalOutstanding > 0 ? "warn" as const : "good" as const, muted: totalOutstanding === 0 },
         ],
       }}
     >
