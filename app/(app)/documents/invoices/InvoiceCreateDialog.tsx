@@ -13,7 +13,7 @@ type ClientOption = {
   address: string | null;
 };
 
-type LeadOption = {
+export type LeadOption = {
   id: string;
   fullName: string;
   phone: string | null;
@@ -22,7 +22,7 @@ type LeadOption = {
   interest: string | null;
 };
 
-type JobOption = {
+export type JobOption = {
   id: string;
   jobNumber: string;
   brand: string | null;

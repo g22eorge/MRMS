@@ -102,8 +102,11 @@ export function CommercialLineItemsEditor({
           onSelectPart(creatingLineKey!, newPart.id, newPart);
           setCreatingLineKey(null);
         }
-      } catch (err: any) {
-        setError(err.message ?? "Failed to create part");
+      } catch (err) {
+        // Narrowed rather than asserted. `err: any` also let an empty message
+        // through: `?? ` only catches null and undefined, so a thrown Error with
+        // no message showed the user a blank error box.
+        setError(err instanceof Error && err.message ? err.message : "Failed to create part");
       } finally {
         setLoading(false);
       }

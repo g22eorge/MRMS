@@ -15,7 +15,6 @@ export const dynamic = "force-dynamic";
 
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { user, orgId } = await requireOrgSession();
-  const db = prisma as any;
   const { id } = await ctx.params;
 
   const invoice = await prisma.invoice.findFirst({ where: { id, orgId }, select: { id: true, orgId: true, invoiceNumber: true, status: true, jobId: true, totalAmount: true, paidAmount: true, clientId: true } });

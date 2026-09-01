@@ -282,18 +282,23 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
   <BulkSelectionProvider pageIds={rows.map((r) => r.id)}>
     <BulkActionBar />
     {(() => {
-      const columns: DataTableColumn<any>[] = [
-        { key: "select", header: "", className: "w-8", cell: (row: any) => <RowCheckbox quotationId={row.id} /> },
-        { key: "quoteNumber", header: "Quote #", className: "w-[150px]", cell: (row: any) => (
+      // Typed off , not . On the invoices page — this file's twin —
+      // the actions menu read row.isPaid and row.isVoid, which the row objects
+      // never carried, so both guards saw undefined and every invoice offered
+      // "Collect Payment" and "View to Void".  is what let that compile.
+      type QuotationRow = (typeof rows)[number];
+      const columns: DataTableColumn<QuotationRow>[] = [
+        { key: "select", header: "", className: "w-8", cell: (row: QuotationRow) => <RowCheckbox quotationId={row.id} /> },
+        { key: "quoteNumber", header: "Quote #", className: "w-[150px]", cell: (row: QuotationRow) => (
           <Link href={`/documents/quotations/${row.id}`} className="mono font-semibold text-[var(--accent)] hover:underline truncate whitespace-nowrap">{row.quoteNumber}</Link>
         )},
-        { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: any) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
-        { key: "status", header: "Status", className: "w-[100px]", cell: (row: any) => row.statusBadge },
-        { key: "amount", header: "Amount", align: "right", className: "w-[100px]", cell: (row: any) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
-        { key: "validUntil", header: "Valid Until", className: "w-[130px]", cell: (row: any) => <span className="whitespace-nowrap">{row.validUntil}</span> },
-        { key: "created", header: "Created", className: "w-[130px]", cell: (row: any) => <span className="whitespace-nowrap">{row.created}</span> },
+        { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: QuotationRow) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
+        { key: "status", header: "Status", className: "w-[100px]", cell: (row: QuotationRow) => row.statusBadge },
+        { key: "amount", header: "Amount", align: "right", className: "w-[100px]", cell: (row: QuotationRow) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
+        { key: "validUntil", header: "Valid Until", className: "w-[130px]", cell: (row: QuotationRow) => <span className="whitespace-nowrap">{row.validUntil}</span> },
+        { key: "created", header: "Created", className: "w-[130px]", cell: (row: QuotationRow) => <span className="whitespace-nowrap">{row.created}</span> },
       ];
-      const actions = (row: any) => (
+      const actions = (row: QuotationRow) => (
         <RowActionsMenu label={`Quotation ${row.quoteNumber}`}>
           <MenuActionLink href={`/documents/quotations/${row.id}`} icon="open">View</MenuActionLink>
           <PreviewButton quotationId={row.id} />
@@ -344,7 +349,7 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
           empty="No quotations found."
           columns={columns}
           actions={actions}
-          renderMobileCard={(row: any) => (
+          renderMobileCard={(row: QuotationRow) => (
             <div className="px-4 py-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
@@ -384,11 +389,11 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
       <QuotationCreateDialog
         currency={orgCurrency}
         canOverrideDiscount={can.overrideDiscount(user)}
-        clients={clients as any[]}
-        leads={leads as any}
-        jobs={jobs as any}
-        parts={parts as any[]}
-        taxRates={taxRates as any[]}
+        clients={clients}
+        leads={leads}
+        jobs={jobs}
+        parts={parts}
+        taxRates={taxRates}
         defaultTaxApplicable={branding.vatDefaultApplicable ?? false}
         defaultTaxRate={defaultTaxRateObj?.rate ?? branding.vatRatePercent ?? 0}
         defaultTaxLabel={defaultTaxRateObj?.code ?? branding.vatLabel ?? "Tax"}

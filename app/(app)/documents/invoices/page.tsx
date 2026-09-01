@@ -697,8 +697,8 @@ export default async function InvoicesPage({
       ) : null}
 
       <div>
-        {(filtered as any[]).length > 0 ? (
-          <BulkSelectionProvider pageIds={filtered.map((r: any) => r.id)}>
+        {filtered.length > 0 ? (
+          <BulkSelectionProvider pageIds={filtered.map((r) => r.id)}>
             <BulkActionBar />
             {(() => {
               const INV_STATUS_TONES: Record<string, BadgeTone> = {
@@ -712,7 +712,7 @@ export default async function InvoicesPage({
               // line 452 and then never used, so every page rendered the whole
               // result set while the footer counted a page of it. On a book of
               // any size the list ignored both the page and the chosen size.
-              const rows = (pageRows as any[]).map((inv) => {
+              const rows = pageRows.map((inv) => {
                 const clientName = clientDisplayName(inv.job?.client ?? inv.client, "—");
                 const invoiceCurrency = normalizeCurrency(inv.currency ?? orgCurrency, "UGX");
                 const isOverdue = !inv.isPaid && !inv.isVoid && inv.daysOverdue > 0;
@@ -751,11 +751,13 @@ export default async function InvoicesPage({
                 };
               });
 
+              type InvoiceRow = (typeof rows)[number];
+
               // Typed, not `any`: the missing-field bug above was invisible
               // precisely because this parameter accepted anything. With the row
               // type inferred from `rows`, reading a field that is not there is
               // a compile error rather than a silently falsy branch.
-              const actions = (row: (typeof rows)[number]) => (
+              const actions = (row: InvoiceRow) => (
                 <RowActionsMenu label={`Invoice ${row.invoiceNumber}`}>
                   <MenuActionLink href={`/documents/invoices/${row.id}`} icon="open">View</MenuActionLink>
                   <PreviewButton invoiceId={row.id} />
@@ -807,21 +809,21 @@ export default async function InvoicesPage({
                   getRowKey={(r) => r.id}
                   empty="No invoices found."
                   columns={[
-                    { key: "select", header: "", className: "w-8", cell: (row: any) => <RowCheckbox invoiceId={row.id} /> },
-                    { key: "invoiceNumber", header: "Invoice #", className: "w-[150px]", cell: (row: any) => (
+                    { key: "select", header: "", className: "w-8", cell: (row: InvoiceRow) => <RowCheckbox invoiceId={row.id} /> },
+                    { key: "invoiceNumber", header: "Invoice #", className: "w-[150px]", cell: (row: InvoiceRow) => (
                       <Link href={`/documents/invoices/${row.id}`} className="mono font-semibold text-[var(--accent)] hover:underline truncate whitespace-nowrap">
                         {row.invoiceNumber}
                       </Link>
                     )},
-                    { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: any) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
-                    { key: "status", header: "Status", className: "w-[100px]", cell: (row: any) => row.statusBadge },
-                    { key: "amount", header: "Amount", align: "right", className: "w-[110px]", cell: (row: any) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
-                    { key: "issued", header: "Issued", className: "w-[100px]", cell: (row: any) => <span className="whitespace-nowrap">{row.issued}</span> },
-                    { key: "due", header: "Due", className: "w-[100px]", cell: (row: any) => <span className="whitespace-nowrap">{row.due}</span> },
-                    { key: "balance", header: "Balance", className: "w-[110px]", cell: (row: any) => row.balance },
+                    { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: InvoiceRow) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
+                    { key: "status", header: "Status", className: "w-[100px]", cell: (row: InvoiceRow) => row.statusBadge },
+                    { key: "amount", header: "Amount", align: "right", className: "w-[110px]", cell: (row: InvoiceRow) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
+                    { key: "issued", header: "Issued", className: "w-[100px]", cell: (row: InvoiceRow) => <span className="whitespace-nowrap">{row.issued}</span> },
+                    { key: "due", header: "Due", className: "w-[100px]", cell: (row: InvoiceRow) => <span className="whitespace-nowrap">{row.due}</span> },
+                    { key: "balance", header: "Balance", className: "w-[110px]", cell: (row: InvoiceRow) => row.balance },
                   ]}
                   actions={actions}
-                  renderMobileCard={(row: any) => (
+                  renderMobileCard={(row: InvoiceRow) => (
                     <div className="px-4 py-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-2">
@@ -869,9 +871,9 @@ export default async function InvoicesPage({
 <InvoiceCreateDialog
   currency={orgCurrency}
   canOverrideDiscount={canOverrideDiscount}
-  clients={clients as any[]}
-  leads={leads as any[]}
-  jobs={jobs as any[]}
+  clients={clients}
+  leads={leads}
+  jobs={jobs}
   parts={invoiceParts}
   taxRates={invoiceTaxRates}
   defaultTaxApplicable={branding.vatDefaultApplicable ?? false}
