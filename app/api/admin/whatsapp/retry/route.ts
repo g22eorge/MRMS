@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { assertPlatformAdmin } from "@/lib/platform-admin";
+import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { getOutboxRetryLimit, retryDueOutboundMessages } from "@/lib/notifications/whatsapp-outbox";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export async function GET() {
   if (!user) {
     return NextResponse.redirect(new URL("/login", process.env.BETTER_AUTH_URL ?? "http://localhost:3000"));
   }
+
 
   // Simple in-browser runner (uses current session cookies).
   const html = `<!doctype html>
@@ -58,6 +60,16 @@ export async function POST() {
   const user = await assertPlatformAdmin();
   if (!user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Bounds what a hijacked admin session can do in a burst, and stops a
+  // repeated click re-running this while the first run is still working.
+  const rl = await rateLimit.platformAdmin(user.id);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many admin operations. Wait a moment and retry." },
+      { status: 429, headers: rateLimitHeaders(rl.retryAfterMs) },
+    );
   }
 
   const result = await retryDueOutboundMessages(getOutboxRetryLimit(25));

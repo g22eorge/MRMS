@@ -6,12 +6,15 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { HubTabs } from "@/components/shared/HubTabs";
+import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { createSupplierPaymentAction } from "./actions";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 const STATUS_TONES: Record<string, BadgeTone> = {
@@ -25,13 +28,17 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 export default async function SupplierBillsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; error?: string }>;
+  searchParams: Promise<{ page?: string; size?: string; error?: string }>;
 }) {
-  const { user, orgId } = await requireOrgSession();
+  const { user, orgId, org } = await requireOrgSession();
+  // The currency the books are kept in. The payment form asks for the transfer
+  // figures in this, since that is what the bank statement shows.
+  const baseCurrency = org.baseCurrency ?? "UGX";
   if (!can.manageInventory(user)) redirect("/inventory");
 
   const params = await searchParams;
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const [total, bills, outstandingRows] = await Promise.all([
     prisma.supplierBill.count({ where: { orgId } }).catch(() => 0),
@@ -43,8 +50,8 @@ export default async function SupplierBillsPage({
         grn: { select: { id: true, grnNumber: true } },
       },
       orderBy: { issuedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
     // Outstanding is a per-row Math.max sum (not SQL-aggregatable); keep a slim
     // whole-dataset fetch so the KPI stays correct after the list is paginated.
@@ -57,16 +64,24 @@ export default async function SupplierBillsPage({
   const totalOutstanding = outstandingRows
     .reduce((sum, bill) => sum + Math.max(0, bill.totalAmount - bill.paidAmount), 0);
 
-  const pageView = paginationView(page, total);
-  const billsHref = pageHrefBuilder("/inventory/supplier-bills", {});
+  const pageView = paginationView(page, total, pageSize);
+  const billsHrefFilters = {
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const billsHref = pageHrefBuilder("/inventory/supplier-bills", billsHrefFilters);
+  const billsHrefSize = sizeHrefBuilder("/inventory/supplier-bills", billsHrefFilters);
 
   const fmt = (d: Date | null) => d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
   return (
     <ListPageLayout
-      topBar={<FormErrorBanner message={params.error} />}
+      topBar={
+        <>
+          <HubTabs items={INVENTORY_TABS} />
+          <FormErrorBanner message={params.error} />
+        </>
+      }
       header={{
-        eyebrow: "Procurement",
         title: "Supplier Bills",
         actions: (
           <>
@@ -76,14 +91,17 @@ export default async function SupplierBillsPage({
         ),
         kpis: [
           { label: "Total Bills", value: total, sub: "recorded" },
-          { label: "Outstanding", value: totalOutstanding.toLocaleString(), sub: "posted or part-paid", valueClass: "text-amber-600" },
+          // valueClass was hand-colouring the figure amber — colour with no
+          // word and no rail, which is the thing tones exist to do properly.
+          { label: "Outstanding", value: totalOutstanding.toLocaleString(), sub: "posted or part-paid", tone: totalOutstanding > 0 ? "warn" as const : "good" as const, muted: totalOutstanding === 0 },
         ],
       }}
     >
       <DataTable
         rows={bills}
         getRowKey={(bill) => bill.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: billsHref, unit: "bills" }}
+        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: billsHref,
+            hrefForSize: billsHrefSize, unit: "bills" }}
         empty="No supplier bills yet."
         columns={[
           {
@@ -172,7 +190,19 @@ export default async function SupplierBillsPage({
                       </select>
                       <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
                       <input name="reference" placeholder="Reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-                      <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold">Record payment</button>
+                      {/* Only for a bill in another currency. The rate is not
+                          typed: it is derived from what the statement shows, so
+                          the books carry the spread that was actually paid
+                          rather than a rate nobody transacted at. */}
+                      {bill.currency !== baseCurrency ? (
+                        <>
+                          <input name="baseAmountSent" type="number" min={0} step="any" placeholder={`Total ${baseCurrency} that left the account`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-right text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                          <input name="feeAmount" type="number" min={0} step="any" placeholder={`Transfer charge in ${baseCurrency}`} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-right text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                        </>
+                      ) : (
+                        <input name="feeAmount" type="number" min={0} step="any" placeholder="Transfer charge (optional)" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-right text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                      )}
+                      <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold">Record payment</SubmitButton>
                     </form>
                   </div>
                 </RowActionsMenu>

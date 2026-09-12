@@ -7,7 +7,6 @@ export default function DocumentsError({ error, reset }: { error: Error; reset: 
 
   return (
     <PageErrorState
-      eyebrow="Documents Error"
       title="Could not load this documents page"
       digest={digest}
       onRetry={reset}

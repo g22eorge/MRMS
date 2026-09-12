@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T19:48:18.663Z",
+  "generatedAt": "2026-09-12T19:52:39.216Z",
   "classes": {
     "money": {
       "prismaType": "Decimal",
@@ -49,6 +49,15 @@
       "class": "money",
       "targetType": "Decimal",
       "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Invoice",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
     },
     {
       "model": "Invoice",
@@ -115,8 +124,26 @@
     },
     {
       "model": "CreditNote",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "CreditNote",
       "field": "totalAmount",
       "column": "totalAmount",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "CreditNoteItem",
+      "field": "quantity",
+      "column": "quantity",
       "optional": false,
       "class": "money",
       "targetType": "Decimal",
@@ -148,6 +175,15 @@
       "class": "factor",
       "targetType": "Decimal",
       "native": "@db.Decimal(18, 6)"
+    },
+    {
+      "model": "Sale",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
     },
     {
       "model": "Sale",
@@ -348,6 +384,15 @@
       "native": "@db.Decimal(18, 2)"
     },
     {
+      "model": "PurchaseOrder",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
       "model": "PurchaseOrderItem",
       "field": "unitCost",
       "column": "unitCost",
@@ -364,6 +409,15 @@
       "class": "money",
       "targetType": "Decimal",
       "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierBill",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
     },
     {
       "model": "SupplierBill",
@@ -421,9 +475,36 @@
     },
     {
       "model": "SupplierPayment",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "SupplierPayment",
       "field": "amount",
       "column": "amount",
       "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierPayment",
+      "field": "feeAmount",
+      "column": "feeAmount",
+      "optional": true,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierPayment",
+      "field": "baseAmountSent",
+      "column": "baseAmountSent",
+      "optional": true,
       "class": "money",
       "targetType": "Decimal",
       "native": "@db.Decimal(18, 2)"
@@ -465,6 +546,15 @@
       "native": "@db.Decimal(18, 2)"
     },
     {
+      "model": "CustomerApproval",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
       "model": "SupplierPrice",
       "field": "unitCost",
       "column": "unitCost",
@@ -472,6 +562,15 @@
       "class": "money",
       "targetType": "Decimal",
       "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "SupplierPrice",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
     },
     {
       "model": "InvoiceLine",
@@ -564,6 +663,15 @@
       "native": "@db.Decimal(12, 6)"
     },
     {
+      "model": "RecurringInvoice",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
       "model": "RecurringInvoiceItem",
       "field": "quantity",
       "column": "quantity",
@@ -636,6 +744,15 @@
       "native": "@db.Decimal(18, 2)"
     },
     {
+      "model": "Receipt",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
       "model": "PaymentAllocation",
       "field": "amount",
       "column": "amount",
@@ -697,6 +814,15 @@
       "class": "money",
       "targetType": "Decimal",
       "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "Quotation",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
     },
     {
       "model": "Quotation",
@@ -904,6 +1030,33 @@
       "class": "money",
       "targetType": "Decimal",
       "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "BankTransaction",
+      "field": "exchangeRateToBase",
+      "column": "exchangeRateToBase",
+      "optional": true,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
+    },
+    {
+      "model": "PaymentReminderSettings",
+      "field": "manualReviewAbove",
+      "column": "manualReviewAbove",
+      "optional": false,
+      "class": "money",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(18, 2)"
+    },
+    {
+      "model": "FxReferenceRate",
+      "field": "rate",
+      "column": "rate",
+      "optional": false,
+      "class": "rate",
+      "targetType": "Decimal",
+      "native": "@db.Decimal(12, 6)"
     },
     {
       "model": "BillingEvent",

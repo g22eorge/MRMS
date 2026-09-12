@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent, useEffect } from "react";
+import type { LeadOption, JobOption } from "./InvoiceCreateDialog";
 
 import {
   CommercialLineItemsEditor,
@@ -49,8 +50,12 @@ type Props = {
   defaultTaxApplicable: boolean;
   defaultTaxRate: number;
   defaultTaxLabel: string;
-  leads?: any[];
-  jobs?: any[];
+  // Declared and forwarded by InvoiceCreateDialog but not read here — typed
+  // rather than deleted, because this file's twin lost a working feature to a
+  // cleanup that removed something equally unused-looking. Shared with the
+  // dialog so the two cannot drift.
+  leads?: LeadOption[];
+  jobs?: JobOption[];
   initialData?: {
     clientId?: string;
     invoiceType?: string;

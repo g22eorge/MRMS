@@ -4,6 +4,7 @@ import { formatEATMediumDate } from "@/lib/date-eat";
 import { createAnnouncementAction, toggleAnnouncementAction, deleteAnnouncementAction } from "./actions";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 const LEVEL_CHIP: Record<string, string> = {
@@ -54,7 +55,7 @@ export default async function PlatformAnnouncementsPage({
             <input type="datetime-local" name="endsAt" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem]" />
           </label>
         </div>
-        <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] text-white">Publish</button>
+        <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] text-white">Publish</SubmitButton>
       </form>
 
       {/* List */}
@@ -87,13 +88,13 @@ export default async function PlatformAnnouncementsPage({
                     <form action={toggleAnnouncementAction}>
                       <input type="hidden" name="id" value={a.id} />
                       <input type="hidden" name="isActive" value={String(a.isActive)} />
-                      <button type="submit" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
+                      <SubmitButton bare className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
                         {a.isActive ? "Deactivate" : "Activate"}
-                      </button>
+                      </SubmitButton>
                     </form>
                     <form action={deleteAnnouncementAction}>
                       <input type="hidden" name="id" value={a.id} />
-                      <button type="submit" className="rounded-lg border border-red-400/40 px-3 py-1.5 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Delete</button>
+                      <SubmitButton bare className="rounded-lg border border-red-400/40 px-3 py-1.5 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Delete</SubmitButton>
                     </form>
                   </div>
                 </div>

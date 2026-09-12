@@ -10,9 +10,10 @@ import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 import { createStockLocationAction, toggleStockLocationAction, updateStockLocationAction } from "./actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 export default async function StockLocationsPage({
@@ -29,13 +30,14 @@ export default async function StockLocationsPage({
   const saved = String(params.saved ?? "") === "1";
   const error = typeof params.error === "string" ? params.error : "";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const [locations, locationsTotal, branches, stockRows] = await Promise.all([
     prisma.stockLocation.findMany({
       where: { orgId },
       orderBy: [{ isActive: "desc" }, { name: "asc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
     prisma.stockLocation.count({ where: { orgId } }).catch(() => 0),
     prisma.branch.findMany({
@@ -55,8 +57,10 @@ export default async function StockLocationsPage({
   const stats = new Map(stockRows.map((row) => [row.locationId, row]));
   const totalOnHand = stockRows.reduce((sum, row) => sum + (row._sum.qtyOnHand ?? 0), 0);
   const branchName = new Map(branches.map((branch) => [branch.id, branch.name]));
-  const pageView = paginationView(page, locationsTotal);
-  const hrefForPage = pageHrefBuilder("/inventory/locations", {});
+  const pageView = paginationView(page, locationsTotal, pageSize);
+  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPage = pageHrefBuilder("/inventory/locations", hrefForPageFilters);
+  const hrefForPageSize = sizeHrefBuilder("/inventory/locations", hrefForPageFilters);
 
   // Named so the same actions menu renders in the desktop table AND mobile card.
   const renderLocationActions = (location: (typeof locations)[number]) => (
@@ -73,14 +77,14 @@ export default async function StockLocationsPage({
           <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink-muted)]">
             <input type="checkbox" name="isActive" value="1" defaultChecked={location.isActive} /> Active
           </label>
-          <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Location</button>
+          <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Location</SubmitButton>
         </form>
         <form action={toggleStockLocationAction} className="mt-2 border-t border-[var(--line)] pt-2">
           <input type="hidden" name="id" value={location.id} />
           <input type="hidden" name="isActive" value={location.isActive ? "0" : "1"} />
-          <button type="submit" className="text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
+          <SubmitButton bare className="text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
             {location.isActive ? "Deactivate" : "Activate"}
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </RowActionsMenu>
@@ -90,7 +94,6 @@ export default async function StockLocationsPage({
     <ListPageLayout
       topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
-        eyebrow: "Inventory",
         title: "Stock Locations",
         kpis: [
           { label: "Total", value: locationsTotal, sub: "locations" },
@@ -113,7 +116,7 @@ export default async function StockLocationsPage({
                 <option value="">No branch</option>
                 {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
               </select>
-              <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Create</button>
+              <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Create</SubmitButton>
             </form>
           </div>
         </>
@@ -122,7 +125,7 @@ export default async function StockLocationsPage({
       <DataTable
         rows={locations}
         getRowKey={(location) => location.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total: locationsTotal, hrefForPage, unit: "locations" }}
+        pagination={{ page: pageView.page, pageSize, total: locationsTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "locations" }}
         empty="No stock locations yet. Create Main Stock, Store, Van, or Technician locations here."
         columns={[
           {

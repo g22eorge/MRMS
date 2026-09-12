@@ -1,9 +1,12 @@
 import { OutboundMessageType } from "@prisma/client";
 
 import { formatMoney } from "@/lib/currency";
+import { formatEATDocDate } from "@/lib/date-eat";
+import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { getClientStatement } from "@/lib/commercial/statements";
-import { enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
+import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
 import { prisma } from "@/lib/prisma";
+import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 
 export type DocumentShareChannel = "whatsapp" | "email";
 
@@ -49,35 +52,65 @@ async function dispatchDocumentShare(params: {
   orgId: string;
   channel: DocumentShareChannel;
   jobId?: string | null;
+  clientId?: string | null;
+  reminderStage?: string | null;
   recipient: DocumentRecipient;
   whatsappBody: string;
   emailSubject: string;
   emailBody: string;
   /** Defaults to JOB_STATUS_UPDATE, which is what the job-linked shares use. */
   type?: OutboundMessageType;
+  /** Set when the message must survive a closed WhatsApp session window. */
+  metaTemplateName?: string | null;
+  metaTemplateLanguage?: string | null;
+  metaTemplateVars?: string | null;
 }): Promise<boolean> {
   const messageType = params.type ?? OutboundMessageType.JOB_STATUS_UPDATE;
+
+  // Enqueue then deliver. Enqueueing alone only writes a PENDING row, and the
+  // retry sweep is a daily job — so every Send button in the documents area was
+  // reporting success while the message waited until the next morning. The
+  // notification triggers have always done both; this path had only ever done
+  // the first half.
+  const attempt = async (queued: unknown) => {
+    if (queued && typeof queued === "object" && "outboxId" in queued) {
+      const id = (queued as { outboxId?: string }).outboxId;
+      // A provider failure is not a failure of the share: the row carries the
+      // error and the sweep will retry it.
+      if (id) await deliverOutboundMessage(id).catch(() => null);
+    }
+  };
+
   if (params.channel === "whatsapp") {
     if (!params.recipient.phone) return false;
-    await enqueueWhatsAppMessage({
+    const queued = await enqueueWhatsAppMessage({
       orgId: params.orgId,
       jobId: params.jobId ?? undefined,
+      clientId: params.clientId ?? undefined,
+      reminderStage: params.reminderStage ?? undefined,
       to: params.recipient.phone,
       type: messageType,
       body: params.whatsappBody,
+      metaTemplateName: params.metaTemplateName ?? null,
+      metaTemplateLanguage: params.metaTemplateLanguage ?? null,
+      metaTemplateVars: params.metaTemplateVars ?? null,
     });
+    await attempt(queued);
     return true;
   }
 
   if (!params.recipient.email) return false;
-  await enqueueEmailMessage({
+  const queued = await enqueueEmailMessage({
     orgId: params.orgId,
     jobId: params.jobId ?? undefined,
+    clientId: params.clientId ?? undefined,
+    reminderStage: params.reminderStage ?? undefined,
     to: params.recipient.email,
     subject: params.emailSubject,
     body: params.emailBody,
     type: messageType,
   });
+  await attempt(queued);
   return true;
 }
 
@@ -85,6 +118,7 @@ const invoiceClientSelect = {
   fullName: true,
   phone: true,
   email: true,
+  organization: true,
 } as const;
 
 const linkedInvoiceSelect = {
@@ -183,15 +217,25 @@ export async function shareCreditNoteDocument(params: {
       totalAmount: true,
       currency: true,
       sale: { select: linkedSaleSelect },
+      invoice: { select: linkedInvoiceSelect },
     },
   });
   if (!creditNote) return false;
 
-  const recipient = resolveLinkedDocumentRecipient({ saleClient: creditNote.sale.client });
+  // Either parent can carry the customer, and a repair invoice usually carries
+  // it on the job rather than on itself.
+  const parent = creditNoteParent(creditNote);
+  const recipient = resolveLinkedDocumentRecipient({
+    saleClient: creditNote.sale?.client ?? null,
+    invoiceClient: creditNote.invoice?.client ?? null,
+    jobClient: creditNote.invoice?.job?.client ?? null,
+  });
   if (!recipient) return false;
 
   const amountLine = `Amount: ${formatMoney(creditNote.totalAmount, creditNote.currency)}`;
-  const intro = `Your credit note ${creditNote.creditNoteNumber} for ${creditNote.sale.saleNumber} is ready.`;
+  const intro = parent.reference
+    ? `Your credit note ${creditNote.creditNoteNumber} for ${parent.reference} is ready.`
+    : `Your credit note ${creditNote.creditNoteNumber} is ready.`;
 
   return dispatchDocumentShare({
     orgId: params.orgId,
@@ -230,7 +274,7 @@ export async function shareRefundDocument(params: {
     jobClient: refund.invoice?.job?.client ?? null,
     invoiceClient: refund.invoice?.client ?? null,
     saleClient: refund.sale?.client ?? null,
-    creditNoteSaleClient: refund.creditNote?.sale.client ?? null,
+    creditNoteSaleClient: refund.creditNote?.sale?.client ?? null,
   });
   if (!recipient) return false;
 
@@ -383,6 +427,8 @@ export async function shareStatementDocument(params: {
   clientId: string;
   channel: DocumentShareChannel;
   baseCurrency: string;
+  /** Stamped on the outbox row so a scheduled statement can be deduped. */
+  reminderStage?: string;
 }): Promise<boolean> {
   const client = await prisma.client.findFirst({
     where: { id: params.clientId, orgId: params.orgId },
@@ -395,6 +441,26 @@ export async function shareStatementDocument(params: {
 
   const statement = await getClientStatement(params.orgId, params.clientId, params.baseCurrency);
   const balance = formatMoney(statement.totals.outstanding, statement.currency);
+  const org = await prisma.organization.findUnique({ where: { id: params.orgId }, select: { name: true } });
+  const oldest = statement.lines.at(0)?.date ?? null;
+
+  // Rendered through the approved template for the same reason the per-invoice
+  // reminders are: a statement is business-initiated, so outside the 24-hour
+  // window free-form text is accepted by Meta and delivered to nobody. Falls
+  // back to the hand-written body when no template is active.
+  const rendered = await renderCommunicationTemplate({
+    orgId: params.orgId,
+    key: "PAYMENT_REMINDER_STATEMENT",
+    channel: params.channel === "whatsapp" ? "WHATSAPP" : "EMAIL",
+    variables: {
+      customerName: client.fullName,
+      companyName: org?.name ?? "",
+      documentCount: String(statement.lines.length),
+      amount: balance,
+      oldestDate: oldest ? formatEATDocDate(oldest) : "—",
+    },
+    fallback: { body: "" },
+  });
   const portalUrl = documentPdfUrl("/portal/documents");
   const docCount = statement.lines.length;
   const intro = statement.totals.outstanding > 0
@@ -405,7 +471,12 @@ export async function shareStatementDocument(params: {
     orgId: params.orgId,
     channel: params.channel,
     recipient,
-    whatsappBody: `Hi ${recipient.fullName}, here is your statement of account.\n\n${intro}\nView and download it here: ${portalUrl}`,
+    clientId: params.clientId,
+    reminderStage: params.reminderStage,
+    metaTemplateName: rendered.metaTemplateName,
+    metaTemplateLanguage: rendered.metaLanguageCode,
+    metaTemplateVars: rendered.metaParamValues.length > 0 ? JSON.stringify(rendered.metaParamValues) : null,
+    whatsappBody: rendered.body || `Hi ${recipient.fullName}, here is your statement of account.\n\n${intro}\nView and download it here: ${portalUrl}`,
     type: OutboundMessageType.INVOICE_REMINDER,
     emailSubject: `Statement of account — balance ${balance}`,
     emailBody: `Hi ${recipient.fullName},\n\nHere is your statement of account.\n\n${intro}\n\nView and download it here: ${portalUrl}`,

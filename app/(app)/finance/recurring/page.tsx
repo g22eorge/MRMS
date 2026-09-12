@@ -11,11 +11,14 @@ import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { clientDisplayName } from "@/lib/client-name";
+import { findRecentDuplicate } from "@/lib/dedup";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 const FREQUENCIES = ["WEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL"] as const;
@@ -54,11 +57,12 @@ function nextDueDateFromFrequency(from: Date, freq: Frequency): Date {
 export default async function RecurringInvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; size?: string; error?: string }>;
 }) {
   const sp = await searchParams;
   const q = sp.q?.toLowerCase().trim() ?? "";
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
   const { user, orgId, org } = await requireOrgSession();
   if (!can.viewFinancials(user)) redirect("/dashboard");
 
@@ -66,7 +70,7 @@ export default async function RecurringInvoicesPage({
     prisma.recurringInvoice.findMany({
       where: { orgId },
       include: {
-        client: { select: { id: true, fullName: true } },
+        client: { select: { id: true, fullName: true, organization: true } },
         items: true,
         createdBy: { select: { name: true } },
       },
@@ -74,9 +78,9 @@ export default async function RecurringInvoicesPage({
     }),
     prisma.client.findMany({
       where: { orgId },
-      select: { id: true, fullName: true },
+      select: { id: true, fullName: true, organization: true },
       orderBy: { fullName: "asc" },
-    }).catch(() => [] as { id: string; fullName: string }[]),
+    }).catch(() => [] as { id: string; fullName: string; organization: string | null }[]),
   ]);
 
   const currency = org.baseCurrency ?? "UGX";
@@ -189,6 +193,14 @@ export default async function RecurringInvoicesPage({
     const nextDue = nextDueDateFromFrequency(new Date(), frequency);
 
     await prisma.$transaction(async (tx) => {
+      // Generating the same recurring invoice twice bills the client twice and
+      // burns a document number. Inside the transaction so a racing second
+      // request sees the first one's row.
+      const dup = await findRecentDuplicate(tx.invoice, {
+        orgId, clientId: rec.clientId, totalAmount, subject: rec.subject,
+      });
+      if (dup) return;
+
       const invoiceNumber = await nextDocumentNumber(tx, "INV", "invoice", orgId);
       const invoice = await tx.invoice.create({
         data: {
@@ -262,13 +274,17 @@ export default async function RecurringInvoicesPage({
   const activeCount = recurringInvoices.filter((r) => r.isActive).length;
   const dueNow = recurringInvoices.filter((r) => r.isActive && r.nextDueAt <= now).length;
   const filteredRecurring = q
-    ? recurringInvoices.filter((r) => r.subject.toLowerCase().includes(q) || r.client?.fullName?.toLowerCase().includes(q))
+    ? recurringInvoices.filter((r) => r.subject.toLowerCase().includes(q) || clientDisplayName(r.client, "").toLowerCase().includes(q))
     : recurringInvoices;
 
   // KPIs above stay whole-dataset; only the displayed rows are paginated.
-  const pageView = paginationView(page, filteredRecurring.length);
+  const pageView = paginationView(page, filteredRecurring.length, pageSize);
   const pageRows = filteredRecurring.slice(pageView.skip, pageView.skip + pageView.take);
-  const recurringHref = pageHrefBuilder("/finance/recurring", { q: sp.q?.trim() ?? "" });
+  const recurringHrefFilters = { q: sp.q?.trim() ?? "",
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const recurringHref = pageHrefBuilder("/finance/recurring", recurringHrefFilters);
+  const recurringHrefSize = sizeHrefBuilder("/finance/recurring", recurringHrefFilters);
 
   // Named so the same actions menu renders in the desktop table AND mobile card.
   const renderRecurringActions = (rec: (typeof pageRows)[number]) => (
@@ -277,15 +293,15 @@ export default async function RecurringInvoicesPage({
       <div className="px-3 py-1">
         <form action={issueNowAction}>
           <input type="hidden" name="recurringId" value={rec.id} />
-          <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
+          <SubmitButton bare className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
             Issue Invoice Now
-          </button>
+          </SubmitButton>
         </form>
         <form action={toggleRecurringAction}>
           <input type="hidden" name="recurringId" value={rec.id} />
-          <button type="submit" className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
+          <SubmitButton bare className="w-full rounded py-1.5 text-left text-[0.75rem] text-[var(--ink)] hover:text-[var(--accent)]">
             {rec.isActive ? "Pause" : "Resume"}
-          </button>
+          </SubmitButton>
         </form>
       </div>
       <MenuDestructiveRow>
@@ -307,7 +323,6 @@ export default async function RecurringInvoicesPage({
       {/* Header */}
       <FormErrorBanner message={sp.error} />
       <PageHeader
-        eyebrow="Finance"
         title="Recurring Invoices"
         description={`${activeCount} active${dueNow > 0 ? ` · ${dueNow} due` : ""} — templates that auto-generate or remind you to issue invoices on schedule.`}
         kpis={[
@@ -328,7 +343,7 @@ export default async function RecurringInvoicesPage({
                 <select name="clientId" required className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]">
                   <option value="">Select client…</option>
                   {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.fullName}</option>
+                    <option key={c.id} value={c.id}>{clientDisplayName(c)}</option>
                   ))}
                 </select>
               </div>
@@ -389,9 +404,9 @@ export default async function RecurringInvoicesPage({
                 <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Notes</label>
                 <textarea name="notes" rows={2} className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
               </div>
-              <button type="submit" className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
+              <SubmitButton bare className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
                 Create Template
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </details>
@@ -402,7 +417,7 @@ export default async function RecurringInvoicesPage({
       <form method="GET" className="flex gap-2">
         <input name="q" defaultValue={q} placeholder="Search subject, client…"
           className="h-8 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-        <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</button>
+        <SubmitButton bare className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</SubmitButton>
         {q && <a href="/finance/recurring" className="flex h-8 items-center rounded-lg border border-[var(--line)] px-3 text-[0.75rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">Clear</a>}
       </form>
 
@@ -432,7 +447,7 @@ export default async function RecurringInvoicesPage({
             key: "client",
             header: "Client",
             className: "text-[var(--ink)]",
-            cell: (rec) => rec.client.fullName,
+            cell: (rec) => clientDisplayName(rec.client),
           },
           {
             key: "frequency",
@@ -497,7 +512,7 @@ export default async function RecurringInvoicesPage({
             <div className="flex items-start justify-between gap-3 px-4 py-3">
               <div className="min-w-0">
                 <p className="truncate font-bold text-[var(--ink)]">{rec.subject}</p>
-                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{rec.client.fullName} · {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{clientDisplayName(rec.client)} · {FREQ_LABELS[rec.frequency as Frequency] ?? rec.frequency}</p>
                 <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">
                   {rec.currency} {rec.items.reduce((s, i) => s + i.lineTotal, 0).toLocaleString()} · <span className={isDue ? "font-semibold text-amber-600" : ""}>{isDue ? "Due now" : `Next ${fmt(rec.nextDueAt)}`}</span>
                 </p>
@@ -519,6 +534,8 @@ export default async function RecurringInvoicesPage({
         total={pageView.total}
         unit="templates"
         hrefForPage={recurringHref}
+          pageSize={pageSize}
+          hrefForSize={recurringHrefSize}
       />
     </div>
   );

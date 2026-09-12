@@ -2,10 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import type { PaymentMethod } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { formatEATDateTime } from "@/lib/date-eat";
-import { prisma, TxClient } from "@/lib/prisma";
+import { prisma, type TxClient } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -21,14 +22,16 @@ import { DocumentShareMenuSection } from "@/components/documents/DocumentShareMe
 import { shareSaleReceiptDocument } from "@/lib/notifications/share-document";
 import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
+import { refundableCeiling } from "@/lib/commercial/refundable";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { computeLinesVat } from "@/lib/commercial/vat";
-import { isMissingTableError } from "@/lib/db-errors";
+import { clientDisplayName } from "@/lib/client-name";
 
+import { flash } from "@/lib/flash";
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
 /**
@@ -52,7 +55,7 @@ async function recalcSaleTotals(
   const currency = normalizeCurrency(current?.currency, "UGX");
   // VAT config: read the three fields we need on the SAME transaction connection
   // with a minimal SELECT. Do NOT use getDocumentBrandingSettings() here — it runs
-  // ensureRawTable() (CREATE/ALTER TABLE DDL) which, issued while this write
+  // ensureRawTable() (CREATE/ALTER TABLE DDL) which, issued while this libSQL write
   // transaction is open, can deadlock checkout on cold start. Falls back to safe
   // defaults (VAT off, exclusive, 18%) if the row/columns aren't present.
   let vatDefaultApplicable = false;
@@ -145,7 +148,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     notes: string | null;
     branchId: string | null;
     branch: { name: string } | null;
-    client: { fullName: string; phone: string | null; email: string | null } | null;
+    client: { fullName: string; phone: string | null; email: string | null; organization: string | null } | null;
     items: Array<{ id: string; partId: string | null; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
     payments: Array<{ id: string; amount: number; method: PaymentMethod; reference: string | null; receivedAt: Date; currency: string | null }>;
     _count: { payments: number; creditNotes: number; refunds: number };
@@ -198,7 +201,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         notes: true,
         branchId: true,
         branch: { select: { name: true } },
-        client: { select: { fullName: true, phone: true, email: true } },
+        client: { select: { fullName: true, phone: true, email: true, organization: true } },
         items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
         payments: { select: { id: true, amount: true, method: true, reference: true, receivedAt: true, currency: true }, orderBy: { receivedAt: "desc" } },
         _count: { select: { payments: true, creditNotes: true, refunds: true } },
@@ -206,13 +209,15 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (isMissingTableError(err) && msg.includes("sale")) dbNeedsFix = true;
+    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
     sale = null;
   }
 
   if (!sale) {
     if (dbNeedsFix) redirect("/pos"); // schema not yet migrated — redirect to list
-    notFound(); // sale doesn't exist in this org
+    {
+      notFound();
+    }
   }
 
   const saleCurrency = normalizeCurrency(sale.currency, org.baseCurrency);
@@ -324,15 +329,28 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     }
 
     await prisma.$transaction(async (tx) => {
+      // One read for every part on the sale rather than one per line. The
+      // quantities are then summed per part before a single update, which is
+      // not merely tidier: the same product can appear on two lines, and the
+      // per-line version only stayed correct because it re-read qtyOnHand each
+      // time and saw its own previous write. Batching the read without summing
+      // would have restored one line's stock and silently dropped the other.
+      const partIds = [...new Set(sale.items.map((i) => i.partId).filter((id): id is string => Boolean(id)))];
+      const parts = partIds.length
+        ? await tx.part.findMany({ where: { id: { in: partIds }, orgId }, select: { id: true, qtyOnHand: true } })
+        : [];
+      const partById = new Map(parts.map((p) => [p.id, p]));
+
+      const restoreByPart = new Map<string, number>();
       for (const item of sale.items) {
-        if (!item.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
-        if (!part) continue;
+        if (!item.partId || !partById.has(item.partId)) continue;
         const baseQty = Math.abs(item.quantity) * (item.saleUomFactor ?? 1);
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
+        restoreByPart.set(item.partId, (restoreByPart.get(item.partId) ?? 0) + baseQty);
+        // One ledger row per line, not per part: the reason names the line's
+        // own description, and that is the record of what was reversed.
         await tx.partStockTransaction.create({
           data: {
-            partId: part.id,
+            partId: item.partId,
             orgId,
             saleId: sale.id,
             type: "IN",
@@ -342,12 +360,19 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           },
         });
       }
+
+      for (const [partId, restored] of restoreByPart) {
+        await tx.part.update({
+          where: { id: partId },
+          data: { qtyOnHand: partById.get(partId)!.qtyOnHand + restored },
+        });
+      }
       await tx.sale.deleteMany({ where: { id: sale.id, orgId } });
     });
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: sale.id, action: "POS_SALE_DELETED", summary: "Open POS sale deleted" });
 
     revalidatePath("/pos");
-    redirect("/pos");
+    redirect(flash("/pos", "Sale deleted"));
   }
 
   async function updateItemAction(formData: FormData) {
@@ -763,12 +788,27 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     await prisma.$transaction(async (tx) => {
       const items = await tx.creditNoteItem.findMany({ where: { creditNoteId }, select: { partId: true, quantity: true, description: true, saleUomFactor: true } });
 
+      // Same shape as the sale-deletion reversal above, and the same reason for
+      // summing rather than only batching: a credit note can return the same
+      // product on two lines, and reading each part once means one update must
+      // carry both quantities.
+      const returnedIds = [...new Set(items.map((i) => i.partId).filter((id): id is string => Boolean(id)))];
+      const returnedParts = returnedIds.length
+        ? await tx.part.findMany({
+            where: { id: { in: returnedIds }, orgId, isActive: true },
+            select: { id: true, qtyOnHand: true, sku: true, name: true },
+          })
+        : [];
+      const returnedById = new Map(returnedParts.map((p) => [p.id, p]));
+
+      const returnByPart = new Map<string, number>();
       for (const it of items) {
         if (!it.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, qtyOnHand: true, sku: true, name: true } });
+        const part = returnedById.get(it.partId);
         if (!part) continue;
         const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
+        returnByPart.set(part.id, (returnByPart.get(part.id) ?? 0) + baseQty);
+        // One ledger row per returned line, so the reason keeps naming the line.
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
@@ -779,6 +819,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             reason: `Return (${creditNote.creditNoteNumber}) ${it.description || part.name}`,
             createdById: session.user.id,
           },
+        });
+      }
+
+      for (const [partId, returned] of returnByPart) {
+        await tx.part.update({
+          where: { id: partId },
+          data: { qtyOnHand: returnedById.get(partId)!.qtyOnHand + returned },
         });
       }
 
@@ -834,10 +881,30 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     });
     if (!creditNote) posReject(saleId, "The related credit note was not found.");
 
-    const refundedAgg = await prisma.refund.aggregate({ where: { orgId, creditNoteId: creditNote.id }, _sum: { amount: true } }).catch(() => ({ _sum: { amount: 0 } }));
-    const refundedSoFar = refundedAgg._sum.amount ?? 0;
-    const refundable = Math.max(0, creditNote.totalAmount - refundedSoFar);
-    if (amount > refundable) posReject(saleId, `Refund exceeds the refundable amount (${formatMoney(refundable, normalizeCurrency(creditNote.currency, org.baseCurrency))}).`);
+    // Capped by the credit note AND by what the till actually took, so a return
+    // on a sale still owing money credits the balance without opening the drawer.
+    const cnCurrency = normalizeCurrency(creditNote.currency, org.baseCurrency);
+    const ceiling = await refundableCeiling({
+      orgId,
+      baseCurrency: org.baseCurrency,
+      creditNote: {
+        id: creditNote.id,
+        totalAmount: creditNote.totalAmount,
+        currency: cnCurrency,
+        exchangeRateToBase: null,
+        invoiceId: null,
+        saleId,
+      },
+    });
+    const refundable = ceiling.refundableBase;
+    if (amount > refundable) {
+      posReject(
+        saleId,
+        ceiling.limitedByCash
+          ? `Only ${formatMoney(refundable, cnCurrency)} has been paid on this sale, so that is the most that can be refunded.`
+          : `Refund exceeds the refundable amount (${formatMoney(refundable, cnCurrency)}).`,
+      );
+    }
 
     const safeMethod: PaymentMethod = METHODS.includes(method as PaymentMethod)
       ? (method as PaymentMethod)
@@ -1041,27 +1108,27 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             {
               key: "item",
               header: "Item",
-              cell: (it) =>
+              cell: (it, _i, v) =>
                 isOpen ? (
-                  <input form={`edit-item-${it.id}`} name="description" defaultValue={it.description} aria-label="Description" className={cellInput} />
+                  <input form={`edit-item-${v}-${it.id}`} name="description" defaultValue={it.description} aria-label="Description" className={cellInput} />
                 ) : it.description,
             },
             {
               key: "qty",
               header: "Qty",
               className: "w-20 whitespace-nowrap tabular-nums",
-              cell: (it) =>
+              cell: (it, _i, v) =>
                 isOpen ? (
-                  <input form={`edit-item-${it.id}`} name="quantity" defaultValue={it.quantity} inputMode="numeric" aria-label="Quantity" className={cellInput} />
+                  <input form={`edit-item-${v}-${it.id}`} name="quantity" defaultValue={it.quantity} inputMode="numeric" aria-label="Quantity" className={cellInput} />
                 ) : it.quantity,
             },
             {
               key: "price",
               header: "Price",
               className: "w-32 whitespace-nowrap tabular-nums",
-              cell: (it) =>
+              cell: (it, _i, v) =>
                 isOpen ? (
-                  <input form={`edit-item-${it.id}`} name="unitPrice" defaultValue={it.unitPrice} inputMode="decimal" aria-label="Unit price" className={cellInput} />
+                  <input form={`edit-item-${v}-${it.id}`} name="unitPrice" defaultValue={it.unitPrice} inputMode="decimal" aria-label="Unit price" className={cellInput} />
                 ) : formatMoney(it.unitPrice, saleCurrency),
             },
             {
@@ -1073,14 +1140,14 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           ]}
           actions={
             isOpen
-              ? (it) => (
+              ? (it, _ai, v) => (
                   <div className="flex items-center justify-end gap-1.5">
-                    <form id={`edit-item-${it.id}`} action={updateItemAction}>
+                    <form id={`edit-item-${v}-${it.id}`} action={updateItemAction}>
                       <input type="hidden" name="saleId" value={sale.id} />
                       <input type="hidden" name="itemId" value={it.id} />
-                      <button type="submit" title="Save line" className={iconBtn}>
+                      <SubmitButton bare title="Save line" className={iconBtn}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-                      </button>
+                      </SubmitButton>
                     </form>
                     <form action={deleteItemAction}>
                       <input type="hidden" name="saleId" value={sale.id} />
@@ -1338,7 +1405,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                         <input type="hidden" name="saleId" value={sale.id} />
                         <input type="hidden" name="creditNoteId" value={cn.id} />
                         <input name="note" placeholder="Stock received note (optional)" className={`${fieldOnStrong} min-w-[200px] flex-1`} />
-                        <Button type="submit" variant="secondary" size="sm">Mark items received</Button>
+                        <SubmitButton variant="secondary" size="sm">Mark items received</SubmitButton>
                       </form>
                     ) : cn.itemsReceivedBackNote ? (
                       <p className="border-t border-[var(--line)] px-3 py-2 text-[0.75rem] text-[var(--ink-muted)]">Note: {cn.itemsReceivedBackNote}</p>
@@ -1396,7 +1463,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             ...(sale.paidAt ? [{ label: "Paid at", value: formatEATDateTime(sale.paidAt) }] : []),
             ...(sale.invoiceNumber ? [{ label: "Invoice", value: sale.invoiceNumber }] : []),
           ] as SummaryRow[]}
-          party={{ title: "Customer", name: sale.client?.fullName ?? "Walk-in" }}
+          party={{ title: "Customer", name: clientDisplayName(sale.client, "Walk-in") }}
         />
       </div>
     </div>

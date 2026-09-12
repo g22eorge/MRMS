@@ -103,6 +103,18 @@ export const rateLimit = {
   jobCreate: (orgId: string) =>
     checkRateLimit(`job:${orgId}`, { limit: 60, windowMs: 60 * 60 * 1000 }),
 
+  /**
+   * Destructive platform-admin operations — 10 per 10 minutes per admin.
+   *
+   * The guard in front of these already restricts them to a platform admin, so
+   * this is not about keeping strangers out. It bounds what a hijacked admin
+   * session can do in a burst, and it stops a repeated click re-running a
+   * schema repair or a demo seed while the first is still working. Generous
+   * enough that no honest use will meet it.
+   */
+  platformAdmin: (userId: string) =>
+    checkRateLimit(`platform-admin:${userId}`, { limit: 10, windowMs: 10 * 60 * 1000 }),
+
   /** File uploads — 30 uploads per 10 minutes per user. */
   upload: (userId: string) =>
     checkRateLimit(`upload:${userId}`, { limit: 30, windowMs: 10 * 60 * 1000 }),
@@ -128,4 +140,43 @@ export function getClientIp(
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
   return req.headers.get("x-real-ip") ?? "unknown";
+}
+
+// ── Test bypass ───────────────────────────────────────────────────────────────
+
+/**
+ * Whether auth rate limiting is suspended for an automated test run.
+ *
+ * The e2e suite signs in dozens of times in a few minutes and was tripping the
+ * 10-per-minute auth limiter partway through, so later specs failed with
+ * "Login failed" for reasons that had nothing to do with the code under test.
+ * The flag existed but only the route handler honoured it — proxy.ts throttles
+ * the same paths and runs first, so the bypass never took effect anywhere.
+ * Defined here so both consult one rule.
+ *
+ * The flag alone is not the guard. Setting it by accident in a production
+ * environment would remove the primary defence against credential stuffing, so
+ * the database has to agree: the bypass applies only when the connection points
+ * at a throwaway test database. NODE_ENV cannot be used for this — `next start`
+ * sets it to production for the test server too.
+ *
+ * This condition used to read `!process.env.TURSO_DATABASE_URL`, which was a
+ * sound guard while every real deployment was Turso-backed. After the move to
+ * Postgres that variable is never set anywhere, which left the flag guarding
+ * itself. An allowlist on the database name cannot rot the same way: it fails
+ * closed when the URL is absent, unparseable, or simply not a test database.
+ */
+const TEST_DATABASE_SUFFIXES = ["_scratch", "_test"];
+
+export function authRateLimitBypassed(): boolean {
+  if (process.env.E2E_DISABLE_RATE_LIMIT !== "1") return false;
+  const url = process.env.DATABASE_URL;
+  if (!url) return false;
+  let name: string;
+  try {
+    name = new URL(url).pathname.replace(/^\//, "");
+  } catch {
+    return false;
+  }
+  return TEST_DATABASE_SUFFIXES.some((suffix) => name.endsWith(suffix));
 }

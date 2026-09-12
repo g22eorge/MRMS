@@ -12,7 +12,9 @@ import { StatCards, type StatCard } from "./StatCards";
  */
 
 export type PageHeaderProps = {
-  title: string;
+  /** Omit where the layout header already names the page — it renders one
+   *  <h1> per view, and two identical ones is the duplication this removes. */
+  title?: string;
   eyebrow?: string;
   description?: string;
   /** Right-aligned action buttons/links. */
@@ -30,10 +32,16 @@ export function PageHeader({ title, eyebrow, description, actions, kpis }: PageH
             {eyebrow ? (
               <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">{eyebrow}</p>
             ) : null}
-            <h1 className="truncate text-[0.9375rem] font-bold leading-tight text-[var(--ink)]">{title}</h1>
+            {title ? <h1 className="truncate text-[0.9375rem] font-bold leading-tight text-[var(--ink)]">{title}</h1> : null}
             {description ? <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">{description}</p> : null}
           </div>
-          {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+          {/* items-start, not items-center: an action that is two lines tall — the
+              month picker carries a "reporting window" line under its select —
+              was being centred against single-line siblings, which dropped its
+              second line level with the neighbouring button and made it read as
+              floating text belonging to nothing. Top-aligned, the controls line
+              up and the helper sits under its own control. */}
+          {actions ? <div className="flex shrink-0 items-start gap-2">{actions}</div> : null}
         </div>
       </div>
       {kpis && kpis.length > 0 ? <StatCards cards={kpis} /> : null}

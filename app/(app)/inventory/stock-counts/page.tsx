@@ -10,7 +10,7 @@ import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
 import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +34,7 @@ export default async function StockCountsPage({
 
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -43,8 +44,8 @@ export default async function StockCountsPage({
       where: {},
       include: { location: { select: { name: true, code: true } }, createdBy: { select: { name: true, email: true } }, _count: { select: { items: true } } },
       orderBy: { countedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
     db.stockCount.count({ where: {} }).catch(() => 0),
     db.stockCount.count({ where: { status: { in: ["DRAFT", "SUBMITTED"] } } }).catch(() => 0),
@@ -54,8 +55,10 @@ export default async function StockCountsPage({
   ]);
 
   const varianceCount = varianceItems;
-  const pageView = paginationView(page, countsTotal);
-  const hrefForPage = pageHrefBuilder("/inventory/stock-counts", {});
+  const pageView = paginationView(page, countsTotal, pageSize);
+  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPage = pageHrefBuilder("/inventory/stock-counts", hrefForPageFilters);
+  const hrefForPageSize = sizeHrefBuilder("/inventory/stock-counts", hrefForPageFilters);
 
   const fmt = (d: Date) => d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" });
 
@@ -63,7 +66,6 @@ export default async function StockCountsPage({
     <ListPageLayout
       topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
-        eyebrow: "Inventory",
         title: "Stock Counts",
         description: `${countsTotal} counts`,
         actions: (
@@ -73,14 +75,16 @@ export default async function StockCountsPage({
           { label: "Total Counts", value: countsTotal, sub: "all time" },
           { label: "In Progress", value: inProgressCount, sub: "draft or submitted" },
           { label: "Completed This Month", value: completedThisMonth, sub: "approved counts" },
-          { label: "Variance Items", value: varianceCount, sub: "counted ≠ expected" },
+          // A variance is stock the books cannot account for. It is the one
+          // figure on this page that asks for someone's attention.
+          { label: "Variance Items", value: varianceCount, sub: "counted ≠ expected", tone: varianceCount > 0 ? "warn" as const : "good" as const, muted: varianceCount === 0 },
         ],
       }}
     >
       <DataTable
         rows={counts}
         getRowKey={(count) => count.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total: countsTotal, hrefForPage, unit: "counts" }}
+        pagination={{ page: pageView.page, pageSize, total: countsTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "counts" }}
         empty="No stock counts yet."
         columns={[
           {

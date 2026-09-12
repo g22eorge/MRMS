@@ -1,4 +1,5 @@
 import { InvoiceType } from "@prisma/client";
+import { INCOMING_PAYMENT } from "@/lib/finance/payment-kinds";
 
 import { toBaseAmount } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
@@ -33,7 +34,7 @@ export async function loadCashCollectionsByChannel(params: {
   const payments = await prisma.payment.findMany({
     where: {
       orgId: params.orgId,
-      kind: "PAYMENT",
+      ...INCOMING_PAYMENT,
       receivedAt: dateWhere(params.range),
     },
     select: {
@@ -130,7 +131,7 @@ export async function loadCashCollectionsByChannelWide(params: {
 
   const [payments, legacyJobs] = await Promise.all([
     prisma.payment.findMany({
-      where: { orgId, kind: "PAYMENT", receivedAt: { gte: mtdStart } },
+      where: { orgId, ...INCOMING_PAYMENT, receivedAt: { gte: mtdStart } },
       select: { amount: true, currency: true, exchangeRateToBase: true, saleId: true, receivedAt: true, invoice: { select: { invoiceType: true } } },
     }),
     prisma.job.findMany({

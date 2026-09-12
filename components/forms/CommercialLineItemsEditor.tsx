@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import type { CommercialLineItemData } from "@/lib/forms/line-items";
 import { commercialLineTotal } from "@/lib/forms/line-items";
 import type { LineWithKey } from "@/hooks/useLineItemsState";
@@ -40,6 +41,45 @@ export function CommercialLineItemsEditor({
   const [creatingLineKey, setCreatingLineKey] = useState<number | null>(null);
   const [openComboKey, setOpenComboKey] = useState<number | null>(null);
 
+  // The suggestion list is anchored to the input's viewport rect and rendered
+  // through a portal. It cannot be a plain absolutely-positioned child:
+  // DataTable wraps rows in `overflow-hidden` and the desktop table in
+  // `overflow-x-auto`, and inside a dialog the panel adds `overflow-hidden`
+  // plus a `max-h-[80vh]` scroller. Every one of those clips an absolute
+  // descendant, so the matches rendered correctly and were simply cut off —
+  // which reads as "inventory search returns nothing".
+  const [comboRect, setComboRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  // Anchor to the input that was actually focused, never to a ref keyed by row.
+  // DataTable renders every row twice — a mobile card and a desktop table, one
+  // of them display:none — so a key-based map is a race that the *hidden* input
+  // wins below the lg breakpoint. That put the list at left:0 with an 11px
+  // width, which is what "inventory search does nothing" looked like on a
+  // narrow window.
+  const anchorEl = useRef<HTMLInputElement | null>(null);
+
+  const positionCombo = useCallback(() => {
+    const el = anchorEl.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setComboRect({ top: r.bottom, left: r.left, width: r.width });
+  }, []);
+
+  useEffect(() => {
+    // No need to clear the rect on close: the list only renders while a combo
+    // is open, and the next open repositions before it paints.
+    if (openComboKey === null) return;
+    const update = () => positionCombo();
+    update();
+    // Capture phase so inner scrollers (the table, the dialog body) are caught,
+    // not just the window.
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [openComboKey, positionCombo]);
+
   // Inline create form component
   function CreatePartInlineForm({ onCancel }: { onCancel: () => void }) {
     const [sku, setSku] = useState("");
@@ -62,8 +102,11 @@ export function CommercialLineItemsEditor({
           onSelectPart(creatingLineKey!, newPart.id, newPart);
           setCreatingLineKey(null);
         }
-      } catch (err: any) {
-        setError(err.message ?? "Failed to create part");
+      } catch (err) {
+        // Narrowed rather than asserted. `err: any` also let an empty message
+        // through: `?? ` only catches null and undefined, so a thrown Error with
+        // no message showed the user a blank error box.
+        setError(err instanceof Error && err.message ? err.message : "Failed to create part");
       } finally {
         setLoading(false);
       }
@@ -124,13 +167,20 @@ export function CommercialLineItemsEditor({
             <input
               value={item.description}
               onChange={(event) => onUpdateLine(item.key, { description: event.target.value, partId: "" })}
-              onFocus={() => setOpenComboKey(item.key)}
+              onFocus={(event) => {
+                anchorEl.current = event.currentTarget;
+                setOpenComboKey(item.key);
+              }}
               onBlur={() => window.setTimeout(() => setOpenComboKey((k) => (k === item.key ? null : k)), 120)}
               placeholder="Type a product or service — or pick from inventory"
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50"
             />
-            {open && (matches.length > 0 || (onCreatePart && q)) ? (
-              <div className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--panel)] p-1 shadow-lg">
+            {open && comboRect && (matches.length > 0 || (onCreatePart && q)) ? createPortal(
+              <div
+                style={{ position: "fixed", top: comboRect.top + 4, left: comboRect.left, width: comboRect.width }}
+                // Above the dialog's z-50 so it is not painted behind the panel.
+                className="z-[60] max-h-56 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--panel)] p-1 shadow-lg"
+              >
                 {matches.map((p) => (
                   <button
                     key={p.id}
@@ -156,7 +206,8 @@ export function CommercialLineItemsEditor({
                     + Create &ldquo;{item.description.trim()}&rdquo; as a new inventory part
                   </button>
                 ) : null}
-              </div>
+              </div>,
+              document.body,
             ) : null}
           </div>
         );

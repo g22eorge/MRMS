@@ -1,4 +1,4 @@
-
+import type { Prisma } from "@prisma/client";
 
 import { postSalePayment } from "@/lib/accounting/post";
 import { getOrgNumberConfig, composeDocumentNumber, maxNumberSequence } from "@/lib/commercial/org-number";
@@ -12,8 +12,14 @@ type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "credit
  * tolerating both tagged (EGL-INV-2026-0007) and legacy untagged numbers so the
  * sequence continues smoothly through the org-tag transition. */
 async function currentMaxDocumentSequence(tx: Tx, countModel: CountModel, inner: string, orgId: string) {
+  // Quotation numbers live in two places — Quotation rows and, for job
+  // quotations, Job.quotationNumber — and both draw on this one counter. Seed
+  // from the higher of the two or a reseed could reissue a number already sent.
   const numbers: string[] = countModel === "quotation"
-    ? (await tx.quotation.findMany({ where: { orgId, quoteNumber: { contains: inner , mode: "insensitive" as const} }, select: { quoteNumber: true } })).map((r) => r.quoteNumber)
+    ? [
+        ...(await tx.quotation.findMany({ where: { orgId, quoteNumber: { contains: inner , mode: "insensitive" as const} }, select: { quoteNumber: true } })).map((r) => r.quoteNumber),
+        ...(await tx.job.findMany({ where: { orgId, quotationNumber: { contains: inner , mode: "insensitive" as const} }, select: { quotationNumber: true } })).map((r) => r.quotationNumber ?? ""),
+      ]
     : countModel === "invoice"
       ? (await tx.invoice.findMany({ where: { orgId, invoiceNumber: { contains: inner , mode: "insensitive" as const} }, select: { invoiceNumber: true } })).map((r) => r.invoiceNumber)
       : countModel === "deliveryNote"
@@ -40,7 +46,7 @@ export async function nextDocumentNumber(tx: Tx, type: string, countModel: Count
   const year = new Date().getFullYear();
   const inner = `${type}-${year}-`;
   // Pass `tx` so the branding read runs on the transaction's own connection.
-  // Using the global client here escapes the interactive transaction
+  // Using the global client here deadlocks the interactive tx on Turso/libSQL
   // (see getOrgNumberConfig) — the bug that silently hung repair/POS payments
   // for fresh orgs and cold serverless instances.
   const { prefix, pad } = await getOrgNumberConfig(orgId, tx);
@@ -85,7 +91,13 @@ export async function nextDocumentNumber(tx: Tx, type: string, countModel: Count
 async function documentNumberTaken(tx: Tx, countModel: CountModel, value: string): Promise<boolean> {
   switch (countModel) {
     case "quotation":
-      return Boolean(await tx.quotation.findFirst({ where: { quoteNumber: value }, select: { id: true } }));
+      // Job quotations print a number without creating a Quotation row, so the
+      // job column has to be checked too — Job.quotationNumber is unique, and a
+      // candidate that collides with one would fail the write with P2002.
+      return Boolean(
+        (await tx.quotation.findFirst({ where: { quoteNumber: value }, select: { id: true } })) ??
+        (await tx.job.findFirst({ where: { quotationNumber: value }, select: { id: true } })),
+      );
     case "invoice":
       return Boolean(await tx.invoice.findFirst({ where: { invoiceNumber: value }, select: { id: true } }));
     case "deliveryNote":
@@ -239,6 +251,11 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
       subject: quotation.job ? `Repair invoice for ${quotation.job.jobNumber}` : `Invoice from quotation ${quotation.quoteNumber}`,
       invoiceNumber,
       currency: quotation.currency || params.currency,
+      // The quote's rate, not today's. An invoice raised from a quote agreed at
+      // 3,750 is worth what was agreed; re-reading a live rate here would make
+      // the same work worth a different number of shillings depending on when
+      // the conversion happened to be clicked.
+      exchangeRateToBase: quotation.exchangeRateToBase,
       status: "ISSUED",
       totalAmount,
       notes: `Converted from quotation ${quotation.quoteNumber}`,

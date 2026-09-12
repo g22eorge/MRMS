@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 
 import { auth } from "@/lib/auth";
+import { getDeploymentContext } from "@/lib/deployment-context";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
-import { checkRateLimit, rateLimitHeaders, getClientIp } from "@/lib/rate-limit";
+import { authRateLimitBypassed, checkRateLimit, rateLimitHeaders, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const preferredRegion = "sfo1";
@@ -33,9 +34,25 @@ export async function POST(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const ip = getClientIp(request);
 
+  // Registration is a commercial-only feature. /register already redirects on
+  // care, but the endpoint behind it answered on every deployment, so the page
+  // was the only thing closed: anyone could create an account row in care's
+  // database, and tell a real staff address from an invented one by the
+  // difference between "user already exists" and success. Gate the endpoint,
+  // not just the page.
+  if (path.endsWith("/sign-up/email")) {
+    const { mode } = await getDeploymentContext();
+    if (mode === "CARE_SINGLE_TENANT") {
+      return NextResponse.json(
+        { message: "Registration is closed on this deployment.", code: "SIGNUP_DISABLED" },
+        { status: 403 },
+      );
+    }
+  }
+
   // Platform admin is always exempt (matched later during credential check,
   // but we check the same env var for a quick bypass without a DB query).
-  let isExempt = process.env.E2E_DISABLE_RATE_LIMIT === "1";
+  let isExempt = authRateLimitBypassed();
   if (!isExempt && path.endsWith("/sign-in/email")) {
     try {
       const body = await request.clone().json();

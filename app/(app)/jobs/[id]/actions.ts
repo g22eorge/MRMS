@@ -2,7 +2,6 @@
 
 import {
   CommunicationStatus,
-  DeliveryMethod,
   JobStatus,
   Prisma,
   RecommendationOption,
@@ -35,15 +34,16 @@ import { generateQuotationBuffer } from "@/lib/pdf/generate-quotation";
 import { generateAssessmentBuffer } from "@/lib/pdf/generate-assessment";
 import { generateInvoiceBuffer } from "@/lib/pdf/generate-invoice";
 import { generateJobCardBuffer } from "@/lib/pdf/generate-job-card";
-import { nextAvailableInvoiceNumber, createReceiptForPayment, nextDocumentNumber } from "@/lib/commercial/document-workflow";
-import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { nextAvailableInvoiceNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
+import { createDeliveryNoteFromInvoice } from "@/lib/commercial/delivery-note-from-invoice";
 import { postRefund, postTechnicianPayout } from "@/lib/accounting/post";
 import { writeJobStatusHistory } from "@/lib/commercial/job-workflow";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { consumeRepairPartsForJob } from "@/lib/inventory/consume-repair-parts";
 import { formatMoney, isSupportedCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
-import { isMissingTableError } from "@/lib/db-errors";
+import { syncJobInvoiceLines } from "@/lib/commercial/job-invoice-lines";
 
+import { clientDisplayName } from "@/lib/client-name";
 const workflowReasonValues = [
   "NONE",
   "PARTS_PENDING",
@@ -709,7 +709,7 @@ export async function updateJobAction(formData: FormData) {
             model: true,
             repairTimeline: true,
             timelineNote: true,
-            client: { select: { fullName: true, phone: true } },
+            client: { select: { fullName: true, phone: true, organization: true } },
             assignedTo: { select: { id: true, name: true, role: true } },
           },
         });
@@ -732,10 +732,10 @@ export async function updateJobAction(formData: FormData) {
     const clientName =
       user.role === "TECHNICIAN_EXTERNAL"
         ? "Client"
-        : (await prisma.job.findUnique({
+        : clientDisplayName((await prisma.job.findUnique({
             where: { id: job.id, orgId },
-            select: { client: { select: { fullName: true } } },
-          }))?.client.fullName ?? "Client";
+            select: { client: { select: { fullName: true, organization: true } } },
+          }))?.client ?? null, "Client");
     await notifyStatusChange(orgId, job.id, existing.status, job.status, job.jobNumber, clientName);
     // Record the transition so the client portal (and staff) can show a real
     // repair timeline. Additive + best-effort — never blocks the status change.
@@ -812,6 +812,18 @@ export async function recordClientPaymentAction(formData: FormData) {
       invoiceNumber: true,
       invoiceIssuedAt: true,
       externalTechBill: true,
+      // Everything the invoice lines are composed from.
+      brand: true,
+      model: true,
+      serviceType: true,
+      issueDescription: true,
+      vatApplicable: true,
+      softwareOsInstall: true,
+      softwareDriversUpdates: true,
+      softwareDataBackupRestore: true,
+      softwareAccountSetup: true,
+      softwarePerformanceTune: true,
+      softwareThirdPartyApps: true,
     },
   });
   if (!job) return { error: "Job not found" };
@@ -878,6 +890,18 @@ export async function recordClientPaymentAction(formData: FormData) {
             },
             select: { id: true, totalAmount: true },
           });
+
+      // Itemise the repair. Without lines the invoice is a bare total: it can't
+      // be credited line by line, and the PDF prints a subtotal nothing accounts
+      // for. Regenerated each time because clientBill can change before the job
+      // closes; the lines always sum back to the same total.
+      await syncJobInvoiceLines(tx, {
+        orgId,
+        invoiceId: invoice.id,
+        job,
+        clientBill: totalAmount,
+        currency: baseCurrency,
+      });
 
       if (job.invoiceNumber !== safeInvoiceNumber || !job.invoiceIssuedAt) {
         await tx.job.updateMany({
@@ -1284,7 +1308,7 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
     ]);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (isMissingTableError(error) || message.toLowerCase().includes("onetimeexternaltechassignment")) {
+    if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("onetimeexternaltechassignment")) {
       return { error: "One-time external assignments are not yet deployed to this database. Apply the latest schema changes and try again." };
     }
     return { error: "Failed to save one-time external assignment" };
@@ -1533,9 +1557,14 @@ export async function issueJobInvoiceAction(
 // One-click delivery note straight from the job: reuse the job's invoice and
 // the deliveredTo/deliveryMethod already captured at handover, so the user
 // never leaves the job for /documents/delivery-notes and re-types data the
-// system already has. Mirrors the canonical create in the delivery-notes page
-// (same numbering, dedup guard, and audit) but drops the "fully paid" gate —
-// a customer collecting on partial payment still needs a handover slip.
+// system already has.
+//
+// The creation itself is createDeliveryNoteFromInvoice, shared with the
+// documents page, the invoice page and the API route. This function used to
+// mirror that logic by hand, which is how the four copies drifted: two grew a
+// "fully paid" gate and this one did not, so whether a handover slip could be
+// issued depended on which screen you started from. What stays here is the
+// part that is genuinely the job's — who received the device and how it left.
 export async function generateJobDeliveryNoteAction(
   jobId: string,
 ): Promise<{ success: boolean; error?: string; deliveryNoteNumber?: string }> {
@@ -1547,69 +1576,41 @@ export async function generateJobDeliveryNoteAction(
 
   const job = await prisma.job.findFirst({
     where: { id: jobId, orgId },
+    // Only what this function still decides. The line items, the existing-note
+    // check and the fallback description all moved into the shared helper,
+    // which reads them from the invoice itself.
     select: {
-      id: true,
-      jobNumber: true,
-      brand: true,
-      model: true,
       deliveredTo: true,
       deliveryMethod: true,
       client: { select: { fullName: true } },
-      invoice: {
-        select: {
-          id: true,
-          invoiceNumber: true,
-          lines: { select: { description: true, quantity: true } },
-          deliveryNotes: { select: { deliveryNoteNumber: true }, take: 1 },
-        },
-      },
+      invoice: { select: { id: true } },
     },
   });
   if (!job) return { success: false, error: "Job not found" };
   if (!job.invoice) return { success: false, error: "Generate the invoice first, then the delivery note." };
 
-  // Already has one — treat as idempotent so a double-tap doesn't duplicate.
-  if (job.invoice.deliveryNotes.length > 0) {
-    return { success: true, deliveryNoteNumber: job.invoice.deliveryNotes[0].deliveryNoteNumber };
-  }
-
   const deliveredByName = user.name?.trim() || "Front desk";
+  // The job knows who collected the device; the generic paths cannot.
   const receivedByName = job.deliveredTo?.trim() || job.client.fullName;
-  const items = job.invoice.lines.length > 0
-    ? job.invoice.lines.map((line) => ({
-        description: line.description,
-        quantity: Math.max(1, Math.round(Number(line.quantity) || 1)),
-      }))
-    : [{ description: `Repair handover for ${job.jobNumber} (${job.brand} ${job.model})`, quantity: 1 }];
-
-  // Double-submit guard: a delivery note for this invoice landed seconds ago.
-  const dupDn = await findRecentDuplicate(prisma.deliveryNote, { orgId, invoiceId: job.invoice.id });
-  if (dupDn) return { success: true };
 
   try {
-    const noteRecord = await prisma.$transaction(async (tx) => {
-      const deliveryNoteNumber = await nextDocumentNumber(tx, "DN", "deliveryNote", orgId);
-      return tx.deliveryNote.create({
-        data: {
-          orgId,
-          invoiceId: job.invoice!.id,
-          deliveryNoteNumber,
-          deliveryMethod: job.deliveryMethod as DeliveryMethod | null,
-          deliveredByName,
-          receivedByName,
-          createdById: user.id,
-          items: { create: items },
-        },
-        select: { id: true, deliveryNoteNumber: true },
-      });
+    const result = await createDeliveryNoteFromInvoice({
+      orgId,
+      invoiceId: job.invoice.id,
+      actorUserId: user.id,
+      deliveredByName,
+      receivedByName,
+      deliveryMethod: job.deliveryMethod,
     });
-    await writeSystemAuditEvent({
-      orgId, actorUserId: user.id, entityType: "DeliveryNote", entityId: noteRecord.id,
-      action: "DELIVERY_NOTE_CREATED", summary: `${noteRecord.deliveryNoteNumber} generated from ${job.jobNumber}`,
-    });
-    revalidatePath(`/jobs/${jobId}`);
-    revalidatePath("/documents/delivery-notes");
-    return { success: true, deliveryNoteNumber: noteRecord.deliveryNoteNumber };
+    if (!result.ok) return { success: false, error: result.error };
+
+    // Idempotent on purpose: an invoice that already has a note returns that
+    // note's number rather than a second document, so a double-tap is safe.
+    if (!result.duplicate) {
+      revalidatePath(`/jobs/${jobId}`);
+      revalidatePath("/documents/delivery-notes");
+    }
+    return { success: true, deliveryNoteNumber: result.deliveryNoteNumber };
   } catch {
     return { success: false, error: "Could not create the delivery note. Please try again." };
   }

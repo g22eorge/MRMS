@@ -1,0 +1,424 @@
+<title>Dduuka ProMax Re-Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#F7F8F6; --panel:#FFFFFF; --sunk:#EEF1EE;
+  --ink:#14181D; --ink-2:#3D474F; --ink-3:#6B7780;
+  --rule:#DCE1DD; --rule-2:#C6CEC7;
+  --accent:#0F6E63;
+  --p1:#B4600A; --p2:#4A6572; --p3:#7A858C;
+  --pass:#1B6E3C; --pass-soft:#E4F0E8;
+  --shadow:0 1px 2px rgba(20,24,29,.06),0 4px 14px rgba(20,24,29,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1316; --panel:#161B1F; --sunk:#1C2226;
+    --ink:#E8EDE9; --ink-2:#AEB9B4; --ink-3:#7E8A86;
+    --rule:#28312F; --rule-2:#374240;
+    --accent:#3FB3A2;
+    --p1:#E2A045; --p2:#8FA3AE; --p3:#78858B;
+    --pass:#5EC585; --pass-soft:#142C1E;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1316; --panel:#161B1F; --sunk:#1C2226;
+  --ink:#E8EDE9; --ink-2:#AEB9B4; --ink-3:#7E8A86;
+  --rule:#28312F; --rule-2:#374240;
+  --accent:#3FB3A2;
+  --p1:#E2A045; --p2:#8FA3AE; --p3:#78858B;
+  --pass:#5EC585; --pass-soft:#142C1E;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:40px 24px 96px}
+.prose{max-width:66ch}
+h1,h2{font-family:Archivo,sans-serif;text-wrap:balance;margin:0}
+h1{font-size:clamp(30px,4.6vw,46px);font-weight:700;letter-spacing:-.02em;line-height:1.08}
+h2{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.mast{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:34px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;justify-content:space-between}
+.mast .meta{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);line-height:1.9;text-align:right}
+.mast .meta b{color:var(--ink-2);font-weight:500}
+
+.verdict{background:var(--panel);border:1px solid var(--rule);border-left:5px solid var(--pass);border-radius:3px;box-shadow:var(--shadow);padding:28px 30px;margin-bottom:34px}
+.verdict .status{font-family:Archivo,sans-serif;font-size:clamp(21px,3vw,29px);font-weight:700;letter-spacing:-.015em;color:var(--pass);line-height:1.15;margin:6px 0 14px}
+.verdict p{margin:0 0 12px;color:var(--ink-2);max-width:68ch}
+.verdict p:last-child{margin-bottom:0}
+.verdict strong{color:var(--ink);font-weight:600}
+
+section{margin-top:44px}
+.shead{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;border-bottom:1px solid var(--rule-2);padding-bottom:9px}
+.shead .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--accent);font-weight:600}
+
+.scores{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.sc{background:var(--panel);padding:13px 15px;display:flex;flex-direction:column;gap:7px}
+.sc .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sc .name{font-size:13.6px;font-weight:500}
+.sc .val{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.sc .was{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-3)}
+.bar{height:4px;background:var(--sunk);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:2px}
+
+.ver{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.vrow{background:var(--panel);padding:12px 16px;display:grid;grid-template-columns:22px 1fr auto;gap:13px;align-items:baseline}
+.tick{color:var(--pass);font-weight:700;font-size:13px;font-family:"IBM Plex Mono",monospace}
+.vrow .what{font-size:14.2px}
+.vrow .what b{font-weight:600}
+.vrow .ev{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+@media(max-width:640px){.vrow{grid-template-columns:22px 1fr}.vrow .ev{grid-column:2;text-align:left}}
+
+.iss{background:var(--panel);border:1px solid var(--rule);border-left:4px solid var(--p2);border-radius:3px;padding:17px 19px;margin-bottom:10px;box-shadow:var(--shadow)}
+.iss[data-p="P2"]{border-left-color:var(--p2)}
+.iss[data-p="P3"]{border-left-color:var(--p3)}
+.iss[data-p="DONE"]{border-left-color:var(--pass);background:var(--pass-soft)}
+.iss[data-p="DONE"] .tag{background:var(--pass)}
+.iss[data-p="DONE"] .ttl{color:var(--ink)}
+.iss .hd{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:9px}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;letter-spacing:.07em;padding:2.5px 7px;border-radius:2px;color:#fff}
+.iss[data-p="P2"] .tag{background:var(--p2)}
+.iss[data-p="P3"] .tag{background:var(--p3)}
+.mod{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3)}
+.iss .ttl{font-family:Archivo,sans-serif;font-size:15.5px;font-weight:600;width:100%}
+.iss dl{margin:0;display:grid;grid-template-columns:78px 1fr;gap:5px 13px;font-size:13.8px}
+.iss dt{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding-top:3px}
+.iss dd{margin:0;color:var(--ink-2)}
+@media(max-width:560px){.iss dl{grid-template-columns:1fr}.iss dt{padding-top:8px}}
+code{font-family:"IBM Plex Mono",monospace;font-size:.875em;background:var(--sunk);padding:1px 5px;border-radius:2px;color:var(--ink)}
+
+.corr{background:var(--sunk);border:1px solid var(--rule);border-radius:3px;padding:20px 22px}
+.corr p{margin:0 0 11px;font-size:14.2px;color:var(--ink-2);max-width:70ch}
+.corr ul{margin:0;padding-left:19px;font-size:14px;color:var(--ink-2)}
+.corr li{margin-bottom:7px}
+.corr li b{color:var(--ink);font-weight:600}
+.fixed{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.frow{background:var(--panel);padding:11px 16px;display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:baseline}
+.frow .lbl{font-size:14px}
+.frow .then{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);text-align:right}
+.frow .now{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--pass);font-weight:600;text-align:right;white-space:nowrap}
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div>
+      <div class="eyebrow">Production readiness — second pass</div>
+      <h1>Dduuka&nbsp;ProMax</h1>
+    </div>
+    <div class="meta">
+      <div><b>Scope</b> &nbsp;128 pages · 72 API routes · 115 models</div>
+      <div><b>Verified against</b> &nbsp;local + both production DBs</div>
+      <div><b>Deployed</b> &nbsp;e39889e · care + commercial</div>
+      <div><b>Date</b> &nbsp;26–27 August 2026</div>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <div class="eyebrow">Release decision</div>
+    <div class="status">Ready for production.</div>
+    <p>Would I let a real customer start today? <strong>Yes</strong> — including a repair business,
+       which was the reservation last time. The blocker then was that fitting a part on a job never
+       decremented inventory; that chain now runs end to end and I re-ran it live for this audit:
+       reserve 3 → 20 on hand / 3 reserved, mark fitted → <strong>17 / 0</strong> with an
+       <code>OUT · REPAIR_CONSUME</code> ledger row against the job.</p>
+    <p>Both production databases are clean on <strong>every</strong> integrity invariant — care and
+       commercial, eleven checks each, zero failures. No cross-tenant rows anywhere.</p>
+    <p>Document numbering is now consistent going forward. Invoice and quotation numbers were
+       never allocated for job-raised documents — they were rebuilt from the job number on every
+       render, so they inherited its format, and that was still spreading rather than being the
+       closed legacy residue it looked like. Both now draw on the shared sequence. Nothing a
+       customer already holds was renumbered.</p>
+    <p>Authentication was audited in its own right this pass. The parts that matter hold: signup
+       cannot grant itself a role or an organisation, deactivation is checked against the database
+       rather than the session cookie, the auth endpoints are rate-limited at the handler so the
+       client SDK cannot walk around them, and production refuses to boot on a weak secret. One
+       gap: care closes registration in the UI but not at the API.</p>
+    <p>One finding this pass touches money indirectly and is worth stating plainly: the same
+       customer could be recorded twice purely because their phone was written two ways, and in
+       care three customers already are. A split customer has a split statement and split
+       receivables, so the shop under-reports what it is owed by the real person. New splits can no
+       longer be created; the three that exist are left for you to judge, since two names on one
+       number may be two people.</p>
+    <p>Since the first pass, care's P&amp;L has also been corrected. Fourteen expenses recorded before
+       cash-basis posting existed were absent from the ledger, so the report understated costs by
+       <strong>UGX 2,246,000</strong>. They are now posted, dated to the day each was spent, and the
+       ledger reconciles to the shilling.</p>
+  </div>
+
+  <section>
+    <div class="shead"><span class="n">01</span><h2>What moved since the first audit</h2></div>
+    <div class="fixed">
+      <div class="frow"><span class="lbl"><b>Repair parts decrement inventory</b> — the P1 blocker</span><span class="then">was: 0 callers</span><span class="now">fixed · verified live</span></div>
+      <div class="frow"><span class="lbl"><b>Warranty claims</b> — FKs, workflow, list, cost, customer notification</span><span class="then">was: schema only</span><span class="now">2 → 9</span></div>
+      <div class="frow"><span class="lbl"><b>Unknown record ids return 404</b> with a proper screen</span><span class="then">was: 200, blank</span><span class="now">404 · all 4 routes</span></div>
+      <div class="frow"><span class="lbl"><b>Mobile Repairs list</b> — truncation and contrast</span><span class="then">16 clipped · 7 fails</span><span class="now">3 · 1</span></div>
+      <div class="frow"><span class="lbl"><b>Job detail density</b> — cards, duplication, ordering</span><span class="then">22 cards, dupes</span><span class="now">14 · work leads</span></div>
+      <div class="frow"><span class="lbl"><b>Unit suite runnable again</b> (bun restored)</span><span class="then">could not run</span><span class="now">537 pass</span></div>
+      <div class="frow"><span class="lbl"><b>Care's P&amp;L corrected</b> — 14 pre-ledger expenses backfilled</span><span class="then">understated 2.2m</span><span class="now">reconciles exactly</span></div>
+      <div class="frow"><span class="lbl"><b>Test names cleared from a live tenant</b> — one deactivated, one renamed</span><span class="then">on a customer receipt</span><span class="now">0 left · money intact</span></div>
+      <div class="frow"><span class="lbl"><b>Invoice numbers allocated, not derived</b> from the job number</span><span class="then">4 formats, still spreading</span><span class="now">one format · 0 renumbered</span></div>
+      <div class="frow"><span class="lbl"><b>Quotation numbers stored at all</b> — they lived nowhere before</span><span class="then">rebuilt every render</span><span class="now">allocated once · 18 preserved</span></div>
+      <div class="frow"><span class="lbl"><b>Overlays escape the content column</b> — a CSS animation was trapping every one</span><span class="then">confined + unreadable</span><span class="now">7 portaled</span></div>
+      <div class="frow"><span class="lbl"><b>Inventory picker in quotes and invoices</b></span><span class="then">silently empty</span><span class="now">works 390–1440</span></div>
+      <div class="frow"><span class="lbl"><b>Customers matched on the canonical phone</b> — the format no longer splits them</span><span class="then">3 already split</span><span class="now">no new splits</span></div>
+      <div class="frow"><span class="lbl"><b>A repair started from a client keeps that client</b></span><span class="then">search again</span><span class="now">carried through</span></div>
+      <div class="frow"><span class="lbl"><b>Lists open to 20, 50 or 100 rows</b></span><span class="then">fixed at 20</span><span class="now">32 pages + jobs</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">02</span><h2>Readiness by area</h2></div>
+    <div class="scores">
+      <div class="sc"><div class="top"><span class="name">Financial calculation</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
+      <div class="sc"><div class="top"><span class="name">Permissions &amp; tenancy</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
+      <div class="sc"><div class="top"><span class="name">Authentication</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">newly assessed</span></div>
+      <div class="sc"><div class="top"><span class="name">Data integrity</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8</span></div>
+      <div class="sc"><div class="top"><span class="name">Navigation &amp; routing</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
+      <div class="sc"><div class="top"><span class="name">Sales &amp; POS</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">unchanged</span></div>
+      <div class="sc"><div class="top"><span class="name">Error handling</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8</span></div>
+      <div class="sc"><div class="top"><span class="name">Responsive behaviour</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8</span></div>
+      <div class="sc"><div class="top"><span class="name">Warranty</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 2</span></div>
+      <div class="sc"><div class="top"><span class="name">Repairs / job cards</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 6</span></div>
+      <div class="sc"><div class="top"><span class="name">Inventory</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was 5</span></div>
+      <div class="sc"><div class="top"><span class="name">Documents &amp; PDFs</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8 — numbering fixed</span></div>
+      <div class="sc"><div class="top"><span class="name">Returns</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was 3 — misjudged</span></div>
+      <div class="sc"><div class="top"><span class="name">Purchasing</span><span class="val" style="color:var(--pass)">8/10</span></div><div class="bar"><i style="width:80%;background:var(--pass)"></i></div><span class="was">was not assessed</span></div>
+      <div class="sc"><div class="top"><span class="name">Customer accounts</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 7 — misjudged</span></div>
+      <div class="sc"><div class="top"><span class="name">Expenses &amp; ledger</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">verified + corrected</span></div>
+      <div class="sc"><div class="top"><span class="name">Technical stability</span><span class="val" style="color:var(--pass)">9/10</span></div><div class="bar"><i style="width:90%;background:var(--pass)"></i></div><span class="was">was 8</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">03</span><h2>Verified this pass, by exercise</h2></div>
+    <div class="ver">
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Repair parts move stock.</b> Reserved holds it on the shelf; fitting takes it out and writes the ledger row.</span><span class="ev">20 → 20/3 → 17/0</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Both production DBs clean</b> on all eleven invariants, including warranty orphans.</span><span class="ev">0 failures × 2</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Warranty foreign keys live</b> in care and commercial.</span><span class="ev">FKs present</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>No broken routes.</b> Every static route resolves or redirects deliberately.</span><span class="ev">102 routes</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Unknown ids return 404</b> and render the record-specific screen.</span><span class="ev">4 of 4</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Hostile input fails clean</b> — quotes, traversal, null bytes. No internals reach the page.</span><span class="ev">0 leaked</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Technicians see no client data</b>; roles that legitimately hold <code>viewClientInfo</code> do.</span><span class="ev">matches the matrix</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Another org's job returns 404</b>, not its contents.</span><span class="ev">cross-tenant scoped</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>All four documents</b> generate — one page, correct branding, no leaked ids or NaN.</span><span class="ev">27–28 KB each</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Mobile holds.</b> Five pipeline stages legible, one attention block, work before reference.</span><span class="ev">14 cards · 4.3 screens</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Touch targets and contrast.</b> All six filter chips ≥44px; one contrast failure, a disabled control.</span><span class="ev">1 of 49</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Console clean</b> on a fresh tab — no errors on dashboard or warranty.</span><span class="ev">0 errors</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Expenses reach the P&amp;L.</b> One created through the app posted Dr 6000 / Cr 1000 and appeared in the report.</span><span class="ev">75,000 · 4.2%</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Statement of account reconciles</b> — billed, paid and outstanding agree, and VOID invoices are excluded.</span><span class="ev">1,100,000 · due 0</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Backfill is safe to repeat.</b> Keyed on the expense id; a second run posts nothing.</span><span class="ev">idempotent</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Renaming touched only labels.</b> Quantity, price, line total, sale total and paid amount identical after.</span><span class="ev">354,000 → 354,000</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>A quote keeps its number.</b> Rendered twice: allocated <code>EIS/QT/2026/0004</code> on the first pass and returned the same number on the second, rather than deriving <code>EIS-5/QT/2025/0005</code> from the job.</span><span class="ev">stable · allocated</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>No document was renumbered.</b> Every already-quoted job backfilled with the number it had been sending, and the unique index holds.</span><span class="ev">18 of 18 · 0 clashes</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Signup cannot escalate privileges.</b> Posting <code>role:"ADMIN"</code> to the signup endpoint lands the account as <code>OPS</code>; <code>orgId</code> is refused outright with <code>FIELD_NOT_ALLOWED</code>. Exercised locally, not in production.</span><span class="ev">OPS · rejected</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Deactivation is enforced server-side.</b> <code>requireRole</code> re-reads <code>role</code> and <code>isActive</code> from the database rather than trusting the session cookie.</span><span class="ev">DB read, not cookie</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Auth endpoints are rate-limited.</b> Sign-in 10/min, signup 5 per 10 min, reset 5 per 10 min, per IP — applied at the BetterAuth handler, so the SDK cannot bypass them.</span><span class="ev">3 paths capped</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Production auth fails closed.</b> A missing or under-32-character secret, or a missing app URL, throws at startup instead of booting insecure. Preview URLs are not trusted in production.</span><span class="ev">asserted at boot</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>No orphan accounts.</b> Every user in both databases belongs to an organisation, and every account is a credential account — no OAuth, 2FA or passkeys anywhere.</span><span class="ev">0 of 46</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Registration refused on care</b> at the endpoint, not only the page — <code>403 SIGNUP_DISABLED</code> where it previously reached password validation.</span><span class="ev">403 · was 400</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>The care alias is care again.</b> <code>mrms-eight.vercel.app/register</code> redirects to login instead of rendering the signup form.</span><span class="ev">both hosts</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>The inventory picker works at both sizes.</b> Driven through the real UI with an injected session: six matches with SKU and stock at 390px and at 1440px, the list correctly over the focused input in each.</span><span class="ev">390 · 1440</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Overlays cover the viewport.</b> Portaled dialogs paint over the whole screen with the sidebar dimmed behind, instead of being confined to the content column.</span><span class="ev">7 portaled</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>A phone format no longer splits a customer.</b> Ten tests over the real pairs found in care, including the one that differs by a single space.</span><span class="ev">10 tests</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>A repair started from a client keeps that client</b> — and a client id from another org is never preselected, so the banner cannot name another tenant\u2019s customer.</span><span class="ev">3 cases</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Lists honour the chosen size.</b> Jobs shows 20 of 33 by default, 33 at 50 and 100, and 20 again at <code>?size=99999</code> — the allow-list holds against a hostile value.</span><span class="ev">32 pages + jobs</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>No hydration mismatch on a page load</b>, where before the portal guard produced one on every page.</span><span class="ev">0 errors</span></div>
+      <div class="vrow"><span class="tick">✓</span><span class="what"><b>Full gate green.</b> Typecheck, lint at baseline, tests, production build.</span><span class="ev">558 pass · 0 fail</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">04</span><h2>Corrections to my own findings</h2></div>
+    <div class="corr">
+      <p>Nine findings across both passes were wrong, six of them calls about the system and three
+         of them fixes of mine that made things worse before they made them better. All nine share
+         a cause — a measurement that looked precise and measured the wrong thing. Worth recording,
+         because the same traps will catch the next person:</p>
+      <ul>
+        <li><b>"Returns have no module."</b> They do — via credit notes, with a stock leg that only
+            fires when goods physically come back. Correctly designed; I had searched for a model
+            named <code>Return</code> and stopped.</li>
+        <li><b>"Two tax conventions in <code>lineTotal</code>."</b> My invariant ignored tax. With
+            <code>lines + tax</code>, production is zero.</li>
+        <li><b>"Mobile nav clips the last row."</b> I measured the nav overlapping itself.</li>
+        <li><b>"Restricted pages return an empty shell."</b> They redirect correctly in a browser;
+            curl can't follow what the RSC payload does.</li>
+        <li><b>"Unknown ids render a proper not-found."</b> This one I got right first, then
+            <em>wrongly corrected</em> — I had grepped raw HTML, which counts the component sitting
+            in the script bundle. It really was a blank page, and is now genuinely fixed.</li>
+        <li><b>"No customer account statement."</b> There is one, and it works: a statement section
+            on the client page with a running-balance table, a PDF, and send-by-WhatsApp-or-email.
+            I checked before building and found the feature I was about to duplicate.</li>
+        <li><b>And a seventh, from this pass:</b> the first registration fix regressed care into
+            commercial mode and opened signup there for about half an hour. Same shape as the six
+            above — I trusted a value that looked authoritative (<code>BETTER_AUTH_URL</code> in a
+            pulled env file) without checking whether it could be read at all. It could not; it is
+            a sensitive variable. A fix that only ever adds a restriction, never replaces one,
+            would not have been able to fail that way.</li>
+        <li><b>And an eighth:</b> I called the inventory picker fixed after checking it at one
+            window size. It worked at 1440px and was dead below 1024px, because the broken code
+            path only wins the race when the desktop table is hidden. Verifying at one viewport is
+            not verifying — the second fix was driven at 390px and 1440px before it was called
+            done.</li>
+        <li><b>And a ninth, also mine:</b> the overlay sweep guarded its portals on
+            <code>typeof document === "undefined"</code>, which returns null on the server and
+            content on the <em>first</em> client render — a hydration mismatch. It was harmless for
+            dialogs, which start closed and render null on both, but <code>SettingsPanel</code>
+            renders unconditionally and <code>Header</code> renders it on every page, so every page
+            load in the app reported a mismatch and React threw that tree away and rebuilt it. I had
+            written the correct mounted-flag version first and removed it to silence a lint rule.
+            The rule was right about the shape and wrong about the case.</li>
+      </ul>
+      <p style="margin-top:12px"><b>The rule that came out of it:</b> curl is the wrong instrument for
+        anything React renders, and a grep over raw HTML counts things that never reach the screen.
+        Every UI claim in this second pass was verified in a browser, with scripts stripped.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">05</span><h2>Open, and one just closed</h2></div>
+
+    <div class="iss" data-p="P2">
+      <div class="hd"><span class="tag">P2</span><span class="mod">Messaging · commercial</span>
+        <div class="ttl">Seven tenants cannot send WhatsApp or email</div></div>
+      <dl>
+        <dt>Detail</dt><dd>Commercial has no WhatsApp credentials and no Resend key in production. Warranty notifications, status updates and invoice reminders queue and fail for every tenant on it. The biggest functional gap left.</dd>
+        <dt>Blocked on</dt><dd>A decision only you can make: whether those tenants send from Eagle Info's number and domain, or are issued their own.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="P2">
+      <div class="hd"><span class="tag">P2</span><span class="mod">Messaging · care</span>
+        <div class="ttl">Inbound WhatsApp webhooks are refused</div></div>
+      <dl>
+        <dt>Detail</dt><dd><code>WHATSAPP_WEBHOOK_APP_SECRET</code> is not set, so signed webhook deliveries return 500. The subscription handshake works; delivery receipts and inbound customer messages do not arrive.</dd>
+        <dt>Blocked on</dt><dd>Your Meta app secret. It cannot be generated, and a wrong value is worse than none — it fails as 401 on every message, which reads like a Meta outage.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Data · commercial</span>
+        <div class="ttl">Test names cleared from a live tenant's records</div></div>
+      <dl>
+        <dt>What it was</dt><dd>Two parts in Akimaathe Kyarumba Foundation's inventory carried test names, and one appeared on a customer's sale line — so reprinting that receipt showed "ZZ E2E Test Battery".</dd>
+        <dt>Resolved</dt><dd><code>QA Test Screen</code> is deactivated: no price, no stock, one stray transfer, now gone from every picker with its history kept. <code>SKU-0001</code> was <em>not</em> test data despite the name — priced at 100,000, seven in stock, three sold for 300,000 — so it was renamed to "Replacement Battery" rather than removed, along with its sale line and stock-ledger text.</dd>
+        <dt>Unchanged</dt><dd>Quantity, unit price, line total, sale total and paid amount are identical to before. Only labels moved, and every step reverses with one statement.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Documents</span>
+        <div class="ttl">Five invoice-numbering formats coexist</div></div>
+      <dl>
+        <dt>What it was</dt><dd>Filed as legacy residue and cosmetic. It was neither. Invoice numbers raised from a job were never allocated from the document sequence &mdash; they were <em>derived from the job number</em> by <code>deriveDocNumberFromJob</code>, which returns <code>EIS/INV/2026/0044</code> for a slash-era job but falls back to <code>INV-</code> + the raw job number for anything else. Job numbering has changed shape four times, so the invoice book inherited four shapes. The one entry that looked like an anomaly, <code>INV-EI-2026-0030</code> issued six days after the switch, was simply a job received on 15 July invoiced late &mdash; not a regression.</dd>
+        <dt>Why it was still spreading</dt><dd>A second path made it self-sustaining: the render-and-send branch (WhatsApp send, the PDF queue, a plain download) stamped a derived number onto <code>Job.invoiceNumber</code> with no allocation and no <code>Invoice</code> row. The persist path then faithfully reused that number as the invoice's own. 30 jobs were still holding dash-era numbers &mdash; 9 in care, 21 in commercial &mdash; and each would have minted another off-format invoice on its next send. Commercial's <code>TFX-001</code> would have produced <code>INV-TFX-001</code>, a fifth shape, in a paying tenant's book.</dd>
+        <dt>Fixed</dt><dd>Only a number a job has already been issued is reused; a derived number is never handed to the allocator. Everything unnumbered now takes the next <code>EIS/INV/YYYY/NNNN</code> from <code>DocumentSequence</code>, which is what standalone invoices always did. The render-and-send branch allocates properly before stamping.</dd>
+        <dt>Not changed</dt><dd>No issued invoice was renumbered. 71 jobs keep the numbers already printed on documents customers hold &mdash; renumbering those would break reconciliation to fix an appearance.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Documents</span>
+        <div class="ttl">Quotation numbers were never stored anywhere</div></div>
+      <dl>
+        <dt>What it was</dt><dd>Found while fixing the invoice numbering above, and worse in one respect: a quotation raised from a job prints a number but <em>never creates a <code>Quotation</code> row</em>. The number existed nowhere in the database &mdash; it was rebuilt from the job number on every render, and survived only inside audit-log JSON. It inherited the job-number format the same way invoices did: care's quoted jobs carry two shapes, <code>QT-EI-2026-0007</code> and <code>EIS-6/QT/2026/0016</code>.</dd>
+        <dt>Knock-on effect</dt><dd>The invoice PDF re-derived the quotation number for its own cross-reference, so an invoice could cite a quote number that had never appeared on any quote the customer received.</dd>
+        <dt>Fixed</dt><dd><code>Job.quotationNumber</code> now mirrors <code>Job.invoiceNumber</code>: allocated once from <code>DocumentSequence</code>, stored, and reused by every later render, with a re-read inside the transaction so two racing sends cannot each allocate. The invoice prints the stored number. Because job quotation numbers share the QT counter without being <code>Quotation</code> rows, the uniqueness check and the sequence seed scan now read the job column too &mdash; otherwise a reseed could reissue a number already sent.</dd>
+        <dt>Not changed</dt><dd>Every already-quoted job was backfilled with the number it has been sending &mdash; 18 in care, 0 in commercial, no collisions &mdash; so no quote a customer holds was renumbered. Only quotes issued from here on take an allocated <code>EIS/QT/YYYY/NNNN</code>.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Auth · care</span>
+        <div class="ttl">Registration was closed in the UI but open at the API</div></div>
+      <dl>
+        <dt>What it was</dt><dd><code>/register</code> redirects to login on care — confirmed in a browser, not with curl, which reports 200 for that redirect. But <code>/api/auth/sign-up/email</code> answered on every deployment. Probed on care with a deliberately short password, it returned <code>PASSWORD_TOO_SHORT</code>: it had reached password validation, so a valid password would have created a row. No account was created.</dd>
+        <dt>The larger half</dt><dd>Gating on the request host would not have closed it. <code>isCareDomain</code> matches hosts beginning "care.", and care is also served on Vercel aliases that do not — <code>mrms-eight.vercel.app</code> belongs to the care project. Reached that way, care's own database resolved as <code>COMMERCIAL_MULTI_TENANT</code>: <code>/register</code> rendered the form, and a signup with no orgId would have been sent to <code>/onboarding</code> to create a <em>second organisation inside a single-tenant deployment</em>. That was the real defect; the signup endpoint was how you would reach it.</dd>
+        <dt>Fixed</dt><dd>Deployment mode now comes from the deployment's own configured origin — <code>BETTER_AUTH_URL</code> or <code>NEXT_PUBLIC_APP_URL</code>, which both projects already set — so it is a property of the deployment rather than of the URL used to reach it. The request host is used only when neither is configured, which is local development. Registration is refused outright on care with <code>SIGNUP_DISABLED</code>. The host selection is a pure function with nine unit tests covering the alias case, a malformed configured URL, and the local fallback.</dd>
+        <dt>The first fix made it worse</dt><dd>Worth recording rather than tidying away. <code>0ea1838</code> let the configured origin <em>replace</em> the request host. In production that flipped <code>care.eagleinfosolutions.com</code> itself into commercial mode and <strong>opened registration on care</strong> — the opposite of the intent, and briefly a live exposure rather than a latent one. The cause was trusting <code>BETTER_AUTH_URL</code> as read from a pulled env snapshot; it is typed <em>sensitive</em>, so it cannot be read back and the snapshot did not reflect what the runtime resolves. That is the same property that makes <code>BETTER_AUTH_SECRET</code> unrecoverable, established two findings below and then not applied here.</dd>
+        <dt>Corrected</dt><dd><code>b601dd5</code> makes the rule only ever <em>add</em> care detection: a care request host wins outright, and a configured origin is consulted only when it is itself a care origin. It cannot lose the case that already worked, so no configuration value can turn care into a commercial deployment. Regression tests cover both directions.</dd>
+        <dt>Verified live</dt><dd>Both <code>care.eagleinfosolutions.com/register</code> and <code>mrms-eight.vercel.app/register</code> redirect to the login page — checked in a browser, since curl reports 200 for that redirect and returns byte-identical HTML for both hosts. The signup endpoint returns <code>403 SIGNUP_DISABLED</code> where it previously reached password validation. Commercial signup still answers, as the product requires.</dd>
+        <dt>Not affected</dt><dd>Commercial signup is the product and still works — verified after the change. Nothing had come through either gap: <strong>zero</strong> users in either database lack an organisation, and care still holds exactly one. Note separately that email verification is off on commercial, so a tenant can be registered with an address the registrant does not own.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">UI · both</span>
+        <div class="ttl">One CSS declaration trapped every overlay inside the content column</div></div>
+      <dl>
+        <dt>What it was</dt><dd>The best find of the pass, and invisible from any log. <code>&lt;main&gt;</code> carries <code>fade-in</code>: <code>animation: fade-in-up 340ms … both</code>, whose final frame is <code>transform: translateY(0)</code>. <code>fill-mode: both</code> keeps that transform applied for the life of the page — and a transformed element becomes the <em>containing block for its <code>position: fixed</code> descendants</em>. So every modal and drawer rendered as page content resolved <code>fixed inset-0</code> against the content column instead of the viewport: the backdrop dimmed the page around a squeezed, half-readable panel while the sidebar stayed bright and clickable.</dd>
+        <dt>Reach</dt><dd>Not one dialog. <code>components/ui/Modal.tsx</code> is the shared modal that ten screens build on, and six further page-level overlays had their own copy of the pattern — invoice and quotation create dialogs, both preview drawers, the record preview, the settings slide-over and the intake drawer.</dd>
+        <dt>Fixed</dt><dd>All of them render through a portal to <code>document.body</code>, outside that containing block, where fixed means fixed. No styling changed. Three things were checked before moving anything: no portaled overlay sits inside a <code>&lt;form&gt;</code> (a portal would detach its submit), modal styling is self-contained utilities plus <code>:root</code> variables with no ancestor selectors, and the theme class is on <code>&lt;html&gt;</code> so <code>body</code> inherits every custom property.</dd>
+        <dt>Left alone</dt><dd><code>Header</code> and <code>IdleLogout</code> render <em>outside</em> <code>&lt;main&gt;</code> and were never affected. <code>JobDetailTabs</code>' overlay is a click-catcher, not a modal, and is the one nested inside a <code>&lt;form&gt;</code> — the only place a portal would have broken something.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Forms · both</span>
+        <div class="ttl">Inventory search returned nothing when quoting or invoicing</div></div>
+      <dl>
+        <dt>What it was</dt><dd>Two faults wearing one symptom. First, the suggestion list was an absolutely-positioned child of a table cell, and everything above it clips: <code>DataTable</code> wraps rows in <code>overflow-hidden</code> and the desktop table in <code>overflow-x-auto</code>, and the dialog adds <code>overflow-hidden</code> plus a <code>max-h-[80vh]</code> scroller. The matches rendered and were trimmed to nothing.</dd>
+        <dt>The half that mattered</dt><dd>Portaling the list exposed the real bug. It was positioned from a ref keyed by row — but <code>DataTable</code> renders every row <em>twice</em>, a mobile card and a desktop table with one of them <code>display:none</code>. Both cells registered under the same key and the last to mount won. Below the <code>lg</code> breakpoint that is the <em>hidden</em> input, whose rect is empty: the list appeared at <code>left:0, width:11px</code>, an invisible sliver in the corner. On a wide window the visible input happened to win — so it worked at 1440px and was dead at 390px, and at any window under 1024px including a half-width desktop one.</dd>
+        <dt>Fixed</dt><dd>The anchor is now the element that actually received focus, captured from the focus event, so there is no race to lose.</dd>
+        <dt>Verified</dt><dd>By driving the real UI, not by reading it: a throwaway local account, a real sign-in, and Playwright injecting the session cookie. At 390px the list moved from <code>left:0/w:11</code> to <code>left:49/w:293</code> over the visible input; at 1440px it is unchanged at <code>left:524/w:331</code>. Six inventory matches render with SKU and stock at both sizes. care's data was never at fault — 74 parts, 72 active, all correctly org-scoped, and the matcher over <code>sku name</code> always worked.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="DONE">
+      <div class="hd"><span class="tag">DONE</span><span class="mod">Data · care</span>
+        <div class="ttl">The same customer could be recorded twice, by phone format alone</div></div>
+      <dl>
+        <dt>What it was</dt><dd>Found while looking at something else, and the most consequential thing in this pass after the overlays. <code>Client</code> is unique on <code>(phone, orgId)</code> over the <em>stored string</em>, and <code>normalizePhoneForStorage</code> — which exists — was called by exactly one page. Both paths that create a customer from a repair matched on the raw text, so <code>+256772006344</code> and <code>0772006344</code> were two different people.</dd>
+        <dt>Already happening</dt><dd>Not a hypothetical. In care today <strong>55 of 93</strong> client phones are stored in a non-canonical form, and three customers are already split across two rows: <code>Medrine</code> (<code>+256 742 904153</code> against <code>+256742904153</code> — one space), <code>Nangoli Robert</code> against <code>Robert Nangoli</code>, and <code>George Bwambale</code> against <code>Brian Kasirye</code> on one number. A split customer has a split job history, a split statement and split receivables, so the shop under-reports what it is owed by the real person.</dd>
+        <dt>Second fault, same lines</dt><dd>The intake conversion also <em>overwrote</em> the shop's own record from whatever an inbound web request said. A customer submitting as "amina" would rename a client recorded as "Amina Yusuf"; a wrong email would replace a known one.</dd>
+        <dt>Fixed</dt><dd>Both paths now look a customer up by the canonical number <em>and</em> the literal one they were handed, so legacy rows still match what they hold and no new second row appears for anyone we can find. New records store canonically. The intake conversion fills only fields the client record does not already have. Ten tests cover the canonicalisation, built from the real pairs above.</dd>
+        <dt>Left for you</dt><dd>The three existing splits are untouched. Merging them is a judgement about your customers, not a cleanup to run from here — George Bwambale and Brian Kasirye may simply share a phone. Say which are genuinely one person and they can be merged.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="P3">
+      <div class="hd"><span class="tag">P3</span><span class="mod">Performance</span>
+        <div class="ttl">Notifications endpoint called three times per page load</div></div>
+      <dl>
+        <dt>Detail</dt><dd><code>/api/notifications</code> fires three times on a single navigation — three queries where one would do, on every page.</dd>
+      </dl>
+    </div>
+
+    <div class="iss" data-p="P3">
+      <div class="hd"><span class="tag">P3</span><span class="mod">Continuity</span>
+        <div class="ttl">BETTER_AUTH_SECRET cannot be recovered from Vercel</div></div>
+      <dl>
+        <dt>Detail</dt><dd>It is stored as a "sensitive" variable, which is write-only — no API, CLI or dashboard read returns it. Since the current value cannot be read back, generating a new one is the only way to end up holding a copy.</dd>
+        <dt>Rotation cost</dt><dd>Lower than it sounds, and now measured. Passwords live in <code>Account.password</code>, hashed by BetterAuth's own scrypt — the secret plays no part, so all 46 users keep their passwords. Every account in both databases is a credential account: no OAuth tokens, 2FA seeds or passkeys are encrypted with the secret, so nothing becomes permanently unreadable. The real cost is sessions: <strong>232 on care and 28 on commercial</strong> die at the moment of change and everyone signs in again.</dd>
+        <dt>How</dt><dd>It is not issued by any service — generate it, with <code>openssl rand -base64 32</code> or <code>npx @better-auth/cli secret</code>. Give care and commercial different values; rotating one does not affect the other. Save it before setting it, and redeploy afterwards, since env changes do not reach a running deployment.</dd>
+      </dl>
+    </div>
+
+  </section>
+
+  <section>
+    <div class="shead"><span class="n">06</span><h2>What I would do next</h2></div>
+    <div class="prose">
+      <p><b>1. Rotate BETTER_AUTH_SECRET and save the new value outside Vercel.</b> The current one
+      cannot be read back, so rotating is the only way to end up holding a copy. It is safe here —
+      no passwords, tokens or seeds are encrypted with it — and costs one forced sign-out of 260
+      sessions. Do it in a quiet hour, care first.</p>
+      <p><b>2. Decide the commercial messaging story.</b> Seven paying tenants currently cannot
+      reach their customers. Whether they share Eagle Info's channels or get their own is a
+      product decision, not a configuration one — which is why it is still open.</p>
+      <p><b>3. Paste in the Meta app secret</b> to finish inbound WhatsApp on care — the last piece of a
+      feature that is otherwise complete and already sending outbound.</p>
+      <p style="color:var(--ink-3);font-size:14px;margin-top:22px">
+      The financial core, tenant isolation and the repair chain are the parts that are hardest to
+      build and most expensive to get wrong. All three now hold under testing that tried to break
+      them, on production data as well as local.</p>
+    </div>
+  </section>
+
+</div>

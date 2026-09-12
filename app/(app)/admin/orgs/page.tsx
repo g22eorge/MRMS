@@ -10,6 +10,7 @@ import type { OrgModule } from "@prisma/client";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { setOrgModulesAction } from "./actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 export default async function AdminOrgsPage() {
@@ -36,9 +37,7 @@ export default async function AdminOrgsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Admin"
         title="Organisation Module Access"
-        description="Toggle which modules each org can access"
         actions={
           <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[0.75rem] font-semibold text-amber-700 dark:text-amber-400">
             Platform Admin
@@ -102,9 +101,9 @@ export default async function AdminOrgsPage() {
                   })}
                 </div>
                 <div className="mt-3 flex justify-end">
-                  <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-xs">
+                  <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-xs">
                     Save changes
-                  </button>
+                  </SubmitButton>
                 </div>
               </form>
             </div>

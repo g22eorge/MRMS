@@ -6,8 +6,10 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { HubTabs } from "@/components/shared/HubTabs";
+import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { RowActionsMenu, MenuActionLink } from "@/components/shared/RowActionsMenu";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,7 @@ export default async function GoodsReceivedPage({
 
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const [notes, notesTotal, receivedThisMonth] = await Promise.all([
@@ -33,22 +36,24 @@ export default async function GoodsReceivedPage({
         items: { select: { quantity: true, unitCost: true } },
       },
       orderBy: { receivedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
     prisma.goodsReceived.count({ where: { orgId } }).catch(() => 0),
     prisma.goodsReceived.count({ where: { orgId, receivedAt: { gte: monthStart } } }).catch(() => 0),
   ]);
 
-  const pageView = paginationView(page, notesTotal);
-  const hrefForPage = pageHrefBuilder("/inventory/goods-received", {});
+  const pageView = paginationView(page, notesTotal, pageSize);
+  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPage = pageHrefBuilder("/inventory/goods-received", hrefForPageFilters);
+  const hrefForPageSize = sizeHrefBuilder("/inventory/goods-received", hrefForPageFilters);
 
   const fmt = (d: Date) => d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" });
 
   return (
     <ListPageLayout
+      topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
-        eyebrow: "Procurement",
         title: "Goods Received",
         kpis: [
           { label: "Total GRNs", value: notesTotal, sub: "received notes" },
@@ -69,7 +74,7 @@ export default async function GoodsReceivedPage({
       <DataTable
         rows={notes}
         getRowKey={(grn) => grn.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total: notesTotal, hrefForPage, unit: "notes" }}
+        pagination={{ page: pageView.page, pageSize, total: notesTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "notes" }}
         empty="No goods received yet. Open a purchase order to receive stock."
         columns={[
           {

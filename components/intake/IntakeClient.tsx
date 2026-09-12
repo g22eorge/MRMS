@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { RepairRequest, RepairRequestStatus } from "@prisma/client";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import {
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DataTable } from "@/components/ui/DataTable";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 /* ── helpers ── */
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   PENDING_INTAKE:       { label: "Pending",       cls: "bg-[var(--panel-strong)] text-[var(--ink)]" },
@@ -170,7 +172,21 @@ function RequestDrawer({
   const isConverted = localStatus === "CONVERTED_TO_JOB";
   const isRejected  = localStatus === "REJECTED";
 
-  return (
+  // Portaled: <main> keeps a transform applied via `fade-in`'s
+  // `fill-mode: both`, making it the containing block for position:fixed
+  // children — backdrop and drawer were confined to the content column.
+  // A mounted flag, not `typeof document`, because this component renders
+  // unconditionally — the panel stays in the tree so it can slide. Branching on
+  // `typeof document` returns null on the server and content on the FIRST client
+  // render, which is a hydration mismatch React reports on every page that
+  // renders this. The flag makes the first client render match the server (null)
+  // and the portal appear on the commit after.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       <ConfirmDialog
         open={confirmDelete}
@@ -322,13 +338,10 @@ function RequestDrawer({
                 />
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={pending}
-                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 disabled:opacity-40"
-                >
+                <SubmitButton bare disabled={pending}
+ className="rounded-lg px-3 py-2 text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 disabled:opacity-40">
                   Save
-                </button>
+                </SubmitButton>
                 {pending ? <span className="text-xs text-[var(--ink-muted)]">Saving…</span> : null}
               </div>
             </form>
@@ -392,7 +405,8 @@ function RequestDrawer({
           </Section>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 

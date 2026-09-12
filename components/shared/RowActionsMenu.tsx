@@ -64,9 +64,17 @@ export function RowActionsMenu({ children, label = "Actions", size = "default" }
   useEffect(() => {
     if (!open) return;
     function onMouse(e: MouseEvent) {
+      const target = e.target as Node | null;
+      // A dialog opened *from* this menu is not "outside" it. It renders in its
+      // own portal, so by DOM containment it looks like anywhere else on the
+      // page — and closing on mousedown unmounted the menu's children, taking
+      // the confirm dialog's form with them, before the click that follows
+      // could submit it. Destructive actions reached through a row menu
+      // therefore did nothing at all: the dialog vanished and the record stayed.
+      if (target instanceof Element && target.closest('[role="dialog"]')) return;
       if (
-        btnRef.current && !btnRef.current.contains(e.target as Node) &&
-        popupRef.current && !popupRef.current.contains(e.target as Node)
+        btnRef.current && !btnRef.current.contains(target) &&
+        popupRef.current && !popupRef.current.contains(target)
       ) setOpen(false);
     }
     function onKey(e: KeyboardEvent) {

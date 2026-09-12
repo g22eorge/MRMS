@@ -9,6 +9,12 @@ export const defaultBranding = {
   companyContacts: "",
   companyEmail: "",
   companyWebsite: "",
+  /// Printed on documents as the TIN. Empty means the org has none, and nothing
+  /// is printed — not an empty "TIN:" label on every document it issues.
+  companyTaxId: "",
+  /// The organisation's own uploaded logo. Empty means it has none, which prints
+  /// no logo rather than another tenant's.
+  companyLogoUrl: "",
   documentTitle: "Job Card",
   quotePrefix: "EIS",
   quoteFormat: "{PREFIX} {M}/{YYYY}/{SEQ}",
@@ -73,6 +79,8 @@ function coerceRow(row: Record<string, unknown>): BrandingSettings {
     companyContacts: String(row.companyContacts ?? defaultBranding.companyContacts),
     companyEmail: row.companyEmail ? String(row.companyEmail) : "",
     companyWebsite: row.companyWebsite ? String(row.companyWebsite) : "",
+    companyTaxId: row.companyTaxId ? String(row.companyTaxId) : "",
+    companyLogoUrl: row.companyLogoUrl ? String(row.companyLogoUrl) : "",
     documentTitle: String(row.documentTitle ?? defaultBranding.documentTitle),
     quotePrefix: String(row.quotePrefix ?? defaultBranding.quotePrefix),
     quoteFormat: String(row.quoteFormat ?? defaultBranding.quoteFormat),
@@ -147,6 +155,8 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
     companyContacts: data.companyContacts,
     companyEmail: data.companyEmail,
     companyWebsite: data.companyWebsite,
+    companyTaxId: data.companyTaxId,
+    companyLogoUrl: data.companyLogoUrl,
     documentTitle: data.documentTitle,
     quotePrefix: data.quotePrefix,
     quoteFormat: data.quoteFormat,
@@ -174,8 +184,13 @@ export async function saveDocumentBrandingSettings(orgId: string, data: Branding
     receiptTemplateKey: data.receiptTemplateKey,
   };
 
+  // Conflict on orgId, not id. Rows created through Prisma carry a cuid and hold
+  // the org in its own UNIQUE orgId column, so `where: { id: orgId }` matched
+  // nothing and the create then died on the orgId index — branding saves failed
+  // outright for every org whose row this function did not create itself. Main
+  // found this against real data: six of seven rows.
   await prisma.documentBrandingSettings.upsert({
-    where: { id: orgId },
+    where: { orgId },
     create: { id: orgId, ...fields },
     update: fields,
   });

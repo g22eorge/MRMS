@@ -5,13 +5,15 @@ import { createElement } from "react";
 import { formatEATDocDate } from "@/lib/date-eat";
 import { formatMoney } from "@/lib/currency";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
-import { pickQuoteTerms } from "@/lib/quote-terms";
+import { quotationTerms } from "@/lib/quote-terms";
 import { can } from "@/lib/permissions";
 import { EagleInfoDocument, type EagleInfoLineItem } from "@/lib/pdf/EagleInfoDocument";
 import { resolvePdfLogo } from "@/lib/pdf/pdf-utils";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
+import { defaultQuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -49,13 +51,13 @@ export async function GET(
   const branding = await getDocumentBrandingSettings(orgId);
   const logoUrl = await resolvePdfLogo();
   const recipient = quotation.client ?? quotation.lead;
-  const clientLocation = quotation.client
-    ? [quotation.client.organization, quotation.client.address].filter(Boolean).join("\n") || null
-    : quotation.lead?.organization ?? null;
+  // The organisation heads the address block (with the person on the Attn
+  // line), so only the street address belongs down here.
+  const clientLocation = quotation.client?.address ?? null;
   const issuedAt = quotation.issueDate ?? quotation.sentAt ?? quotation.createdAt;
   const validUntil = quotation.validUntil ?? new Date(issuedAt.getTime() + branding.quoteValidityDays * 86400000);
   const currency = quotation.currency;
-  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
+  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
   const lineItems: EagleInfoLineItem[] = quotation.items.length > 0
     ? quotation.items.map((item) => ({
         name: item.description,
@@ -80,13 +82,16 @@ export async function GET(
     companyAddress: address,
     companyPhone: branding.companyContacts || null,
     companyEmail: branding.companyEmail || null,
+    companyWebsite: branding.companyWebsite || null,
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl || null,
     docTitle: "Estimate",
     docNumber: quotation.quoteNumber,
     docDate: formatEATDocDate(issuedAt),
     terms: `Valid until ${formatEATDocDate(validUntil)}`,
     dueDate: null,
-    clientName: recipient?.fullName ?? "Client",
+    clientName: clientDisplayName(recipient, "Client"),
+    clientAttn: clientContactName(recipient),
     clientEmail: recipient?.email ?? null,
     clientPhone: recipient?.phone ?? null,
     clientLocation,
@@ -107,7 +112,8 @@ export async function GET(
     paymentTo: null,
     // Repair quote vs sales quote get concise, relevant terms (unless the org
     // wrote its own). A quote linked to a job is a repair; otherwise a sale.
-    termsText: pickQuoteTerms(branding.termsText, !!quotation.job),
+    termsText: quotationTerms(branding.termsText, quotation.job ? "REPAIR" : "SALE"),
+    promo: defaultQuotationPromo(branding.companyName),
   });
 
   try {

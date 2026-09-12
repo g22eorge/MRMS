@@ -106,7 +106,28 @@ export async function createOrganization(
     // write. The slug is globally unique, so deriving from it is collision-free
     // on day one. The admin can shorten it in Settings -> Branding.
     await tx.documentBrandingSettings.create({
-      data: { orgId: org.id, quotePrefix: defaultDocumentCodeForSlug(slug) },
+      data: {
+        orgId: org.id,
+        quotePrefix: defaultDocumentCodeForSlug(slug),
+
+        // Everything below is set explicitly because the schema defaults are
+        // Eagle Info's own business: its trading name, its address on Bombo
+        // Road, its two telephone numbers and its signature line. Those
+        // defaults are right for care, which is Eagle Info and has one tenant.
+        // On the commercial deployment they meant a new repair shop's first
+        // quotation went to their client showing another company's name,
+        // address and phone numbers — a letterhead belonging to someone else.
+        //
+        // A new tenant starts blank apart from its own name. Blank prints
+        // nothing, which is honest; inherited prints a competitor's contact
+        // details, which is not.
+        companyName: businessName,
+        companyAddressLine1: "",
+        companyAddressLine2: "",
+        companyContacts: "",
+        signatureCompanyLabel: `Signed by: ${businessName}`,
+        footerText: "",
+      },
     });
 
     // Grant only the modules the client selected.

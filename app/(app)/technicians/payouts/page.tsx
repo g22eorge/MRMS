@@ -9,6 +9,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { icontains } from "@/lib/db/search";
 
 type SearchParams = {
   q?: string;
@@ -61,9 +62,9 @@ export default async function TechnicianPayoutsPage({
       ...(filters.q
         ? {
             OR: [
-              { jobNumber: { contains: filters.q , mode: "insensitive" as const} },
-              { brand: { contains: filters.q , mode: "insensitive" as const} },
-              { model: { contains: filters.q , mode: "insensitive" as const} },
+              { jobNumber: icontains(filters.q) },
+              { brand: icontains(filters.q) },
+              { model: icontains(filters.q) },
             ],
           }
         : {}),
@@ -131,7 +132,6 @@ export default async function TechnicianPayoutsPage({
   return (
     <ListPageLayout
       header={{
-        eyebrow: "Service",
         title: "My Payouts",
         kpis: [
           { label: "Total in view", value: formatMoney(total, currency), sub: `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"}` },

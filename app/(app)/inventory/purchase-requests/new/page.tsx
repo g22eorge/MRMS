@@ -21,7 +21,6 @@ export default async function NewPurchaseRequestPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Inventory · Purchases"
         title="New purchase request"
         description="Ask to buy stock. Approve it, and it turns into a supplier order."
         actions={<Button href="/inventory/purchase-requests" variant="secondary" size="sm">All requests</Button>}

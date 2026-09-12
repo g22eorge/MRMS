@@ -22,6 +22,8 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { rateLimit } from "@/lib/rate-limit";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
 type SearchParams = {
   q?: string;
   userId?: string;
@@ -681,7 +683,7 @@ export default async function UsersPage({
     });
 
     revalidatePath("/settings/users");
-    redirect(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`);
+    redirect(flash(`/settings/users?${new URLSearchParams({ q, userId: targetUserId }).toString()}`, "Access changes saved"));
   }
 
   async function setUserAccessMode(formData: FormData) {
@@ -731,7 +733,7 @@ export default async function UsersPage({
       after: { isActive: !target.isActive },
     });
     revalidatePath("/settings/users");
-    redirect(`/settings/users?${new URLSearchParams({ q, userId: targetId }).toString()}`);
+    redirect(flash(`/settings/users?${new URLSearchParams({ q, userId: targetId }).toString()}`, "Saved"));
   }
 
   async function inviteUser(_prev: InviteState, formData: FormData): Promise<InviteState> {
@@ -806,7 +808,7 @@ export default async function UsersPage({
 
     if (!parsed.success) {
       revalidatePath("/settings/users");
-      redirect("/settings/users");
+      redirect(flash("/settings/users", "User created"));
     }
 
     const userLimit = await checkUserLimit(actorOrgId);
@@ -842,7 +844,7 @@ export default async function UsersPage({
     });
 
     revalidatePath("/settings/users");
-    redirect(`/settings/users?${new URLSearchParams({ userId: created.id }).toString()}`);
+    redirect(flash(`/settings/users?${new URLSearchParams({ userId: created.id }).toString()}`, "User created"));
   }
 
 
@@ -994,7 +996,7 @@ export default async function UsersPage({
               <select name="role" defaultValue="OPS" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14">
                 {roleOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
-              <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] text-white">Create</button>
+              <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.8125rem] text-white">Create</SubmitButton>
             </form>
           </div>
         </section>
@@ -1067,7 +1069,7 @@ export default async function UsersPage({
                         <form action={toggleUserActive}>
                           <input type="hidden" name="userId" value={selectedUser.id} />
                           <input type="hidden" name="q" value={q} />
-                          <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Deactivate User</button>
+                          <SubmitButton bare className="w-full text-left text-[0.75rem] text-red-600">Deactivate User</SubmitButton>
                         </form>
                       </MenuDestructiveRow>
                     ) : (
@@ -1143,7 +1145,7 @@ export default async function UsersPage({
                         {selectedUser.id === user.id ? (
                           <span className="text-[0.75rem] text-[var(--ink-muted)]">You can&apos;t set yourself to read-only.</span>
                         ) : (
-                          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold">Update</button>
+                          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.8125rem] font-semibold">Update</SubmitButton>
                         )}
                       </form>
                     </section>

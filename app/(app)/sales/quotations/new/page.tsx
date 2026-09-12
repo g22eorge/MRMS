@@ -59,7 +59,7 @@ export default async function NewQuotationPage({
       },
       orderBy: { updatedAt: "desc" },
       take: 150,
-      select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true } } },
+      select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true, organization: true } } },
     }),
     prisma.part.findMany({
       where: { orgId, isActive: true },

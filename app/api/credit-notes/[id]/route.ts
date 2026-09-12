@@ -10,7 +10,10 @@ import { can } from "@/lib/permissions";
 import { EagleInfoDocument, type EagleInfoLineItem } from "@/lib/pdf/EagleInfoDocument";
 import { resolveInvoiceLogo } from "@/lib/pdf/pdf-utils";
 import { prisma } from "@/lib/prisma";
+import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 
+import { clientContactName } from "@/lib/client-name";
+import { pickDocumentTerms } from "@/lib/quote-terms";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -39,6 +42,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           client: { select: { fullName: true, phone: true, email: true, organization: true } },
         },
       },
+      invoice: {
+        select: {
+          invoiceNumber: true,
+          client: { select: { fullName: true, phone: true, email: true, organization: true } },
+          job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+        },
+      },
       items: {
         select: { description: true, quantity: true, unitPrice: true, lineTotal: true },
         orderBy: { createdAt: "asc" },
@@ -53,10 +63,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const [branding, logoUrl] = await Promise.all([
     getDocumentBrandingSettings(orgId),
-    resolveInvoiceLogo(),
+    resolveInvoiceLogo(orgId),
   ]);
-  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
+  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
   const currency = creditNote.currency;
+  const parent = creditNoteParent(creditNote);
   const refundedTotal = creditNote.refunds.reduce((sum, refund) => sum + refund.amount, 0);
   const outstandingCredit = Math.max(0, creditNote.totalAmount - refundedTotal);
   const lineItems: EagleInfoLineItem[] = creditNote.items.length > 0
@@ -78,30 +89,38 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     companyAddress: address,
     companyPhone: branding.companyContacts || null,
     companyEmail: branding.companyEmail || null,
+    companyWebsite: branding.companyWebsite || null,
     companyLogoUrl: logoUrl || null,
     docTitle: "Credit Note",
     docNumber: creditNote.creditNoteNumber,
     docDate: formatEATDocDate(creditNote.issuedAt),
     terms: "Sales return / adjustment",
     dueDate: null,
-    clientName: creditNote.sale.client?.fullName ?? "Walk-in",
-    clientEmail: creditNote.sale.client?.email ?? null,
-    clientPhone: creditNote.sale.client?.phone ?? null,
-    clientLocation: creditNote.sale.client?.organization ?? null,
+    clientName: parent.clientName,
+    clientAttn: clientContactName(parent.client),
+    clientEmail: parent.client?.email ?? null,
+    clientPhone: parent.client?.phone ?? null,
+    clientLocation: null,
     lineItems,
     subTotal: formatMoney(creditNote.totalAmount, currency),
+    // Lead with the credit issued rather than what is left outstanding on it.
+    headlineLabel: "Credit Issued",
+    headlineAmount: formatMoney(creditNote.totalAmount, currency),
     totalLabel: "Credit Total",
     totalAmount: formatMoney(creditNote.totalAmount, currency),
     paymentMade: formatMoney(refundedTotal, currency),
     balanceDue: formatMoney(outstandingCredit, currency),
     notes: [
-      `Sale: ${creditNote.sale.saleNumber}`,
+      parent.label || null,
       creditNote.reason ? `Reason: ${creditNote.reason}` : null,
       creditNote.itemsReceivedBackAt ? `Items received back: ${formatEATDocDate(creditNote.itemsReceivedBackAt)}` : "Items return pending",
       creditNote.itemsReceivedBackNote ? `Return note: ${creditNote.itemsReceivedBackNote}` : null,
     ].filter(Boolean).join("\n"),
     paymentTo: null,
-    termsText: branding.termsText || null,
+    termsText: pickDocumentTerms(
+      branding.termsText,
+      creditNote.invoice?.job ? "REPAIR" : creditNote.sale || creditNote.invoice ? "SALE" : "MIXED",
+    ),
   });
 
   try {

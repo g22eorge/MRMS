@@ -14,11 +14,12 @@ import {
 } from "@/lib/complaints";
 import { RowActionsMenu, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { ServiceHubNav } from "@/components/service/ServiceHubNav";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 const STATUSES = COMPLAINT_STATUSES as unknown as ComplaintStatus[];
@@ -45,6 +46,7 @@ export default async function ComplaintsPage({
 
   const params = await searchParams;
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const filterStatus = STATUSES.includes(params.status as ComplaintStatus)
     ? (params.status as ComplaintStatus)
     : null;
@@ -95,8 +97,8 @@ export default async function ComplaintsPage({
     prisma.complaint.findMany({
       where: complaintsWhere,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         complaintNumber: true,
@@ -122,8 +124,12 @@ export default async function ComplaintsPage({
     }).catch(() => [] as Array<{ status: ComplaintStatus; _count: { status: number } }>),
   ]);
 
-  const pageView = paginationView(page, complaintsTotal);
-  const complaintsHref = pageHrefBuilder("/complaints", { status: filterStatus ?? "", q: qSearch });
+  const pageView = paginationView(page, complaintsTotal, pageSize);
+  const complaintsHrefFilters = { status: filterStatus ?? "", q: qSearch,
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const complaintsHref = pageHrefBuilder("/complaints", complaintsHrefFilters);
+  const complaintsHrefSize = sizeHrefBuilder("/complaints", complaintsHrefFilters);
 
   const byStatus = Object.fromEntries(counts.map((c) => [c.status, c._count?.status ?? 0]));
   const now = new Date();
@@ -155,7 +161,7 @@ export default async function ComplaintsPage({
         </select>
         <textarea name="resolution" defaultValue={c.resolution ?? ""} placeholder="Resolution (shown to client)" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
         <textarea name="internalNotes" defaultValue={c.internalNotes ?? ""} placeholder="Internal notes" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
-        <button type="submit" className="btn-premium w-full rounded-lg px-3 py-1.5 text-xs">Save</button>
+        <SubmitButton bare className="btn-premium w-full rounded-lg px-3 py-1.5 text-xs">Save</SubmitButton>
       </form>
     </RowActionsMenu>
   );
@@ -164,7 +170,6 @@ export default async function ComplaintsPage({
     <ListPageLayout
       topBar={<ServiceHubNav />}
       header={{
-        eyebrow: "Service",
         title: "Complaints",
         actions: (
           <>
@@ -212,7 +217,7 @@ export default async function ComplaintsPage({
             {filterStatus && <input type="hidden" name="status" value={filterStatus} />}
             <input name="q" defaultValue={params.q ?? ""} placeholder="Search client, description…"
               className="h-7 min-w-[160px] rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
-            <button type="submit" className="h-7 rounded-full border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</button>
+            <SubmitButton bare className="h-7 rounded-full border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">Search</SubmitButton>
           </form>
         </div>
       }
@@ -327,6 +332,8 @@ export default async function ComplaintsPage({
         total={pageView.total}
         unit="complaints"
         hrefForPage={complaintsHref}
+          pageSize={pageSize}
+          hrefForSize={complaintsHrefSize}
       />
     </ListPageLayout>
   );

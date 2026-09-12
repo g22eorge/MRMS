@@ -185,7 +185,6 @@ export default async function PLPage({
     <div className="print-area space-y-4">
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <PageHeader
-        eyebrow="Finance"
         title="Profit & Loss"
         description={periodLabel}
         actions={

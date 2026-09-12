@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { JournalEntryStatus } from "@prisma/client";
@@ -19,11 +20,13 @@ import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { parsePeriodInt } from "@/lib/date-eat";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { icontains } from "@/lib/db/search";
 const MONTHS = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
@@ -57,8 +60,15 @@ export default async function JournalPage({
   const month  = parsePeriodInt(sp.month, 0); // 0 = all months
   const statusFilter = sp.status ?? "all";
   const searchQ = (sp.q ?? "").trim();
-  const currency = "UGX";
+  // The organisation's own currency, not a literal. A tenant whose books are
+  // kept in KES was shown every figure on this page labelled UGX.
+  const currency =
+    (await prisma.organization.findUnique({
+      where: { id: user.orgId ?? "" },
+      select: { baseCurrency: true },
+    }).catch(() => null))?.baseCurrency ?? "UGX";
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
 
   // ── Date ranges ───────────────────────────────────────────────────────────
   const periodFilter =
@@ -76,6 +86,11 @@ export default async function JournalPage({
     "use server";
     const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return { error: "Your account is not attached to a workspace." };
+    // The page redirects a non-accountant at render, but a server action is
+    // callable on its own — the render guard never runs for a direct
+    // invocation, so raising a journal entry needs the same check here that
+    // decides who may see the screen.
+    if (!canAccessAccountantFinance(_u.role)) return { error: "You do not have access to the journal." };
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const db = orgDb(_u.orgId);
 
@@ -140,6 +155,7 @@ export default async function JournalPage({
     "use server";
     const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    if (!canAccessAccountantFinance(_u.role)) return;
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;
@@ -161,6 +177,7 @@ export default async function JournalPage({
     "use server";
     const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    if (!canAccessAccountantFinance(_u.role)) return;
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;
@@ -174,6 +191,7 @@ export default async function JournalPage({
     "use server";
     const { user: _u, org } = await requireOrgSession();
     if (!_u.orgId) return;
+    if (!canAccessAccountantFinance(_u.role)) return;
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;
@@ -187,9 +205,9 @@ export default async function JournalPage({
   const searchWhere = searchQ
     ? {
         OR: [
-          { description: { contains: searchQ , mode: "insensitive" as const} },
-          { reference:   { contains: searchQ , mode: "insensitive" as const} },
-          { entryNumber: { contains: searchQ , mode: "insensitive" as const} },
+          { description: icontains(searchQ) },
+          { reference:   icontains(searchQ) },
+          { entryNumber: icontains(searchQ) },
         ],
       }
     : {};
@@ -214,8 +232,8 @@ export default async function JournalPage({
     db.journalEntry.findMany({
       where: entriesWhere,
       orderBy: { date: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       include: {
         lines: {
           include: { account: { select: { code: true, name: true } } },
@@ -273,20 +291,22 @@ export default async function JournalPage({
   // Filtered summary — whole-dataset posted total (not just the current page)
   const filteredTotal = filteredPostedStats._sum.totalAmount ?? 0;
 
-  const pageView = paginationView(page, total);
-  const journalHref = pageHrefBuilder("/finance/journal", {
+  const pageView = paginationView(page, total, pageSize);
+  const journalHrefFilters = {
     month: month > 0 ? String(month) : "",
     year: String(year),
     status: statusFilter !== "all" ? statusFilter : "",
     q: searchQ,
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const journalHref = pageHrefBuilder("/finance/journal", journalHrefFilters);
+  const journalHrefSize = sizeHrefBuilder("/finance/journal", journalHrefFilters);
 
   return (
     <div className="space-y-4">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <PageHeader
-        eyebrow="Finance"
         title="Journal Entries"
         description="Double-entry ledger — every entry's debits must equal its credits"
         actions={
@@ -390,12 +410,9 @@ export default async function JournalPage({
           placeholder="Search description, reference…"
           className="min-w-[180px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[0.8125rem]"
         />
-        <button
-          type="submit"
-          className="btn-premium-secondary rounded-lg px-4 py-2 text-sm font-semibold"
-        >
+        <SubmitButton bare className="btn-premium-secondary rounded-lg px-4 py-2 text-sm font-semibold">
           Filter
-        </button>
+        </SubmitButton>
         {(month > 0 || statusFilter !== "all" || searchQ) && (
           <Link
             href="/finance/journal"
@@ -482,23 +499,17 @@ export default async function JournalPage({
                       {entry.status === "DRAFT" && (
                         <form action={postEntry}>
                           <input type="hidden" name="id" value={entry.id} />
-                          <button
-                            type="submit"
-                            className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]"
-                          >
+                          <SubmitButton bare className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]">
                             ✓ Post Entry
-                          </button>
+                          </SubmitButton>
                         </form>
                       )}
                       {entry.status === "POSTED" && (
                         <form action={voidEntry}>
                           <input type="hidden" name="id" value={entry.id} />
-                          <button
-                            type="submit"
-                            className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]"
-                          >
+                          <SubmitButton bare className="w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--panel)]">
                             Void Entry
-                          </button>
+                          </SubmitButton>
                         </form>
                       )}
                       {entry.status === "DRAFT" && (
@@ -605,6 +616,8 @@ export default async function JournalPage({
         total={pageView.total}
         unit="entries"
         hrefForPage={journalHref}
+          pageSize={pageSize}
+          hrefForSize={journalHrefSize}
       />
 
       {/* ── QUICK LINKS ────────────────────────────────────────────────────── */}

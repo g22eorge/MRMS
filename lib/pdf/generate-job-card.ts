@@ -76,6 +76,7 @@ export async function generateJobCardBuffer(
     companyContacts: branding.companyContacts,
     companyEmail: branding.companyEmail ?? "",
     companyWebsite: branding.companyWebsite ?? "",
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl,
     documentNumber,
     dateIssued: formatEATDocDate(job.receivedAt),

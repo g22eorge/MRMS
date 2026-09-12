@@ -1,4 +1,5 @@
 import { getClientBill, resolveTechCost } from "@/lib/billing";
+import { INCOMING_PAYMENT } from "@/lib/finance/payment-kinds";
 import { getAppCurrency, toBaseAmount } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
 import { monthLabel, monthSequence } from "@/lib/date-ranges";
@@ -79,7 +80,7 @@ export async function loadSalesRevenueTrend(trendMonths: TrendMonth[], orgId?: s
 
   const [payments, saleItems, invoiceLines] = await Promise.all([
     prisma.payment.findMany({
-      where: { orgId, kind: "PAYMENT", receivedAt: { gte: rangeStart, lte: rangeEnd } },
+      where: { orgId, ...INCOMING_PAYMENT, receivedAt: { gte: rangeStart, lte: rangeEnd } },
       select: { amount: true, currency: true, exchangeRateToBase: true, saleId: true, receivedAt: true, invoice: { select: { invoiceType: true } } },
     }),
     // COGS inputs, bucketed by paidAt below (matches the operational report basis)

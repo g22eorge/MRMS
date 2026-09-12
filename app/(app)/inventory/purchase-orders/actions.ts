@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { notifyStockReceived } from "@/lib/notifications";
 
+import { flash } from "@/lib/flash";
 async function requireAdmin() {
   const ctx = await requireOrgSession();
   if (!can.manageInventory(ctx.user)) redirect("/inventory");
@@ -398,7 +399,7 @@ export async function deletePurchaseOrderAction(formData: FormData): Promise<voi
   revalidatePath("/inventory/purchase-orders");
   revalidatePath("/inventory/goods-received");
   revalidatePath("/inventory/supplier-bills");
-  redirect("/inventory/purchase-orders");
+  redirect(flash("/inventory/purchase-orders", "Purchase order deleted"));
 }
 
 // ── Receive stock (mark items received, update Part qty) ───────────────────

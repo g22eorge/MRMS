@@ -11,6 +11,7 @@ import { checkPartLimit } from "@/lib/plan-limits";
 import { notifyStockAlert } from "@/lib/notifications";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 
+import { flash } from "@/lib/flash";
 type StockTxnType = "IN" | "OUT" | "ADJUST";
 
 /**
@@ -18,7 +19,7 @@ type StockTxnType = "IN" | "OUT" | "ADJUST";
  * SKU-#### based on the org's current max, with a short retry to absorb races
  * (the @@unique([sku, orgId]) constraint still backstops it).
  */
-async function generatePartSku(orgId: string): Promise<string> {
+export async function generatePartSku(orgId: string): Promise<string> {
   const rows = await prisma.part.findMany({
     where: { orgId, sku: { startsWith: "SKU-" , mode: "insensitive" as const} },
     select: { sku: true },
@@ -249,7 +250,7 @@ export async function adjustStockAction(formData: FormData) {
 
   revalidatePath(`/inventory/${partId}`);
   revalidatePath("/inventory");
-  redirect(`/inventory/${partId}?saved=1`);
+  redirect(flash(`/inventory/${partId}?saved=1`, "Saved"));
 }
 
 export async function togglePartActiveAction(formData: FormData) {
@@ -264,7 +265,7 @@ export async function togglePartActiveAction(formData: FormData) {
   await prisma.part.updateMany({ where: { id: partId, orgId }, data: { isActive: next === "1" } });
   revalidatePath(`/inventory/${partId}`);
   revalidatePath("/inventory");
-  redirect(`/inventory/${partId}`);
+  redirect(flash(`/inventory/${partId}`, "Saved"));
 }
 
 export async function updatePartAction(formData: FormData) {
@@ -323,5 +324,5 @@ export async function updatePartAction(formData: FormData) {
 
   revalidatePath(`/inventory/${partId}`);
   revalidatePath("/inventory");
-  redirect(`/inventory/${partId}`);
+  redirect(flash(`/inventory/${partId}`, "Part updated"));
 }

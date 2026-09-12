@@ -6,6 +6,8 @@ import { ExternalTechJobView } from "@/components/jobs/ExternalTechJobView";
 import { JobDetailTabs } from "@/components/jobs/JobDetailTabs";
 import { SendAssessmentButton } from "@/components/jobs/SendAssessmentButton";
 import { MoveJobPanel } from "@/components/jobs/MoveJobPanel";
+import { JobPartsPanel } from "@/components/jobs/JobPartsPanel";
+import { WarrantyClaimsPanel } from "@/components/jobs/WarrantyClaimsPanel";
 import { staffReplyRepairMessageAction } from "./portal-message-actions";
 import { generateAssessmentAction, updateAssessmentAction, publishAssessmentAction, deleteAssessmentAction, setWarrantyAction } from "./assessment-actions";
 import { getClientBill, getExternalTechBill } from "@/lib/billing";
@@ -14,8 +16,11 @@ import { loadJobDocumentTimeline } from "@/lib/jobs/job-document-timeline";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { getWhatsAppReadiness } from "@/lib/notifications/whatsapp-readiness";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
+import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export default async function JobDetailPage({
   params,
   searchParams,
@@ -26,6 +31,8 @@ export default async function JobDetailPage({
   const { id } = await params;
   const { returnTo, returnLabel, tab, error: jobError } = await searchParams;
   const { session, user, orgId, org } = await requireOrgSession();
+  // Whether the Messages tab should say that WhatsApp sends will not arrive.
+  const { ready: whatsappReady } = await getWhatsAppReadiness(orgId);
   const safeReturnTo =
     returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
       ? returnTo
@@ -146,6 +153,45 @@ export default async function JobDetailPage({
         },
       }).then((invoice) => invoice?.payments ?? []).catch(() => [])
     : [];
+
+  // Refunds are Refund rows, not Payment rows with kind REFUND, so the billing
+  // tab — which rebuilt the running balance from payments alone — showed a
+  // refunded job as still fully paid and overstated what the customer had
+  // parted with. They are folded in here in the payment shape the tab already
+  // knows how to render and subtract.
+  const clientRefunds = can.viewFinancials(user)
+    ? await prisma.refund
+        .findMany({
+          where: { orgId, invoice: { jobId: job.id } },
+          select: {
+            id: true,
+            amount: true,
+            method: true,
+            reference: true,
+            note: true,
+            refundedAt: true,
+            createdBy: { select: { name: true } },
+          },
+          orderBy: { refundedAt: "desc" },
+        })
+        .then((rows) =>
+          rows.map((r) => ({
+            id: r.id,
+            amount: r.amount,
+            kind: "REFUND",
+            method: r.method,
+            reference: r.reference,
+            note: r.note,
+            receivedAt: r.refundedAt,
+            createdBy: r.createdBy,
+          })),
+        )
+        .catch(() => [])
+    : [];
+
+  const clientLedger = [...clientPayments, ...clientRefunds].sort(
+    (a, b) => b.receivedAt.getTime() - a.receivedAt.getTime(),
+  );
   const technicianPayouts = can.reviewExternalBills(user) || user.role === "ADMIN"
     ? await prisma.technicianPayout.findMany({
         where: { orgId, jobId: job.id },
@@ -317,9 +363,81 @@ export default async function JobDetailPage({
       }).catch(() => [])
     : [];
 
+  // Parts drawn from real stock. Reserved parts are still on the shelf but
+  // spoken for; fitting one takes it out of inventory for good. External techs
+  // are excluded here as they are everywhere else stock and pricing are shown.
+  // External techs never reach this branch — the page returns ExternalTechJobView
+  // above — so the role test here is only about who may move stock.
+  // parts-actions.ts re-checks server-side; this just decides read-only vs not.
+  const canRecordParts =
+    can.manageInventory({ role: user.role, permissions: user.permissions })
+    || user.role === "TECHNICIAN_INTERNAL";
+
+  const [warrantyClaims, sameClientJobs] = await Promise.all([
+    prisma.warrantyClaim.findMany({
+      where: { orgId, originalJobId: id },
+      orderBy: { openedAt: "desc" },
+      select: {
+        id: true, status: true, reason: true, resolution: true,
+        openedAt: true, closedAt: true,
+        warrantyJob: { select: { id: true, jobNumber: true } },
+      },
+    }).catch(() => []),
+    // Candidates for "the repair we did under warranty": this client's other
+    // jobs, newest first. Anything else would be someone else's device.
+    prisma.job.findMany({
+      where: { orgId, clientId: job.clientId, id: { not: id } },
+      orderBy: { receivedAt: "desc" },
+      take: 20,
+      select: { id: true, jobNumber: true },
+    }).catch(() => []),
+  ]);
+
+  const [stockLocation, availableParts, jobPartLines] = await Promise.all([
+    prisma.stockLocation.findFirst({
+      where: { orgId, isActive: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.part.findMany({
+      where: { orgId, isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, sku: true, name: true, qtyOnHand: true, qtyReserved: true },
+    }),
+    prisma.partReservation.findMany({
+      where: { jobId: job.id, status: { in: ["RESERVED", "CONSUMED"] } },
+      orderBy: { reservedAt: "asc" },
+      select: {
+        id: true, partId: true, quantity: true, status: true,
+        reservedAt: true, consumedAt: true,
+        part: { select: { name: true, sku: true } },
+      },
+    }),
+  ]);
+
+  const partsPanel = (
+    <JobPartsPanel
+      jobId={job.id}
+      locationId={stockLocation?.id ?? null}
+      locationName={stockLocation?.name ?? null}
+      parts={availableParts}
+      lines={jobPartLines.map((line) => ({
+        id: line.id,
+        partId: line.partId,
+        name: line.part?.name ?? "Part",
+        sku: line.part?.sku ?? "",
+        quantity: line.quantity,
+        status: line.status,
+        reservedAt: line.reservedAt,
+        consumedAt: line.consumedAt,
+      }))}
+      readOnly={!canRecordParts}
+    />
+  );
+
   const movePanel = canMoveJob && moveCandidates.length > 0 ? (
     <div className="flex justify-end">
-      <MoveJobPanel jobId={job.id} currentClientName={job.client?.fullName ?? "this account"} candidates={moveCandidates} />
+      <MoveJobPanel jobId={job.id} currentClientName={clientDisplayName(job.client, "this account")} candidates={moveCandidates} />
     </div>
   ) : null;
 
@@ -341,7 +459,7 @@ export default async function JobDetailPage({
       <form action={staffReplyRepairMessageAction} className="flex gap-2">
         <input type="hidden" name="jobId" value={id} />
         <input name="body" required pattern=".*\S.*" title="Type a message before sending." maxLength={4000} placeholder="Reply to the client…" className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50" />
-        <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-[0.8125rem] text-white">Reply</button>
+        <SubmitButton bare className="btn-premium rounded-lg px-3 py-2 text-[0.8125rem] text-white">Reply</SubmitButton>
       </form>
     </div>
   ) : null;
@@ -361,7 +479,7 @@ export default async function JobDetailPage({
             {canAssess ? (
               <form action={generateAssessmentAction}>
                 <input type="hidden" name="jobId" value={id} />
-                <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--accent)]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
+                <SubmitButton bare className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--accent)]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</SubmitButton>
               </form>
             ) : (
               <button type="button" disabled title="Add the diagnosis and repair details first" className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink-muted)] opacity-60"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="M12 3l1.6 4.9L18.5 9.5l-4.9 1.6L12 16l-1.6-4.9L5.5 9.5l4.9-1.6L12 3Z"/></svg>Generate AI draft</button>
@@ -384,12 +502,12 @@ export default async function JobDetailPage({
                       <input type="hidden" name="reportId" value={r.id} />
                       <input type="hidden" name="jobId" value={id} />
                       <input type="hidden" name="visible" value={String(!visible)} />
-                      <button type="submit" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">{visible ? "Unpublish" : "Publish to client"}</button>
+                      <SubmitButton bare className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">{visible ? "Unpublish" : "Publish to client"}</SubmitButton>
                     </form>
                     <form action={deleteAssessmentAction}>
                       <input type="hidden" name="reportId" value={r.id} />
                       <input type="hidden" name="jobId" value={id} />
-                      <button type="submit" className="rounded-lg border border-red-400/40 px-2.5 py-1 text-[0.75rem] font-semibold text-red-500 hover:bg-red-500/10">Delete</button>
+                      <SubmitButton bare className="rounded-lg border border-red-400/40 px-2.5 py-1 text-[0.75rem] font-semibold text-red-500 hover:bg-red-500/10">Delete</SubmitButton>
                     </form>
                   </div>
                 </div>
@@ -400,7 +518,7 @@ export default async function JobDetailPage({
                   <textarea name="findings" defaultValue={r.findings ?? ""} rows={2} placeholder="Inspection findings" className={ta} />
                   <textarea name="recommendedWork" defaultValue={r.recommendedWork ?? ""} rows={2} placeholder="Recommended / completed work" className={ta} />
                   <textarea name="riskNotes" defaultValue={r.riskNotes ?? ""} rows={2} placeholder="Notes / recommendations" className={ta} />
-                  <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Save report</button>
+                  <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Save report</SubmitButton>
                 </form>
               </div>
             );
@@ -418,8 +536,28 @@ export default async function JobDetailPage({
             <input type="hidden" name="jobId" value={id} />
             <input name="months" type="number" min={0} max={60} defaultValue={warrantyInfo?.warrantyMonths ?? 0} className="w-24 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]" />
             <span className="text-[0.8125rem] text-[var(--ink-muted)]">months</span>
-            <button type="submit" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Set warranty</button>
+            <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] text-white">Set warranty</SubmitButton>
           </form>
+
+          <div className="mt-4 border-t border-[var(--line)] pt-3">
+            <WarrantyClaimsPanel
+              jobId={id}
+              coverageMonths={warrantyInfo?.warrantyMonths ?? null}
+              coverageExpiresAt={warrantyInfo?.warrantyExpiresAt ? warrantyInfo.warrantyExpiresAt.toISOString() : null}
+              claims={warrantyClaims.map((c) => ({
+                id: c.id,
+                status: c.status,
+                reason: c.reason,
+                resolution: c.resolution,
+                openedAt: c.openedAt.toISOString(),
+                closedAt: c.closedAt ? c.closedAt.toISOString() : null,
+                warrantyJob: c.warrantyJob,
+              }))}
+              linkableJobs={sameClientJobs}
+              canRaise={can.createJob(user) || can.approveWork(user)}
+              canSettle={can.approveWork(user)}
+            />
+          </div>
         </div>
       </div>
   );
@@ -428,11 +566,12 @@ export default async function JobDetailPage({
     <>
     <FormErrorBanner message={jobError} />
     <JobDetailTabs
+      whatsappReady={whatsappReady}
       role={user.role}
       permissions={user.permissions}
       orgBaseCurrency={org.baseCurrency}
       supportedCurrencies={org.supportedCurrencies}
-      job={{ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments, technicianPayouts }}
+      job={{ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments: clientLedger, technicianPayouts }}
       technicians={technicians}
       deviceHistory={deviceHistory}
       returnTo={safeReturnTo}
@@ -440,6 +579,7 @@ export default async function JobDetailPage({
       initialTab={tab}
       documentTimeline={documentTimeline}
       assessmentSlot={assessmentPanel}
+      partsSlot={partsPanel}
       moveSlot={movePanel}
       portalSlot={portalPanel}
     />

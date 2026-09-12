@@ -168,11 +168,11 @@ export default async function MorePage() {
                 <NavRow href="/documents/invoices" iconBg="bg-[var(--panel-strong)]"
                   icon={<ItemIcon d={["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M16 13H8","M16 17H8","M10 9H8"]} color="text-[var(--ink-muted)]" />}
                 />
-                <NavRow href="/documents/receipts" iconBg="bg-[var(--panel-strong)]"
-                  icon={<ItemIcon d={["M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z","M9 12h6","M9 16h4"]} color="text-[var(--ink-muted)]" />}
-                />
                 <NavRow href="/documents/delivery-notes" iconBg="bg-[var(--panel-strong)]"
                   icon={<ItemIcon d={["M1 3h15v13H1z","M16 8h4l3 3v5h-7V8z"]} color="text-[var(--ink-muted)]" />}
+                />
+                <NavRow href="/documents/receipts" iconBg="bg-[var(--panel-strong)]"
+                  icon={<ItemIcon d={["M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z","M9 12h6","M9 16h4"]} color="text-[var(--ink-muted)]" />}
                 />
                 <NavRow href="/documents/credit-notes" iconBg="bg-[var(--panel-strong)]"
                   icon={<ItemIcon d={["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M8 13h8","M8 17h5","M8 9h2"]} color="text-[var(--ink-muted)]" />}

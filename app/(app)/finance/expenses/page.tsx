@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { rowToBase } from "@/lib/currency";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { ExpenseCategory, PaymentMethod } from "@prisma/client";
@@ -21,9 +22,10 @@ import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
+import { icontains } from "@/lib/db/search";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +82,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const q = sp.q?.trim() ?? "";
   const periodFilter = (sp.period ?? "all") as "all" | "this_month" | "last_month" | "ytd";
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
 
   const now = new Date();
   const thisYear = now.getFullYear();
@@ -95,14 +98,29 @@ export default async function ExpensesPage({ searchParams }: Props) {
   // 6-month trend window
   const trendStart = new Date(thisYear, thisMonth - 5, 1);
 
+  // The period chips have never narrowed anything: `periodFilter` was read from
+  // the URL and used only to highlight the active chip, and `where` referenced
+  // no date at all. Clicking "This month" reloaded the identical list, so the
+  // chips looked like a filter and behaved like decoration.
+  const periodRange: { gte?: Date; lte?: Date } | null =
+    periodFilter === "this_month" ? { gte: new Date(thisYear, thisMonth, 1) }
+    : periodFilter === "last_month" ? { gte: prevMonthStart, lte: prevMonthEnd }
+    : periodFilter === "ytd" ? { gte: new Date(thisYear, 0, 1) }
+    : null;
+
   const where: Prisma.ExpenseWhereInput = {
     ...(catFilter ? { category: catFilter } : {}),
+    // paidAt where it exists, falling back to createdAt — the same pairing the
+    // KPI tiles on this page already use, so the chip and the tiles agree.
+    ...(periodRange
+      ? { OR: [{ paidAt: periodRange }, { AND: [{ paidAt: null }, { createdAt: periodRange }] }] }
+      : {}),
     ...(q
       ? {
           OR: [
-            { description: { contains: q , mode: "insensitive" as const} },
-            { expenseNumber: { contains: q , mode: "insensitive" as const} },
-            { reference: { contains: q , mode: "insensitive" as const} },
+            { description: icontains(q) },
+            { expenseNumber: icontains(q) },
+            { reference: icontains(q) },
           ],
         }
       : {}),
@@ -117,15 +135,15 @@ export default async function ExpensesPage({ searchParams }: Props) {
           createdBy: { select: { name: true } },
         },
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
       }),
       // Whole-dataset KPIs: totalAmount, thisMonthAmount (paidAt ?? createdAt
       // fallback isn't SQL-aggregatable) and byCategory are computed in JS from
       // this slim, filter-scoped fetch so they don't reflect only the page.
       db.expense.findMany({
         where,
-        select: { amount: true, paidAt: true, createdAt: true, category: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true, paidAt: true, createdAt: true, category: true },
       }),
       db.expense.count({ where }),
       db.supplier
@@ -134,37 +152,49 @@ export default async function ExpensesPage({ searchParams }: Props) {
       // For 6-month trend chart (all categories, no filters)
       db.expense.findMany({
         where: { paidAt: { gte: trendStart } },
-        select: { amount: true, paidAt: true, createdAt: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true, paidAt: true, createdAt: true },
       }),
       db.expense.findMany({
         where: { paidAt: { gte: prevMonthStart, lte: prevMonthEnd } },
-        select: { amount: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
       }),
       db.expense.findMany({
         where: { paidAt: { gte: ytdStart } },
-        select: { amount: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
       }),
       db.expense.findMany({
         where: { paidAt: { gte: prevYtdStart, lte: prevYtdEnd } },
-        select: { amount: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
       }),
     ]);
 
-  const currency = "UGX";
-  const pageView = paginationView(page, total);
+  // The organisation's own currency, not a literal. A tenant whose books are
+  // kept in KES was shown every figure on this page labelled UGX.
+  const currency =
+    (await prisma.organization.findUnique({
+      where: { id: user.orgId ?? "" },
+      select: { baseCurrency: true },
+    }).catch(() => null))?.baseCurrency ?? "UGX";
+  const pageView = paginationView(page, total, pageSize);
 
-  const totalAmount = statsRows.reduce((sum, e) => sum + e.amount, 0);
+  // Every expense total on this page is converted. Expense has carried a rate
+  // for some time; the page simply never used it, so a foreign expense was
+  // summed at face value into a base-currency figure.
+  const toBase = (e: { amount: number; currency?: string | null; exchangeRateToBase?: number | null }) =>
+    rowToBase(e, currency);
+
+  const totalAmount = statsRows.reduce((sum, e) => sum + toBase(e), 0);
 
   const thisMonthAmount = statsRows
     .filter((e) => {
       const d = e.paidAt ?? e.createdAt;
       return d.getFullYear() === thisYear && d.getMonth() === thisMonth;
     })
-    .reduce((sum, e) => sum + e.amount, 0);
+    .reduce((sum, e) => sum + toBase(e), 0);
 
-  const prevMonthTotal = prevMonthExpenses.reduce((s, e) => s + e.amount, 0);
-  const ytdTotal = ytdExpenses.reduce((s, e) => s + e.amount, 0);
-  const prevYtdTotal = prevYtdExpenses.reduce((s, e) => s + e.amount, 0);
+  const prevMonthTotal = prevMonthExpenses.reduce((s, e) => s + toBase(e), 0);
+  const ytdTotal = ytdExpenses.reduce((s, e) => s + toBase(e), 0);
+  const prevYtdTotal = prevYtdExpenses.reduce((s, e) => s + toBase(e), 0);
   const momDelta = thisMonthAmount - prevMonthTotal;
   const ytdDelta = ytdTotal - prevYtdTotal;
 
@@ -345,8 +375,13 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const base = new URLSearchParams();
     const nextCat = params.category !== undefined ? params.category : catFilter;
     const nextQ = params.q !== undefined ? params.q : q;
+    // period was accepted as an argument and then ignored, so all four chips
+    // produced the same URL and none of them could ever become active.
+    const nextPeriod =
+      params.period !== undefined ? params.period : periodFilter !== "all" ? periodFilter : "";
     if (nextCat) base.set("category", nextCat);
     if (nextQ) base.set("q", nextQ);
+    if (nextPeriod) base.set("period", nextPeriod);
     const s = base.toString();
     return `/finance/expenses${s ? `?${s}` : ""}`;
   };
@@ -354,11 +389,14 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const topCategory =
     byCategory.length > 0 ? [...byCategory].sort((a, b) => b.total - a.total)[0] : null;
 
-  const expensesHref = pageHrefBuilder("/finance/expenses", {
+  const expensesHrefFilters = {
     category: catFilter ?? "",
     q,
     period: periodFilter !== "all" ? periodFilter : "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const expensesHref = pageHrefBuilder("/finance/expenses", expensesHrefFilters);
+  const expensesHrefSize = sizeHrefBuilder("/finance/expenses", expensesHrefFilters);
 
   return (
     <div className="space-y-4">
@@ -369,7 +407,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
       ) : null}
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <PageHeader
-        eyebrow="Finance"
         title="Expenses"
         description={`${total} record${total !== 1 ? "s" : ""}`}
         actions={
@@ -580,9 +617,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
             placeholder="Search description, reference…"
             className="input-base h-8 min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] sm:min-w-[180px]"
           />
-          <button type="submit" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">
+          <SubmitButton bare className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">
             Search
-          </button>
+          </SubmitButton>
         </form>
         <div className="flex w-full min-w-0 gap-1 overflow-x-auto pb-1 sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0">
           <Link
@@ -730,6 +767,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
         total={pageView.total}
         unit="expenses"
         hrefForPage={expensesHref}
+          pageSize={pageSize}
+          hrefForSize={expensesHrefSize}
       />
     </div>
   );

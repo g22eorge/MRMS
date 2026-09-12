@@ -34,10 +34,23 @@ export type StatCard = {
   valueClass?: string;
 };
 
-const TONE: Record<StatCardTone, { rail: string; value: string }> = {
+/**
+ * Tones carry a rail, a value colour, and — for the two states that demand
+ * action — a word.
+ *
+ * A rail and a coloured number say "this one is different" only to someone who
+ * can see the hue and is reading rather than scanning. The word says which
+ * direction different is.
+ *
+ * Deliberately only crit and warn. On a five-card band where three are healthy,
+ * three "Healthy" chips is chatter that trains people to skip the row — and a
+ * good state does not ask anything of the reader, so its colour is reassurance
+ * rather than a signal. The two that mean "do something" get named.
+ */
+const TONE: Record<StatCardTone, { rail: string; value: string; word?: string }> = {
   neutral: { rail: "bg-[var(--dc-line)]", value: "text-[var(--dc-ink)]" },
-  crit:    { rail: "bg-[var(--dc-crit)]", value: "text-[var(--dc-crit)]" },
-  warn:    { rail: "bg-[var(--dc-warn)]", value: "text-[var(--dc-warn)]" },
+  crit:    { rail: "bg-[var(--dc-crit)]", value: "text-[var(--dc-crit)]", word: "Act today" },
+  warn:    { rail: "bg-[var(--dc-warn)]", value: "text-[var(--dc-warn)]", word: "Needs attention" },
   good:    { rail: "bg-[var(--dc-good)]", value: "text-[var(--dc-good)]" },
   accent:  { rail: "bg-[var(--dc-accent)]", value: "text-[var(--dc-accent-2)]" },
 };
@@ -73,6 +86,15 @@ export function StatCards({ cards, columns }: { cards: StatCard[]; columns?: 2 |
             <p className={`mt-1 truncate text-[1.625rem] font-bold leading-none tracking-[-0.02em] tabular-nums ${value}`}>
               {card.value}
             </p>
+            {/* Muted means "nothing to do here", so the word is suppressed with
+                the colour — a dimmed card that still says "Act today" is a
+                contradiction the reader has to resolve. */}
+            {tone.word && !card.muted ? (
+              <span className={`mt-1 flex items-center gap-1 text-[0.625rem] font-semibold uppercase tracking-[0.1em] ${value}`}>
+                <span aria-hidden className={`h-1 w-1 shrink-0 rounded-full ${rail}`} />
+                {tone.word}
+              </span>
+            ) : null}
             {card.sub ? <p className="mt-1 truncate text-[0.65625rem] text-[var(--dc-ink-3)]">{card.sub}</p> : null}
           </>
         );

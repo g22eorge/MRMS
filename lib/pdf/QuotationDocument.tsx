@@ -1,8 +1,11 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { AmountInWordsLine } from "@/lib/pdf/house";
 
+import { isTermsHeading } from "@/lib/quote-terms";
+import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 const NAVY = "#0f3b7a";
 const NAVY_LIGHT = "#1e56a8";
-const GOLD = "#D4AF37";
+const GOLD = "#C9A227";
 const DARK = "#0f172a";
 const MID = "#475569";
 const LIGHT = "#94a3b8";
@@ -164,6 +167,7 @@ const s = StyleSheet.create({
 
   // ── terms ────────────────────────────────────────────────────────────────
   termItem: { fontSize: 8.2, color: DARK, fontWeight: 600, marginBottom: 2 },
+  termHead: { fontSize: 9, fontFamily: "Helvetica-Bold", marginTop: 6, marginBottom: 2 },
 
   // ── signatures ──────────────────────────────────────────────────────────
   sigWrap: {
@@ -198,6 +202,7 @@ type Props = {
   companyContacts: string;
   companyEmail?: string;
   companyWebsite?: string;
+  companyTaxId?: string | null;
   companyLogoUrl?: string;
   quotationNumber: string;
   dateIssued: string;
@@ -222,6 +227,7 @@ type Props = {
   vatLabel: string;
   vatAmount: string;
   totalAmountPayable: string;
+  amountWords?: string | null;
   estimatedDuration: string;
   approvalStatus: string;
   recommendation: string;
@@ -229,6 +235,7 @@ type Props = {
   status: string;
   currency: string;
   termsText: string;
+  promo?: QuotationPromo | null;
   footerText: string;
   signatureCompanyLabel: string;
   signatureClientLabel: string;
@@ -272,6 +279,7 @@ export function QuotationDocument(props: Props) {
             <Text style={s.companyLine}>{props.companyContacts}</Text>
             {props.companyEmail ? <Text style={s.companyLine}>{props.companyEmail}</Text> : null}
             {props.companyWebsite ? <Text style={s.companyLine}>{props.companyWebsite}</Text> : null}
+            {props.companyTaxId ? <Text style={s.companyLine}>TIN: {props.companyTaxId}</Text> : null}
           </View>
 
           <View style={s.headerRight}>
@@ -406,6 +414,7 @@ export function QuotationDocument(props: Props) {
                   <Text style={s.totalLabel}>Total Payable</Text>
                   <Text style={s.totalValue}>{props.totalAmountPayable}</Text>
                 </View>
+                <AmountInWordsLine value={props.amountWords} />
               </View>
             </View>
           </View>
@@ -416,7 +425,9 @@ export function QuotationDocument(props: Props) {
           <View style={s.sectionHead}><Text style={s.sectionTitle}>Terms & Conditions</Text></View>
           <View style={s.sectionBody}>
             {(props.termsText ?? "").split("\n").map((l) => l.trim()).filter(Boolean).map((line, i) => (
-              <Text key={i} style={s.termItem}>• {line}</Text>
+              isTermsHeading(line)
+                ? <Text key={i} style={s.termHead}>{line}</Text>
+                : <Text key={i} style={s.termItem}>• {line}</Text>
             ))}
           </View>
         </View>
@@ -438,6 +449,8 @@ export function QuotationDocument(props: Props) {
           </View>
           <Text style={s.footer}>{props.footerText}</Text>
         </View>
+
+        <QuotationPromoStrip promo={props.promo} />
 
       </Page>
     </Document>

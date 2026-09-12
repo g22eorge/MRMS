@@ -8,20 +8,36 @@ import {
 } from "../../lib/communications/routes";
 
 describe("COMMUNICATIONS_ROUTES", () => {
-  it("defines canonical communications paths", () => {
-    expect(COMMUNICATIONS_ROUTES.home).toBe("/communications");
-    expect(COMMUNICATIONS_ROUTES.outbox).toBe("/communications/outbox");
-    expect(COMMUNICATIONS_ROUTES.templates).toBe("/communications/templates");
-    expect(COMMUNICATIONS_ROUTES.policies).toBe("/communications/policies");
-    expect(COMMUNICATIONS_ROUTES.whatsapp).toBe("/communications/whatsapp");
+  /**
+   * These assertions used to have it backwards — they required the canonical
+   * paths to be /communications/*, which are redirect stubs, and called the
+   * real pages legacy. The test passed while every outbox filter and every
+   * template save banner was being lost to that redirect, because a stub
+   * forwards no query string. Asserting the literal strings could never have
+   * caught it; what matters is which path holds the page.
+   */
+  it("points at the pages themselves, not at the redirect stubs", () => {
+    expect(COMMUNICATIONS_ROUTES.outbox).toBe("/settings/notifications/outbox");
+    expect(COMMUNICATIONS_ROUTES.templates).toBe("/settings/notifications/templates");
+    expect(COMMUNICATIONS_ROUTES.whatsapp).toBe("/settings/notifications/whatsapp");
     expect(COMMUNICATIONS_ROUTES.preferences).toBe("/settings/notifications");
   });
 
-  it("maps legacy paths for redirect stubs", () => {
-    expect(COMMUNICATIONS_ROUTES.legacyOutbox).toBe("/settings/notifications/outbox");
-    expect(COMMUNICATIONS_ROUTES.legacyTemplates).toBe("/settings/notifications/templates");
-    expect(COMMUNICATIONS_ROUTES.legacyWhatsapp).toBe("/settings/notifications/whatsapp");
+  it("never routes a query-carrying destination through a stub", () => {
+    // The filters, the search box, the pagination and twenty save/error
+    // redirects are all built from these. A stub in any of them silently drops
+    // whatever the user was narrowing by.
+    for (const key of ["outbox", "templates", "whatsapp"] as const) {
+      expect(COMMUNICATIONS_ROUTES[key].startsWith("/communications/")).toBe(false);
+    }
+  });
+
+  it("keeps the old paths addressable for existing bookmarks", () => {
+    expect(COMMUNICATIONS_ROUTES.legacyOutbox).toBe("/communications/outbox");
+    expect(COMMUNICATIONS_ROUTES.legacyTemplates).toBe("/communications/templates");
+    expect(COMMUNICATIONS_ROUTES.legacyWhatsapp).toBe("/communications/whatsapp");
     expect(COMMUNICATIONS_ROUTES.shortcutOutbox).toBe("/outbox");
+    expect(COMMUNICATIONS_ROUTES.home).toBe("/communications");
   });
 });
 
@@ -44,9 +60,9 @@ describe("communicationsNavForRole", () => {
     expect(canAccessCommunications("ADMIN")).toBe(true);
   });
 
-  it("uses canonical hrefs in nav items", () => {
+  it("navigates to pages that hold content rather than to stubs", () => {
     for (const item of COMMUNICATIONS_NAV) {
-      expect(item.href.startsWith("/communications/")).toBe(true);
+      expect(item.href.startsWith("/settings/notifications")).toBe(true);
     }
   });
 });

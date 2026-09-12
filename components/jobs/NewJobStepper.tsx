@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { createJobAction } from "@/app/(app)/jobs/new/actions";
 
+import { clientDisplayName } from "@/lib/client-name";
 const steps = ["Client Info", "Device Info", "Issue", "Review"] as const;
 
 type DeviceDraft = {
@@ -68,13 +69,40 @@ function FieldError({ msg }: { msg?: string }) {
   return <p className="mt-0.5 text-xs text-red-500">{msg}</p>;
 }
 
-export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
-  const [step, setStep] = useState(0);
+export type PresetClient = {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  organization: string | null;
+};
+
+/**
+ * `presetClient` arrives when the repair is started from a client or a job that
+ * already names the customer. Step 0 asks nothing else — it is purely
+ * identification — so with a known client it has nothing left to ask and the
+ * stepper opens on Device Info instead. This is a data-integrity measure as
+ * much as a convenience: made to search again, staff who do not find the
+ * record simply retype it, and a second client appears for the same person,
+ * splitting their job history, statement and receivables.
+ *
+ * The client stays changeable. People do start from the wrong page, so the
+ * banner keeps an escape back to step 0 rather than locking the choice in.
+ */
+export function NewJobStepper({
+  receivedByName,
+  presetClient = null,
+}: {
+  receivedByName: string;
+  presetClient?: PresetClient | null;
+}) {
+  const [step, setStep] = useState(presetClient ? 1 : 0);
+  const [clientPreselected, setClientPreselected] = useState(Boolean(presetClient));
   const [form, setForm] = useState({
-    fullName: "",
-    phone: "",
-    email: "",
-    organization: "",
+    fullName: presetClient?.fullName ?? "",
+    phone: presetClient?.phone ?? "",
+    email: presetClient?.email ?? "",
+    organization: presetClient?.organization ?? "",
     receivedAt: "",
   });
   const [devices, setDevices] = useState<DeviceDraft[]>([blankDevice()]);
@@ -83,13 +111,22 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
     fullName: string;
     email: string | null;
     organization: string | null;
-  }>(null);
+  }>(presetClient
+    ? {
+        id: presetClient.id,
+        fullName: presetClient.fullName,
+        email: presetClient.email,
+        organization: presetClient.organization,
+      }
+    : null);
   const [clientLookupQuery, setClientLookupQuery] = useState("");
   const [clientLookupResults, setClientLookupResults] = useState<
     Array<{ id: string; fullName: string; phone: string; email: string | null; organization: string | null }>
   >([]);
   const [clientLookupLoading, setClientLookupLoading] = useState(false);
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>(
+    presetClient ? { fullName: true, phone: true } : {},
+  );
   const [agreedToServiceTerms, setAgreedToServiceTerms] = useState(false);
 
   const receivedBy = useMemo(() => receivedByName, [receivedByName]);
@@ -298,6 +335,22 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
         ))}
       </div>
 
+      {clientPreselected && step !== 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-3 py-2">
+          <p className="text-[0.8125rem] text-[var(--ink)]">
+            New repair for <span className="font-bold">{form.fullName}</span>
+            {form.phone ? <span className="text-[var(--ink-muted)]"> · {form.phone}</span> : null}
+          </p>
+          <button
+            type="button"
+            onClick={() => { setClientPreselected(false); setStep(0); }}
+            className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--ink)]"
+          >
+            Change client
+          </button>
+        </div>
+      ) : null}
+
       {/* Step 0 — Client Info */}
       {step === 0 ? (
         <section className="grid gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 md:grid-cols-2">
@@ -324,7 +377,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
                     className="flex w-full items-start justify-between gap-3 border-b border-[var(--line)] px-3 py-2 text-left text-sm last:border-b-0 hover:bg-[var(--panel)]"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-medium text-[var(--ink)]">{c.fullName}</span>
+                      <span className="block truncate font-medium text-[var(--ink)]">{clientDisplayName(c)}</span>
                       <span className="block truncate text-xs text-[var(--ink-muted)]">{c.phone}{c.organization ? ` · ${c.organization}` : ""}</span>
                     </span>
                     <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">Use</span>
@@ -379,7 +432,7 @@ export function NewJobStepper({ receivedByName }: { receivedByName: string }) {
           />
           {existingClient ? (
             <p className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-3 py-2 text-xs text-[var(--accent)] md:col-span-2">
-              Existing client found: <strong>{existingClient.fullName}</strong>. Submitting will update this client profile.
+              Existing client found: <strong>{clientDisplayName(existingClient)}</strong>. Submitting will update this client profile.
             </p>
           ) : null}
         </section>

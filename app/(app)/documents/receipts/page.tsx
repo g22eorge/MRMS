@@ -30,13 +30,15 @@ import {
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { type SourceGroup } from "@/components/documents/DocumentSourcePicker";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { CreateReceiptDialog, type ReceiptFormState } from "./CreateReceiptDialog";
+import { clientDisplayName } from "@/lib/client-name";
+import { icontains } from "@/lib/db/search";
 
 export default async function ReceiptsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; new?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; period?: string; new?: string; page?: string; size?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
@@ -49,6 +51,7 @@ export default async function ReceiptsPage({
   const q = (params.q ?? "").trim();
   const period = params.period ?? "all";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const createMode = params.new === "1";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -307,10 +310,10 @@ export default async function ReceiptsPage({
   const searchWhere = q
     ? {
         OR: [
-          { reference: { contains: q , mode: "insensitive" as const} },
-          { note: { contains: q , mode: "insensitive" as const} },
-          { invoice: { invoiceNumber: { contains: q , mode: "insensitive" as const} } },
-          { sale: { saleNumber: { contains: q , mode: "insensitive" as const} } },
+          { reference: icontains(q) },
+          { note: icontains(q) },
+          { invoice: { invoiceNumber: icontains(q) } },
+          { sale: { saleNumber: icontains(q) } },
         ],
       }
     : {};
@@ -332,8 +335,8 @@ export default async function ReceiptsPage({
     prisma.payment.findMany({
       where: paymentsWhere,
       orderBy: { receivedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         amount: true,
@@ -344,14 +347,18 @@ export default async function ReceiptsPage({
         note: true,
         receivedAt: true,
         receipts: { select: { issuedAt: true }, orderBy: { issuedAt: "desc" }, take: 1 },
-        sale: { select: { id: true, saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
-        invoice: { select: { id: true, invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true } }, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true, email: true } } } } } },
+        sale: { select: { id: true, saleNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+        invoice: { select: { id: true, invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } }, job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } } } },
       },
     }),
   ]);
   const payments = pageRows;
-  const pageView = paginationView(page, receiptsTotal);
-  const receiptsHref = pageHrefBuilder("/documents/receipts", { q, period: period !== "all" ? period : "" });
+  const pageView = paginationView(page, receiptsTotal, pageSize);
+  const receiptsHrefFilters = { q, period: period !== "all" ? period : "",
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const receiptsHref = pageHrefBuilder("/documents/receipts", receiptsHrefFilters);
+  const receiptsHrefSize = sizeHrefBuilder("/documents/receipts", receiptsHrefFilters);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -385,8 +392,8 @@ export default async function ReceiptsPage({
     totalAmount: number;
     paidAmount: number;
     currency: string | null;
-    job: { jobNumber: string; client: { fullName: string; phone: string | null } | null } | null;
-    client: { fullName: string; phone: string | null } | null;
+    job: { jobNumber: string; client: { fullName: string; phone: string | null; organization: string | null } | null } | null;
+    client: { fullName: string; phone: string | null; organization: string | null } | null;
   };
 
   type SaleOption = {
@@ -395,7 +402,7 @@ export default async function ReceiptsPage({
     totalAmount: number;
     paidAmount: number;
     currency: string | null;
-    client: { fullName: string; phone: string | null } | null;
+    client: { fullName: string; phone: string | null; organization: string | null } | null;
   };
 
   const [invoiceOptions, saleOptions]: [InvoiceOption[], SaleOption[]] = await Promise.all([
@@ -403,13 +410,13 @@ export default async function ReceiptsPage({
       where: { status: { not: "VOID" } },
       orderBy: { issuedAt: "desc" },
       take: 80,
-      select: { id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } }, client: { select: { fullName: true, phone: true } } },
+      select: { id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } }, client: { select: { fullName: true, phone: true, organization: true } } },
     }).then((rows: InvoiceOption[]) => rows.filter((invoice) => invoice.paidAmount < invoice.totalAmount)),
     prisma.sale.findMany({
       where: { orgId, status: { not: "VOID" } },
       orderBy: { createdAt: "desc" },
       take: 80,
-      select: { id: true, saleNumber: true, totalAmount: true, paidAmount: true, currency: true, client: { select: { fullName: true, phone: true } } },
+      select: { id: true, saleNumber: true, totalAmount: true, paidAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
     }).then((rows: SaleOption[]) => rows.filter((sale) => sale.paidAmount < sale.totalAmount)),
   ]);
   // Customer first, so the person paying is what you search for and read.
@@ -417,7 +424,7 @@ export default async function ReceiptsPage({
     {
       label: "Invoices",
       options: invoiceOptions.map((inv) => {
-        const who = inv.client?.fullName ?? inv.job?.client?.fullName ?? "No customer";
+        const who = clientDisplayName(inv.client ?? inv.job?.client, "No customer");
         return {
           value: `invoice:${inv.id}`,
           label: `${who} — ${inv.invoiceNumber}`,
@@ -429,7 +436,7 @@ export default async function ReceiptsPage({
     {
       label: "Sales",
       options: saleOptions.map((sale) => {
-        const who = sale.client?.fullName ?? "Walk-in";
+        const who = clientDisplayName(sale.client, "Walk-in");
         return {
           value: `sale:${sale.id}`,
           label: `${who} — ${sale.saleNumber}`,
@@ -738,6 +745,8 @@ export default async function ReceiptsPage({
         total={pageView.total}
         unit="receipts"
         hrefForPage={receiptsHref}
+          pageSize={pageSize}
+          hrefForSize={receiptsHrefSize}
       />
     </section>
   );

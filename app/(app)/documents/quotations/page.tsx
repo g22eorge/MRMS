@@ -10,6 +10,7 @@ import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
 import { sanitizeText } from "@/lib/sanitize";
 import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
+import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
 import { prisma } from "@/lib/prisma";
 import { shareQuotationDocument } from "@/lib/notifications/share-document";
@@ -20,16 +21,22 @@ import { PreviewButton } from "./PreviewButton";
 import { BulkSelectionProvider } from "./BulkSelectionProvider";
 import { BulkActionBar } from "./BulkActionBar";
 import { RowCheckbox } from "./RowCheckbox";
-import { QuotationCreateDialog, QuotationNewButton } from "./QuotationCreateDialog";
+import { QuotationCreateDialog, QuotationCreateProvider, QuotationNewButton } from "./QuotationCreateDialog";
 import { DataTable, TablePagination, type DataTableColumn } from "@/components/ui/DataTable";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { QuoteFollowUpButton, QuoteFollowUpBulkButton, ExpireStaleDraftsButton } from "@/components/documents/QuotationFollowUpForms";
+import { DEFAULT_DRAFT_STALE_DAYS } from "@/lib/commercial/quote-followups";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { formatEATDate } from "@/lib/date-eat";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
+import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
   SENT: "sky",
@@ -49,7 +56,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   const statusFilter = typeof sp.status === "string" ? sp.status.toUpperCase() : "ALL";
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const page = parsePage(sp.page);
-  const pageSize = 20;
+  const pageSize = parsePageSize(sp.size);
 
   const db = orgDb(user.orgId);
   const org = await db.organization.findFirst({ where: { id: user.orgId }, select: { baseCurrency: true } });
@@ -59,15 +66,20 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   if (statusFilter !== "ALL") where.status = statusFilter as QuotationStatus;
   if (q) {
     where.OR = [
-      { quoteNumber: { contains: q , mode: "insensitive" as const} },
-      { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+      { quoteNumber: icontains(q) },
+      // A quotation raised from a repair is looked for by the job it belongs to
+      // at least as often as by its own number. Invoices already search this;
+      // quotations did not, so the same search found the invoice and missed the
+      // quote that produced it.
+      { job: { jobNumber: icontains(q) } },
+      { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
     ];
   }
 
   // KPI band reflects the whole org (all statuses), respecting only the search —
   // so the summary numbers stay stable as you flip the status filter.
   const kpiWhere: Prisma.QuotationWhereInput = { orgId: user.orgId };
-  if (q) kpiWhere.OR = [{ quoteNumber: { contains: q , mode: "insensitive" as const} }, { client: { fullName: { contains: q , mode: "insensitive" as const} } }];
+  if (q) kpiWhere.OR = [{ quoteNumber: icontains(q) }, { job: { jobNumber: icontains(q) } }, { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } }];
 
   const [quotations, totalItems, statusGroups] = await Promise.all([
     db.quotation.findMany({
@@ -80,7 +92,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
         totalAmount: true,
         validUntil: true,
         createdAt: true,
-        client: { select: { id: true, fullName: true } },
+        client: { select: { id: true, fullName: true, organization: true } },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -95,9 +107,18 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   const statusValue = (s: string) => byStatus[s]?._sum?.totalAmount ?? 0;
   const openQuoteValue = statusValue("DRAFT") + statusValue("SENT");
 
+  // Restored with the follow-up controls below. The bulk button needs the count
+  // of quotes awaiting a reply, which statusCount already has; the expiry
+  // button needs stale drafts, which is one indexed count.
+  const staleDraftCutoff = new Date(Date.now() - DEFAULT_DRAFT_STALE_DAYS * 86400000);
+  const staleDraftCount = await db.quotation
+    .count({ where: { status: "DRAFT", createdAt: { lt: staleDraftCutoff } } })
+    .catch(() => 0);
+  const followUpContext = { returnTo: "/documents/quotations" };
+
   const rows = quotations.map((q) => {
     const currency = normalizeCurrency(orgCurrency, normalizeCurrency(q.currency, "UGX"));
-    const clientName = q.client?.fullName ?? "—";
+    const clientName = clientDisplayName(q.client, "—");
     return {
       id: q.id,
       quoteNumber: q.quoteNumber,
@@ -116,20 +137,30 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   async function deleteQuotationAction(formData: FormData) {
     "use server";
     const { user, org } = await requireOrgSession();
-    if (!canDelete) redirect("/dashboard");
+    // Re-derived from the live actor, not from canDelete: that closure holds
+    // what was true when the page rendered, so a user whose role was withdrawn
+    // could still delete from a tab left open.
+    if (!["ADMIN", "OPS"].includes(user.role)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = String(formData.get("id") ?? "").trim();
     await db.quotation.delete({ where: { id } });
     revalidatePath("/documents/quotations");
-    redirect("/documents/quotations");
+    redirect(flash("/documents/quotations", "Quotation deleted"));
   }
 
   async function convertToInvoiceAction(formData: FormData) {
     "use server";
-    const { user } = await getCurrentUserRole();
+    // requireOrgSession, not getCurrentUserRole: the latter cannot see
+    // org.access, so this action had no way to know the workspace was
+    // suspended. Converting a quotation creates an invoice — a financial
+    // document — and a permission check alone does not cover the two states
+    // that must stop it: a READ_ONLY user, and an organisation whose
+    // subscription has lapsed. deleteQuotationAction beside it already guards
+    // both; this did not, in all three places the conversion exists.
+    const { user, orgId, org } = await requireOrgSession();
     if (!can.createInvoices(user)) redirect("/dashboard");
-    const orgId = user.orgId;
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     if (!orgId) redirect("/dashboard");
     const id = String(formData.get("id") ?? "").trim();
     if (!id) redirect("/documents/quotations");
@@ -142,7 +173,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
     revalidatePath("/documents/quotations");
     if (invoice) {
       revalidatePath("/documents/invoices");
-      redirect(`/documents/invoices/${invoice.id}`);
+      redirect(flash(`/documents/invoices/${invoice.id}`, "Quotation converted to invoice"));
     }
     redirect("/documents/quotations");
   }
@@ -163,14 +194,16 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   }
 
   const pageView = paginationView(page, totalItems, pageSize);
-  const hrefForPage = pageHrefBuilder(`/documents/quotations`, { status: statusFilter, q });
+  const quotationFilters = { status: statusFilter, q, size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPage = pageHrefBuilder(`/documents/quotations`, quotationFilters);
+  const hrefForSize = sizeHrefBuilder(`/documents/quotations`, quotationFilters);
 
   const [clients, parts, taxRates, leads, jobs, branding] = await Promise.all([
     db.client.findMany({ where: { orgId: user.orgId }, orderBy: { fullName: "asc" }, take: 300, select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true } }),
     db.part.findMany({ where: { orgId: user.orgId, isActive: true }, orderBy: { name: "asc" }, take: 500, select: { id: true, sku: true, name: true, unitCost: true, sellingPrice: true, taxable: true, taxRate: true, qtyOnHand: true } }),
     db.taxRate.findMany({ where: { orgId: user.orgId, isActive: true, appliesToSales: true }, orderBy: [{ isDefault: "desc" }, { code: "asc" }], select: { id: true, name: true, code: true, rate: true, isDefault: true } }),
     db.lead.findMany({ where: { orgId: user.orgId, status: { notIn: ["LOST", "STALE"] } }, orderBy: { updatedAt: "desc" }, take: 150, select: { id: true, fullName: true, phone: true, organization: true, interest: true } }),
-    db.job.findMany({ where: { orgId: user.orgId, status: { notIn: ["CLOSED"] } }, orderBy: { updatedAt: "desc" }, take: 150, select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true } } } }),
+    db.job.findMany({ where: { orgId: user.orgId, status: { notIn: ["CLOSED"] } }, orderBy: { updatedAt: "desc" }, take: 150, select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true, organization: true } } } }),
     getDocumentBrandingSettings(user.orgId),
   ]);
 
@@ -178,10 +211,9 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
 
   return (
     <QuotationPreviewProvider>
+      <QuotationCreateProvider>
       <section className="space-y-4">
         <PageHeader
-          title="Quotations"
-          eyebrow="Documents"
           actions={
 canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold" />
           }
@@ -204,19 +236,17 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
                 { key: "ACCEPTED", label: "Accepted" },
                 { key: "REJECTED", label: "Rejected" },
               ].map((s) => (
-                <button
-                  key={s.key}
-                  type="submit"
-                  name="status"
-                  value={s.key}
-                  className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
-                    statusFilter === s.key
-                      ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
-                      : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
-                  }`}
-                >
+                <SubmitButton bare key={s.key}
+
+ name="status"
+ value={s.key}
+ className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
+ statusFilter === s.key
+ ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
+ : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+ }`}>
                   {s.label}
-                </button>
+                </SubmitButton>
               ))}
             </div>
             <label className="sr-only" htmlFor="qt-search">Search quotations</label>
@@ -230,22 +260,45 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
 </form>
           </div>
 
+      {/* Restored. "Quote follow-up nudges + draft expiry policy" shipped whole
+          — engine, server actions, tests, documentation — and then a cleanup
+          commit removed QuotationFollowUpForms.tsx as an unused component. It
+          was unused because the page had already stopped rendering it, so the
+          cleanup cemented the loss rather than causing it. The engine and the
+          three actions were left behind, still tested, still passing, with no
+          way for anyone to reach them. */}
+      {(statusCount("SENT") > 0 || staleDraftCount > 0) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+          {statusCount("SENT") > 0 ? (
+            <QuoteFollowUpBulkButton count={statusCount("SENT")} context={followUpContext} />
+          ) : null}
+          {staleDraftCount > 0 ? (
+            <ExpireStaleDraftsButton count={staleDraftCount} context={followUpContext} />
+          ) : null}
+        </div>
+      )}
+
       <div>
   <BulkSelectionProvider pageIds={rows.map((r) => r.id)}>
     <BulkActionBar />
     {(() => {
-      const columns: DataTableColumn<any>[] = [
-        { key: "select", header: "", className: "w-8", cell: (row: any) => <RowCheckbox quotationId={row.id} /> },
-        { key: "quoteNumber", header: "Quote #", className: "w-[150px]", cell: (row: any) => (
+      // Typed off , not . On the invoices page — this file's twin —
+      // the actions menu read row.isPaid and row.isVoid, which the row objects
+      // never carried, so both guards saw undefined and every invoice offered
+      // "Collect Payment" and "View to Void".  is what let that compile.
+      type QuotationRow = (typeof rows)[number];
+      const columns: DataTableColumn<QuotationRow>[] = [
+        { key: "select", header: "", className: "w-8", cell: (row: QuotationRow) => <RowCheckbox quotationId={row.id} /> },
+        { key: "quoteNumber", header: "Quote #", className: "w-[150px]", cell: (row: QuotationRow) => (
           <Link href={`/documents/quotations/${row.id}`} className="mono font-semibold text-[var(--accent)] hover:underline truncate whitespace-nowrap">{row.quoteNumber}</Link>
         )},
-        { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: any) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
-        { key: "status", header: "Status", className: "w-[100px]", cell: (row: any) => row.statusBadge },
-        { key: "amount", header: "Amount", align: "right", className: "w-[100px]", cell: (row: any) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
-        { key: "validUntil", header: "Valid Until", className: "w-[130px]", cell: (row: any) => <span className="whitespace-nowrap">{row.validUntil}</span> },
-        { key: "created", header: "Created", className: "w-[130px]", cell: (row: any) => <span className="whitespace-nowrap">{row.created}</span> },
+        { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: QuotationRow) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
+        { key: "status", header: "Status", className: "w-[100px]", cell: (row: QuotationRow) => row.statusBadge },
+        { key: "amount", header: "Amount", align: "right", className: "w-[100px]", cell: (row: QuotationRow) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
+        { key: "validUntil", header: "Valid Until", className: "w-[130px]", cell: (row: QuotationRow) => <span className="whitespace-nowrap">{row.validUntil}</span> },
+        { key: "created", header: "Created", className: "w-[130px]", cell: (row: QuotationRow) => <span className="whitespace-nowrap">{row.created}</span> },
       ];
-      const actions = (row: any) => (
+      const actions = (row: QuotationRow) => (
         <RowActionsMenu label={`Quotation ${row.quoteNumber}`}>
           <MenuActionLink href={`/documents/quotations/${row.id}`} icon="open">View</MenuActionLink>
           <PreviewButton quotationId={row.id} />
@@ -269,12 +322,23 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
             <input type="hidden" name="channel" value="whatsapp" />
             <MenuActionButton icon="whatsapp" tone="success">Send by WhatsApp</MenuActionButton>
           </form>
+          {row.status === "SENT" ? (
+            <QuoteFollowUpButton quotationId={row.id} context={followUpContext} compact />
+          ) : null}
           <MenuSection label="Danger zone" />
           {canDelete && (
-            <form action={deleteQuotationAction}>
-              <input type="hidden" name="id" value={row.id} />
-              <MenuDestructiveRow>Delete</MenuDestructiveRow>
-            </form>
+            <MenuDestructiveRow>
+              <form action={deleteQuotationAction}>
+                <input type="hidden" name="id" value={row.id} />
+                <ConfirmSubmitButton
+                  message="Delete this quotation? This cannot be undone."
+                  confirmLabel="Delete"
+                  className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-sm font-semibold text-red-600 dark:text-red-400"
+                >
+                  Delete
+                </ConfirmSubmitButton>
+              </form>
+            </MenuDestructiveRow>
           )}
         </RowActionsMenu>
       );
@@ -285,7 +349,7 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
           empty="No quotations found."
           columns={columns}
           actions={actions}
-          renderMobileCard={(row: any) => (
+          renderMobileCard={(row: QuotationRow) => (
             <div className="px-4 py-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
@@ -317,23 +381,26 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
     total={pageView.total}
     unit="quotations"
     hrefForPage={hrefForPage}
+    pageSize={pageSize}
+    hrefForSize={hrefForSize}
   />
   </div>
 
       <QuotationCreateDialog
         currency={orgCurrency}
         canOverrideDiscount={can.overrideDiscount(user)}
-        clients={clients as any[]}
-        leads={leads as any}
-        jobs={jobs as any}
-        parts={parts as any[]}
-        taxRates={taxRates as any[]}
+        clients={clients}
+        leads={leads}
+        jobs={jobs}
+        parts={parts}
+        taxRates={taxRates}
         defaultTaxApplicable={branding.vatDefaultApplicable ?? false}
         defaultTaxRate={defaultTaxRateObj?.rate ?? branding.vatRatePercent ?? 0}
         defaultTaxLabel={defaultTaxRateObj?.code ?? branding.vatLabel ?? "Tax"}
       />
 
     </section>
+      </QuotationCreateProvider>
     </QuotationPreviewProvider>
   );
 }

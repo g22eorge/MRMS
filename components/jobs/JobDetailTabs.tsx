@@ -24,7 +24,9 @@ import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
 import type { JobDocumentTimelineEntry } from "@/lib/jobs/job-document-timeline-shared";
 import { can } from "@/lib/permissions";
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const tabs = ["overview", "client", "diagnosis", "repair", "financials", "documents", "timeline", "photos", "messages"] as const;
 
 function formatUtcDateTime(value: Date | string) {
@@ -154,6 +156,7 @@ function DeliveryDot({ status }: { status: string | null }) {
 
 function MessagesTab({
   jobId,
+  whatsappReady,
   clientPhone,
   clientEmail,
   canSendQuote,
@@ -163,6 +166,8 @@ function MessagesTab({
   outbound,
 }: {
   jobId: string;
+  /** False when this org has no WhatsApp configuration — sends will not go out. */
+  whatsappReady: boolean;
   clientPhone: string | null | undefined;
   clientEmail: string | null | undefined;
   canSendQuote: boolean;
@@ -281,6 +286,20 @@ function MessagesTab({
           </button>
         ) : null}
       </div>
+
+      {/* This tab is where someone decides messaging is working. An empty list
+          and a list of silently-failed sends look identical here, so say which
+          it is before they conclude the client was contacted. */}
+      {!whatsappReady && (
+        <div role="status" className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+          <p className="text-[0.8125rem] font-semibold text-amber-500">
+            WhatsApp is not set up — messages queued for it will not reach the client
+          </p>
+          <a href="/settings/notifications/whatsapp" className="text-[0.75rem] font-semibold text-[var(--accent)] underline underline-offset-2">
+            Set up WhatsApp
+          </a>
+        </div>
+      )}
 
       {thread.length === 0 ? (
         <div className="px-6 py-10 text-center text-sm text-[var(--ink-muted)]">
@@ -530,7 +549,7 @@ type Props = {
     timelineConfidence?: "FIRM" | "ESTIMATED" | "PARTS_DEPENDENT" | null;
     timelineNote?: string | null;
     assignedTo?: { id: string; name: string; role: Role } | null;
-    client?: { fullName: string; phone: string; email: string | null } | null;
+    client?: { fullName: string; phone: string; email: string | null; organization?: string | null } | null;
     clientPayments?: Array<{
       id: string;
       amount: number;
@@ -593,11 +612,18 @@ type Props = {
   };
   /** Server-rendered panels folded into the tab system instead of stacked below the page. */
   assessmentSlot?: ReactNode;
+  partsSlot?: ReactNode;
   moveSlot?: ReactNode;
   portalSlot?: ReactNode;
+  /**
+   * Whether this org can actually send over WhatsApp. Defaults to true so an
+   * un-updated caller shows nothing rather than a false alarm — a wrong warning
+   * on a working system trains people to ignore the right one.
+   */
+  whatsappReady?: boolean;
 };
 
-export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", initialTab, documentTimeline = [], assessmentSlot, moveSlot, portalSlot }: Props) {
+export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, technicians, deviceHistory = [], returnTo = "/jobs", initialTab, documentTimeline = [], assessmentSlot, partsSlot, moveSlot, portalSlot, whatsappReady = true }: Props) {
   const inboundMessages = job.inboundMessages ?? [];
   const outboundMessages = job.outboundMessages ?? [];
   const unreadCount = inboundMessages.filter((m) => !m.isRead).length;
@@ -641,6 +667,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const permissionUser = { role, permissions };
   const canViewFinancials = can.viewFinancials(permissionUser);
   const canManageFinancials = can.approveInvoices(permissionUser);
+  const canStartRepair = can.createJob(permissionUser);
   const canGenerateJobCard = can.generateJobCards(permissionUser);
   const canGenerateQuotation =
     ["ADMIN", "OPS", "TECHNICIAN_INTERNAL"].includes(role) ||
@@ -990,14 +1017,14 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 });
               }}
             >
-              <button type="submit" disabled={isStatusPending} className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-2.5 text-[0.8125rem] font-bold text-black shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60">
+              <SubmitButton bare disabled={isStatusPending} className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--accent)] px-5 py-2.5 text-[0.8125rem] font-bold text-black shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60">
                 {isStatusPending ? "Updating…" : (
                   <>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
                     {nextActionByStatus[statusKey]}
                   </>
                 )}
-              </button>
+              </SubmitButton>
             </form>
           ) : isTerminal ? (
             <div className="flex shrink-0 items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
@@ -1034,9 +1061,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                     });
                   }}
                 >
-                  <button type="submit" disabled={isStatusPending} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-60">
+                  <SubmitButton bare disabled={isStatusPending} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-60">
                     {prettyEnum(status)}
-                  </button>
+                  </SubmitButton>
                 </form>
               ),
             )}
@@ -1057,10 +1084,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             </h1>
             <p className="mt-1 line-clamp-2 text-sm leading-snug text-[var(--ink-muted)]">{job.issueDescription}</p>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.75rem] text-[var(--ink-muted)]">
-              {role !== "TECHNICIAN_EXTERNAL" && job.client?.fullName ? (
+              {role !== "TECHNICIAN_EXTERNAL" && job.client ? (
                 <span className="inline-flex items-center gap-1">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  <strong className="text-[var(--ink)]">{job.client.fullName}</strong>
+                  <strong className="text-[var(--ink)]">{clientDisplayName(job.client)}</strong>
                 </span>
               ) : null}
               <span className="inline-flex items-center gap-1">
@@ -1084,9 +1111,15 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       <div className="lg:hidden space-y-3">
         {/* Slim progress dots with labels */}
         <div className="flex items-start px-1">
+          {/* Every stage gets an equal share and its label is bounded by that
+              share. The last stage previously had no width constraint, so at
+              375px "Complete" ran 17px past the edge and an ancestor's
+              overflow-hidden quietly cut it in half. The label also dropped to
+              10px: at 13px with wide tracking, five stages could not fit a
+              phone no matter how the space was divided. */}
           {stageLabels.map((label, i) => (
-            <div key={label} className={`flex items-start ${i < stageLabels.length - 1 ? "flex-1" : ""}`}>
-              <div className="flex flex-col items-center" style={{ minWidth: 44 }}>
+            <div key={label} className="flex min-w-0 flex-1 items-start">
+              <div className="flex min-w-0 flex-1 flex-col items-center">
                 <div className={`h-2.5 w-2.5 rounded-full ring-2 ring-offset-1 ring-offset-[var(--bg)] ${
                   i < currentStageIndex
                     ? "bg-emerald-500 ring-emerald-500/40"
@@ -1094,12 +1127,18 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                       ? "bg-[var(--accent)] ring-[var(--accent)]/40"
                       : "bg-[var(--panel-strong)] ring-[var(--line)]"
                 }`} />
-                <p className={`mt-1 text-center text-[0.8125rem] font-bold uppercase leading-none tracking-wider ${
+                {/* Sentence case, not caps: uppercase letterforms are about
+                    15% wider, which was the difference between "Diagnosis"
+                    fitting its column and ellipsing to "Diagnos…". */}
+                <p className={`mt-1 w-full truncate text-center text-[0.6875rem] font-semibold leading-none ${
                   i === currentStageIndex ? "text-[var(--accent)]" : "text-[var(--ink-muted)]"
                 }`}>{label}</p>
               </div>
               {i < stageLabels.length - 1 && (
-                <div className={`mt-[4px] h-px flex-1 mx-0.5 ${
+                // Fixed width, not flex-1: as a flex sibling of the label column
+                // the connector claimed half of every stage's share, squeezing
+                // "Diagnosis" into 31px and ellipsing it.
+                <div className={`mt-[4px] h-px w-2 shrink-0 ${
                   i < currentStageIndex ? "bg-emerald-500" : "bg-[var(--line)]"
                 }`} />
               )}
@@ -1118,11 +1157,8 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               handleStatusUpdateResult(res, statusActions[0]);
             });
           }}>
-            <button
-              type="submit"
-              disabled={isStatusPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-black shadow-md shadow-[var(--accent)]/20 transition-transform active:scale-[0.98] disabled:opacity-60"
-            >
+            <SubmitButton bare disabled={isStatusPending}
+ className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] py-3 text-sm font-bold text-black shadow-md shadow-[var(--accent)]/20 transition-transform active:scale-[0.98] disabled:opacity-60">
               {isStatusPending ? (
                 <span>Updating…</span>
               ) : (
@@ -1131,7 +1167,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   {nextActionByStatus[statusKey]}
                 </>
               )}
-            </button>
+            </SubmitButton>
           </form>
         ) : isTerminal ? (
           <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5">
@@ -1140,71 +1176,82 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
         ) : null}
 
-        {/* Time alert */}
-        {watchLabel ? (
-          <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2">
-            <div className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
-            <p className="text-xs font-semibold text-amber-600">{watchLabel} · {formatElapsedHours(statusAgeHours)} in this state</p>
-          </div>
-        ) : null}
-
-        {/* Attention items */}
-        {attentionItems.length > 0 ? (
-          <div className="space-y-1.5">
-            {attentionItems.map((item) => (
-              <button key={item.label} type="button" onClick={() => setActive(item.tab)}
-                className="flex w-full items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-left active:opacity-70">
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-[var(--ink)]">{item.label}</p>
-                  <p className="text-[0.75rem] text-[var(--ink-muted)]">{item.action}</p>
+        {/* Everything asking for attention, in one block.
+            The status-age alert and each nudge used to be its own bordered
+            amber card. Stacked, four boxes read as four unrelated alarms
+            rather than one list, and the borders did work that a single
+            surface plus hairlines does more quietly. */}
+        {watchLabel || attentionItems.length > 0 ? (
+          <section
+            aria-label="Needs attention"
+            className="overflow-hidden rounded-xl border border-amber-500/25 bg-amber-500/[0.06]"
+          >
+            <p className="px-3 pt-2.5 text-[0.6875rem] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              Needs attention
+            </p>
+            <div className="mt-1 divide-y divide-amber-500/15">
+              {watchLabel ? (
+                <div className="flex items-start gap-2.5 px-3 py-2">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                  <p className="text-xs font-semibold text-[var(--ink)]">
+                    {watchLabel} · {formatElapsedHours(statusAgeHours)} in this state
+                  </p>
                 </div>
-              </button>
-            ))}
-          </div>
+              ) : null}
+              {attentionItems.map((item) => (
+                <button key={item.label} type="button" onClick={() => setActive(item.tab)}
+                  className="flex w-full items-start gap-2.5 px-3 py-2 text-left active:bg-amber-500/10">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" aria-hidden />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-[var(--ink)]">{item.label}</p>
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">{item.action}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
         ) : null}
 
-        {/* Key facts 2×2 grid */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[0.8125rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">ETA</p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{etaValue}</p>
+        {/* One surface, four figures.
+            These were four separately filled and bordered tiles, which gave
+            equal visual weight to four halves of a single summary. The labels
+            also outsized the values they described. Balance keeps its colour —
+            money owed is worth the one accent here — but as text rather than
+            another box. */}
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl bg-[var(--panel-strong)] px-3.5 py-3">
+          <div className="min-w-0">
+            <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">ETA</dt>
+            <dd className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{etaValue}</dd>
           </div>
-          <div className="rounded-xl bg-[var(--panel-strong)] px-3 py-2">
-            <p className="text-[0.8125rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Technician</p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{
+          <div className="min-w-0">
+            <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Technician</dt>
+            <dd className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{
               assignedLabel === "No technician assigned yet." ? "Unassigned" : assignedLabel
-            }</p>
+            }</dd>
           </div>
           {canViewFinancials ? (
             <>
-              <div className="rounded-xl bg-[var(--panel-strong)] px-3 py-2.5">
-                <p className="text-[0.8125rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Total Bill</p>
-                <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
+              <div className="min-w-0">
+                <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Total bill</dt>
+                <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums text-[var(--ink)]">
                   {clientBillValue > 0 ? `UGX ${formatBillAmount(clientBillValue)}` : "Not set"}
-                </p>
+                </dd>
               </div>
-              <div className={`rounded-xl border px-3 py-2 ${
-                clientBalanceDue > 0
-                  ? "border-red-500/30 bg-red-500/8"
-                  : clientBillValue > 0
-                    ? "border-emerald-500/30 bg-emerald-500/8"
-                    : "border-[var(--line)] bg-[var(--panel-strong)]"
-              }`}>
-                <p className="text-[0.8125rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Balance</p>
-                <p className={`mt-0.5 text-sm font-semibold ${
+              <div className="min-w-0">
+                <dt className="text-[0.6875rem] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Balance</dt>
+                <dd className={`mt-0.5 truncate text-sm font-semibold tabular-nums ${
                   clientBalanceDue > 0 ? "text-red-500"
-                  : clientBillValue > 0 ? "text-emerald-600"
+                  : clientBillValue > 0 ? "text-emerald-600 dark:text-emerald-400"
                   : "text-[var(--ink)]"
                 }`}>
                   {paymentStatus === "Paid" ? "Paid ✓"
                    : paymentStatus === "No bill set" ? "—"
                    : `UGX ${formatBillAmount(clientBalanceDue)}`}
-                </p>
+                </dd>
               </div>
             </>
           ) : null}
-        </div>
+        </dl>
 
         {/* Share button */}
         <div className="flex gap-2">
@@ -1212,11 +1259,18 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </div>
       </div>
 
-      {/* ── Two-column console: context rail | work segments ── */}
+      {/* ── Two-column console: context rail | work segments ──
+          Source order is rail-then-work because that is the desktop reading
+          order, left column first. On a phone the columns stack, which put the
+          client, money and delivery cards between the reader and the tabs they
+          came to use, so the order flips below lg. */}
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
-      <aside className="space-y-3 lg:sticky lg:top-4">
-        {/* Device */}
-        <div className="dc-card p-4">
+      <aside className="order-2 space-y-3 lg:order-1 lg:sticky lg:top-4">
+        {/* Device — desktop only. On a phone the hero card above already gives
+            the device, the client, the technician and the FULL issue text,
+            where this shows a 90-character preview. Repeating it was a card's
+            worth of scrolling to say the same thing less well. */}
+        <div className="hidden dc-card p-4 lg:block">
           <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-strong)] text-[var(--ink-muted)]">
               {job.photos?.[0]?.id ? (
@@ -1238,7 +1292,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Client &amp; technician</p>
           <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
             <span className="text-[0.71875rem] text-[var(--ink-muted)]">Client</span>
-            <span className="truncate text-[0.78125rem] font-semibold text-[var(--ink)]">{job.client?.fullName ?? "No client"}</span>
+            <span className="truncate text-[0.78125rem] font-semibold text-[var(--ink)]">{clientDisplayName(job.client, "No client")}</span>
           </div>
           <div className="flex items-center justify-between gap-2 pt-2">
             <span className="text-[0.71875rem] text-[var(--ink-muted)]">Technician</span>
@@ -1265,10 +1319,12 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
         ) : null}
 
-        {/* Attention */}
+        {/* Attention — desktop only. The mobile overview renders this same list
+            in its own "Needs attention" block, so on a phone this was the
+            second copy of identical nudges. */}
         {attentionItems.length > 0 ? (
-          <div className="dc-card p-4">
-            <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-amber-600">Needs attention</p>
+          <div className="hidden dc-card p-4 lg:block">
+            <p className="mb-3 text-[0.625rem] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-400">Needs attention</p>
             <div className="space-y-2">
               {attentionItems.map((item) => (
                 <button key={item.label} type="button" onClick={() => setActive(item.tab)} className="flex w-full items-start gap-2.5 rounded-lg bg-amber-500/8 px-3 py-2 text-left transition hover:bg-amber-500/12">
@@ -1307,7 +1363,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
         ) : null}
       </aside>
-      <div className="min-w-0 space-y-3">
+      <div className="order-1 min-w-0 space-y-3 lg:order-2">
 
       {/* ── Segment nav — Work · Money · History ── */}
       <div className="sticky top-0 z-20 -mx-4 flex gap-2 overflow-x-auto bg-[var(--bg)]/95 px-4 py-2 backdrop-blur-sm [scrollbar-width:none] lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:py-0">
@@ -1360,10 +1416,11 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           {/* Contact card */}
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent)]/15 text-2xl font-black text-[var(--accent)]">
-              {(job.client?.fullName?.trim() || "?").charAt(0).toUpperCase()}
+              {(clientDisplayName(job.client, "?")).charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-lg font-black text-[var(--ink)]">{job.client?.fullName ?? "No client"}</p>
+              <p className="text-lg font-black text-[var(--ink)]">{clientDisplayName(job.client, "No client")}</p>
+              {clientContactName(job.client) ? <p className="text-sm text-[var(--ink-muted)]">{clientContactName(job.client)}</p> : null}
               {job.client?.phone ? (
                 <a href={`tel:${job.client.phone}`} className="text-sm text-[var(--accent)]">{job.client.phone}</a>
               ) : <p className="text-sm text-[var(--ink-muted)]">No phone</p>}
@@ -1414,6 +1471,16 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               <div className="flex items-center justify-between px-4 py-3">
                 <p className="text-xs text-[var(--ink-muted)]">Profile</p>
                 <a href={job.clientId ? `/clients/${job.clientId}` : `/clients`} className="text-sm font-medium text-[var(--accent)]">View client →</a>
+              </div>
+            ) : null}
+            {/* Repeat customers are the common case in repair, and starting here
+                carries the client through so nobody has to search for the person
+                whose job is already open — which is how duplicate client records
+                get made. */}
+            {job.client && job.clientId && canStartRepair ? (
+              <div className="flex items-center justify-between px-4 py-3">
+                <p className="text-xs text-[var(--ink-muted)]">New repair</p>
+                <a href={`/jobs/new?clientId=${job.clientId}`} className="text-sm font-medium text-[var(--accent)]">Another for this customer →</a>
               </div>
             ) : null}
           </div>
@@ -1468,7 +1535,14 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                       <select
                         id="assignedToId"
                         name="assignedToId"
-                        value="__one_time__"
+                        // defaultValue, not value: pinned to the sentinel it was
+                        // a controlled select that could never change, so this
+                        // form always posted "__one_time__". On any job with a
+                        // one-time external tech, saving diagnosis notes came
+                        // back "Invalid assignee. Select an active technician."
+                        // and discarded everything typed. The sibling select
+                        // below has always done it this way.
+                        defaultValue="__one_time__"
                         className={fieldClass}
                         onChange={(e) => {
                           if (e.target.value === "__one_time__") {
@@ -1684,13 +1758,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               </details>
 
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={isOneTimeExternalPending}
-                  className="btn-premium w-full rounded-lg px-3 py-1.5 text-[0.8125rem] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm"
-                >
+                <SubmitButton bare disabled={isOneTimeExternalPending}
+ className="btn-premium w-full rounded-lg px-3 py-1.5 text-[0.8125rem] disabled:opacity-60 sm:w-auto sm:py-2 sm:text-sm">
                   {oneTimeExternal ? "Update" : "Assign"}
-                </button>
+                </SubmitButton>
                 {oneTimeExternal && (
                   <button
                     type="button"
@@ -1706,6 +1777,16 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             </form>
           ) : null}
         </div>
+      ) : null}
+
+      {/* The slot is the sole child on purpose. A server-rendered element that
+          arrives through the RSC stream is validated as a runtime array child,
+          so giving it a sibling here makes React demand a key it cannot have.
+          The other slots below follow the same single-child shape.
+          It also sits outside the repair-log form: this panel submits its own
+          forms, and a form cannot be nested inside another. */}
+      {segment === "work" && partsSlot ? (
+        <div className={panelShellClass}>{partsSlot}</div>
       ) : null}
 
       {segment === "work" ? (
@@ -1732,7 +1813,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-[var(--ink-muted)]">Parts replaced</label>
-            <textarea name="partsReplaced" readOnly={isTerminal && !canAssignJobs} defaultValue={job.partsReplaced ?? ""} placeholder="List parts replaced (if any)…" className={areaClass} />
+            <textarea name="partsReplaced" readOnly={isTerminal && !canAssignJobs} defaultValue={job.partsReplaced ?? ""} placeholder="Any notes on the parts used…" className={areaClass} />
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <button disabled={(isTerminal && !canAssignJobs) || isRepairPending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">
@@ -1870,13 +1951,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 <p className="text-xs text-[var(--ink-muted)]">Client billing and payout controls are admin-only.</p>
               ) : null}
               <div className="space-y-2 pt-1">
-                <button
-                  type="submit"
-                  disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
-                  className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60"
-                >
+                <SubmitButton bare disabled={isFinancialPending || (isTerminal && !canManageFinancials)}
+ className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">
                   {isFinancialPending ? "Saving…" : "Save Billing"}
-                </button>
+                </SubmitButton>
                 <button
                   type="button"
                   onClick={() => setActive("overview")}
@@ -2377,10 +2455,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <button type="submit" disabled={isCommunicationPending}
-                  className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">
+                <SubmitButton bare disabled={isCommunicationPending}
+ className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">
                   {isCommunicationPending ? "Saving…" : "Save Workflow"}
-                </button>
+                </SubmitButton>
                 <button type="button" onClick={() => setActive("overview")} disabled={isCommunicationPending}
                   className="px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)]">
                   Cancel
@@ -2414,6 +2492,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       {segment === "history" && ["ADMIN", "OPS", "FRONT_DESK"].includes(role) ? (
         <MessagesTab
           jobId={job.id}
+          whatsappReady={whatsappReady}
           clientPhone={job.client?.phone ?? null}
           clientEmail={job.client?.email ?? null}
           canSendQuote={canGenerateQuotation && !isIntake}
@@ -2623,7 +2702,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         onClose={() => setCompletionFlowOpen(false)}
         jobId={job.id}
         jobNumber={job.jobNumber}
-        clientName={job.client?.fullName}
+        clientName={job.client ? clientDisplayName(job.client) : null}
         clientPhone={job.client?.phone}
         clientBill={clientBillValue}
         balanceDue={clientBalanceDue}

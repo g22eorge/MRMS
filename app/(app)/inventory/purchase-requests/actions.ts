@@ -11,6 +11,7 @@ import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { notifyPurchaseRequest } from "@/lib/notifications";
 
+import { flash } from "@/lib/flash";
 async function requireInventoryManager() {
   const ctx = await requireOrgSession();
   if (!can.manageInventory(ctx.user)) redirect("/inventory");
@@ -155,7 +156,7 @@ export async function deletePurchaseRequestAction(formData: FormData): Promise<v
 
   revalidatePath("/inventory/purchase-requests");
   if (request.convertedPoId) revalidatePath(`/inventory/purchase-orders/${request.convertedPoId}`);
-  redirect("/inventory/purchase-requests");
+  redirect(flash("/inventory/purchase-requests", "Purchase request deleted"));
 }
 
 export async function convertPurchaseRequestToPoAction(formData: FormData): Promise<void> {
@@ -211,5 +212,5 @@ export async function convertPurchaseRequestToPoAction(formData: FormData): Prom
   revalidatePath("/inventory/purchase-requests");
   revalidatePath(`/inventory/purchase-requests/${id}`);
   revalidatePath("/inventory/purchase-orders");
-  redirect(`/inventory/purchase-orders/${po.id}`);
+  redirect(flash(`/inventory/purchase-orders/${po.id}`, "Purchase order created from request"));
 }

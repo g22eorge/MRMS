@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { icontains } from "@/lib/db/search";
 
 export async function GET(req: NextRequest) {
   const { user, orgId } = await requireOrgSession();
@@ -20,11 +21,11 @@ export async function GET(req: NextRequest) {
       where: {
         orgId,
         OR: [
-          { fullName: { contains: q , mode: "insensitive" as const} },
-          { phone: { contains: q , mode: "insensitive" as const} },
-          { email: { contains: q , mode: "insensitive" as const} },
-          { organization: { contains: q , mode: "insensitive" as const} },
-          { address: { contains: q , mode: "insensitive" as const} },
+          { fullName: icontains(q) },
+          { phone: icontains(q) },
+          { email: icontains(q) },
+          { organization: icontains(q) },
+          { address: icontains(q) },
         ],
       },
       orderBy: { updatedAt: "desc" },

@@ -22,6 +22,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const ACCOUNT_TYPES: AccountType[] = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
 
 // Plain-English names so a non-accountant can pick the right type.
@@ -69,6 +70,10 @@ export default async function ChartOfAccountsPage({
   async function createAccount(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // Both gates the page applies, repeated where the write happens: a server
+    // action runs without the render guard that redirected the user away, and
+    // the chart of accounts is the shape every report is built on.
+    if (!can.viewFinancials(actor) || !canAccessAccountantFinance(actor.role)) redirect("/finance");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const code = fd.get("code") as string;
@@ -88,6 +93,10 @@ export default async function ChartOfAccountsPage({
   async function toggleActive(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // Both gates the page applies, repeated where the write happens: a server
+    // action runs without the render guard that redirected the user away, and
+    // the chart of accounts is the shape every report is built on.
+    if (!can.viewFinancials(actor) || !canAccessAccountantFinance(actor.role)) redirect("/finance");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = fd.get("id") as string;
@@ -100,6 +109,10 @@ export default async function ChartOfAccountsPage({
   async function deleteAccount(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // Both gates the page applies, repeated where the write happens: a server
+    // action runs without the render guard that redirected the user away, and
+    // the chart of accounts is the shape every report is built on.
+    if (!can.viewFinancials(actor) || !canAccessAccountantFinance(actor.role)) redirect("/finance");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = fd.get("id") as string;
@@ -190,7 +203,13 @@ export default async function ChartOfAccountsPage({
     monthlyMap.set(l.accountId, (monthlyMap.get(l.accountId) ?? 0) + net);
   }
 
-  const currency = "UGX";
+  // The organisation's own currency, not a literal. A tenant whose books are
+  // kept in KES was shown every figure on this page labelled UGX.
+  const currency =
+    (await prisma.organization.findUnique({
+      where: { id: user.orgId ?? "" },
+      select: { baseCurrency: true },
+    }).catch(() => null))?.baseCurrency ?? "UGX";
 
   const byType = ACCOUNT_TYPES.map((t) => ({
     type: t,
@@ -223,12 +242,9 @@ export default async function ChartOfAccountsPage({
             <MenuSection label="Actions" />
             <form action={toggleActive}>
               <input type="hidden" name="id" value={acc.id} />
-              <button
-                type="submit"
-                className="w-full px-3 py-1.5 text-left hover:bg-[var(--panel)]"
-              >
+              <SubmitButton bare className="w-full px-3 py-1.5 text-left hover:bg-[var(--panel)]">
                 {acc.isActive ? "Deactivate" : "Activate"}
-              </button>
+              </SubmitButton>
             </form>
             <MenuDestructiveRow>
               <form action={deleteAccount}>
@@ -251,7 +267,6 @@ export default async function ChartOfAccountsPage({
     <div className="space-y-4">
       <FormErrorBanner message={acctParams.error} />
       <PageHeader
-        eyebrow="Finance"
         title="Accounts"
         description="The categories your money flows through. Click any account to see its history."
         actions={
@@ -290,24 +305,18 @@ export default async function ChartOfAccountsPage({
           description="Load the standard chart of accounts to get started instantly — 40 accounts covering assets, liabilities, equity, revenue, and expenses. You can edit or delete them afterwards."
           action={
             <form action={seedDefaults}>
-              <button
-                type="submit"
-                className="btn-premium rounded-lg px-5 py-2.5 text-sm font-semibold"
-              >
+              <SubmitButton bare className="btn-premium rounded-lg px-5 py-2.5 text-sm font-semibold">
                 Load standard accounts
-              </button>
+              </SubmitButton>
             </form>
           }
         />
       ) : (
         <form action={seedDefaults} className="flex justify-end">
-          <button
-            type="submit"
-            title="Adds any missing standard accounts — existing codes are skipped"
-            className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
-          >
+          <SubmitButton bare title="Adds any missing standard accounts — existing codes are skipped"
+ className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]">
             + Load standard defaults
-          </button>
+          </SubmitButton>
         </form>
       )}
 
@@ -371,12 +380,9 @@ export default async function ChartOfAccountsPage({
             />
           </div>
           <div className="flex justify-end sm:col-span-3">
-            <button
-              type="submit"
-              className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold"
-            >
+            <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">
               Create Account
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </details>

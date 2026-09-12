@@ -15,6 +15,7 @@ import { ReceiveStockForm } from "./ReceiveStockForm";
 import { POMetaForm } from "./POMetaForm";
 import { deletePurchaseOrderAction, setPurchaseOrderStatusAction } from "../actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 const STATUS_TONES: Record<string, BadgeTone> = {
@@ -121,7 +122,7 @@ export default async function PurchaseOrderDetailPage({
             <form action={setPurchaseOrderStatusAction}>
               <input type="hidden" name="id" value={po.id} />
               <input type="hidden" name="status" value="ORDERED" />
-              <button type="submit" className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-700">Issue</button>
+              <SubmitButton bare className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-700">Issue</SubmitButton>
             </form>
           ) : canReceive ? (
             <Link href="#receive" className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-700">Receive</Link>
@@ -134,14 +135,14 @@ export default async function PurchaseOrderDetailPage({
                 <form action={setPurchaseOrderStatusAction}>
                   <input type="hidden" name="id" value={po.id} />
                   <input type="hidden" name="status" value="CANCELLED" />
-                  <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Cancel Order</button>
+                  <SubmitButton bare className="w-full text-left text-[0.75rem] text-red-600">Cancel Order</SubmitButton>
                 </form>
               </MenuDestructiveRow>
             ) : null}
             <MenuDestructiveRow>
               <form action={deletePurchaseOrderAction}>
                 <input type="hidden" name="id" value={po.id} />
-                <button type="submit" className="w-full text-left text-[0.75rem] text-red-600">Delete Order</button>
+                <SubmitButton bare className="w-full text-left text-[0.75rem] text-red-600">Delete Order</SubmitButton>
               </form>
             </MenuDestructiveRow>
           </RowActionsMenu>
@@ -264,7 +265,7 @@ export default async function PurchaseOrderDetailPage({
               <form action={createLocationForPoAction} className="mt-2 flex flex-wrap items-end gap-2">
                 <input name="name" required placeholder="Location name (e.g. Main Store)" className="min-w-[180px] flex-1 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]/10" />
                 <input name="code" placeholder="Code (optional)" className="w-32 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm uppercase outline-none focus:ring-2 focus:ring-[var(--accent)]/10" />
-                <button type="submit" className="btn-premium rounded-md px-3 py-1.5 text-sm font-semibold">Create &amp; continue</button>
+                <SubmitButton bare className="btn-premium rounded-md px-3 py-1.5 text-sm font-semibold">Create &amp; continue</SubmitButton>
               </form>
             </div>
           ) : null}

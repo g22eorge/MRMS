@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { StatCards } from "@/components/ui/StatCards";
+
 import { getAppCurrency } from "@/lib/currency";
 import { JobStatus } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
@@ -115,21 +117,29 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
         icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>}
       />
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
-          { label: "Completed MTD", val: String(completedMtd.length), sub: `avg ${avgTurnaround.toFixed(1)}d turnaround`, href: "/jobs?status=COMPLETED", color: "text-emerald-600" },
-          { label: "Open Jobs", val: String(openJobs), sub: `${diagnosingCount} diagnosing`, href: "/jobs", color: "text-[var(--ink)]" },
-          { label: "Overdue (3d+)", val: String(overdueWithDays.length), sub: `${unassignedCount} unassigned`, href: "/jobs", color: overdueWithDays.length > 0 ? "text-amber-600" : "text-[var(--ink-muted)]" },
-          { label: "Parts Used MTD", val: String(partsConsumed), sub: "units consumed", href: "/inventory", color: "text-[var(--ink)]" },
-        ].map(t => (
-          <Link key={t.label} href={t.href} className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px]">
-            <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
-            <p className={`mt-1 text-[0.9375rem] font-black leading-tight ${t.color}`}>{t.val}</p>
-            <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{t.sub}</p>
-          </Link>
-        ))}
-      </div>
+      {/* StatCards, not a hand-rolled strip with a `color` field. Overdue in
+          amber-600 was the only state signal here and it was carried by hue
+          alone; it now has a rail and the word "Act today" when it is non-zero.
+
+          Completed MTD loses its permanent emerald: work finished is the good
+          outcome, so marking it good on every render is a badge that never
+          changes and therefore never informs. */}
+      <StatCards
+        columns={4}
+        cards={[
+          { label: "Completed MTD", value: String(completedMtd.length), sub: `avg ${avgTurnaround.toFixed(1)}d turnaround`, href: "/jobs?status=COMPLETED" },
+          { label: "Open Jobs", value: String(openJobs), sub: `${diagnosingCount} diagnosing`, href: "/jobs" },
+          {
+            label: "Overdue (3d+)",
+            value: String(overdueWithDays.length),
+            sub: `${unassignedCount} unassigned`,
+            href: "/jobs",
+            tone: overdueWithDays.length > 0 ? "crit" : "good",
+            muted: overdueWithDays.length === 0,
+          },
+          { label: "Parts Used MTD", value: String(partsConsumed), sub: "units consumed", href: "/inventory" },
+        ]}
+      />
 
       {/* Attention banner */}
       {(overdueWithDays.length > 0 || unassignedCount > 0) && (

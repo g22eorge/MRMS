@@ -2,9 +2,9 @@ import Link from "next/link";
 
 
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBadge";
-import { JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus, ACTIVE_JOB_STATUSES } from "@/lib/job-status";
 import { formatEATDate } from "@/lib/date-eat";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -12,6 +12,7 @@ import { Role } from "@prisma/client";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { ServiceHubNav } from "@/components/service/ServiceHubNav";
 import { StatCards } from "@/components/ui/StatCards";
+import { icontains } from "@/lib/db/search";
 
 function deviceName(brand?: string | null, model?: string | null) {
   const b = brand && brand !== "Unknown" ? brand : "";
@@ -35,6 +36,7 @@ type SearchParams = {
   ready?: string;
   dismiss?: string;
   page?: string;
+  size?: string;
 };
 
 const ACTIVE_BOARD_STATUSES = [
@@ -82,6 +84,7 @@ export default async function TechniciansPage({
   const { user, orgId } = await requireOrgSession();
   const filters = await searchParams;
   const page = parsePage(filters.page);
+  const pageSize = parsePageSize(filters.size);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -133,12 +136,28 @@ export default async function TechniciansPage({
     where: {
       orgId, // tenant scope — the role branches below only filter by assignee
       ...where,
+      // The status filter used to run in JS after the query, so the board
+      // loaded every job the org had ever recorded and then threw away the
+      // closed ones — the great majority, and a set that only grows. It is the
+      // same rule, applied where the rows are chosen instead of after.
+      //
+      // AND, not a second status key: the two filters can both be set, and
+      // overwriting one with the other would silently widen the result rather
+      // than narrowing it the way the old JS chain did.
+      AND: [
+        statusFilter
+          ? { status: statusFilter }
+          : { status: { in: ACTIVE_BOARD_STATUSES as JobStatus[] } },
+        ...(filters.ready === "1"
+          ? [{ status: "IN_REPAIR" as JobStatus, clientApproved: true }]
+          : []),
+      ],
       ...(filters.q
         ? {
             OR: [
-              { jobNumber: { contains: filters.q , mode: "insensitive" as const} },
-              { brand: { contains: filters.q , mode: "insensitive" as const} },
-              { model: { contains: filters.q , mode: "insensitive" as const} },
+              { jobNumber: icontains(filters.q) },
+              { brand: icontains(filters.q) },
+              { model: icontains(filters.q) },
             ],
           }
         : {}),
@@ -150,12 +169,6 @@ export default async function TechniciansPage({
   });
 
   const normalized = jobs
-    .filter((job) => {
-      if (statusFilter && job.status !== statusFilter) return false;
-      if (!statusFilter && !ACTIVE_BOARD_STATUSES.includes(job.status)) return false;
-      if (filters.ready === "1" && !(job.status === "IN_REPAIR" && job.clientApproved === true)) return false;
-      return true;
-    })
     .map((job) => {
     const extendedJob = job as typeof job & { timelineNote?: string | null };
     const ageDays = Math.floor((job.updatedAt.getTime() - job.receivedAt.getTime()) / (1000 * 60 * 60 * 24));
@@ -185,14 +198,17 @@ export default async function TechniciansPage({
 
   // KPIs/spotlight stay computed from the whole in-memory-filtered set; only the
   // displayed work-queue rows are paginated.
-  const pageView = paginationView(page, sortedJobs.length);
+  const pageView = paginationView(page, sortedJobs.length, pageSize);
   const pageRows = sortedJobs.slice(pageView.skip, pageView.skip + pageView.take);
-  const jobsHref = pageHrefBuilder("/technicians", {
+  const jobsHrefFilters = {
     q: filters.q ?? "",
     status: filters.status ?? "",
     ready: filters.ready ?? "",
     dismiss: filters.dismiss ?? "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const jobsHref = pageHrefBuilder("/technicians", jobsHrefFilters);
+  const jobsHrefSize = sizeHrefBuilder("/technicians", jobsHrefFilters);
 
   const assignedCount = normalized.length;
   const readyCount = normalized.filter((job) => job.ready).length;
@@ -227,7 +243,7 @@ export default async function TechniciansPage({
     .filter(
       (job) =>
         !dismissedSpotlightIds.has(job.id) &&
-        ["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status),
+        (ACTIVE_JOB_STATUSES as readonly string[]).includes(job.status),
     )
     .slice(0, 3);
   const spotlightJobIds = new Set(spotlightJobs.map((j) => j.id));
@@ -246,7 +262,6 @@ export default async function TechniciansPage({
     <ListPageLayout
       topBar={<ServiceHubNav />}
       header={{
-        eyebrow: "Service",
         title: "Technicians",
         description: "Active assignments and repair board",
         actions: <Link href="/settings/users" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem]">Manage staff →</Link>,
@@ -374,7 +389,14 @@ export default async function TechniciansPage({
         {/* Search + quick chips + action — single compact row */}
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-3 py-2">
           <form className="flex min-w-0 flex-1 gap-1.5">
+            {/* Everything the reader has already narrowed by has to ride along,
+                or submitting a search silently widens the list back out. Only
+                status was carried, so the Ready chip and a dismissed spotlight
+                were both lost the moment anyone typed. */}
             {filters.status && <input type="hidden" name="status" value={filters.status} />}
+            {filters.ready && <input type="hidden" name="ready" value={filters.ready} />}
+            {filters.dismiss && <input type="hidden" name="dismiss" value={filters.dismiss} />}
+            {filters.size && <input type="hidden" name="size" value={filters.size} />}
             <input
               name="q"
               defaultValue={filters.q}
@@ -596,6 +618,8 @@ export default async function TechniciansPage({
           total={pageView.total}
           unit="jobs"
           hrefForPage={jobsHref}
+          pageSize={pageSize}
+          hrefForSize={jobsHrefSize}
         />
       </section>
     </ListPageLayout>

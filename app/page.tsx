@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PLAN_PRICES } from "@/lib/plan-prices";
 import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -155,9 +156,13 @@ const PRICING: Array<{
     href: "/register",
     features: ["2 team members", "20 jobs / month", "20 inventory items", "1 branch"],
   },
+  // Prices come from PLAN_PRICES. This block held its own formatted strings, so
+  // the public site advertised one ladder while checkout charged another the
+  // moment the table changed — the same drift as the two price tables that made
+  // every payment fail, now on the page a prospect reads before they trust you.
   {
     name: "Duuka Plus",
-    price: "35,000",
+    price: PLAN_PRICES.STANDARD.toLocaleString("en-US"),
     tagline: "For a growing shop",
     inherits: "Duuka",
     cta: "Get started",
@@ -166,7 +171,7 @@ const PRICING: Array<{
   },
   {
     name: "Duuka Pro",
-    price: "75,000",
+    price: PLAN_PRICES.GROWTH.toLocaleString("en-US"),
     tagline: "Best for most teams",
     inherits: "Duuka Plus",
     popular: true,
@@ -176,7 +181,7 @@ const PRICING: Array<{
   },
   {
     name: "Duuka Max",
-    price: "120,000",
+    price: PLAN_PRICES.PREMIUM.toLocaleString("en-US"),
     tagline: "For busy operations",
     inherits: "Duuka Pro",
     cta: "Get started",
@@ -185,7 +190,7 @@ const PRICING: Array<{
   },
   {
     name: "Duuka ProMax",
-    price: "200,000",
+    price: PLAN_PRICES.ENTERPRISE.toLocaleString("en-US"),
     tagline: "Unlimited scale",
     inherits: "Duuka Max",
     cta: "Talk to sales",
@@ -201,7 +206,7 @@ const WA_PATH = "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.
 // Small check glyph for pricing feature lists
 function Check() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#D4AF37]/70" aria-hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#C9A227]/70" aria-hidden>
       <path d="M20 6 9 17l-5-5" />
     </svg>
   );
@@ -212,7 +217,7 @@ function PricingPlans() {
   return (
     <div>
       <div className="mb-9 max-w-2xl">
-        <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Pricing</p>
+        <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#C9A227]">Pricing</p>
         <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">One system. A plan for every size.</h2>
         <p className="mt-3 text-sm leading-6 text-white/55">
           Start on <span className="font-semibold text-white/75">Duuka</span> free — no card needed. Move up only when you
@@ -226,20 +231,20 @@ function PricingPlans() {
             key={p.name}
             className={`group relative flex flex-col rounded-2xl border p-5 transition duration-200 ${
               p.popular
-                ? "border-[#D4AF37]/45 bg-gradient-to-b from-[#D4AF37]/[0.11] to-[#D4AF37]/[0.02] shadow-[0_24px_60px_-24px_rgba(212,175,55,0.55)] lg:z-10 lg:scale-[1.04]"
+                ? "border-[#C9A227]/45 bg-gradient-to-b from-[#C9A227]/[0.11] to-[#C9A227]/[0.02] shadow-[0_24px_60px_-24px_rgba(201, 162, 39,0.55)] lg:z-10 lg:scale-[1.04]"
                 : "border-white/10 bg-white/[0.02] hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.04]"
             }`}
           >
             {p.popular && (
               <span
                 className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide text-black"
-                style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}
+                style={{ background: "linear-gradient(180deg,#DEBD54 0%,#C9A020 100%)" }}
               >
                 Most popular
               </span>
             )}
 
-            <p className={`text-[0.8125rem] font-bold uppercase tracking-wide ${p.popular ? "text-[#E8C84A]" : "text-white/75"}`}>
+            <p className={`text-[0.8125rem] font-bold uppercase tracking-wide ${p.popular ? "text-[#DEBD54]" : "text-white/75"}`}>
               {p.name}
             </p>
             <p className="mt-1 text-[0.75rem] leading-snug text-white/55">{p.tagline}</p>
@@ -278,7 +283,7 @@ function PricingPlans() {
                   href={p.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="block rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-center text-[0.8125rem] font-semibold text-white/75 transition active:scale-[0.98] hover:border-[#D4AF37]/40 hover:text-white"
+                  className="block rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-center text-[0.8125rem] font-semibold text-white/75 transition active:scale-[0.98] hover:border-[#C9A227]/40 hover:text-white"
                 >
                   {p.cta}
                 </a>
@@ -287,10 +292,10 @@ function PricingPlans() {
                   href={p.href}
                   className={`block rounded-xl px-4 py-2.5 text-center text-[0.8125rem] font-bold transition active:scale-[0.98] ${
                     p.popular
-                      ? "text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] hover:opacity-90"
-                      : "border border-white/15 bg-white/5 text-white/75 hover:border-[#D4AF37]/40 hover:text-white"
+                      ? "text-black shadow-[0_4px_20px_rgba(201, 162, 39,0.3)] hover:opacity-90"
+                      : "border border-white/15 bg-white/5 text-white/75 hover:border-[#C9A227]/40 hover:text-white"
                   }`}
-                  style={p.popular ? { background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" } : undefined}
+                  style={p.popular ? { background: "linear-gradient(180deg,#DEBD54 0%,#C9A020 100%)" } : undefined}
                 >
                   {p.cta}
                 </Link>
@@ -312,7 +317,7 @@ function DuukaSaasLanding() {
   return (
     <main className="theme-blackgold relative min-h-screen overflow-x-hidden bg-[#050505] text-white">
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute left-1/2 top-0 h-[720px] w-[720px] -translate-x-1/2 rounded-full bg-[#D4AF37]/8 blur-[150px]" />
+        <div className="absolute left-1/2 top-0 h-[720px] w-[720px] -translate-x-1/2 rounded-full bg-[#C9A227]/8 blur-[150px]" />
       </div>
 
       <nav className="sticky top-0 z-40 border-b border-white/6 bg-[#050505]/90 px-4 py-3 backdrop-blur-md">
@@ -321,7 +326,7 @@ function DuukaSaasLanding() {
             <AppLogoDark height={44} priority />
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/register" className="hidden rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-2 text-xs font-semibold text-[#D4AF37] transition active:scale-[0.98] hover:bg-[#D4AF37]/20 sm:inline-flex">
+            <Link href="/register" className="hidden rounded-lg border border-[#C9A227]/30 bg-[#C9A227]/10 px-4 py-2 text-xs font-semibold text-[#C9A227] transition active:scale-[0.98] hover:bg-[#C9A227]/20 sm:inline-flex">
               Start Free
             </Link>
             <Link href="/login" className="rounded-lg border border-white/12 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 transition active:scale-[0.98] hover:border-white/20 hover:text-white">
@@ -333,13 +338,13 @@ function DuukaSaasLanding() {
 
       <section className="mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-24">
         <div>
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/8 px-4 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]" />
-            <span className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">One system for your whole business</span>
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#C9A227]/25 bg-[#C9A227]/8 px-4 py-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#C9A227]" />
+            <span className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#C9A227]">One system for your whole business</span>
           </div>
-          <h1 className="max-w-2xl text-4xl font-black leading-[0.95] tracking-tight text-white md:text-6xl">
+          <h1 className="display-serif max-w-2xl text-4xl leading-[0.95] tracking-tight text-white md:text-6xl">
             Run everything from
-            <span className="block bg-gradient-to-r from-[#E8C84A] to-[#C9A020] bg-clip-text text-transparent">one workspace.</span>
+            <span className="block bg-gradient-to-r from-[#DEBD54] to-[#C9A020] bg-clip-text text-transparent">one workspace.</span>
           </h1>
           <p className="mt-5 max-w-lg text-lg leading-7 text-white/60">
             Sell, stock, invoice, and get paid — everything your business does, in one place.
@@ -351,10 +356,10 @@ function DuukaSaasLanding() {
             ))}
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+            <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(201, 162, 39,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#DEBD54 0%,#C9A020 100%)" }}>
               Create Workspace
             </Link>
-            <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition active:scale-[0.98] hover:border-[#D4AF37]/30 hover:text-white">
+            <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition active:scale-[0.98] hover:border-[#C9A227]/30 hover:text-white">
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden><path d={WA_PATH}/></svg>
               Talk to Sales
             </a>
@@ -367,13 +372,13 @@ function DuukaSaasLanding() {
         {/* Product mock — a live-looking ops dashboard so visitors see the system,
             not another paragraph. */}
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-3 shadow-2xl sm:p-4">
-          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#D4AF37]/12 blur-[70px]" />
+          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#C9A227]/12 blur-[70px]" />
           <div className="relative rounded-2xl border border-white/8 bg-[#0b0b0b] p-4">
 
             {/* Window chrome */}
             <div className="flex items-center justify-between border-b border-white/8 pb-3">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-[#E8C84A]" />
+                <span className="h-2 w-2 rounded-full bg-[#DEBD54]" />
                 <p className="text-[0.75rem] font-bold text-white">Operations Dashboard</p>
               </div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide text-emerald-300">
@@ -384,7 +389,7 @@ function DuukaSaasLanding() {
             {/* KPI tiles */}
             <div className="mt-3 grid grid-cols-3 gap-2">
               {[
-                { v: "UGX 4.2M", l: "Revenue · mo", d: "▲ 12%", tone: "text-[#E8C84A]" },
+                { v: "UGX 4.2M", l: "Revenue · mo", d: "▲ 12%", tone: "text-[#DEBD54]" },
                 { v: "18", l: "Open orders", d: "3 due today", tone: "text-white/55" },
                 { v: "UGX 1.1M", l: "Receivable", d: "7 invoices", tone: "text-white/55" },
               ].map((k) => (
@@ -400,12 +405,12 @@ function DuukaSaasLanding() {
             <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.02] p-3">
               <div className="flex items-center justify-between">
                 <p className="text-[0.6875rem] font-semibold text-white/50">Revenue · last 7 days</p>
-                <p className="text-[0.6875rem] font-bold text-[#E8C84A]">▲ 12%</p>
+                <p className="text-[0.6875rem] font-bold text-[#DEBD54]">▲ 12%</p>
               </div>
               <svg viewBox="0 0 240 64" className="mt-2 w-full" role="img" aria-label="Revenue trend chart">
                 <defs>
                   <linearGradient id="barGold" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stopColor="#E8C84A" />
+                    <stop offset="0" stopColor="#DEBD54" />
                     <stop offset="1" stopColor="#C9A020" stopOpacity="0.5" />
                   </linearGradient>
                 </defs>
@@ -422,7 +427,7 @@ function DuukaSaasLanding() {
                 {[
                   { dot: "bg-red-400/70", t: "Invoice #INV-000482 overdue", s: "2 days" },
                   { dot: "bg-white/30", t: "5 items below reorder level", s: "restock" },
-                  { dot: "bg-[#E8C84A]", t: "7 invoices ready to chase", s: "UGX 1.1M" },
+                  { dot: "bg-[#DEBD54]", t: "7 invoices ready to chase", s: "UGX 1.1M" },
                 ].map((r) => (
                   <div key={r.t} className="flex items-center gap-2 rounded-lg border border-white/6 bg-white/[0.02] px-2.5 py-1.5">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.dot}`} />
@@ -447,7 +452,7 @@ function DuukaSaasLanding() {
               { v: "Audit trail", l: "Every action logged", d: "9 role-based access levels" },
             ].map((t) => (
               <div key={t.l} className="text-center sm:text-left">
-                <p className="text-xl font-black tracking-tight text-[#E8C84A] sm:text-2xl">{t.v}</p>
+                <p className="text-xl font-black tracking-tight text-[#DEBD54] sm:text-2xl">{t.v}</p>
                 <p className="mt-1 text-[0.8125rem] font-semibold text-white/80">{t.l}</p>
                 <p className="mt-0.5 text-[0.75rem] leading-snug text-white/55">{t.d}</p>
               </div>
@@ -462,14 +467,14 @@ function DuukaSaasLanding() {
 
       <section className="mx-auto max-w-6xl px-4 pb-16">
         <div className="mb-8 max-w-2xl">
-          <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Product Suite</p>
+          <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#C9A227]">Product Suite</p>
           <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">Everything your business needs to operate daily</h2>
           <p className="mt-3 text-sm leading-6 text-white/55">Start with the modules you need, then expand into full operations, finance, reporting, and communications.</p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {MODULES.map((mod) => (
-            <div key={mod.group} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-[#D4AF37]/30 hover:bg-white/[0.04]">
-              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] text-[#D4AF37] transition group-hover:border-[#D4AF37]/35">{mod.icon}</div>
+            <div key={mod.group} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-[#C9A227]/30 hover:bg-white/[0.04]">
+              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#C9A227]/20 bg-[#C9A227]/[0.06] text-[#C9A227] transition group-hover:border-[#C9A227]/35">{mod.icon}</div>
               <p className="text-sm font-bold text-white">{mod.group}</p>
               <p className="mt-1.5 text-[0.8125rem] leading-snug text-white/55">{mod.blurb}</p>
               <p className="mt-3 text-[0.6875rem] font-semibold uppercase tracking-wide text-white/55">{mod.items.length} tools</p>
@@ -484,7 +489,7 @@ function DuukaSaasLanding() {
           {/* Phone mock */}
           <div className="order-2 flex justify-center lg:order-1">
             <div className="relative w-[236px]">
-              <div className="pointer-events-none absolute -inset-6 rounded-[3rem] bg-[#D4AF37]/10 blur-[60px]" />
+              <div className="pointer-events-none absolute -inset-6 rounded-[3rem] bg-[#C9A227]/10 blur-[60px]" />
               <div className="relative rounded-[2.3rem] border border-white/12 bg-[#0b0b0b] p-2.5 shadow-2xl">
                 <div className="overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0d0d0d]">
                   {/* status row */}
@@ -506,7 +511,7 @@ function DuukaSaasLanding() {
                         <p className="mt-0.5 text-[0.5rem] text-white/55">Revenue · mo</p>
                       </div>
                       <div className="rounded-lg border border-white/8 bg-white/[0.03] p-2">
-                        <p className="text-[0.8125rem] font-extrabold text-[#E8C84A]">▲ 12%</p>
+                        <p className="text-[0.8125rem] font-extrabold text-[#DEBD54]">▲ 12%</p>
                         <p className="mt-0.5 text-[0.5rem] text-white/55">vs last month</p>
                       </div>
                     </div>
@@ -514,11 +519,11 @@ function DuukaSaasLanding() {
                       <p className="mb-1 text-[0.5rem] font-semibold text-white/55">Last 7 days</p>
                       <svg viewBox="0 0 200 40" className="w-full" role="img" aria-label="Sales trend">
                         {[14, 20, 12, 26, 22, 30, 36].map((h, i) => (
-                          <rect key={i} x={4 + i * 28} y={40 - h} width="16" height={h} rx="2" fill="#E8C84A" opacity={i === 6 ? 1 : 0.8} />
+                          <rect key={i} x={4 + i * 28} y={40 - h} width="16" height={h} rx="2" fill="#DEBD54" opacity={i === 6 ? 1 : 0.8} />
                         ))}
                       </svg>
                     </div>
-                    <div className="mt-2 rounded-lg py-1.5 text-center text-[0.625rem] font-bold text-black" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+                    <div className="mt-2 rounded-lg py-1.5 text-center text-[0.625rem] font-bold text-black" style={{ background: "linear-gradient(180deg,#DEBD54 0%,#C9A020 100%)" }}>
                       + New sale
                     </div>
                   </div>
@@ -529,7 +534,7 @@ function DuukaSaasLanding() {
 
           {/* Copy */}
           <div className="order-1 lg:order-2">
-            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Mobile</p>
+            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#C9A227]">Mobile</p>
             <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">Run your business from your pocket</h2>
             <p className="mt-3 max-w-lg text-sm leading-6 text-white/50">
               Works on any Android or iOS device — sell, invoice, and check your numbers on the go. Everything syncs in
@@ -549,7 +554,7 @@ function DuukaSaasLanding() {
               ))}
             </ul>
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+              <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(201, 162, 39,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#DEBD54 0%,#C9A020 100%)" }}>
                 Start free
               </Link>
               <span className="text-[0.75rem] text-white/55">Install straight from your phone&apos;s browser — no download needed.</span>
@@ -563,7 +568,7 @@ function DuukaSaasLanding() {
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           {/* Copy */}
           <div>
-            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#D4AF37]">Client Portal</p>
+            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em] text-[#C9A227]">Client Portal</p>
             <h2 className="mt-2 text-2xl font-extrabold text-white md:text-3xl">Give your customers their own window</h2>
             <p className="mt-3 max-w-lg text-sm leading-6 text-white/50">
               Every client gets a secure login to track their repairs live, submit new requests, and download their
@@ -583,7 +588,7 @@ function DuukaSaasLanding() {
               ))}
             </ul>
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+              <Link href="/register" className="rounded-xl px-6 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(201, 162, 39,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#DEBD54 0%,#C9A020 100%)" }}>
                 Start free
               </Link>
               <span className="text-[0.75rem] text-white/55">Your customers sign in from any browser — nothing to install.</span>
@@ -592,7 +597,7 @@ function DuukaSaasLanding() {
 
           {/* Portal mock — a client tracking their repair */}
           <div className="relative">
-            <div className="pointer-events-none absolute -inset-6 rounded-[2rem] bg-[#D4AF37]/10 blur-[70px]" />
+            <div className="pointer-events-none absolute -inset-6 rounded-[2rem] bg-[#C9A227]/10 blur-[70px]" />
             <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0b] shadow-2xl">
               {/* Browser chrome */}
               <div className="flex items-center gap-1.5 border-b border-white/8 px-4 py-2.5">
@@ -604,7 +609,7 @@ function DuukaSaasLanding() {
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[0.5rem] font-bold uppercase tracking-[0.16em] text-[#D4AF37]">Client Portal</p>
+                    <p className="text-[0.5rem] font-bold uppercase tracking-[0.16em] text-[#C9A227]">Client Portal</p>
                     <p className="text-[0.8125rem] font-bold text-white">Welcome back, Sarah</p>
                   </div>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-wide text-emerald-300">
@@ -619,11 +624,11 @@ function DuukaSaasLanding() {
                     <p className="text-[0.5rem] text-white/40">EIS-3/2025/0042</p>
                   </div>
                   <div className="relative mt-3.5">
-                    <div className="absolute inset-x-1.5 top-[5px] h-0.5 rounded-full bg-[#E8C84A]/60" />
+                    <div className="absolute inset-x-1.5 top-[5px] h-0.5 rounded-full bg-[#DEBD54]/60" />
                     <div className="relative flex justify-between">
                       {["Received", "Diagnosed", "In repair", "Ready"].map((step) => (
                         <div key={step} className="flex flex-col items-center">
-                          <span className="h-3 w-3 rounded-full border-2 border-[#0b0b0b] bg-[#E8C84A]" />
+                          <span className="h-3 w-3 rounded-full border-2 border-[#0b0b0b] bg-[#DEBD54]" />
                           <span className="mt-1 text-[0.4375rem] text-white/60">{step}</span>
                         </div>
                       ))}
@@ -641,7 +646,7 @@ function DuukaSaasLanding() {
                   ))}
                 </div>
 
-                <div className="mt-2 rounded-lg py-1.5 text-center text-[0.5rem] font-bold text-black" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+                <div className="mt-2 rounded-lg py-1.5 text-center text-[0.5rem] font-bold text-black" style={{ background: "linear-gradient(180deg,#DEBD54 0%,#C9A020 100%)" }}>
                   + New repair request
                 </div>
               </div>
@@ -658,13 +663,13 @@ function DuukaSaasLanding() {
       {/* ── Closing CTA — catches visitors who scrolled the whole page ── */}
       <section className="mx-auto max-w-6xl px-4 pb-20">
         <div
-          className="relative overflow-hidden rounded-3xl border border-[#D4AF37]/25 p-8 text-center md:p-12"
+          className="relative overflow-hidden rounded-3xl border border-[#C9A227]/25 p-8 text-center md:p-12"
           style={{
             background: "linear-gradient(135deg,#1f1b0e 0%,#141006 45%,#0c0c0c 100%)",
-            boxShadow: "0 0 0 1px rgba(212,175,55,0.12), 0 24px 60px rgba(0,0,0,0.5)",
+            boxShadow: "0 0 0 1px rgba(201, 162, 39,0.12), 0 24px 60px rgba(0,0,0,0.5)",
           }}
         >
-          <div className="pointer-events-none absolute left-1/2 top-0 h-64 w-96 -translate-x-1/2 rounded-full bg-[#D4AF37]/12 blur-[90px]" />
+          <div className="pointer-events-none absolute left-1/2 top-0 h-64 w-96 -translate-x-1/2 rounded-full bg-[#C9A227]/12 blur-[90px]" />
           <div className="relative">
             <h2 className="text-2xl font-black tracking-tight text-white md:text-4xl">
               Ready to run your business this way?
@@ -673,10 +678,10 @@ function DuukaSaasLanding() {
               Start free in minutes — or talk to us about setup, migration, and training.
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <Link href="/register" className="rounded-xl px-7 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#E8C84A 0%,#C9A020 100%)" }}>
+              <Link href="/register" className="rounded-xl px-7 py-3 text-sm font-bold text-black shadow-[0_4px_20px_rgba(201, 162, 39,0.3)] transition hover:opacity-90 active:scale-[0.98]" style={{ background: "linear-gradient(180deg,#DEBD54 0%,#C9A020 100%)" }}>
                 Create Workspace
               </Link>
-              <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3 text-sm font-semibold text-white/75 transition active:scale-[0.98] hover:border-[#D4AF37]/30 hover:text-white">
+              <a href="https://wa.me/256772006344?text=Hi%2C%20I%27m%20interested%20in%20Duuka%20ProMax.%20Please%20send%20pricing%20and%20setup%20details." target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3 text-sm font-semibold text-white/75 transition active:scale-[0.98] hover:border-[#C9A227]/30 hover:text-white">
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden><path d={WA_PATH}/></svg>
                 Talk to Sales
               </a>

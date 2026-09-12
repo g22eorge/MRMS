@@ -15,6 +15,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { RowActionsMenu, MenuActionButton, MenuActionLink, MenuDestructiveRow, MenuSection } from "@/components/shared/RowActionsMenu";
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { shareRefundDocument } from "@/lib/notifications/share-document";
+import { refundableCeiling } from "@/lib/commercial/refundable";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { postRefund, reverseJournalEntry } from "@/lib/accounting/post";
 import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
@@ -22,19 +23,24 @@ import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@
 import { formatEATDate } from "@/lib/date-eat";
 import { DocumentFilterBar } from "@/components/documents";
 import { DocumentSourcePicker, type SourceGroup } from "@/components/documents/DocumentSourcePicker";
+import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
+import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 export const dynamic = "force-dynamic";
 
 export default async function RefundsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; method?: string; type?: string; period?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; method?: string; type?: string; period?: string; page?: string; size?: string; error?: string }>;
 }) {
   await requireModule(OrgModule.INVOICING);
   const { user, orgId, org } = await requireOrgSession();
@@ -48,6 +54,7 @@ export default async function RefundsPage({
   const typeFilter = params.type ?? "all";
   const periodFilter = params.period ?? "all";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const now2 = new Date();
   const thisMonthStart = new Date(now2.getFullYear(), now2.getMonth(), 1);
   const lastMonthStart = new Date(now2.getFullYear(), now2.getMonth() - 1, 1);
@@ -89,7 +96,6 @@ export default async function RefundsPage({
     // A credit note stores no FX rate of its own, so its ceiling can only be
     // converted once the rate on this form has been read. Held here until then.
     let creditNoteDocTotal: number | null = null;
-    let creditNoteRefundedBase = 0;
 
     if (sourceType === "invoice") {
       const inv = await prisma.invoice.findFirst({
@@ -117,29 +123,21 @@ export default async function RefundsPage({
         select: {
           id: true,
           saleId: true,
+          invoiceId: true,
           totalAmount: true,
           currency: true,
-          refunds: { select: { amount: true, currency: true, exchangeRateToBase: true } },
         },
       });
       if (!creditNote) return;
       creditNoteId = creditNote.id;
+      // Inherit whichever parent the credit note hangs off, so refunding an
+      // invoice-sourced credit note reduces that invoice rather than nothing.
       saleId = creditNote.saleId;
+      invoiceId = creditNote.invoiceId;
       currency = creditNote.currency;
       // A credit note carries no paidAmount and stores no rate of its own, so
       // its total stays in document currency until the form's rate is read.
       creditNoteDocTotal = creditNote.totalAmount;
-      creditNoteRefundedBase = creditNote.refunds.reduce(
-        (sum, refund) =>
-          sum +
-          toBaseAmount({
-            amount: refund.amount,
-            currency: refund.currency,
-            baseCurrency: org.baseCurrency,
-            exchangeRateToBase: refund.exchangeRateToBase,
-          }),
-        0,
-      );
     }
 
     // Capture the FX rate for a non-base refund so it can be converted for
@@ -153,14 +151,26 @@ export default async function RefundsPage({
       redirect(`/documents/refunds?error=${encodeURIComponent(`Enter the exchange rate for this ${refundCurrency} refund.`)}`);
     }
 
-    if (creditNoteDocTotal != null) {
-      const creditedBase = toBaseAmount({
-        amount: creditNoteDocTotal,
-        currency: refundCurrency,
+    let limitedByCash = false;
+    if (creditNoteDocTotal != null && creditNoteId) {
+      // The credit note is only one of the two ceilings; the other is the cash
+      // actually received against the parent, which nothing checked because
+      // credit notes used to require a fully-paid document. See
+      // lib/commercial/refundable.ts.
+      const ceiling = await refundableCeiling({
+        orgId,
         baseCurrency: org.baseCurrency,
-        exchangeRateToBase,
+        creditNote: {
+          id: creditNoteId,
+          totalAmount: creditNoteDocTotal,
+          currency: refundCurrency,
+          exchangeRateToBase,
+          invoiceId,
+          saleId,
+        },
       });
-      refundableBase = Math.max(0, creditedBase - creditNoteRefundedBase);
+      refundableBase = ceiling.refundableBase;
+      limitedByCash = ceiling.limitedByCash;
     }
 
     // Show the ceiling in the currency the user is actually typing in.
@@ -175,10 +185,18 @@ export default async function RefundsPage({
     // Was a bare return, so over-refunding did nothing at all — no refund, no
     // message. The amount field has no max, so this is an ordinary typo.
     if (refundableBase <= 0) {
-      redirect(`/documents/refunds?error=${encodeURIComponent("There is nothing left to refund on that document.")}`);
+      redirect(`/documents/refunds?error=${encodeURIComponent(
+        limitedByCash
+          ? "Nothing has been paid on that document yet, so there is no money to refund. The credit note already reduces the balance owed."
+          : "There is nothing left to refund on that document.",
+      )}`);
     }
     if (amountBase > refundableBase) {
-      redirect(`/documents/refunds?error=${encodeURIComponent(`That is more than the refundable amount (${formatMoney(refundableAmount, refundCurrency)}).`)}`);
+      redirect(`/documents/refunds?error=${encodeURIComponent(
+        limitedByCash
+          ? `Only ${formatMoney(refundableAmount, refundCurrency)} has been received on that document, so that is the most that can be paid back.`
+          : `That is more than the refundable amount (${formatMoney(refundableAmount, refundCurrency)}).`,
+      )}`);
     }
 
     // Double-submit guard: an identical refund landed seconds ago — reuse it
@@ -193,7 +211,7 @@ export default async function RefundsPage({
     });
     if (dupRefund) {
       revalidatePath("/documents/refunds");
-      redirect("/documents/refunds");
+      redirect(flash("/documents/refunds", "Refund created"));
     }
 
     // Refund write + ledger reversal run inside the txn; ensure schema first.
@@ -286,7 +304,7 @@ export default async function RefundsPage({
       summary: `Refund ${formatMoney(amountRaw, currency)} against ${sourceType} ${sourceId}`,
     });
     revalidatePath("/documents/refunds");
-    redirect("/documents/refunds");
+    redirect(flash("/documents/refunds", "Refund created"));
   }
 
   async function deleteRefundAction(formData: FormData) {
@@ -361,13 +379,13 @@ export default async function RefundsPage({
   else if (periodFilter === "last_month") baseWhere.refundedAt = { gte: lastMonthStart, lte: lastMonthEnd };
   if (q) {
     baseWhere.OR = [
-      { reference: { contains: q , mode: "insensitive" as const} },
-      { note: { contains: q , mode: "insensitive" as const} },
-      { invoice: { is: { invoiceNumber: { contains: q , mode: "insensitive" as const} } } },
-      { invoice: { is: { job: { is: { client: { is: { fullName: { contains: q , mode: "insensitive" as const} } } } } } } },
-      { sale: { is: { saleNumber: { contains: q , mode: "insensitive" as const} } } },
-      { sale: { is: { client: { is: { fullName: { contains: q , mode: "insensitive" as const} } } } } },
-      { creditNote: { is: { creditNoteNumber: { contains: q , mode: "insensitive" as const} } } },
+      { reference: icontains(q) },
+      { note: icontains(q) },
+      { invoice: { is: { invoiceNumber: icontains(q) } } },
+      { invoice: { is: { job: { is: { client: { is: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } } } } } },
+      { sale: { is: { saleNumber: icontains(q) } } },
+      { sale: { is: { client: { is: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } } } },
+      { creditNote: { is: { creditNoteNumber: icontains(q) } } },
     ];
   }
 
@@ -383,9 +401,20 @@ export default async function RefundsPage({
     invoiceId: true,
     saleId: true,
     creditNoteId: true,
-    invoice: { select: { invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true } }, job: { select: { id: true, client: { select: { fullName: true, phone: true, email: true } } } } } },
-    sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true } } } },
-    creditNote: { select: { creditNoteNumber: true, sale: { select: { client: { select: { fullName: true, phone: true, email: true } } } } } },
+    invoice: { select: { invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } }, job: { select: { id: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } } } },
+    sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+    creditNote: {
+      select: {
+        creditNoteNumber: true,
+        sale: { select: { client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+        invoice: {
+          select: {
+            client: { select: { fullName: true, phone: true, email: true, organization: true } },
+            job: { select: { client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+          },
+        },
+      },
+    },
     createdBy: { select: { name: true } },
   } satisfies Prisma.RefundSelect;
 
@@ -413,8 +442,8 @@ export default async function RefundsPage({
         invoiceNumber: true,
         paidAmount: true,
         currency: true,
-        client: { select: { fullName: true, phone: true } },
-        job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true } } } },
+        client: { select: { fullName: true, phone: true, organization: true } },
+        job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } },
         refunds: { select: { amount: true } },
       },
     }).catch(() => []),
@@ -427,7 +456,7 @@ export default async function RefundsPage({
         saleNumber: true,
         paidAmount: true,
         currency: true,
-        client: { select: { fullName: true, phone: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
         refunds: { select: { amount: true } },
       },
     }).catch(() => []),
@@ -440,7 +469,14 @@ export default async function RefundsPage({
         creditNoteNumber: true,
         totalAmount: true,
         currency: true,
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true } } } },
+        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } },
+        invoice: {
+          select: {
+            invoiceNumber: true,
+            client: { select: { fullName: true, phone: true, organization: true } },
+            job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } },
+          },
+        },
         refunds: { select: { amount: true } },
       },
     }).catch(() => []),
@@ -448,7 +484,7 @@ export default async function RefundsPage({
 
   // KPIs come from whole-dataset aggregates above; the list is paginated in SQL
   // against the filtered total so no rows are dropped beyond an arbitrary cap.
-  const pageView = paginationView(page, refundCount);
+  const pageView = paginationView(page, refundCount, pageSize);
   const pageRows = await prisma.refund.findMany({
     where: baseWhere,
     orderBy: { refundedAt: "desc" },
@@ -456,12 +492,15 @@ export default async function RefundsPage({
     take: pageView.take,
     select: refundListSelect,
   }).catch(() => [] as never[]);
-  const refundsHref = pageHrefBuilder("/documents/refunds", {
+  const refundsHrefFilters = {
     q,
     method: methodFilter !== "all" ? methodFilter : "",
     type: typeFilter !== "all" ? typeFilter : "",
     period: periodFilter !== "all" ? periodFilter : "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const refundsHref = pageHrefBuilder("/documents/refunds", refundsHrefFilters);
+  const refundsHrefSize = sizeHrefBuilder("/documents/refunds", refundsHrefFilters);
 
   const currency = org.baseCurrency;
   const totalRefunds = kpiData._count.id ?? 0;
@@ -494,7 +533,7 @@ export default async function RefundsPage({
     {
       label: "Invoices",
       options: refundableInvoices.map((invoice) => {
-        const who = invoice.client?.fullName ?? invoice.job?.client?.fullName ?? "No customer";
+        const who = clientDisplayName(invoice.client ?? invoice.job?.client, "No customer");
         return {
           value: `invoice:${invoice.id}`,
           label: `${who} — ${invoice.invoiceNumber}`,
@@ -506,7 +545,7 @@ export default async function RefundsPage({
     {
       label: "Sales",
       options: refundableSales.map((sale) => {
-        const who = sale.client?.fullName ?? "Walk-in";
+        const who = clientDisplayName(sale.client, "Walk-in");
         return {
           value: `sale:${sale.id}`,
           label: `${who} — ${sale.saleNumber}`,
@@ -518,12 +557,12 @@ export default async function RefundsPage({
     {
       label: "Credit notes",
       options: refundableCreditNotes.map((cn) => {
-        const who = cn.sale?.client?.fullName ?? "Walk-in";
+        const parent = creditNoteParent(cn);
         return {
           value: `creditNote:${cn.id}`,
-          label: `${who} — ${cn.creditNoteNumber}`,
-          hint: `${cn.sale.saleNumber} · refundable ${formatMoney(cn.refundableAmount, cn.currency)}`,
-          search: [who, cn.creditNoteNumber, cn.sale.saleNumber].filter(Boolean).join(" "),
+          label: `${parent.clientName} — ${cn.creditNoteNumber}`,
+          hint: `${parent.reference ? parent.reference + " · " : ""}refundable ${formatMoney(cn.refundableAmount, cn.currency)}`,
+          search: [parent.clientName, cn.creditNoteNumber, parent.reference].filter(Boolean).join(" "),
         };
       }),
     },
@@ -540,28 +579,40 @@ export default async function RefundsPage({
       : r.creditNote
       ? r.creditNote.creditNoteNumber
       : "—";
+    // Both halves of this were wrong. /sales/<id> is not a route — a POS sale
+    // lives at /pos/<id> — so the Source link on every sale-backed refund
+    // 404'd. And /documents/invoices?id=<id> pointed the invoice case at the
+    // list with a parameter the list does not read, so it opened an unfiltered
+    // index instead of the invoice. Both now link to the record itself.
     const sourceHref = r.invoiceId
-      ? `/documents/invoices?id=${r.invoiceId}`
+      ? `/documents/invoices/${r.invoiceId}`
       : r.saleId
-      ? `/sales/${r.saleId}`
+      ? `/pos/${r.saleId}`
       : null;
-    const clientName =
-      r.invoice?.job?.client?.fullName ??
-      r.invoice?.client?.fullName ??
-      r.sale?.client?.fullName ??
-      r.creditNote?.sale.client?.fullName ??
-      "—";
+    const clientName = clientDisplayName(
+      r.invoice?.job?.client ??
+        r.invoice?.client ??
+        r.sale?.client ??
+        r.creditNote?.sale?.client ??
+        r.creditNote?.invoice?.client ??
+        r.creditNote?.invoice?.job?.client,
+      "—",
+    );
     const recipientPhone =
       r.invoice?.job?.client?.phone ??
       r.invoice?.client?.phone ??
       r.sale?.client?.phone ??
-      r.creditNote?.sale.client?.phone ??
+      r.creditNote?.sale?.client?.phone ??
+      r.creditNote?.invoice?.client?.phone ??
+      r.creditNote?.invoice?.job?.client?.phone ??
       null;
     const recipientEmail =
       r.invoice?.job?.client?.email ??
       r.invoice?.client?.email ??
       r.sale?.client?.email ??
-      r.creditNote?.sale.client?.email ??
+      r.creditNote?.sale?.client?.email ??
+      r.creditNote?.invoice?.client?.email ??
+      r.creditNote?.invoice?.job?.client?.email ??
       null;
     const refundUrl = `${appUrl}/api/refunds/${r.id}`;
     const refundShareText = encodeURIComponent(`Your refund document is ready.\n\n${sourceLabel}\nAmount: ${formatMoney(r.amount, refundCurrency)}\nPDF: ${refundUrl}`);
@@ -631,8 +682,6 @@ export default async function RefundsPage({
       ) : null}
       {/* Header + KPIs */}
       <PageHeader
-        eyebrow="Documents"
-        title="Refunds"
         description="Money paid back on an invoice, sale or credit note. For a POS return that restocks items, use Credit Notes."
         actions={
           ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role) ? (
@@ -704,6 +753,27 @@ export default async function RefundsPage({
                 ))}
               </select>
             </div>
+            {/* The action refuses a refund on a document that is not in the
+                org's base currency unless it is given a rate — and there was no
+                field to give one in, so refunding a foreign-currency document
+                was impossible: the form returned "Enter the exchange rate for
+                this USD refund" with nowhere to enter it. It is rendered
+                unconditionally because the currency follows the source, which
+                is chosen in the browser after this markup is built; the action
+                ignores it when the document is already in {currency}. */}
+            <div className="space-y-1">
+              <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                Exchange rate to {currency}
+              </label>
+              <input
+                name="exchangeRateToBase"
+                type="number"
+                min="0"
+                step="any"
+                placeholder={`Only if the document is not in ${currency}`}
+                className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              />
+            </div>
             <div className="space-y-1">
               <label className="text-[0.8125rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Reference
@@ -774,12 +844,9 @@ export default async function RefundsPage({
               <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>
             ))}
           </select>
-          <button
-            type="submit"
-            className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]"
-          >
+          <SubmitButton bare className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">
             Filter
-          </button>
+          </SubmitButton>
         </form>
       </DocumentFilterBar>
 
@@ -909,6 +976,8 @@ export default async function RefundsPage({
         total={pageView.total}
         unit="refunds"
         hrefForPage={refundsHref}
+          pageSize={pageSize}
+          hrefForSize={refundsHrefSize}
       />
     </div>
     </Disclosure>

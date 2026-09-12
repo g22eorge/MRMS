@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export type UpdateClientState = { ok: boolean; error: string | null };
 
 type ClientProfile = {
@@ -98,17 +99,17 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1">
           <span className="text-xs font-medium text-[var(--ink-muted)]">Full name</span>
-          <input name="fullName" defaultValue={client.fullName} className={controlClass} />
+          <input name="fullName" required minLength={2} defaultValue={client.fullName} className={controlClass} />
         </label>
 
         <label className="space-y-1">
           <span className="text-xs font-medium text-[var(--ink-muted)]">Phone</span>
-          <input name="phone" defaultValue={client.phone} className={controlClass} />
+          <input name="phone" required minLength={4} defaultValue={client.phone} className={controlClass} />
         </label>
 
         <label className="space-y-1">
           <span className="text-xs font-medium text-[var(--ink-muted)]">Email</span>
-          <input name="email" defaultValue={client.email ?? ""} className={controlClass} />
+          <input name="email" type="email" defaultValue={client.email ?? ""} className={controlClass} />
         </label>
 
         <label className="space-y-1">
@@ -132,9 +133,9 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
       </div>
 
       <div className="flex items-center gap-2">
-        <button type="submit" disabled={pending} className="btn-premium rounded-lg px-3 py-2 text-white disabled:opacity-60">
+        <SubmitButton bare disabled={pending} className="btn-premium rounded-lg px-3 py-2 text-white disabled:opacity-60">
           {pending ? "Saving…" : "Save Client"}
-        </button>
+        </SubmitButton>
         <button
           type="button"
           onClick={() => setEditing(false)}

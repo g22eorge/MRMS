@@ -11,13 +11,16 @@ import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuSection } from "@
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { createLead, advanceLeadStageAction } from "./actions";
+import { clientDisplayName } from "@/lib/client-name";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { icontains } from "@/lib/db/search";
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "New",
   CONTACTED: "Contacted",
@@ -89,6 +92,7 @@ type SearchParams = {
   q?: string;
   createError?: string;
   page?: string;
+  size?: string;
 };
 
 export default async function SalesPage({
@@ -111,6 +115,7 @@ export default async function SalesPage({
   const statusFilter = overdueOnly ? undefined : (filters.status as LeadStatus | undefined);
   const searchQ      = (filters.q ?? "").trim();
   const page         = parsePage(filters.page);
+  const pageSize     = parsePageSize(filters.size);
   const currency     = getAppCurrency();
 
   const now = new Date();
@@ -127,9 +132,9 @@ export default async function SalesPage({
     ...(searchQ
       ? {
           OR: [
-            { quoteNumber: { contains: searchQ , mode: "insensitive" as const} },
-            { lead:   { fullName: { contains: searchQ , mode: "insensitive" as const} } },
-            { client: { fullName: { contains: searchQ , mode: "insensitive" as const} } },
+            { quoteNumber: icontains(searchQ) },
+            { lead:   { fullName: icontains(searchQ) } },
+            { client: { OR: [{ fullName: icontains(searchQ) }, { organization: icontains(searchQ) }] } },
           ],
         }
       : {}),
@@ -148,9 +153,9 @@ export default async function SalesPage({
     ...(searchQ
       ? {
           OR: [
-            { fullName: { contains: searchQ , mode: "insensitive" as const} },
-            { phone:    { contains: searchQ , mode: "insensitive" as const} },
-            { organization: { contains: searchQ , mode: "insensitive" as const} },
+            { fullName: icontains(searchQ) },
+            { phone:    icontains(searchQ) },
+            { organization: icontains(searchQ) },
           ],
         }
       : {}),
@@ -182,8 +187,8 @@ export default async function SalesPage({
             assignedTo: { select: { id: true, name: true } },
           },
           orderBy: { updatedAt: "desc" },
-          skip: (page - 1) * PAGE_SIZE,
-          take: PAGE_SIZE,
+          skip: (page - 1) * pageSize,
+          take: pageSize,
         }).catch(() => [])
       : Promise.resolve([]),
 
@@ -192,11 +197,11 @@ export default async function SalesPage({
           where: quotationWhere,
           include: {
             lead:   { select: { id: true, fullName: true } },
-            client: { select: { id: true, fullName: true } },
+            client: { select: { id: true, fullName: true, organization: true } },
           },
           orderBy: { createdAt: "desc" },
-          skip: (page - 1) * PAGE_SIZE,
-          take: PAGE_SIZE,
+          skip: (page - 1) * pageSize,
+          take: pageSize,
         }).catch(() => [])
       : Promise.resolve([]),
 
@@ -285,13 +290,16 @@ export default async function SalesPage({
 
   const listTotal = activeTab === "leads" ? leadsTotal : quotationsTotal;
   const listUnit = activeTab === "leads" ? "leads" : "quotations";
-  const pageView = paginationView(page, listTotal);
-  const listHref = pageHrefBuilder("/sales", {
+  const pageView = paginationView(page, listTotal, pageSize);
+  const listFilters = {
     tab: activeTab,
     status: statusFilter ?? "",
     overdue: overdueOnly ? "1" : "",
     q: searchQ,
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const listHref = pageHrefBuilder("/sales", listFilters);
+  const listSizeHref = sizeHrefBuilder("/sales", listFilters);
 
   const hasLeadFilters = Boolean(searchQ) || Boolean(statusFilter) || overdueOnly;
 
@@ -325,9 +333,11 @@ export default async function SalesPage({
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to create lead";
-      redirect(`/sales?tab=leads&createError=${encodeURIComponent(msg)}`);
+      redirect(`/sales?tab=leads&createError=${encodeURIComponent(msg)}&failed=${encodeURIComponent(msg)}`);
     }
-    redirect("/sales?tab=leads");
+    // Say so. A save that repaints the page in silence is indistinguishable
+    // from one that was dropped, which is why people tap the button twice.
+    redirect(`/sales?tab=leads&saved=${encodeURIComponent("Lead created")}`);
   }
 
   // ── Hrefs ───────────────────────────────────────────────────────────────
@@ -504,9 +514,6 @@ export default async function SalesPage({
           {/* ══ DESKTOP HEADER ══ */}
           <div className="hidden lg:block">
             <PageHeader
-              eyebrow="CRM"
-              title="Sales"
-              description="Leads pipeline and quotations"
               actions={
                 canNewLead ? (
                   <DisclosureTrigger
@@ -618,7 +625,7 @@ export default async function SalesPage({
             placeholder={activeTab === "leads" ? "Search by name, phone or organization..." : "Search by quote number or name..."}
             className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
           />
-          <Button type="submit" variant="secondary" size="sm">Search</Button>
+          <SubmitButton variant="secondary" size="sm">Search</SubmitButton>
           {(activeTab === "leads" ? hasLeadFilters : Boolean(searchQ)) ? (
             <Link href={href({ status: null, overdue: false, q: "" })} className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
           ) : null}
@@ -632,16 +639,23 @@ export default async function SalesPage({
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">New Lead</p>
           </div>
-          <form action={createLeadAction} noValidate className="p-3">
+          {/*
+            noValidate removed. It had been switching off the `required` markers
+            two lines below, which have been on these fields all along — the form
+            asked for a name and a phone, marked both with a *, and then let an
+            empty one through to be refused by the server. Nothing here does its
+            own client-side validation, which is the only reason to opt out.
+          */}
+          <form action={createLeadAction} className="p-3">
             {filters.createError ? (
               <p className="mb-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">
                 {filters.createError}
               </p>
             ) : null}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <input name="fullName" required placeholder="Full name *" className={field} />
-              <input name="phone" required placeholder="Phone *" className={field} />
-              <input name="email" placeholder="Email" className={field} />
+              <input name="fullName" required minLength={2} placeholder="Full name *" className={field} />
+              <input name="phone" required minLength={3} placeholder="Phone *" className={field} />
+              <input name="email" type="email" placeholder="Email" className={field} />
               <input name="organization" placeholder="Organization" className={field} />
               <input name="interest" placeholder="Interest / product" className={field} />
               <input name="estimatedValue" type="number" placeholder={`Est. value (${currency})`} className={field} />
@@ -665,7 +679,7 @@ export default async function SalesPage({
               <textarea name="notes" placeholder="Notes" rows={2} className={`${field} sm:col-span-2 lg:col-span-3`} />
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <Button type="submit" size="sm" className="px-4 font-bold">Create Lead</Button>
+              <SubmitButton size="sm" className="px-4 font-bold" pendingLabel="Creating…">Create Lead</SubmitButton>
               <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</DisclosureClose>
             </div>
           </form>
@@ -881,7 +895,7 @@ export default async function SalesPage({
             rows={quotations}
             getRowKey={(q) => q.id}
             renderMobileCard={(q) => {
-              const recipientName = q.client?.fullName ?? q.lead?.fullName ?? null;
+              const recipientName = (q.client ? clientDisplayName(q.client) : null) ?? q.lead?.fullName ?? null;
               const isExpired = q.status !== "ACCEPTED" && q.validUntil != null && q.validUntil < now;
               return (
                 <div className="flex items-center gap-3 px-4 py-3">
@@ -929,7 +943,7 @@ export default async function SalesPage({
                 header: "Client / Lead",
                 cell: (q) =>
                   q.client
-                    ? <Link href={`/clients/${q.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{q.client.fullName}</Link>
+                    ? <Link href={`/clients/${q.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(q.client)}</Link>
                     : q.lead
                       ? <Link href={`/sales/leads/${q.lead.id}`} className="font-medium text-[var(--ink)] hover:underline">{q.lead.fullName}</Link>
                       : <span className="opacity-30">—</span>,
@@ -969,6 +983,8 @@ export default async function SalesPage({
         total={pageView.total}
         unit={listUnit}
         hrefForPage={listHref}
+        pageSize={pageSize}
+        hrefForSize={listSizeHref}
       />
     </ListPageLayout>
     </DisclosureProvider>

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { portalLogoutAction, switchPortalClientAction } from "@/app/(portal)/portal/actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const ROLE_LABEL: Record<string, string> = {
   ORG_ADMIN: "Organization Administrator",
   IT_OFFICER: "IT Officer",
@@ -57,7 +58,7 @@ export function PortalHeader({
                 <option key={a.id} value={a.id}>{a.organization ? `${a.organization} — ${a.fullName}` : a.fullName}</option>
               ))}
             </select>
-            <button type="submit" className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-1 text-[0.75rem] font-semibold text-[var(--accent)]">Switch</button>
+            <SubmitButton bare className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2 py-1 text-[0.75rem] font-semibold text-[var(--accent)]">Switch</SubmitButton>
           </form>
         ) : null}
       </div>
@@ -67,9 +68,9 @@ export function PortalHeader({
         {link("/portal/documents", "Documents", "documents")}
         {link("/portal/complaints", "Complaints", "complaints")}
         <form action={portalLogoutAction}>
-          <button type="submit" className="ml-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
+          <SubmitButton bare className="ml-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
             Sign out
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </div>

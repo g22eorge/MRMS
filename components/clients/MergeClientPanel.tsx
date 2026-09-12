@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { previewClientMerge, mergeClientIntoAction, type ClientMergePreview } from "@/app/(app)/clients/[id]/merge-actions";
 
+import { clientDisplayName } from "@/lib/client-name";
 type Candidate = { id: string; fullName: string; phone: string; organization: string | null };
 
 const LABELS: Record<string, string> = {
@@ -59,7 +60,7 @@ export function MergeClientPanel({
 
   function selectTarget(c: Candidate) {
     setTargetId(c.id);
-    setQuery(c.fullName);
+    setQuery(clientDisplayName(c));
     setError(null);
     setPreview(null);
     setConfirmText("");
@@ -118,7 +119,7 @@ export function MergeClientPanel({
                   onClick={() => selectTarget(c)}
                   className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[0.8125rem] hover:bg-[var(--panel-strong)]"
                 >
-                  <span className="font-semibold text-[var(--ink)]">{c.fullName}</span>
+                  <span className="font-semibold text-[var(--ink)]">{clientDisplayName(c)}</span>
                   <span className="text-[0.75rem] text-[var(--ink-muted)]">{c.organization || c.phone}</span>
                 </button>
               ))
@@ -132,7 +133,7 @@ export function MergeClientPanel({
       {target && preview?.ok ? (
         <div className="mt-3 space-y-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 p-3">
           <p className="text-[0.8125rem]">
-            Move everything into <span className="font-semibold text-[var(--ink)]">{target.fullName}</span>
+            Move everything into <span className="font-semibold text-[var(--ink)]">{clientDisplayName(target)}</span>
             {target.organization ? <span className="text-[var(--ink-muted)]"> · {target.organization}</span> : null}
           </p>
           {preview.totalMoving && preview.totalMoving > 0 ? (
@@ -149,7 +150,7 @@ export function MergeClientPanel({
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)]/60 p-2.5">
             <label className="flex items-center gap-2 text-[0.8125rem] font-medium text-[var(--ink)]">
               <input type="checkbox" checked={createLogin} onChange={(e) => setCreateLogin(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--accent)]" />
-              Also create a portal login from this record (under {target.fullName})
+              Also create a portal login from this record (under {clientDisplayName(target)})
             </label>
             {createLogin ? (
               <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -172,7 +173,7 @@ export function MergeClientPanel({
               disabled={!canMerge}
               className="rounded-lg bg-red-500 px-3 py-1.5 text-[0.8125rem] font-semibold text-white hover:bg-red-600 disabled:opacity-40"
             >
-              {merging ? "Merging…" : `Merge into ${target.fullName}`}
+              {merging ? "Merging…" : `Merge into ${clientDisplayName(target)}`}
             </button>
           </div>
         </div>

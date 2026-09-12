@@ -6,9 +6,11 @@ import { can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/currency";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
+import { HubTabs } from "@/components/shared/HubTabs";
+import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuSection, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { deletePurchaseOrderAction, setPurchaseOrderStatusAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +34,7 @@ function poNumber(po: { reference: string | null; id: string }) {
 export default async function PurchaseOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; size?: string; }>;
 }) {
   const { user } = await getCurrentUserRole();
   const orgId = user.orgId;
@@ -41,6 +43,7 @@ export default async function PurchaseOrdersPage({
 
   const params = await searchParams;
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -51,8 +54,8 @@ export default async function PurchaseOrdersPage({
     prisma.purchaseOrder.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       include: {
         supplier: { select: { id: true, name: true } },
         items: { select: { qtyOrdered: true, qtyReceived: true, unitCost: true } },
@@ -72,8 +75,12 @@ export default async function PurchaseOrdersPage({
   // KPIs stay whole-dataset: counts come from count({ where }) and pendingValue
   // is a simple (non-currency-converted) sum over the full open-item set.
   const pendingValue = pendingItems.reduce((sum, item) => sum + item.qtyOrdered * item.unitCost, 0);
-  const pageView = paginationView(page, total);
-  const poHref = pageHrefBuilder("/inventory/purchase-orders", {});
+  const pageView = paginationView(page, total, pageSize);
+  const poHrefFilters = {
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const poHref = pageHrefBuilder("/inventory/purchase-orders", poHrefFilters);
+  const poHrefSize = sizeHrefBuilder("/inventory/purchase-orders", poHrefFilters);
 
   // Named so the same actions render in the desktop table AND the mobile card.
   const renderPoActions = (po: (typeof orders)[number]) => {
@@ -104,8 +111,8 @@ export default async function PurchaseOrdersPage({
 
   return (
     <ListPageLayout
+      topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
-        eyebrow: "Procurement",
         title: "Purchase Orders",
         actions: (
           <>
@@ -114,12 +121,16 @@ export default async function PurchaseOrdersPage({
             <Link href="/inventory/purchase-orders/new" className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">New PO</Link>
           </>
         ),
+        // Tones and destinations, where before every figure looked the same and
+        // went nowhere. Overdue is the only one that means something is wrong;
+        // total and open are the normal state of a buying desk, and colouring
+        // the normal state is how a reader learns to ignore the colours.
         kpis: [
-          { label: "Total", value: total },
-          { label: "Open", value: openCount },
-          { label: "Receiving", value: receivingCount },
-          { label: "Overdue", value: overdueCount },
-          { label: "Pending", value: formatMoney(pendingValue) },
+          { label: "Total", value: total, href: "/inventory/purchase-orders" },
+          { label: "Open", value: openCount, muted: openCount === 0 },
+          { label: "Receiving", value: receivingCount, muted: receivingCount === 0, href: "/inventory/goods-received" },
+          { label: "Overdue", value: overdueCount, tone: overdueCount > 0 ? "crit" as const : "good" as const, muted: overdueCount === 0 },
+          { label: "Pending", value: formatMoney(pendingValue), sub: "awaiting receipt", muted: pendingValue === 0 },
         ],
       }}
       footer={total > 0 ? (
@@ -129,7 +140,8 @@ export default async function PurchaseOrdersPage({
       <DataTable
         rows={orders}
         getRowKey={(po) => po.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: poHref, unit: "purchase orders" }}
+        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: poHref,
+            hrefForSize: poHrefSize, unit: "purchase orders" }}
         empty={
           <div className="space-y-3">
             <p>No purchase orders yet.</p>

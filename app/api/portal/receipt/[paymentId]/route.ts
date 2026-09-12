@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ paymentId: 
 
   const [branding, logoUrl, receipt] = await Promise.all([
     getDocumentBrandingSettings(session.org.id),
-    resolveInvoiceLogo(),
+    resolveInvoiceLogo(session.org.id),
     prisma.receipt.findFirst({ where: { orgId: session.org.id, paymentId: payment.id }, select: { receiptNumber: true } }),
   ]);
   const currency = normalizeCurrency(payment.currency, session.org.baseCurrency);

@@ -116,6 +116,8 @@ export default async function PublicStatusPage({
       ? formatMinutes(job.timelineMinMinutes, job.timelineMaxMinutes)
       : null);
 
+  const deviceName = [job.brand, job.model].filter((v) => v && v !== "Unknown").join(" ");
+
   return (
     <div className="min-h-screen bg-[#fafaf9] px-4 py-10 font-sans">
       <div className="mx-auto max-w-lg space-y-6">
@@ -144,8 +146,16 @@ export default async function PublicStatusPage({
           {/* Device info */}
           <div className="px-5 py-4 space-y-1 border-b border-gray-100">
             <p className="text-[0.75rem] font-bold uppercase tracking-widest text-gray-400">Device</p>
-            <p className="font-semibold text-gray-800">{job.brand} {job.model}</p>
-            <p className="text-sm text-gray-500">{formatDeviceType(job.deviceType)}</p>
+            {/* "Unknown" is the sentinel intake writes when brand or model was
+                not captured, and it is filtered out of every internal view.
+                This page is the only one a customer sees, and it printed the
+                sentinel straight through — so someone checking on their repair
+                was told their device was an "Unknown Unknown". With nothing to
+                name, the device type below stands on its own. */}
+            {deviceName ? <p className="font-semibold text-gray-800">{deviceName}</p> : null}
+            <p className={deviceName ? "text-sm text-gray-500" : "font-semibold text-gray-800"}>
+              {formatDeviceType(job.deviceType)}
+            </p>
           </div>
 
           {/* Dates & timeline */}

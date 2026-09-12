@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { PLATFORM_ROUTES } from "@/lib/platform/routes";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ function compactJson(value: string | null) {
 export default async function PlatformAuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ orgId?: string; action?: string; page?: string }>;
+  searchParams: Promise<{ orgId?: string; action?: string; page?: string; size?: string; }>;
 }) {
   await requirePlatformAdmin();
 
@@ -27,6 +27,7 @@ export default async function PlatformAuditPage({
   const orgId = typeof params.orgId === "string" ? params.orgId.trim() : "";
   const action = typeof params.action === "string" ? params.action.trim() : "";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const exportParams = new URLSearchParams({ scope: "platform" });
   if (orgId) exportParams.set("orgId", orgId);
   if (action) exportParams.set("action", action);
@@ -72,9 +73,13 @@ export default async function PlatformAuditPage({
 
   // Filter options and lookup maps are derived from the full fetched dataset;
   // only the displayed rows are paginated below.
-  const pageView = paginationView(page, events.length);
+  const pageView = paginationView(page, events.length, pageSize);
   const pageRows = events.slice(pageView.skip, pageView.skip + pageView.take);
-  const auditHref = pageHrefBuilder("/platform/audit", { orgId, action });
+  const auditHrefFilters = { orgId, action,
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const auditHref = pageHrefBuilder("/platform/audit", auditHrefFilters);
+  const auditHrefSize = sizeHrefBuilder("/platform/audit", auditHrefFilters);
 
   const fmt = (d: Date) => d.toLocaleString("en-UG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
@@ -186,6 +191,8 @@ export default async function PlatformAuditPage({
         total={pageView.total}
         unit="events"
         hrefForPage={auditHref}
+          pageSize={pageSize}
+          hrefForSize={auditHrefSize}
       />
     </div>
   );

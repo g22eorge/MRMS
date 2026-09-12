@@ -22,7 +22,11 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { clientDisplayName } from "@/lib/client-name";
 
+import { findRecentDuplicate } from "@/lib/dedup";
+import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 type SearchParams = {
   q?: string;
   tech?: string;
@@ -40,9 +44,9 @@ function buildJobSearch(q?: string): Prisma.JobWhereInput {
   if (!q) return {};
   return {
     OR: [
-      { jobNumber: { contains: q , mode: "insensitive" as const} },
-      { client: { fullName: { contains: q , mode: "insensitive" as const} } },
-      { assignedTo: { is: { name: { contains: q , mode: "insensitive" as const} } } },
+      { jobNumber: icontains(q) },
+      { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+      { assignedTo: { is: { name: icontains(q) } } },
     ],
   };
 }
@@ -51,9 +55,9 @@ function buildInvoiceSearch(q?: string): Prisma.InvoiceWhereInput {
   if (!q) return {};
   return {
     OR: [
-      { invoiceNumber: { contains: q , mode: "insensitive" as const} },
-      { client: { fullName: { contains: q , mode: "insensitive" as const} } },
-      { subject: { contains: q , mode: "insensitive" as const} },
+      { invoiceNumber: icontains(q) },
+      { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+      { subject: icontains(q) },
     ],
   };
 }
@@ -62,8 +66,8 @@ function buildBillSearch(q?: string): Prisma.SupplierBillWhereInput {
   if (!q) return {};
   return {
     OR: [
-      { billNumber: { contains: q , mode: "insensitive" as const} },
-      { supplier: { name: { contains: q , mode: "insensitive" as const} } },
+      { billNumber: icontains(q) },
+      { supplier: { name: icontains(q) } },
     ],
   };
 }
@@ -191,6 +195,14 @@ async function receiveInvoicePaymentAction(formData: FormData) {
 
   // Payment + receipt + ledger post run inside the txn; ensure schema first.
   await prisma.$transaction(async (tx) => {
+    // Inside the transaction, so the second of two racing requests sees the
+    // first one's committed row rather than writing a second payment against
+    // the same invoice.
+    const dup = await findRecentDuplicate(tx.payment, {
+      orgId, invoiceId: invoice.id, amount: amountRaw, method, createdById: user.id,
+    });
+    if (dup) return;
+
     const payment = await tx.payment.create({
       data: { invoiceId: invoice.id, currency, amount: amountRaw, method, reference: reference || null, createdById: user.id, orgId },
     });
@@ -206,7 +218,7 @@ async function receiveInvoicePaymentAction(formData: FormData) {
 
   revalidatePath("/payout-followups");
   revalidatePath("/documents/invoices");
-  redirect("/payout-followups");
+  redirect(flash("/payout-followups", "Invoice payment received"));
 }
 
 export default async function PayoutFollowupsPage({
@@ -291,7 +303,7 @@ export default async function PayoutFollowupsPage({
         id: true, jobNumber: true, status: true, repairPath: true,
         clientBill: true, externalTechFee: true, externalTechBill: true,
         completedAt: true, deliveredAt: true,
-        client: { select: { fullName: true, phone: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
         assignedTo: { select: { id: true, name: true } },
       },
     }) : Promise.resolve([]),
@@ -307,7 +319,7 @@ export default async function PayoutFollowupsPage({
         id: true, jobNumber: true, status: true,
         clientBill: true, externalTechFee: true, externalTechBill: true,
         completedAt: true, deliveredAt: true,
-        client: { select: { fullName: true, phone: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
         assignedTo: { select: { id: true, name: true } },
       },
     }) : Promise.resolve([]),
@@ -323,7 +335,7 @@ export default async function PayoutFollowupsPage({
         id: true, invoiceNumber: true, invoiceType: true, subject: true,
         status: true, totalAmount: true, paidAmount: true,
         dueDate: true, issuedAt: true,
-        client: { select: { fullName: true, phone: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
       },
     }) : Promise.resolve([]),
     canSeeInvoices ? prisma.invoice.count({ where: invoiceWhere }) : Promise.resolve(0),
@@ -435,8 +447,6 @@ export default async function PayoutFollowupsPage({
         <>
           <FormErrorBanner message={filters.error} />
           <PageHeader
-            eyebrow="Finance"
-            title="Collections &amp; Payouts"
             description={
               totalReceivable > 0 || totalPayable > 0
                 ? `${formatMoneyCompact(totalReceivable, currency)} owed to you · ${formatMoneyCompact(totalPayable, currency)} you owe · net ${totalReceivable >= totalPayable ? "+" : "-"}${formatMoneyCompact(Math.abs(totalReceivable - totalPayable), currency)}`
@@ -538,7 +548,7 @@ export default async function PayoutFollowupsPage({
               ))}
             </select>
           )}
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</SubmitButton>
           <Link href={`/payout-followups?section=${activeTab}`} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
         </form>
       </section>
@@ -567,7 +577,7 @@ export default async function PayoutFollowupsPage({
                     <Link href={`/documents/invoices/${inv.id}`} className="mono font-bold text-[var(--ink)] hover:text-[var(--accent)]">{inv.invoiceNumber}</Link>
                     {overdueDays != null ? <StatusBadge tone="danger" className="shrink-0">{overdueDays}d overdue</StatusBadge> : <span className="text-emerald-600">On time</span>}
                   </div>
-                  <p className="text-[0.8125rem] font-medium text-[var(--ink)]">{inv.client?.fullName ?? "—"} <span className="text-[0.8125rem] font-normal text-[var(--ink-muted)]">{inv.client?.phone}</span></p>
+                  <p className="text-[0.8125rem] font-medium text-[var(--ink)]">{clientDisplayName(inv.client, "—")} <span className="text-[0.8125rem] font-normal text-[var(--ink-muted)]">{inv.client?.phone}</span></p>
                   <div className="mt-1 flex items-center gap-3 text-[0.75rem]">
                     <span className="font-semibold text-[var(--accent)] dark:text-[var(--accent)]">{formatMoneyCompact(balance, currency)} due</span>
                     <span className="text-[var(--ink-muted)]">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "No due date"}</span>
@@ -594,7 +604,7 @@ export default async function PayoutFollowupsPage({
               {
                 key: "client",
                 header: "Client",
-                cell: (inv) => <><p className="font-medium">{inv.client?.fullName ?? "—"}</p><p className="text-[0.75rem] text-[var(--ink-muted)]">{inv.client?.phone ?? ""}</p></>,
+                cell: (inv) => <><p className="font-medium">{clientDisplayName(inv.client, "—")}</p><p className="text-[0.75rem] text-[var(--ink-muted)]">{inv.client?.phone ?? ""}</p></>,
               },
               {
                 key: "type",
@@ -663,7 +673,7 @@ export default async function PayoutFollowupsPage({
                     <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="mono text-[0.8125rem] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
                     <span className="text-[0.75rem] font-semibold text-amber-700 dark:text-amber-400">{formatMoneyCompact(job.clientBill ?? 0, currency)}</span>
                   </div>
-                  <p className="font-medium text-[var(--ink)]">{job.client?.fullName ?? "—"} <span className="font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
+                  <p className="font-medium text-[var(--ink)]">{clientDisplayName(job.client, "—")} <span className="font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
                   <p className="mt-0.5 text-[var(--ink-muted)]">{job.assignedTo?.name ?? "Unassigned"}{doneAt ? ` · ${new Date(doneAt).toLocaleDateString()}` : ""}</p>
                 </div>
               );
@@ -678,7 +688,7 @@ export default async function PayoutFollowupsPage({
               {
                 key: "client",
                 header: "Client",
-                cell: (job) => <><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-[0.75rem] text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
+                cell: (job) => <><p className="font-medium">{clientDisplayName(job.client, "—")}</p><p className="text-[0.75rem] text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
               },
               { key: "assigned", header: "Assigned To", cell: (job) => job.assignedTo?.name ?? "Unassigned" },
               {
@@ -825,7 +835,7 @@ export default async function PayoutFollowupsPage({
                     <Link href={`/jobs/${job.id}?tab=financials&returnTo=/payout-followups&returnLabel=Finance+Hub`} className="mono text-[0.8125rem] font-bold text-[var(--accent)]">{job.jobNumber}</Link>
                     <span className="text-[0.75rem] font-semibold text-blue-700 dark:text-blue-400">{formatMoneyCompact(remaining, currency)} due</span>
                   </div>
-                  <p className="font-medium text-[var(--ink)]">{job.client?.fullName ?? "—"} <span className="font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
+                  <p className="font-medium text-[var(--ink)]">{clientDisplayName(job.client, "—")} <span className="font-normal text-[var(--ink-muted)]">{job.client?.phone}</span></p>
                   <p className="mt-0.5 text-[var(--ink-muted)]">
                     {job.assignedTo?.name ?? "Unassigned"}{doneAt ? ` · ${new Date(doneAt).toLocaleDateString()}` : ""}
                     {alreadyPaid > 0 ? ` · Paid ${formatMoneyCompact(alreadyPaid, currency)} of ${formatMoneyCompact(payoutDue, currency)}` : ""}
@@ -854,7 +864,7 @@ export default async function PayoutFollowupsPage({
               {
                 key: "client",
                 header: "Client",
-                cell: (job) => <><p className="font-medium">{job.client?.fullName ?? "—"}</p><p className="text-[0.75rem] text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
+                cell: (job) => <><p className="font-medium">{clientDisplayName(job.client, "—")}</p><p className="text-[0.75rem] text-[var(--ink-muted)]">{job.client?.phone ?? "—"}</p></>,
               },
               { key: "technician", header: "Technician", cell: (job) => job.assignedTo?.name ?? "Unassigned" },
               { key: "status", header: "Status", cell: (job) => job.status },

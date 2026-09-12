@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import { amountInWords } from "@/lib/amount-in-words";
 import { renderToBuffer } from "@react-pdf/renderer";
 
 import { getClientBill } from "@/lib/billing";
@@ -11,6 +12,7 @@ import { compactText, compactListText, prettyEnum, resolveInvoiceLogo } from "@/
 import type { PdfLineItem } from "@/lib/pdf/pdf-line-items";
 import { InvoiceTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
 import { prisma } from "@/lib/prisma";
+import { syncJobInvoiceLines } from "@/lib/commercial/job-invoice-lines";
 
 export type GenerateInvoiceResult =
   | { ok: true; buffer: Buffer; filename: string; invoiceNumber: string; clientPhone: string }
@@ -35,13 +37,16 @@ export async function generateInvoiceBuffer(
     where: expectedOrgId ? { id: jobId, orgId: expectedOrgId } : { id: jobId },
     select: {
       id: true, jobNumber: true, status: true, repairPath: true,
-      invoiceNumber: true, invoiceIssuedAt: true,
+      invoiceNumber: true, invoiceIssuedAt: true, quotationNumber: true,
       orgId: true,
       deviceType: true, brand: true, model: true, serialOrImei: true,
       accessories: true, physicalNotes: true, issueDescription: true,
       diagnosisNotes: true, externalDiagnosis: true, recommendedRepair: true,
       recommendationOption: true, clientConversationNote: true,
       partsNeeded: true, clientBill: true, vatApplicable: true,
+      serviceType: true, softwareOsInstall: true, softwareDriversUpdates: true,
+      softwareDataBackupRestore: true, softwareAccountSetup: true,
+      softwarePerformanceTune: true, softwareThirdPartyApps: true,
       workDone: true, partsReplaced: true,
       clientApproved: true, approvalDate: true, quotedAt: true,
       repairTimeline: true, timelineNote: true, technicianNotes: true, statusNote: true,
@@ -111,15 +116,28 @@ export async function generateInvoiceBuffer(
   const issuedAtDate = new Date();
   const dueDate = new Date(issuedAtDate);
   dueDate.setDate(dueDate.getDate() + branding.quoteValidityDays);
-  const logoUrl = await resolveInvoiceLogo();
+  const logoUrl = await resolveInvoiceLogo(orgId);
   const normalizedFooterText = (branding.footerText ?? "").trim();
-  const quotationNumber = deriveDocNumberFromJob(job.jobNumber, "QT");
-  const preferredInvoiceNumber = job.invoiceNumber?.trim() || deriveDocNumberFromJob(job.jobNumber, "INV");
-  let invoiceNumber = preferredInvoiceNumber;
+  // Print the quotation number the customer actually received, not a fresh
+  // derivation of it — otherwise the invoice cites a quote number that was
+  // never on any quote.
+  const quotationNumber = job.quotationNumber?.trim() || deriveDocNumberFromJob(job.jobNumber, "QT");
+  // Only a number this job has already been issued may be reused. A number
+  // derived from the job number must never reach the allocator: job numbering
+  // has changed shape four times, and deriving from it is what put four
+  // different formats into the invoice book. Jobs still open from the dash era
+  // would keep minting fresh INV-EI-2026-NNNN invoices today. Without a stored
+  // number the invoice takes the next EIS/INV/YYYY/NNNN from DocumentSequence,
+  // which is what standalone invoices have always done.
+  const storedInvoiceNumber = job.invoiceNumber?.trim() || null;
+  // Read-only workspaces render without persisting, so there is no allocation
+  // to show; the derived number stands in on a PDF that is never issued.
+  const unpersistedInvoiceNumber = storedInvoiceNumber ?? deriveDocNumberFromJob(job.jobNumber, "INV");
+  let invoiceNumber = unpersistedInvoiceNumber;
   const invoiceTotal = clientBill;
 
   if (options.skipPersist) {
-    invoiceNumber = job.invoiceNumber?.trim() || preferredInvoiceNumber;
+    invoiceNumber = unpersistedInvoiceNumber;
   } else if (options.persistInvoiceRecord && orgId) {
     try {
       invoiceNumber = await prisma.$transaction(async (tx) => {
@@ -130,7 +148,7 @@ export async function generateInvoiceBuffer(
         const safeInvoiceNumber = await nextAvailableInvoiceNumber(
           tx,
           orgId,
-          existingInvoice?.invoiceNumber ?? preferredInvoiceNumber,
+          existingInvoice?.invoiceNumber ?? storedInvoiceNumber,
           existingInvoice?.id,
         );
 
@@ -161,6 +179,23 @@ export async function generateInvoiceBuffer(
           });
         }
 
+        // Itemise the repair on whichever invoice row we just wrote, so the
+        // line-item block and the subtotal the PDF prints describe the same
+        // money — and so the invoice can be credited line by line.
+        const persisted = await tx.invoice.findFirst({
+          where: { orgId, jobId: job.id },
+          select: { id: true },
+        });
+        if (persisted) {
+          await syncJobInvoiceLines(tx, {
+            orgId,
+            invoiceId: persisted.id,
+            job,
+            clientBill: invoiceTotal,
+            currency,
+          });
+        }
+
         await tx.job.update({
           where: { id: job.id },
           data: {
@@ -188,22 +223,36 @@ export async function generateInvoiceBuffer(
       }).catch(() => null);
     }
   } else if (staffUserId) {
-    invoiceNumber = preferredInvoiceNumber;
-    await prisma.$transaction([
-      prisma.job.update({
-        where: { id: job.id },
-        data: { invoiceIssuedAt: issuedAtDate, invoiceNumber },
-      }),
-      prisma.auditLog.create({
-        data: {
-          jobId: job.id,
-          userId: staffUserId,
-          action: "INVOICE_GENERATED",
-          detail: JSON.stringify({ invoiceNumber }),
-          orgId: job.orgId,
-        },
-      }),
-    ]).catch(() => null);
+    // Renders and sends a PDF without creating an Invoice row — but it still
+    // stamps the number onto the job, so the number has to be a real one.
+    // Stamping a job-derived number here is what seeded Job.invoiceNumber with
+    // the dash-era formats that the persist path above then faithfully reused;
+    // the WhatsApp send, the PDF queue and the plain download all land here.
+    // Allocating burns a sequence number without an Invoice row, which is the
+    // right trade: the number is printed and sent, so it is genuinely spent.
+    try {
+      invoiceNumber = await prisma.$transaction(async (tx) => {
+        const allocated = orgId
+          ? await nextAvailableInvoiceNumber(tx, orgId, storedInvoiceNumber)
+          : unpersistedInvoiceNumber;
+        await tx.job.update({
+          where: { id: job.id },
+          data: { invoiceIssuedAt: issuedAtDate, invoiceNumber: allocated },
+        });
+        await tx.auditLog.create({
+          data: {
+            jobId: job.id,
+            userId: staffUserId,
+            action: "INVOICE_GENERATED",
+            detail: JSON.stringify({ invoiceNumber: allocated }),
+            orgId: job.orgId,
+          },
+        });
+        return allocated;
+      });
+    } catch {
+      invoiceNumber = unpersistedInvoiceNumber;
+    }
   }
 
   const docElement = createElement(InvoiceDoc as never, {
@@ -214,6 +263,7 @@ export async function generateInvoiceBuffer(
     companyContacts: branding.companyContacts,
     companyEmail: branding.companyEmail ?? "",
     companyWebsite: branding.companyWebsite ?? "",
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl,
     paymentInstructions: (branding as unknown as { paymentInstructions?: string | null }).paymentInstructions ?? "",
     documentTitle: "INVOICE",
@@ -243,6 +293,7 @@ export async function generateInvoiceBuffer(
     vatLabel: `${branding.vatLabel ?? "VAT"} (${branding.vatRatePercent ?? 0}%)`,
     vatAmount: formatMoney(vatAmount, currency),
     totalAmountPayable: formatMoney(clientBill, currency),
+    amountWords: amountInWords(clientBill, currency),
     // Actual money received on the linked invoice, and the resulting balance —
     // not the old clientApproved-based guess, so the PDF matches the job's money panel.
     paymentMade: formatMoney(paidAmount, currency),

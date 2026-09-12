@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { CreateStandaloneInvoiceForm } from "./CreateStandaloneInvoiceForm";
 
 type ClientOption = {
@@ -12,7 +13,7 @@ type ClientOption = {
   address: string | null;
 };
 
-type LeadOption = {
+export type LeadOption = {
   id: string;
   fullName: string;
   phone: string | null;
@@ -21,7 +22,7 @@ type LeadOption = {
   interest: string | null;
 };
 
-type JobOption = {
+export type JobOption = {
   id: string;
   jobNumber: string;
   brand: string | null;
@@ -108,10 +109,14 @@ export function InvoiceCreateDialog({
     };
   }, [close]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+  // Portaled to document.body: <main> carries `fade-in`, whose `fill-mode: both`
+  // leaves a transform applied permanently, making <main> the containing block
+  // for position:fixed descendants. In place, this covered the content column
+  // rather than the viewport.
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label={editInvoiceId ? "Edit invoice" : "New invoice"} className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/55 backdrop-blur-sm" onClick={close} />
       <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
         <div className="relative w-full max-w-[1300px] rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl overflow-hidden">
@@ -145,7 +150,8 @@ export function InvoiceCreateDialog({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

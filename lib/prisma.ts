@@ -144,7 +144,7 @@ void basePrisma.$connect().catch(() => {/* errors surface on first query */});
  * The application's client type, and the transaction-scoped variant.
  *
  * Helpers that accept "either the global client or a transaction client" must
- * be typed against these rather than `PrismaClient` / `Prisma.TransactionClient`:
+ * be typed against these rather than `PrismaClient` / `TxClient`:
  * an extended client is a structurally different type, so the generated
  * built-ins do not accept it.
  */

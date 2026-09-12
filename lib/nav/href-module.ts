@@ -12,6 +12,7 @@ export const HREF_MODULE: Record<string, string> = {
   "/clients": "JOBS",
   "/payout-followups": "JOBS",
   "/complaints": "COMPLAINTS",
+  "/warranty": "JOBS",
   "/field": "FIELD",
   "/inventory": "INVENTORY",
   "/inventory/locations": "INVENTORY",

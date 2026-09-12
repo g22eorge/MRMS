@@ -10,7 +10,8 @@ import { HubTabs } from "@/components/shared/HubTabs";
 import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RowActionsMenu, MenuSection, MenuActionButton } from "@/components/shared/RowActionsMenu";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
   approveStockTransferAction,
   cancelStockTransferAction,
@@ -49,14 +50,15 @@ export default async function StockTransfersPage({
   const locationCreated = createdFlag === "location";
   const error = typeof params.error === "string" ? params.error : "";
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const [transfers, transfersTotal, locations, parts] = await Promise.all([
     prisma.stockTransfer.findMany({
       where: { orgId },
       orderBy: { createdAt: "desc" },
       include: { items: { include: { part: { select: { sku: true, name: true } } } } },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }).catch(() => []),
     prisma.stockTransfer.count({ where: { orgId } }).catch(() => 0),
     prisma.stockLocation.findMany({ where: { orgId, isActive: true }, orderBy: { name: "asc" } }).catch(() => []),
@@ -67,8 +69,10 @@ export default async function StockTransfersPage({
     prisma.stockTransfer.count({ where: { orgId, status: "DISPATCHED" } }).catch(() => 0),
   ]);
   const locationName = new Map(locations.map((location) => [location.id, location.name]));
-  const pageView = paginationView(page, transfersTotal);
-  const hrefForPage = pageHrefBuilder("/inventory/transfers", {});
+  const pageView = paginationView(page, transfersTotal, pageSize);
+  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPage = pageHrefBuilder("/inventory/transfers", hrefForPageFilters);
+  const hrefForPageSize = sizeHrefBuilder("/inventory/transfers", hrefForPageFilters);
 
   // Named so the same status actions render in the desktop table AND mobile card.
   const renderTransferActions = (transfer: (typeof transfers)[number]) => {
@@ -112,7 +116,6 @@ export default async function StockTransfersPage({
     <ListPageLayout
       topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
-        eyebrow: "Inventory",
         title: "Stock Transfers",
         kpis: [
           { label: "Total", value: transfersTotal, sub: "transfers" },
@@ -135,7 +138,7 @@ export default async function StockTransfersPage({
               </p>
               <form action={createLocationForTransferAction} className="flex flex-wrap gap-2">
                 <input name="name" required placeholder="e.g. Main Store, Warehouse B" className="min-w-[12rem] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-                <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Add location</button>
+                <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Add location</SubmitButton>
               </form>
             </div>
           ) : (
@@ -156,7 +159,7 @@ export default async function StockTransfersPage({
               </select>
               <input name="quantity" placeholder="Qty" inputMode="numeric" required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
               <input name="note" placeholder="Note" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-              <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Request</button>
+              <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Request</SubmitButton>
             </form>
           </div>
           )}
@@ -166,7 +169,7 @@ export default async function StockTransfersPage({
       <DataTable
         rows={transfers}
         getRowKey={(transfer) => transfer.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total: transfersTotal, hrefForPage, unit: "transfers" }}
+        pagination={{ page: pageView.page, pageSize, total: transfersTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "transfers" }}
         empty="No transfer requests yet."
         columns={[
           {

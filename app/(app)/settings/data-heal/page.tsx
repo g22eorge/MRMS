@@ -7,6 +7,7 @@ import { getCurrentUserRole } from "@/lib/session";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { DataTable } from "@/components/ui/DataTable";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export default async function DataHealPage({
   searchParams,
 }: {
@@ -83,10 +84,10 @@ export default async function DataHealPage({
         ) : null}
         <div className="flex flex-wrap gap-2">
           <form action={runDry}>
-            <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Run Dry Check</button>
+            <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Run Dry Check</SubmitButton>
           </form>
           <form action={runApply}>
-            <button type="submit" className="btn-premium rounded-lg px-3 py-2 text-sm font-semibold text-white">Run Heal Now</button>
+            <SubmitButton bare className="btn-premium rounded-lg px-3 py-2 text-sm font-semibold text-white">Run Heal Now</SubmitButton>
           </form>
         </div>
       </section>

@@ -92,7 +92,6 @@ export default async function VatReportPage({
   return (
     <div className="print-area space-y-4">
       <PageHeader
-        eyebrow="Finance"
         title="VAT Summary"
         description={periodLabel}
         actions={

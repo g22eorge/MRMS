@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { computeLinesVat } from "@/lib/commercial/vat";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { can } from "@/lib/permissions";
-import { normalizeCurrency, roundMoney } from "@/lib/currency";
+import { normalizeCurrency, readCurrencyAndRate, roundMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { requireOrgSession } from "@/lib/org-context";
@@ -25,6 +25,10 @@ export type CreateQuotationInput = {
   taxApplicable?: boolean;
   taxRate?: number;
   taxLabel?: string;
+  /** Document currency. Defaults to the organisation's own when absent. */
+  currency?: string;
+  /** Base units per 1 unit of `currency`; required when they differ. */
+  exchangeRate?: string | number;
   items: Array<{
     partId?: string | null;
     description: string;
@@ -80,7 +84,19 @@ export async function createQuotationRecord(data: CreateQuotationInput) {
 
   // Currency must follow the org, not a process-wide env var (multi-tenant).
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { baseCurrency: true } }).catch(() => null);
-  const currency = normalizeCurrency(org?.baseCurrency, process.env.APP_CURRENCY ?? "UGX");
+  const baseCurrency = normalizeCurrency(org?.baseCurrency, process.env.APP_CURRENCY ?? "UGX");
+
+  // A quote may be raised in a currency the business does not keep its books
+  // in. The rate is captured here and stored on the row, so the shilling value
+  // of this quote is fixed at the moment it was agreed rather than moving with
+  // the market every time someone opens it.
+  const money = readCurrencyAndRate({
+    currency: data.currency ?? baseCurrency,
+    exchangeRate: data.exchangeRate,
+    baseCurrency,
+  });
+  if (money.error) throw new Error(money.error);
+  const currency = money.currency;
   // Round to the currency's minor unit so subtotal + tax === total to the shilling.
   const subtotal = roundMoney(items.reduce((sum, item) => sum + item.lineTotal, 0), currency);
   const requestedTaxRate = Number(data.taxRate);
@@ -203,6 +219,7 @@ export async function createQuotationRecord(data: CreateQuotationInput) {
         taxRate: vatAmount > 0 ? taxRate : null,
         totalAmount,
         currency,
+        exchangeRateToBase: money.exchangeRateToBase,
         issueDate: data.issueDate ? new Date(data.issueDate) : new Date(),
         validUntil: data.validUntil ? new Date(data.validUntil) : null,
         notes: data.notes ? sanitizeText(data.notes) : null,

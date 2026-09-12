@@ -23,6 +23,8 @@ const JOBS = [
   { name: "subscription-lifecycle", path: "/api/cron/subscription-lifecycle", schedule: "0 6 * * *" },
   { name: "data-heal",              path: "/api/cron/data-heal",              schedule: "30 2 * * *" },
   { name: "audit-prune",            path: "/api/cron/audit-prune",            schedule: "0 3 * * 0" },
+  { name: "payment-reminders",      path: "/api/cron/payment-reminders",      schedule: "0 8 * * *" },
+  { name: "fx-rates",               path: "/api/cron/fx-rates",               schedule: "0 5 * * *" },
 ];
 
 if (!CRON_SECRET) {

@@ -1,5 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { AmountInWordsLine } from "@/lib/pdf/house";
 
+import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 const DARK = "#0f172a";
 const MID = "#475569";
 const LIGHT = "#94a3b8";
@@ -31,6 +33,7 @@ type Props = {
   companyContacts: string;
   companyEmail: string;
   companyWebsite: string;
+  companyTaxId?: string | null;
   companyLogoUrl: string | null;
 
   quotationNumber: string;
@@ -59,6 +62,7 @@ type Props = {
   vatLabel: string;
   vatAmount: string;
   totalAmountPayable: string;
+  amountWords?: string | null;
   estimatedDuration: string;
   approvalStatus: string;
   recommendation: string;
@@ -66,6 +70,7 @@ type Props = {
   status: string;
   currency: string;
   termsText: string;
+  promo?: QuotationPromo | null;
   footerText: string;
   signatureCompanyLabel: string;
   signatureClientLabel: string;
@@ -77,6 +82,7 @@ export function QuotationDocumentMinimal(props: Props) {
     props.companyContacts,
     props.companyEmail,
     props.companyWebsite,
+    props.companyTaxId ? `TIN: ${props.companyTaxId}` : "",
   ].filter(Boolean).join(" · ");
 
   const addressLine = [props.companyAddressLine1, props.companyAddressLine2].filter(Boolean).join(" · ");
@@ -137,6 +143,7 @@ export function QuotationDocumentMinimal(props: Props) {
                 <Text style={s.muted}>Total payable</Text>
                 <Text style={s.moneyTotal}>{props.totalAmountPayable}</Text>
               </View>
+              <AmountInWordsLine value={props.amountWords} />
             </View>
           </View>
         </View>
@@ -191,6 +198,8 @@ export function QuotationDocumentMinimal(props: Props) {
           </View>
         </View>
         {props.footerText ? <Text style={[s.tiny, { marginTop: 8 }]}>{props.footerText}</Text> : null}
+        <QuotationPromoStrip promo={props.promo} />
+
       </Page>
     </Document>
   );

@@ -7,6 +7,7 @@ import { getAppCurrency } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
+import { clientDisplayName } from "@/lib/client-name";
 import { JOB_STATUSES, isOpenJobStatus } from "@/lib/job-status";
 
 type ExportType =
@@ -22,9 +23,16 @@ type ExportType =
   | "leads"
   | "staff-sales";
 
-function toCsv(rows: Array<Record<string, string | number>>) {
-  if (rows.length === 0) return "";
-  const headers = Object.keys(rows[0]);
+/**
+ * columns is required rather than inferred from the first row, because the
+ * empty case is the one that mattered: with no rows there is no first row to
+ * read keys from, so an export with nothing to report produced a zero-byte
+ * file. A spreadsheet opens that as nothing at all, which is indistinguishable
+ * from a failed download — and "no sales in this month" is a real answer that
+ * the report should be able to give.
+ */
+function toCsv(rows: Array<Record<string, string | number>>, columns: string[]) {
+  const headers = columns.length > 0 ? columns : Object.keys(rows[0] ?? {});
   const escape = (value: string | number) => {
     const raw = String(value ?? "");
     if (raw.includes(",") || raw.includes("\n") || raw.includes('"')) {
@@ -159,7 +167,7 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "jobNumber", "status", "repairPath", "etaWindow", "etaConfidence", "etaMinHours", "etaMaxHours", "assignedTo", "receivedAt", "ageDays", "ageBucket"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -191,7 +199,7 @@ export async function GET(req: NextRequest) {
         month: month.label,
         currency,
         jobNumber: job.jobNumber,
-        client: job.client.fullName,
+        client: clientDisplayName(job.client),
         completedAt: job.completedAt?.toISOString() ?? "",
         externalTechBill: externalTechBill.toFixed(2),
         ourBillToClient: clientBill.toFixed(2),
@@ -200,7 +208,7 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "month", "currency", "jobNumber", "client", "completedAt", "externalTechBill", "ourBillToClient", "repairMargin", "marginPct"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -238,7 +246,7 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "currency", "jobNumber", "technician", "status", "completedAt", "externalTechFee", "payoutStatus", "paidAt", "paymentRef"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -370,7 +378,7 @@ export async function GET(req: NextRequest) {
       })
       .sort((a, b) => b.totalJobs - a.totalJobs);
 
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "month", "currency", "deviceType", "totalJobs", "openJobs", "completedJobs", "cancelledOrClosedJobs", "externalJobs", "inHouseJobs", "completionRatePct", "avgTurnaroundHours", "revenue", "margin", "avgMarginPerJob", "topTechnician"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -397,7 +405,7 @@ export async function GET(req: NextRequest) {
       discountAmount: s.discountAmount.toFixed(2),
       createdBy: s.createdBy?.name ?? "",
     }));
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "month", "currency", "saleNumber", "paidAt", "totalAmount", "discountAmount", "createdBy"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -419,7 +427,7 @@ export async function GET(req: NextRequest) {
       month: month.label,
       currency,
       invoiceNumber: inv.invoiceNumber,
-      client: inv.client?.fullName ?? "",
+      client: clientDisplayName(inv.client, ""),
       status: inv.status,
       issuedAt: inv.issuedAt.toISOString(),
       dueAt: inv.dueDate?.toISOString() ?? "",
@@ -428,7 +436,7 @@ export async function GET(req: NextRequest) {
       paidAmount: inv.paidAmount?.toFixed(2) ?? "0.00",
       balance: Math.max(0, inv.totalAmount - (inv.paidAmount ?? 0)).toFixed(2),
     }));
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "month", "currency", "invoiceNumber", "client", "status", "issuedAt", "dueAt", "paidAt", "totalAmount", "paidAmount", "balance"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -459,7 +467,7 @@ export async function GET(req: NextRequest) {
       reference: e.reference ?? "",
       createdBy: e.createdBy?.name ?? "",
     }));
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "month", "currency", "expenseNumber", "category", "description", "supplier", "paidAt", "amount", "method", "reference", "createdBy"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -493,7 +501,7 @@ export async function GET(req: NextRequest) {
       purchaseUom: p.purchaseUom ?? "",
       purchaseUomFactor: p.purchaseUomFactor ?? "",
     }));
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "currency", "sku", "name", "manufacturer", "category", "baseUom", "qtyOnHand", "reorderLevel", "stockStatus", "unitCost", "sellingPrice", "totalValue", "saleUom", "saleUomFactor", "purchaseUom", "purchaseUomFactor"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -523,7 +531,7 @@ export async function GET(req: NextRequest) {
       createdAt: l.createdAt.toISOString(),
       updatedAt: l.updatedAt.toISOString(),
     }));
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "currency", "leadName", "organization", "email", "phone", "status", "source", "estimatedValue", "assignedTo", "createdAt", "updatedAt"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -576,7 +584,7 @@ export async function GET(req: NextRequest) {
         targetPct: s.target > 0 ? Math.round((total / s.target) * 100) + "%" : "",
       };
     });
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, ["exportedAt", "month", "currency", "name", "repairRevenue", "posRevenue", "invoiceRevenue", "totalRevenue", "target", "targetPct"]);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
@@ -638,7 +646,7 @@ export async function GET(req: NextRequest) {
       : "0.00",
   }));
 
-  const csv = toCsv(rows);
+  const csv = toCsv(rows, ["exportedAt", "technician", "role", "assignedJobs", "completedJobs", "completionRatePct", "avgTurnaroundHours"]);
   return new NextResponse(csv, {
     headers: {
       "content-type": "text/csv; charset=utf-8",

@@ -54,6 +54,29 @@ TLS-terminating reverse proxy in front of it (Caddy or nginx) and set
 `NEXT_PUBLIC_APP_URL` to the public HTTPS URL — BetterAuth uses it for cookies
 and redirects, so a mismatch shows up as login loops.
 
+### The proxy must preserve the Host header, and `BETTER_AUTH_URL` must be set
+
+Deployment mode is decided from the host (`lib/deployment-context.ts`):
+`care.eagleinfosolutions.com` is single-tenant, everything else is the
+commercial multi-tenant product. On Vercel the application always saw the real
+public host. Behind a container proxy it does not, unless the proxy is
+configured to forward it — an unconfigured `proxy_pass` hands the app its own
+internal service name, `app:3000`, which does not begin `care.`, and care would
+resolve as COMMERCIAL_MULTI_TENANT: `/register` renders, and a signup with no
+orgId is sent to `/onboarding` to create a second organisation inside a
+single-tenant deployment.
+
+Two independent things prevent that, and the care deployment should have both:
+
+- Forward the original host — `proxy_set_header Host $host;` in nginx, which
+  Caddy's `reverse_proxy` does by default.
+- Set `BETTER_AUTH_URL=https://care.eagleinfosolutions.com`. Any care signal
+  wins regardless of the request host, so this holds the deployment in
+  single-tenant mode even if the proxy is misconfigured.
+
+The commercial deployment needs neither for this purpose — multi-tenant is the
+fallback — but both are still wanted for correct cookies and redirects.
+
 ## Loading data from the old SQLite/Turso database
 
 The importer runs in the `migrate` image. Mount the dump read-only:

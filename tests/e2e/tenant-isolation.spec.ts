@@ -1,6 +1,7 @@
 import { expect, test, type Cookie, type Page } from "@playwright/test";
 import { OrgModule, PrismaClient } from "@prisma/client";
 import { hashPassword } from "better-auth/crypto";
+import { destroyE2eOrg } from "./fixtures/destroy-org";
 
 process.env.DATABASE_URL = process.env.E2E_DATABASE_URL ?? process.env.DATABASE_URL;
 
@@ -226,4 +227,12 @@ test("tenant-scoped job APIs and documents do not expose another organization", 
   const auditCsv = await page.evaluate(async () => fetch("/api/audit/export", { headers: { accept: "text/csv" } }).then((r) => r.text()));
   expect(auditCsv).not.toContain("TENANT_B_SECRET_AUDIT");
   expect(auditCsv).not.toContain("Tenant B audit secret");
+});
+
+// Leave the database as we found it. Without this the fixture org and every
+// document these tests create survive the run, and the next spec — and the next
+// run — sees data it did not put there.
+test.afterAll(async () => {
+  await destroyE2eOrg(prisma, "e2e-tenant-a");
+  await destroyE2eOrg(prisma, "e2e-tenant-b");
 });

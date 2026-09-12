@@ -3,6 +3,7 @@
 import { useActionState, useTransition } from "react";
 import { saveWhatsAppConfigAction, deleteWhatsAppConfigAction } from "@/app/(app)/settings/notifications/whatsapp/actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 /**
  * Only the non-secret identifiers. This is a Client Component, so whatever it
  * receives is serialised into the RSC payload embedded in the page HTML — and
@@ -112,13 +113,10 @@ export function WhatsAppConfigForm({ orgId, current }: Props) {
         )}
 
         <div className="flex items-center gap-3 pt-1">
-          <button
-            type="submit"
-            disabled={saving}
-            className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
-          >
+          <SubmitButton bare disabled={saving}
+ className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
             {saving ? "Saving…" : current ? "Update credentials" : "Connect WhatsApp"}
-          </button>
+          </SubmitButton>
 
           {current && (
             <button

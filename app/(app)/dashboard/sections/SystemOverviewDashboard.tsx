@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { JobStatus } from "@/lib/job-status";
+import { ACTIVE_JOB_STATUSES } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { routeLabel } from "@/lib/nav/registry";
 import { prisma } from "@/lib/prisma";
@@ -14,7 +15,7 @@ export async function SystemOverviewDashboard({ orgId }: { orgId: string }) {
     prisma.job.count({
       where: {
         orgId,
-        status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "IN_REPAIR", "READY_FOR_PICKUP", "AWAITING_APPROVAL"]) as JobStatus[] },
+        status: { in: filterSupportedJobStatuses(ACTIVE_JOB_STATUSES) as JobStatus[] },
       },
     }),
     prisma.job.count({ where: { orgId, status: "COMPLETED" } }),

@@ -11,7 +11,7 @@ import { HubTabs } from "@/components/shared/HubTabs";
 import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { RowActionsMenu, MenuActionLink, MenuSection } from "@/components/shared/RowActionsMenu";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,7 @@ export default async function SuppliersPage({
 
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const now = new Date();
 
@@ -34,8 +35,8 @@ export default async function SuppliersPage({
       where: {},
       orderBy: { name: "asc" },
       include: { _count: { select: { purchaseOrders: true } } },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }),
     db.supplier.count({ where: {} }).catch(() => 0),
     db.supplier.count({ where: { isActive: true } }).catch(() => 0),
@@ -43,14 +44,15 @@ export default async function SuppliersPage({
     db.supplierBill.count({ where: { dueAt: { lt: now }, status: { notIn: ["PAID", "CANCELLED"] } } }).catch(() => 0),
   ]);
 
-  const pageView = paginationView(page, suppliersTotal);
-  const hrefForPage = pageHrefBuilder("/inventory/suppliers", {});
+  const pageView = paginationView(page, suppliersTotal, pageSize);
+  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPage = pageHrefBuilder("/inventory/suppliers", hrefForPageFilters);
+  const hrefForPageSize = sizeHrefBuilder("/inventory/suppliers", hrefForPageFilters);
 
   return (
     <ListPageLayout
       topBar={<HubTabs items={INVENTORY_TABS} />}
       header={{
-        eyebrow: "Inventory",
         title: "Suppliers",
         description: `${suppliersTotal} registered`,
         actions: (
@@ -93,7 +95,7 @@ export default async function SuppliersPage({
       <DataTable
         rows={suppliers}
         getRowKey={(s) => s.id}
-        pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total: suppliersTotal, hrefForPage, unit: "suppliers" }}
+        pagination={{ page: pageView.page, pageSize, total: suppliersTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "suppliers" }}
         empty="No suppliers yet. Add your first supplier to start raising purchase orders."
         columns={[
           {

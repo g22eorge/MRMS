@@ -7,12 +7,15 @@ import { can } from "@/lib/permissions";
 import { PLAN_LIMITS, PLAN_LABELS, getLimitsForOrg } from "@/lib/plan-limits";
 import { PlanBanner } from "@/components/shared/PlanBanner";
 import { TRIAL_DAYS } from "@/lib/billing-access";
-import { submitOrder, getOrCreateIpnId, buildMerchantRef, PLAN_PRICES, CURRENCY } from "@/lib/pesapal";
-import { getOrgModules, MODULE_LABELS } from "@/lib/module-access";
-import { ModuleIcon } from "@/components/shared/ModuleIcon";
+import { submitOrder, getOrCreateIpnId, buildMerchantRef, CURRENCY } from "@/lib/pesapal";
+import { getEffectivePlanPrice, getEffectivePlanPrices } from "@/lib/plan-prices";
+import { getOrgModules } from "@/lib/module-access";
+import { OrgModuleControls } from "@/components/settings/OrgModuleControls";
 import { formatMoney } from "@/lib/currency";
 import { getPesapalConsumerKey, getPesapalConsumerSecret } from "@/lib/platform-settings";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
 // ── Server actions ────────────────────────────────────────────────────────────
 
 async function startGrowthTrial() {
@@ -38,7 +41,7 @@ async function startGrowthTrial() {
   });
 
   revalidatePath("/settings/billing");
-  redirect("/dashboard");
+  redirect(flash("/dashboard", "Saved"));
 }
 
 async function subscribeToPlan(formData: FormData) {
@@ -52,20 +55,40 @@ async function subscribeToPlan(formData: FormData) {
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const merchantRef = buildMerchantRef(orgId, targetPlan);
-  const ipnId = await getOrCreateIpnId();
 
-  const result = await submitOrder({
-    merchantReference: merchantRef,
-    amount: PLAN_PRICES[targetPlan],
-    currency: "UGX",
-    description: `Duuka ProMax ${targetPlan} plan`,
-    callbackUrl: `${baseUrl}/api/billing/callback`,
-    ipnId,
-    email: user.email,
-    name: user.name,
-  });
+  let redirectUrl: string;
+  try {
+    const ipnId = await getOrCreateIpnId();
 
-  redirect(result.redirect_url);
+    // The override, not the raw table. The webhook and the callback verify the
+    // amount against getEffectivePlanPrice, so charging the base price while a
+    // platform override is set would have every payment rejected for an amount
+    // mismatch — one price to charge and another to verify, which is the exact
+    // defect this system already had once.
+    const amount = await getEffectivePlanPrice(targetPlan);
+    if (amount == null) throw new Error(`No price configured for ${targetPlan}`);
+
+    const result = await submitOrder({
+      merchantReference: merchantRef,
+      amount,
+      currency: CURRENCY,
+      description: `Duuka ProMax ${targetPlan} plan`,
+      callbackUrl: `${baseUrl}/api/billing/callback`,
+      ipnId,
+      email: user.email,
+      name: user.name,
+    });
+    redirectUrl = result.redirect_url;
+  } catch (err) {
+    // Unconfigured credentials, an unregisterable IPN, or Pesapal being down
+    // all threw out of this action unhandled, so pressing Subscribe produced a
+    // bare error page with a digest and no explanation. Nothing has been
+    // charged at this point, and saying so is the whole message.
+    console.error("[billing/subscribe]", err);
+    redirect("/settings/billing?payment=unavailable");
+  }
+
+  redirect(redirectUrl);
 }
 
 async function cancelPlan() {
@@ -153,6 +176,7 @@ export default async function BillingPage({
 
   const paymentNotice = (() => {
     if (params.payment === "success") return { tone: "success" as const, title: "Payment received", body: "Your subscription is active." };
+    if (params.payment === "unavailable") return { tone: "warn" as const, title: "Payments are not available right now", body: "You have not been charged. This is a problem on our side rather than with your details — please try again shortly, or contact support if it continues." };
     if (params.payment === "failed") return { tone: "error" as const, title: "Payment failed", body: "No charge was captured. Try again or use a different method." };
     if (params.payment === "cancelled") return { tone: "warn" as const, title: "Payment cancelled", body: "You can resume payment anytime." };
     return null;
@@ -277,7 +301,7 @@ export default async function BillingPage({
                   </div>
                   <p className="mt-1 text-lg font-bold text-[var(--ink)]">
                     <span className="text-base font-normal text-[var(--ink-muted)]">UGX </span>
-                    {formatMoney(PLAN_PRICES[key])}
+                    {formatMoney(prices[key] ?? 0)}
                     <span className="text-sm font-normal text-[var(--ink-muted)]"> / mo</span>
                   </p>
                 </div>
@@ -291,25 +315,19 @@ export default async function BillingPage({
                 <div className="space-y-2">
                   <form action={subscribeToPlan}>
                     <input type="hidden" name="plan" value={key} />
-                    <button
-                      type="submit"
-                      className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-                        highlight
-                          ? "btn-premium text-white"
-                          : "border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--accent)]/10"
-                      }`}
-                    >
+                    <SubmitButton bare className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+ highlight
+ ? "btn-premium text-white"
+ : "border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--accent)]/10"
+ }`}>
                       Subscribe to {PLAN_LABELS[key]}
-                    </button>
+                    </SubmitButton>
                   </form>
                   {key === "GROWTH" && canStartGrowthTrial && (
                     <form action={startGrowthTrial}>
-                      <button
-                        type="submit"
-                        className="w-full rounded-lg border border-[var(--accent)] py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
-                      >
+                      <SubmitButton bare className="w-full rounded-lg border border-[var(--accent)] py-2 text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors">
                         Try Growth free for 14 days
-                      </button>
+                      </SubmitButton>
                     </form>
                   )}
                 </div>
@@ -335,6 +353,12 @@ export default async function BillingPage({
   }
 
   // ── Normal billing page (active trial or paid) ─────────────────────────────
+  // Every price shown here is the one checkout will charge and the webhook will
+  // verify — a platform override has to move all three together or a customer
+  // is quoted one figure, charged it, and has the payment rejected against
+  // another.
+  const prices = await getEffectivePlanPrices();
+
   const plans: Array<{
     key: "STARTER" | "STANDARD" | "GROWTH" | "PREMIUM" | "ENTERPRISE";
     price: number | null;
@@ -354,7 +378,7 @@ export default async function BillingPage({
     },
     {
       key: "STANDARD",
-      price: PLAN_PRICES.STANDARD,
+      price: prices.STANDARD ?? null,
       features: [
         `${PLAN_LIMITS.STANDARD.maxUsers} team members`,
         `${PLAN_LIMITS.STANDARD.maxJobsPerMonth} jobs / month`,
@@ -365,7 +389,7 @@ export default async function BillingPage({
     },
     {
       key: "GROWTH",
-      price: PLAN_PRICES.GROWTH,
+      price: prices.GROWTH ?? null,
       highlight: true,
       features: [
         `${PLAN_LIMITS.GROWTH.maxUsers} team members`,
@@ -377,7 +401,7 @@ export default async function BillingPage({
     },
     {
       key: "PREMIUM",
-      price: PLAN_PRICES.PREMIUM,
+      price: prices.PREMIUM ?? null,
       features: [
         `${PLAN_LIMITS.PREMIUM.maxUsers} team members`,
         `${PLAN_LIMITS.PREMIUM.maxJobsPerMonth} jobs / month`,
@@ -388,7 +412,7 @@ export default async function BillingPage({
     },
     {
       key: "ENTERPRISE",
-      price: PLAN_PRICES.ENTERPRISE,
+      price: prices.ENTERPRISE ?? null,
       features: [
         "Unlimited team members",
         "Unlimited jobs & inventory",
@@ -480,7 +504,7 @@ export default async function BillingPage({
             <span className="font-medium text-[var(--ink)]">
               {org.planRenewsAt.toLocaleDateString("en-UG", { day: "numeric", month: "long", year: "numeric" })}
             </span>{" "}
-            · {CURRENCY} {formatMoney(PLAN_PRICES[org.plan] ?? 0)} / month
+            · {CURRENCY} {formatMoney(prices[org.plan] ?? 0)} / month
           </p>
         )}
 
@@ -492,12 +516,9 @@ export default async function BillingPage({
 
         {isAdmin && org.billingStatus === "ACTIVE" && (
           <form action={cancelPlan}>
-            <button
-              type="submit"
-              className="text-xs text-red-500 underline underline-offset-2 hover:text-red-600"
-            >
+            <SubmitButton bare className="text-xs text-red-500 underline underline-offset-2 hover:text-red-600">
               Cancel subscription
-            </button>
+            </SubmitButton>
           </form>
         )}
       </section>
@@ -513,17 +534,14 @@ export default async function BillingPage({
             {enabledModuleList.length} / 10
           </span>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {enabledModuleList.map((m) => (
-            <span key={m} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-xs font-medium text-[var(--ink)]">
-              <ModuleIcon module={m} className="h-4 w-4 text-[var(--accent)]" />
-              <span>{MODULE_LABELS[m]}</span>
-            </span>
-          ))}
-        </div>
-        <p className="text-[0.8125rem] text-[var(--ink-muted)]">
-          Modules are selected during onboarding and can be adjusted by a platform administrator.
-        </p>
+        {/* Was a read-only list telling the customer to ask a platform
+            administrator — a support request between them and a feature they
+            are entitled to. */}
+        <OrgModuleControls
+          enabled={enabledModuleList}
+          isTrialing={org.billingStatus === "TRIALING"}
+          canEdit={isAdmin}
+        />
       </section>
 
       {/* Plan cards — hide Starter upgrade (it's the free tier, no upgrade path back to it) */}
@@ -576,12 +594,9 @@ export default async function BillingPage({
               {canSubscribe && (
                 <form action={subscribeToPlan}>
                   <input type="hidden" name="plan" value={key} />
-                  <button
-                    type="submit"
-                    className="btn-premium w-full rounded-lg py-2 text-sm font-semibold text-white"
-                  >
+                  <SubmitButton bare className="btn-premium w-full rounded-lg py-2 text-sm font-semibold text-white">
                     Upgrade to {PLAN_LABELS[key]}
-                  </button>
+                  </SubmitButton>
                 </form>
               )}
 

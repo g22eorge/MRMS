@@ -16,8 +16,10 @@ import { can } from "@/lib/permissions";
 import { prisma, type Row } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
-import { PAGE_SIZE, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 
+import { clientDisplayName } from "@/lib/client-name";
+import { icontains } from "@/lib/db/search";
 type SearchParams = {
   status?: string;
   pricing?: string;
@@ -30,6 +32,7 @@ type SearchParams = {
   to?: string;
   dateField?: "receivedAt" | "completedAt";
   page?: string;
+  size?: string;
   sort?: string;
   view?: string;
   adv?: string;
@@ -46,7 +49,7 @@ const jobListSelect = {
   deviceType: true, brand: true, model: true, serialOrImei: true,
   clientId: true, deviceId: true, assignedToId: true,
   issueDescription: true, diagnosisNotes: true,
-  client:     { select: { id: true, fullName: true, phone: true } },
+  client:     { select: { id: true, fullName: true, phone: true, organization: true } },
   assignedTo: { select: { id: true, name: true } },
   device:     { select: { id: true, deviceType: true, brand: true, model: true } },
 } as const;
@@ -140,7 +143,7 @@ export default async function JobsPage({
   const payoutFilter = filters.payout === "due" || filters.payout === "paid" ? filters.payout : "";
   const page = Math.max(Number(filters.page ?? "1") || 1, 1);
   // Mobile gets a large batch for continuous scroll; desktop uses pages
-  const pageSize = PAGE_SIZE;
+  const pageSize = parsePageSize(filters.size);
   const sort = filters.sort === "job_number_desc" ? "job_number_desc" : "received_desc";
   const orderBy = sort === "job_number_desc" ? { jobNumber: "desc" as const } : { receivedAt: "desc" as const };
   const internalCanSearchAll =
@@ -223,13 +226,13 @@ export default async function JobsPage({
           ...(q
             ? {
                 OR: [
-                  { jobNumber: { contains: q , mode: "insensitive" as const} },
+                  { jobNumber: icontains(q) },
                   // External techs can still search by device details.
-                  { brand: { contains: q , mode: "insensitive" as const} },
-                  { model: { contains: q , mode: "insensitive" as const} },
-                  { device: { brand: { contains: q , mode: "insensitive" as const} } },
-                  { device: { model: { contains: q , mode: "insensitive" as const} } },
-                  { serialOrImei: { contains: q , mode: "insensitive" as const} },
+                  { brand: icontains(q) },
+                  { model: icontains(q) },
+                  { device: { brand: icontains(q) } },
+                  { device: { model: icontains(q) } },
+                  { serialOrImei: icontains(q) },
                 ],
               }
             : {}),
@@ -239,16 +242,16 @@ export default async function JobsPage({
           ...(q
             ? {
                 OR: [
-                  { jobNumber: { contains: q , mode: "insensitive" as const} },
-                  { client: { fullName: { contains: q , mode: "insensitive" as const} } },
-                  { client: { phone: { contains: q , mode: "insensitive" as const} } },
+                  { jobNumber: icontains(q) },
+                  { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+                  { client: { phone: icontains(q) } },
                   // Support both the legacy Job.brand/model fields and the newer Device relation.
-                  { brand: { contains: q , mode: "insensitive" as const} },
-                  { model: { contains: q , mode: "insensitive" as const} },
-                  { device: { brand: { contains: q , mode: "insensitive" as const} } },
-                  { device: { model: { contains: q , mode: "insensitive" as const} } },
-                  { serialOrImei: { contains: q , mode: "insensitive" as const} },
-                  { issueDescription: { contains: q , mode: "insensitive" as const} },
+                  { brand: icontains(q) },
+                  { model: icontains(q) },
+                  { device: { brand: icontains(q) } },
+                  { device: { model: icontains(q) } },
+                  { serialOrImei: icontains(q) },
+                  { issueDescription: icontains(q) },
                 ],
               }
             : {}),
@@ -301,7 +304,7 @@ export default async function JobsPage({
       canLoadClientRows
         ? prisma.client.findMany({
             where: { id: { in: clientIds } },
-            select: { id: true, fullName: true, phone: true },
+            select: { id: true, fullName: true, phone: true, organization: true },
           })
         : Promise.resolve([]),
       prisma.user.findMany({
@@ -393,7 +396,7 @@ export default async function JobsPage({
       deviceType: job.device?.deviceType ?? fallbackFields(job).deviceType ?? "OTHER",
       brand: job.device?.brand ?? fallbackFields(job).brand ?? "",
       model: job.device?.model ?? fallbackFields(job).model ?? "",
-      clientName: "client" in job ? (job as { client?: { fullName?: string } }).client?.fullName : undefined,
+      clientName: "client" in job ? clientDisplayName((job as { client?: { fullName?: string; organization?: string | null } }).client, "") || undefined : undefined,
       assignedTo: job.assignedTo?.name ?? (job as { oneTimeExternalAssignment?: { technicianName: string } }).oneTimeExternalAssignment?.technicianName,
       receivedAt: job.receivedAt,
       externalTechBill: getExternalTechBill(job),
@@ -481,7 +484,7 @@ export default async function JobsPage({
       deviceType: job.device?.deviceType ?? fallbackFields.deviceType ?? "OTHER",
       brand: job.device?.brand ?? fallbackFields.brand ?? "",
       model: job.device?.model ?? fallbackFields.model ?? "",
-      clientName: "client" in job ? job.client?.fullName : undefined,
+      clientName: "client" in job ? clientDisplayName(job.client, "") || undefined : undefined,
       clientPhone: "client" in job ? job.client?.phone ?? null : null,
       issue: job.issueDescription ?? null,
       assignedTo: job.assignedTo?.name ?? job.oneTimeExternalAssignment?.technicianName,
@@ -635,7 +638,7 @@ export default async function JobsPage({
             <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2">
               {KEY_CHIPS.map(({ href, label, count, active }) => (
                 <Link key={label} href={href}
-                  className={`inline-flex h-9 shrink-0 items-center justify-center rounded-full px-3 text-center text-[0.75rem] font-bold transition ${
+                  className={`inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3.5 text-center text-[0.75rem] font-bold transition ${
                     active
                       ? "bg-[var(--accent)] text-black"
                       : "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]"
@@ -817,6 +820,17 @@ export default async function JobsPage({
                 sort: sort !== "received_desc" ? sort : undefined,
                 from: filters.from,
                 to: filters.to,
+                // These were missing, so typing in the search box quietly
+                // cleared whatever the reader had already narrowed to — most
+                // visibly Overdue and Mine, which are one-click chips, so it
+                // looked like the search had widened the list rather than that
+                // a filter had been dropped.
+                overdue: filters.overdue,
+                mine: filters.mine,
+                assignedToId: filters.assignedToId,
+                payout: filters.payout,
+                dateField: filters.dateField,
+                size: filters.size,
               }}
             />
             {!isExternalTech ? (
@@ -937,7 +951,15 @@ export default async function JobsPage({
           totalPages={totalPages}
           isPrevDisabled={isPrevDisabled}
           isNextDisabled={isNextDisabled}
-          hrefForPage={pageHrefBuilder("/jobs", { ...preservedWithoutStatus, status: filters.status })}
+          hrefForPage={pageHrefBuilder("/jobs", {
+            ...preservedWithoutStatus,
+            status: filters.status,
+            size: pageSize !== PAGE_SIZE ? pageSize : "",
+          })}
+          hrefForSize={sizeHrefBuilder("/jobs", {
+            ...preservedWithoutStatus,
+            status: filters.status,
+          })}
         />
       )}
     </div>

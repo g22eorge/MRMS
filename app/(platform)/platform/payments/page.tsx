@@ -6,7 +6,7 @@ import { PLATFORM_ROUTES } from "@/lib/platform/routes";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { planLabel } from "@/lib/plan-labels";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +14,13 @@ export const dynamic = "force-dynamic";
 export default async function PaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; size?: string; }>;
 }) {
   await requirePlatformAdmin();
 
   const params = await searchParams;
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
 
   const [events, totalRevenue, monthRevenue] = await Promise.all([
     getRecentBillingEvents(100),
@@ -32,9 +33,13 @@ export default async function PaymentsPage({
     (e) => e.status === "successful" && e.event === "charge.completed",
   ).length;
 
-  const pageView = paginationView(page, events.length);
+  const pageView = paginationView(page, events.length, pageSize);
   const pageRows = events.slice(pageView.skip, pageView.skip + pageView.take);
-  const paymentsHref = pageHrefBuilder("/platform/payments", {});
+  const paymentsHrefFilters = {
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const paymentsHref = pageHrefBuilder("/platform/payments", paymentsHrefFilters);
+  const paymentsHrefSize = sizeHrefBuilder("/platform/payments", paymentsHrefFilters);
 
   const fmt = (d: Date) => formatEATMediumDate(d);
 
@@ -43,6 +48,29 @@ export default async function PaymentsPage({
       <div>
         <h1 className="text-2xl font-bold text-[var(--ink)]">Payments</h1>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">Payment events recorded from Pesapal webhooks</p>
+      </div>
+
+      {/* These three answer the questions this table cannot: whether the
+          deployment can take money at all, what the organisations look like
+          against their subscriptions, and whether a specific Pesapal
+          transaction was actually honoured. They were reachable only by typing
+          the URL, which is the same as not existing. */}
+      <div className="flex flex-wrap gap-2">
+        <a href="/api/admin/pesapal-health"
+           className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--ink)] hover:border-[var(--accent)] transition-colors">
+          Payment readiness check
+          <span className="block text-[0.75rem] font-normal text-[var(--ink-muted)]">Can this deployment take a real payment?</span>
+        </a>
+        <a href="/api/admin/billing-reconcile"
+           className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--ink)] hover:border-[var(--accent)] transition-colors">
+          Billing reconciliation
+          <span className="block text-[0.75rem] font-normal text-[var(--ink-muted)]">Subscriptions against recorded events</span>
+        </a>
+        <a href="/api/admin/verify-payments"
+           className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[0.8125rem] font-semibold text-[var(--ink)] hover:border-[var(--accent)] transition-colors">
+          Verify Pesapal transactions
+          <span className="block text-[0.75rem] font-normal text-[var(--ink-muted)]">Paste tracking ids — was each one honoured?</span>
+        </a>
       </div>
 
       {/* Summary */}
@@ -127,6 +155,8 @@ export default async function PaymentsPage({
         total={pageView.total}
         unit="events"
         hrefForPage={paymentsHref}
+          pageSize={pageSize}
+          hrefForSize={paymentsHrefSize}
       />
     </div>
   );

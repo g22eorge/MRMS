@@ -1,4 +1,5 @@
 import type { JobStatus } from "@prisma/client";
+import { ACTIVE_JOB_STATUSES } from "@/lib/job-status";
 import Link from "next/link";
 
 import { requirePortalSession } from "@/lib/portal-auth";
@@ -15,8 +16,11 @@ const ROLE_LABEL: Record<string, string> = {
   MEMBER: "Member",
 };
 
-// Repair statuses that count as "active" for the portal summary.
-const ACTIVE_STATUSES: JobStatus[] = ["RECEIVED", "DIAGNOSING", "REFERRED", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"];
+// Shared with the staff dashboard rather than restated here. This list had
+// omitted IN_EXTERNAL_REPAIR, so a client whose device had gone to an external
+// repairer saw it drop out of their active jobs — the job had not stalled, the
+// definition had, and the client is the one person who cannot check.
+const ACTIVE_STATUSES: JobStatus[] = [...ACTIVE_JOB_STATUSES];
 
 export default async function PortalDashboardPage() {
   const { portalUser, client, org, accessibleClients } = await requirePortalSession();

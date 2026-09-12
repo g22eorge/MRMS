@@ -61,6 +61,10 @@ next-env.d.ts
 # local sqlite files
 dev.db
 *.db
+# Generated per test run by scripts/test-schema.mjs — a copy of schema.prisma
+# pointing at test.db. Regenerated every time, so committing it only creates
+# churn and a second file to keep in step with the models.
+prisma/schema.test.prisma
 *.db-journal
 *.db-wal
 *.db-shm
@@ -69,3 +73,11 @@ libsql:*
 .agents/
 package-lock.json
 prisma/dev.db.bak-before-date-fix
+
+# `.env*` above matches by filename, so a directory of *.env files slips past it.
+# vercel-env/ is a leftover of pulling values down from Vercel; deployment is
+# container-based now, but the rule costs nothing and keeps stray env files out.
+vercel-env/
+*.env
+!.env.example
+!.env.docker.example

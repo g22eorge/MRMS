@@ -24,7 +24,7 @@ export async function generateAssessmentAction(formData: FormData): Promise<void
   const job = await prisma.job.findFirst({
     where: { id: jobId, orgId },
     select: {
-      jobNumber: true, brand: true, model: true, deviceType: true, issueDescription: true,
+      jobNumber: true, status: true, brand: true, model: true, deviceType: true, issueDescription: true,
       diagnosisNotes: true, externalDiagnosis: true, recommendedRepair: true, workDone: true,
       partsNeeded: true, technicianNotes: true,
     },
@@ -44,7 +44,9 @@ export async function generateAssessmentAction(formData: FormData): Promise<void
   const ai = await generateAssessmentDraft({
     orgId,
     userId: user.id,
-    job: { ...job, deviceType: String(job.deviceType), diagnosisNotes: diagnosis, recommendedRepair: repairDetails },
+    // Status drives the tense: a report drafted before the work is written in
+    // the future, one drafted after it in the past.
+    job: { ...job, status: String(job.status), deviceType: String(job.deviceType), diagnosisNotes: diagnosis, recommendedRepair: repairDetails },
   });
 
   const draft = ai.ok

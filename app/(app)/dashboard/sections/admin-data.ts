@@ -1,7 +1,7 @@
 import { getClientBill, resolveTechCost } from "@/lib/billing";
 import { getAppCurrency } from "@/lib/currency";
 import { loadCashCollectionsByChannelWide, loadReceivablesTotal } from "@/lib/finance/reconciliation";
-import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { UI_JOB_STATUSES, ACTIVE_JOB_STATUSES, ACTIVE_STATUSES_EXPECTING_CONTACT, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { getTechnicianPayoutTotalsByJobIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
@@ -57,6 +57,7 @@ export async function loadAdminDashboardData(orgId: string | null) {
     overdueJobsCount,
     jobsNoClientUpdateCount,
     completedUnpaidCount,
+    jobsNeedingActionCount,
     payoutDueJobs,
     // Sales funnel
     leadFunnel,
@@ -118,9 +119,37 @@ export async function loadAdminDashboardData(orgId: string | null) {
     prisma.job.count({ where: { ...orgFilter, receivedAt: { gte: mtdStart, lte: today } } }),
 
     prisma.expense.aggregate({ where: { orgId: orgFilter.orgId ?? undefined, paidAt: { gte: todayStart } }, _sum: { amount: true } }).catch(() => ({ _sum: { amount: null } })),
-    prisma.job.count({ where: { ...orgFilter, status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] }, receivedAt: { lt: new Date(today.getTime() - 7 * 86_400_000) } } }).catch(() => 0),
-    prisma.job.count({ where: { ...orgFilter, status: { in: filterSupportedJobStatuses(["DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] }, lastClientContactAt: null } }).catch(() => 0),
+    prisma.job.count({ where: { ...orgFilter, status: { in: filterSupportedJobStatuses(ACTIVE_JOB_STATUSES) as JobStatus[] }, receivedAt: { lt: new Date(today.getTime() - 7 * 86_400_000) } } }).catch(() => 0),
+    prisma.job.count({ where: { ...orgFilter, status: { in: filterSupportedJobStatuses(ACTIVE_STATUSES_EXPECTING_CONTACT) as JobStatus[] }, lastClientContactAt: null } }).catch(() => 0),
     prisma.job.count({ where: { ...orgFilter, status: "COMPLETED", clientBill: { gt: 0 }, clientPaid: false } }).catch(() => 0),
+
+    // How many JOBS need attention, counted once each.
+    //
+    // The five job rows in "Needs action" overlap heavily by construction: a
+    // job awaiting approval, eight days old and never contacted, satisfies
+    // three of them at once. Summing the row counts therefore produced a
+    // headline that could be several times the real amount of work — 119 on a
+    // book that held far fewer jobs than that. The rows are right; the total
+    // was not, and a number nobody can reconcile is worse than no number.
+    prisma.job.count({
+      where: {
+        ...orgFilter,
+        OR: [
+          { status: "AWAITING_APPROVAL" },
+          { status: "READY_FOR_PICKUP" },
+          { status: "COMPLETED", clientBill: { gt: 0 }, clientPaid: false },
+          {
+            status: { in: filterSupportedJobStatuses(ACTIVE_JOB_STATUSES) as JobStatus[] },
+            receivedAt: { lt: new Date(today.getTime() - 7 * 86_400_000) },
+          },
+          {
+            status: { in: filterSupportedJobStatuses(ACTIVE_STATUSES_EXPECTING_CONTACT) as JobStatus[] },
+            lastClientContactAt: null,
+          },
+        ],
+      },
+    }).catch(() => 0),
+
     prisma.job.findMany({ where: { ...orgFilter, repairPath: "EXTERNAL", status: { in: ["COMPLETED", "DELIVERED"] }, externalPaid: false }, select: { id: true, externalTechFee: true, externalTechBill: true } }).catch(() => [] as { id: string; externalTechFee: number | null; externalTechBill: number | null }[]),
 
     prisma.lead.groupBy({ by: ["status"], where: orgFilter, _count: { status: true } }).catch(() => [] as { status: string; _count: { status: number } }[]),
@@ -140,7 +169,7 @@ export async function loadAdminDashboardData(orgId: string | null) {
     // Tech pending jobs — groupBy to get counts without loading every job row
     prisma.job.groupBy({
       by: ["assignedToId"],
-      where: { ...orgFilter, status: { in: filterSupportedJobStatuses(["RECEIVED", "DIAGNOSING", "REFERRED", "IN_EXTERNAL_REPAIR", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"]) as JobStatus[] }, assignedToId: { not: null } },
+      where: { ...orgFilter, status: { in: filterSupportedJobStatuses(ACTIVE_JOB_STATUSES) as JobStatus[] }, assignedToId: { not: null } },
       _count: { assignedToId: true },
     }).catch(() => [] as { assignedToId: string | null; _count: { assignedToId: number } }[]),
 
@@ -259,6 +288,13 @@ export async function loadAdminDashboardData(orgId: string | null) {
   }
   // Mobile-specific derived counts
   const inRepairCount      = statusCount.get("IN_REPAIR") ?? 0;
+  // Every status that counts as still-open work, summed from the same status
+  // map the pipeline chart uses. The tile used to add three of the seven, so it
+  // reported less work than the shop actually had.
+  const activeJobsCount = ACTIVE_JOB_STATUSES.reduce(
+    (sum, status) => sum + (statusCount.get(status) ?? 0),
+    0,
+  );
   const readyForPickupCount = statusCount.get("READY_FOR_PICKUP") ?? 0;
   const statusData = UI_JOB_STATUSES.map((status) => ({
     key: status, name: statusLabel[status], value: statusCount.get(status) ?? 0,
@@ -312,12 +348,14 @@ export async function loadAdminDashboardData(orgId: string | null) {
     overdueJobsCount,
     jobsNoClientUpdateCount,
     completedUnpaidCount,
+    jobsNeedingActionCount,
     failedOutboxCount,
     failedOutboxLabel,
     // Pipeline
     statusCount,
     statusData,
     inRepairCount,
+    activeJobsCount,
     readyForPickupCount,
     conversionRate,
     // Revenue channels

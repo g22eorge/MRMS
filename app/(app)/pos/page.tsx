@@ -18,14 +18,16 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
-import { isMissingTableError } from "@/lib/db-errors";
+import { clientDisplayName } from "@/lib/client-name";
 
+import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 function saleStatusTone(status: string): BadgeTone {
   if (status === "PAID") return "success";
   if (status === "VOID") return "danger";
@@ -55,7 +57,7 @@ type Segment = (typeof SEGMENTS)[number];
 export default async function PosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; q?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ period?: string; q?: string; page?: string; size?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
@@ -63,8 +65,9 @@ export default async function PosPage({
     redirect("/dashboard");
   }
 
-  const { period, q: rawQ, page: pageParam, error: posListError } = await searchParams;
+  const { period, q: rawQ, page: pageParam, size: sizeParam, error: posListError } = await searchParams;
   const page = parsePage(pageParam);
+  const pageSize = parsePageSize(sizeParam);
   const currency = org.baseCurrency;
   const segment: Segment = SEGMENTS.includes(period as Segment) ? (period as Segment) : "all";
   const q = (rawQ ?? "").trim();
@@ -83,9 +86,9 @@ export default async function PosPage({
   const searchFilter: Prisma.SaleWhereInput = q
     ? {
         OR: [
-          { saleNumber: { contains: q , mode: "insensitive" as const} },
-          { notes: { contains: q , mode: "insensitive" as const} },
-          { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+          { saleNumber: icontains(q) },
+          { notes: icontains(q) },
+          { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
         ],
       }
     : {};
@@ -147,7 +150,7 @@ export default async function PosPage({
     });
 
     revalidatePath("/pos");
-    redirect(`/pos/${sale.id}`);
+    redirect(flash(`/pos/${sale.id}`, "Sale created"));
   }
 
   async function deleteSaleAction(formData: FormData) {
@@ -213,7 +216,7 @@ export default async function PosPage({
     paidAmount: number;
     invoicedAt: Date | null;
     createdAt: Date;
-    client: { id: string; fullName: string } | null;
+    client: { id: string; fullName: string; organization: string | null } | null;
     createdBy: { id: string; name: string } | null;
     _count: { payments: number; creditNotes: number; refunds: number };
   }> = [];
@@ -224,8 +227,8 @@ export default async function PosPage({
     sales = await db.sale.findMany({
       where: salesWhere,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         saleNumber: true,
@@ -235,19 +238,21 @@ export default async function PosPage({
         paidAmount: true,
         invoicedAt: true,
         createdAt: true,
-        client: { select: { id: true, fullName: true } },
+        client: { select: { id: true, fullName: true, organization: true } },
         createdBy: { select: { id: true, name: true } },
         _count: { select: { payments: true, creditNotes: true, refunds: true } },
       },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (isMissingTableError(err) && msg.includes("sale")) dbNeedsFix = true;
+    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
     sales = [];
   }
 
-  const salesPage = paginationView(page, salesTotal);
-  const salesHref = pageHrefBuilder("/pos", { period: segment !== "all" ? segment : "", q });
+  const salesPage = paginationView(page, salesTotal, pageSize);
+  const salesHrefFilters = { ...{ period: segment !== "all" ? segment : "", q }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const salesHref = pageHrefBuilder("/pos", salesHrefFilters);
+  const salesHrefSize = sizeHrefBuilder("/pos", salesHrefFilters);
   const hasSaleFilters = Boolean(q) || segment !== "all";
 
   function filterHref(next: Segment, search = q) {
@@ -315,11 +320,10 @@ export default async function PosPage({
             <section className="panel-shadow rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
               <p className="font-semibold text-amber-50">POS database tables are missing.</p>
               <p className="mt-1 text-amber-100/90">
-                The <span className="mono">Sale</span> tables have not been created, which means the release&apos;s
-                migration step did not run. Check the database health report, then redeploy.
+                Run <span className="mono">/api/admin/db-fix</span> as the platform admin to create <span className="mono">Sale</span> tables.
               </p>
-              <Button href="/api/admin/db-health" external target="_blank" rel="noreferrer" variant="secondary" size="sm" className="mt-3">
-                Open DB Health
+              <Button href="/api/admin/db-fix" external target="_blank" rel="noreferrer" variant="secondary" size="sm" className="mt-3">
+                Open DB Fix
               </Button>
             </section>
           ) : null}
@@ -394,7 +398,6 @@ export default async function PosPage({
           {/* ══ DESKTOP HEADER ══ */}
           <div className="hidden lg:block">
             <PageHeader
-              eyebrow="Point of Sale"
               title="Sales"
               description="Walk-in and retail transactions"
             />
@@ -476,7 +479,7 @@ export default async function PosPage({
             placeholder="Search by sale number, client or note..."
             className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
           />
-          <Button type="submit" variant="secondary" size="sm">Search</Button>
+          <SubmitButton variant="secondary" size="sm">Search</SubmitButton>
           {hasSaleFilters ? (
             <Link href="/pos" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
           ) : null}
@@ -517,7 +520,7 @@ export default async function PosPage({
                     </div>
                   </Link>
                   <Link href={`/pos/${s.id}`} className="min-w-0 flex-1 active:opacity-70">
-                    <p className="truncate font-bold text-[var(--ink)]">{s.client?.fullName ?? "Walk-in"}</p>
+                    <p className="truncate font-bold text-[var(--ink)]">{clientDisplayName(s.client, "Walk-in")}</p>
                     <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                       <span className="mono">{s.saleNumber}</span>
                       {" · "}{formatEATDate(s.createdAt)}
@@ -556,7 +559,7 @@ export default async function PosPage({
                 header: "Client",
                 cell: (s) =>
                   s.client
-                    ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{s.client.fullName}</Link>
+                    ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(s.client)}</Link>
                     : <span className="text-[var(--ink-muted)]">Walk-in</span>,
               },
               {
@@ -600,6 +603,8 @@ export default async function PosPage({
         total={salesPage.total}
         unit="sales"
         hrefForPage={salesHref}
+        pageSize={pageSize}
+        hrefForSize={salesHrefSize}
       />
     </ListPageLayout>
   );

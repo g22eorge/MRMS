@@ -3,37 +3,32 @@ import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import type { InvoiceStatus, InvoiceType, PaymentMethod } from "@prisma/client";
+import type { InvoiceStatus, InvoiceType } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
 import {
   formatMoney,
-  formatMoneyCompact,
-  isSupportedCurrency,
   normalizeCurrency,
   roundMoney,
 } from "@/lib/currency";
-import { canGenerateInvoiceForStatus } from "@/lib/documents";
 import { JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
-import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
-import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
+import { RowActionsMenu, MenuSection, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { computeVat } from "@/lib/commercial/vat";
 import { nextAvailableInvoiceNumber } from "@/lib/commercial/document-workflow";
-import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { PAYMENT_METHODS, parsePaymentMethod } from "@/lib/constants/payment-methods";
-import { formatEATDate, formatEATShortDate } from "@/lib/date-eat";
-import { sendInvoiceViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
+import { formatEATDate } from "@/lib/date-eat";
 import { shareInvoiceDocument } from "@/lib/notifications/share-document";
 import {
   InvoiceOverdueReminderBulkButton,
   InvoiceOverdueReminderButton,
 } from "@/components/documents/InvoiceOverdueReminderForms";
+import { WhatsAppReadinessNotice } from "@/components/notifications/WhatsAppReadinessNotice";
+import { reminderState } from "@/lib/notifications/reminder-state";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { BulkSelectionProvider } from "./BulkSelectionProvider";
 import { BulkActionBar } from "./BulkActionBar";
@@ -42,14 +37,17 @@ import { InvoicePreviewProvider } from "./InvoicePreviewProvider";
 import { PreviewButton } from "./PreviewButton";
 import { InvoiceCreateDialog } from "./InvoiceCreateDialog";
 import { InvoiceNewButton } from "./InvoiceNewButton";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
-import { isMissingTableError } from "@/lib/db-errors";
+import { clientDisplayName } from "@/lib/client-name";
 
-const INVOICE_STATUSES: InvoiceStatus[] = ["DRAFT", "ISSUED", "PAID", "VOID"];
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { plural } from "@/lib/plural";
+import { flash } from "@/lib/flash";
+import { icontains } from "@/lib/db/search";
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
 
 export const dynamic = "force-dynamic";
@@ -57,7 +55,7 @@ export const dynamic = "force-dynamic";
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string; voidSkipped?: string; page?: string }>;
+  searchParams: Promise<{ type?: string; status?: string; q?: string; aging?: string; create?: string; collect?: string; pay?: string; error?: string; reminded?: string; remindedBulk?: string; reminderSkipped?: string; reminderFailed?: string; reminderError?: string; voidSkipped?: string; page?: string; size?: string; }>;
 }) {
   const { user } = await getCurrentUserRole();
   if (!user.orgId) redirect("/dashboard");
@@ -73,6 +71,15 @@ export default async function InvoicesPage({
   const orgRow = user.orgId
     ? await prisma.organization.findUnique({ where: { id: user.orgId }, select: { baseCurrency: true } }).catch(() => null)
     : null;
+
+  // Whether the automatic ladder is actually chasing these invoices.
+  const reminderStatus = reminderState(
+    user.orgId
+      ? await prisma.paymentReminderSettings
+          .findUnique({ where: { orgId: user.orgId }, select: { enabled: true, dryRun: true } })
+          .catch(() => null)
+      : null,
+  );
   const orgCurrency = normalizeCurrency(orgRow?.baseCurrency, "UGX");
 
   const params = await searchParams;
@@ -81,6 +88,7 @@ export default async function InvoicesPage({
   const agingFilter = params.aging ?? "all";
   const q = (params.q ?? "").trim();
   const page = parsePage(params.page);
+  const pageSize = parsePageSize(params.size);
   const errorParam = params.error ?? "";
   const remindedParam = params.reminded ?? "";
   const remindedBulkParam = params.remindedBulk ?? "";
@@ -326,7 +334,7 @@ export default async function InvoicesPage({
       });
     }
     revalidatePath("/documents/invoices");
-    redirect(`/documents/invoices/${invoice.id}?pay=1`);
+    redirect(flash(`/documents/invoices/${invoice.id}?pay=1`, "Standalone invoice created"));
   }
 
   // Row-menu Send — works for standalone AND job-linked invoices, logs to the
@@ -353,11 +361,11 @@ export default async function InvoicesPage({
   // Search in the DB, not in-memory over the top-150, so older invoices are findable.
   if (q) {
     where.OR = [
-      { invoiceNumber: { contains: q , mode: "insensitive" as const} },
-      { subject: { contains: q , mode: "insensitive" as const} },
-      { job: { jobNumber: { contains: q , mode: "insensitive" as const} } },
-      { job: { client: { fullName: { contains: q , mode: "insensitive" as const} } } },
-      { client: { fullName: { contains: q , mode: "insensitive" as const} } },
+      { invoiceNumber: icontains(q) },
+      { subject: icontains(q) },
+      { job: { jobNumber: icontains(q) } },
+      { job: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } },
+      { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
     ];
   }
 
@@ -403,10 +411,10 @@ export default async function InvoicesPage({
             id: true,
             jobNumber: true,
             status: true,
-            client: { select: { fullName: true } },
+            client: { select: { fullName: true, organization: true } },
           },
         },
-        client: { select: { id: true, fullName: true } },
+        client: { select: { id: true, fullName: true, organization: true } },
         payments: { select: { id: true }, take: 1 },
         deliveryNotes: { select: { id: true }, take: 1 },
       },
@@ -414,7 +422,7 @@ export default async function InvoicesPage({
     invoices = raw.map((inv) => ({ ...inv, invoiceType: inv.invoiceType ?? "REPAIR" }));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (isMissingTableError(err) && msg.includes("invoice")) dbNeedsFix = true;
+    if (msg.includes("no such table") && msg.includes("Invoice")) dbNeedsFix = true;
     invoices = [];
   }
 
@@ -422,8 +430,14 @@ export default async function InvoicesPage({
   // Compute aging for each outstanding invoice
   const withAging = invoices.map((inv) => {
     const balance = Math.max(0, inv.totalAmount - inv.paidAmount);
-    const isPaid = balance <= 0 || inv.status === "PAID";
     const isVoid = inv.status === "VOID";
+    // Void wins over paid, and a zero-total document is not "paid". isPaid was
+    // read before isVoid everywhere below, so a voided invoice with no balance
+    // left — one that had been paid before it was voided — showed as "Paid",
+    // with a green "Cleared" badge and "Fully paid — no void" where its own row
+    // menu should say "Voided". A draft with no lines yet has a zero balance for
+    // the same arithmetic reason and was labelled paid on the same line.
+    const isPaid = !isVoid && inv.totalAmount > 0 && (balance <= 0 || inv.status === "PAID");
     let daysOverdue = 0;
     if (!isPaid && !isVoid) {
       const dueOrIssued = inv.dueDate ?? inv.issuedAt;
@@ -445,38 +459,17 @@ export default async function InvoicesPage({
 
   // KPIs/aging/summaries stay computed from the full `filtered` array; only the
   // rendered list rows are paginated.
-  const pageView = paginationView(page, filtered.length);
+  const pageView = paginationView(page, filtered.length, pageSize);
   const pageRows = filtered.slice(pageView.skip, pageView.skip + pageView.take);
-  const invoicesHref = pageHrefBuilder("/documents/invoices", {
+  const invoicesHrefFilters = {
     type: typeFilter !== "all" ? typeFilter : "",
     status: statusFilter !== "all" ? statusFilter : "",
     aging: agingFilter !== "all" ? agingFilter : "",
     q,
-  });
-
-  const readyJobs = await db.job
-    .findMany({
-      where: {
-        status: { in: ["READY_FOR_PICKUP", "COMPLETED", "CLOSED"] },
-        invoiceIssuedAt: null,
-        ...(canManageInvoicePayments ? {} : { createdById: user.id }),
-      },
-      orderBy: { completedAt: "asc" }, // oldest first — most urgent to collect
-      take: 20,
-      select: {
-        id: true,
-        jobNumber: true,
-        status: true,
-        brand: true,
-        model: true,
-        clientBill: true,
-        completedAt: true,
-        receivedAt: true,
-        client: { select: { fullName: true, phone: true } },
-      },
-    })
-    .catch(() => []);
-  const readyJobsTotal = readyJobs.reduce((s, j) => s + (j.clientBill ?? 0), 0);
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const invoicesHref = pageHrefBuilder("/documents/invoices", invoicesHrefFilters);
+  const invoicesHrefSize = sizeHrefBuilder("/documents/invoices", invoicesHrefFilters);
 
   const [clients, invoiceParts, invoiceTaxRates, branding] = await Promise.all([
     db.client
@@ -525,59 +518,16 @@ export default async function InvoicesPage({
         jobNumber: true,
         brand: true,
         model: true,
-        client: { select: { fullName: true, phone: true, address: true } },
+        client: { select: { fullName: true, phone: true, address: true, organization: true } },
       },
     })
     .catch(() => []);
 
   // ── Aging analysis ────────────────────────────────────────────────────────
   const outstanding = withAging.filter((i) => !i.isPaid && !i.isVoid);
-  const agingBands = [
-    {
-      label: "Current",
-      key: "current",
-      items: outstanding.filter((i) => i.daysOverdue <= 0),
-      color: "text-[var(--ink)]",
-      bg: "bg-[var(--panel)]",
-      border: "border-[var(--line)]",
-    },
-    {
-      label: "1–30 days",
-      key: "1-30",
-      items: outstanding.filter((i) => i.daysOverdue >= 1 && i.daysOverdue <= 30),
-      color: "text-amber-700",
-      bg: "bg-amber-500/8",
-      border: "border-amber-400/30",
-    },
-    {
-      label: "31–60 days",
-      key: "31-60",
-      items: outstanding.filter((i) => i.daysOverdue >= 31 && i.daysOverdue <= 60),
-      color: "text-amber-700",
-      bg: "bg-amber-500/8",
-      border: "border-amber-400/30",
-    },
-    {
-      label: "61+ days",
-      key: "61+",
-      items: outstanding.filter((i) => i.daysOverdue >= 61),
-      color: "text-red-700",
-      bg: "bg-red-500/10",
-      border: "border-red-400/30",
-    },
-  ];
 
-  const totalBilled = invoices.filter((i) => i.status !== "VOID").reduce((s, i) => s + i.totalAmount, 0);
   const totalCollected = invoices.filter((i) => i.status !== "VOID").reduce((s, i) => s + i.paidAmount, 0);
   const totalOutstanding = outstanding.reduce((s, i) => s + i.balance, 0);
-  const collectionRate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
-  const byType = INVOICE_TYPES.map((t) => ({
-    type: t,
-    count: invoices.filter((i) => i.invoiceType === t).length,
-  })).filter((x) => x.count > 0);
-  const criticalOverdue = [...agingBands[3].items, ...agingBands[2].items]
-    .sort((a, b) => b.daysOverdue - a.daysOverdue)
-    .slice(0, 5);
 
   const reminderReturnQuery = new URLSearchParams();
   if (typeFilter !== "all") reminderReturnQuery.set("type", typeFilter);
@@ -595,24 +545,45 @@ export default async function InvoicesPage({
       : null;
   const overdueInView = filtered.filter((i) => !i.isPaid && !i.isVoid && i.daysOverdue > 0);
 
-  const invoiceTypeTones: Record<string, BadgeTone> = {
-    REPAIR: "info",
-    SERVICE: "violet",
-    MERCHANDISE: "orange",
-    CONTRACT: "teal",
-    OTHER: "neutral",
-  };
-  const invoiceStatusTones: Record<string, BadgeTone> = {
-    Paid: "success",
-    Void: "danger",
-    Draft: "neutral",
-    Overdue: "danger",
-    Outstanding: "warning",
-  };
 
   return (
     <InvoicePreviewProvider>
     <section className="space-y-4">
+      {/* Reminders and document sends on this page can go out over WhatsApp.
+          Compact, because this is a working list rather than a settings page. */}
+      <WhatsAppReadinessNotice orgId={user.orgId ?? undefined} compact />
+
+      {/* Said here because this is the page where someone looks at overdue
+          invoices and decides whether the automatic ladder has them covered. */}
+      {reminderStatus.looksOnButSendsNothing && (
+        <div role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <p className="text-[0.8125rem] font-semibold text-amber-500">{reminderStatus.headline}</p>
+          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
+            These invoices still need chasing by hand until preview is cleared.{" "}
+            <a href="/settings/notifications" className="font-semibold text-[var(--accent)] underline underline-offset-2">
+              Reminder settings
+            </a>
+          </p>
+        </div>
+      )}
+
+      {/* dbNeedsFix was set when the Invoice table is missing and then never
+          read, so that failure rendered as an ordinary empty list — "No invoices
+          found." on a database that cannot answer the question. The POS page
+          already surfaces the same signal this way. */}
+      {dbNeedsFix && (
+        <div role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <p className="text-[0.8125rem] font-semibold text-amber-500">The invoice tables are missing from this database.</p>
+          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
+            This list is empty because the table could not be read, not because there are no invoices.{" "}
+            <a href="/api/admin/db-fix" target="_blank" rel="noreferrer" className="font-semibold text-[var(--accent)] underline underline-offset-2">
+              Run DB Fix
+            </a>{" "}
+            as the platform admin.
+          </p>
+        </div>
+      )}
+
       {errorParam && (
         <div className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-red-500" aria-hidden>
@@ -664,8 +635,6 @@ export default async function InvoicesPage({
       )}
 
       <PageHeader
-        title="Invoices"
-        eyebrow="Documents"
         actions={
                   canCreateInvoice && (
                     <InvoiceNewButton />
@@ -689,19 +658,17 @@ export default async function InvoicesPage({
               { key: "PAID", label: "Paid" },
               { key: "OVERDUE", label: "Overdue" },
             ].map((s) => (
-              <button
-                key={s.key}
-                type="submit"
-                name="status"
-                value={s.key}
-                className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
-                  statusFilter === s.key
-                    ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
-                    : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
-                }`}
-              >
+              <SubmitButton bare key={s.key}
+
+ name="status"
+ value={s.key}
+ className={`rounded-full px-3 py-1 text-[0.8125rem] font-semibold transition ${
+ statusFilter === s.key
+ ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40"
+ : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+ }`}>
                 {s.label}
-              </button>
+              </SubmitButton>
             ))}
           </div>
           <label className="sr-only" htmlFor="inv-search">Search invoices</label>
@@ -715,9 +682,23 @@ export default async function InvoicesPage({
         </form>
       </div>
 
+      {/* The other half of the restored feature. bulkAgingBucket and
+          overdueInView are computed above and existed only to drive this, so
+          both were dead alongside it. Shown only when an aging filter is
+          active, which is what makes "all in this bucket" a defined set. */}
+      {bulkAgingBucket && overdueInView.length > 0 && canManageInvoicePayments ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">
+            {plural(overdueInView.length, "overdue invoice")} in the{" "}
+            <span className="font-semibold text-[var(--ink)]">{bulkAgingBucket === "61+" ? "61+ days" : `${bulkAgingBucket} days`}</span> bucket
+          </p>
+          <InvoiceOverdueReminderBulkButton aging={bulkAgingBucket} count={overdueInView.length} context={reminderContext} />
+        </div>
+      ) : null}
+
       <div>
-        {(filtered as any[]).length > 0 ? (
-          <BulkSelectionProvider pageIds={filtered.map((r: any) => r.id)}>
+        {filtered.length > 0 ? (
+          <BulkSelectionProvider pageIds={filtered.map((r) => r.id)}>
             <BulkActionBar />
             {(() => {
               const INV_STATUS_TONES: Record<string, BadgeTone> = {
@@ -727,8 +708,12 @@ export default async function InvoicesPage({
                 DRAFT: "neutral",
               };
 
-              const rows = (filtered as any[]).map((inv) => {
-                const clientName = inv.job?.client?.fullName ?? inv.client?.fullName ?? "—";
+              // pageRows, not filtered: the paginated slice was computed on
+              // line 452 and then never used, so every page rendered the whole
+              // result set while the footer counted a page of it. On a book of
+              // any size the list ignored both the page and the chosen size.
+              const rows = pageRows.map((inv) => {
+                const clientName = clientDisplayName(inv.job?.client ?? inv.client, "—");
                 const invoiceCurrency = normalizeCurrency(inv.currency ?? orgCurrency, "UGX");
                 const isOverdue = !inv.isPaid && !inv.isVoid && inv.daysOverdue > 0;
                 const statusLabel = inv.isPaid
@@ -744,6 +729,16 @@ export default async function InvoicesPage({
                   id: inv.id,
                   invoiceNumber: inv.invoiceNumber,
                   client: clientName,
+                  // Carried onto the row because the actions menu below branches
+                  // on them. They were read there while this object never
+                  // produced them, so both guards saw `undefined`: every row —
+                  // paid and voided included — offered "Collect Payment" and
+                  // "View to Void". The row was cast to `any`, so nothing
+                  // complained. The server refuses both, so this misled the
+                  // reader rather than corrupting anything.
+                  isPaid: inv.isPaid,
+                  isVoid: inv.isVoid,
+                  isOverdue,
                   statusBadge: <StatusBadge tone={toneFor(INV_STATUS_TONES, statusLabel)}>{statusLabel}</StatusBadge>,
                   amount: formatMoney(inv.totalAmount, invoiceCurrency),
                   issued: inv.issuedAt ? formatEATDate(inv.issuedAt) : "—",
@@ -756,7 +751,13 @@ export default async function InvoicesPage({
                 };
               });
 
-              const actions = (row: any) => (
+              type InvoiceRow = (typeof rows)[number];
+
+              // Typed, not `any`: the missing-field bug above was invisible
+              // precisely because this parameter accepted anything. With the row
+              // type inferred from `rows`, reading a field that is not there is
+              // a compile error rather than a silently falsy branch.
+              const actions = (row: InvoiceRow) => (
                 <RowActionsMenu label={`Invoice ${row.invoiceNumber}`}>
                   <MenuActionLink href={`/documents/invoices/${row.id}`} icon="open">View</MenuActionLink>
                   <PreviewButton invoiceId={row.id} />
@@ -779,6 +780,16 @@ export default async function InvoicesPage({
                     <input type="hidden" name="channel" value="whatsapp" />
                     <MenuActionButton icon="whatsapp" tone="success">Send by WhatsApp</MenuActionButton>
                   </form>
+                  {/* Restored. The overdue reminder shipped in "one-click overdue
+                      reminders via outbox", and the later rewrite of this page
+                      dropped the JSX while leaving the imports, the server
+                      actions and reminderContext in place — so a finished,
+                      org-guarded feature became unreachable and nothing said so.
+                      The AI insights page tells the reader their invoices are
+                      overdue; this is the control that acts on it. */}
+                  {row.isOverdue && canManageInvoicePayments ? (
+                    <InvoiceOverdueReminderButton invoiceId={row.id} context={reminderContext} compact />
+                  ) : null}
                   <MenuSection label="Danger zone" />
                   {row.isPaid ? (
                     <span className="px-3 py-1.5 text-[0.8125rem] text-[var(--ink-muted)]">Fully paid — no void</span>
@@ -798,21 +809,21 @@ export default async function InvoicesPage({
                   getRowKey={(r) => r.id}
                   empty="No invoices found."
                   columns={[
-                    { key: "select", header: "", className: "w-8", cell: (row: any) => <RowCheckbox invoiceId={row.id} /> },
-                    { key: "invoiceNumber", header: "Invoice #", className: "w-[150px]", cell: (row: any) => (
+                    { key: "select", header: "", className: "w-8", cell: (row: InvoiceRow) => <RowCheckbox invoiceId={row.id} /> },
+                    { key: "invoiceNumber", header: "Invoice #", className: "w-[150px]", cell: (row: InvoiceRow) => (
                       <Link href={`/documents/invoices/${row.id}`} className="mono font-semibold text-[var(--accent)] hover:underline truncate whitespace-nowrap">
                         {row.invoiceNumber}
                       </Link>
                     )},
-                    { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: any) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
-                    { key: "status", header: "Status", className: "w-[100px]", cell: (row: any) => row.statusBadge },
-                    { key: "amount", header: "Amount", align: "right", className: "w-[110px]", cell: (row: any) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
-                    { key: "issued", header: "Issued", className: "w-[100px]", cell: (row: any) => <span className="whitespace-nowrap">{row.issued}</span> },
-                    { key: "due", header: "Due", className: "w-[100px]", cell: (row: any) => <span className="whitespace-nowrap">{row.due}</span> },
-                    { key: "balance", header: "Balance", className: "w-[110px]", cell: (row: any) => row.balance },
+                    { key: "client", header: "Client", className: "min-w-[200px]", cell: (row: InvoiceRow) => <span className="font-medium text-[var(--ink)] truncate">{row.client}</span> },
+                    { key: "status", header: "Status", className: "w-[100px]", cell: (row: InvoiceRow) => row.statusBadge },
+                    { key: "amount", header: "Amount", align: "right", className: "w-[110px]", cell: (row: InvoiceRow) => <span className="tabular-nums whitespace-nowrap">{row.amount}</span> },
+                    { key: "issued", header: "Issued", className: "w-[100px]", cell: (row: InvoiceRow) => <span className="whitespace-nowrap">{row.issued}</span> },
+                    { key: "due", header: "Due", className: "w-[100px]", cell: (row: InvoiceRow) => <span className="whitespace-nowrap">{row.due}</span> },
+                    { key: "balance", header: "Balance", className: "w-[110px]", cell: (row: InvoiceRow) => row.balance },
                   ]}
                   actions={actions}
-                  renderMobileCard={(row: any) => (
+                  renderMobileCard={(row: InvoiceRow) => (
                     <div className="px-4 py-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-2">
@@ -851,6 +862,8 @@ export default async function InvoicesPage({
           total={pageView.total}
           unit="invoices"
           hrefForPage={invoicesHref}
+          pageSize={pageSize}
+          hrefForSize={invoicesHrefSize}
         />
       </div>
 
@@ -858,9 +871,9 @@ export default async function InvoicesPage({
 <InvoiceCreateDialog
   currency={orgCurrency}
   canOverrideDiscount={canOverrideDiscount}
-  clients={clients as any[]}
-  leads={leads as any[]}
-  jobs={jobs as any[]}
+  clients={clients}
+  leads={leads}
+  jobs={jobs}
   parts={invoiceParts}
   taxRates={invoiceTaxRates}
   defaultTaxApplicable={branding.vatDefaultApplicable ?? false}

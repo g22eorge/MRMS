@@ -28,6 +28,42 @@ export const UI_JOB_STATUSES = [
   "CLOSED",
 ] as const;
 
+/**
+ * A job that is still work — open on the bench, not yet handed back.
+ *
+ * There were three definitions of this and they disagreed. The dashboard's
+ * "Active" tile counted three statuses, the queries beside it counted seven,
+ * and the client portal counted six. So the tile understated the shop's own
+ * workload by omitting diagnosis, referral, external repair and awaiting
+ * collection, and a client whose device had gone to an external repairer
+ * watched it drop out of their active list altogether — the job had not
+ * stalled, the definition had.
+ *
+ * Deliberately excludes DELIVERED, COMPLETED and CLOSED: those are finished,
+ * whatever remains to be invoiced. The legacy external-assignment states are
+ * excluded too, since normalizeJobStatus folds them into IN_EXTERNAL_REPAIR
+ * before anything counts them.
+ */
+export const ACTIVE_JOB_STATUSES = [
+  "RECEIVED",
+  "DIAGNOSING",
+  "REFERRED",
+  "IN_EXTERNAL_REPAIR",
+  "AWAITING_APPROVAL",
+  "IN_REPAIR",
+  "READY_FOR_PICKUP",
+] as const;
+
+/**
+ * Active, minus the jobs too new to have earned a client update.
+ *
+ * A job received an hour ago has not been neglected. Derived rather than
+ * retyped, so the two lists cannot drift the way the three above did.
+ */
+export const ACTIVE_STATUSES_EXPECTING_CONTACT = ACTIVE_JOB_STATUSES.filter(
+  (s) => s !== "RECEIVED",
+);
+
 export type JobStatus = (typeof JOB_STATUSES)[number];
 export type UiJobStatus = (typeof UI_JOB_STATUSES)[number];
 

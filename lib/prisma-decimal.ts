@@ -7,8 +7,8 @@ import { Prisma } from "@prisma/client";
  * Maps every `Decimal` column to `number` at the Prisma boundary.
  *
  * Money is stored as exact `numeric` in Postgres (see
- * docs/pg-migration/numeric-classification.json: 93 columns across
- * 41 models) while the application reads and writes plain numbers. A
+ * docs/pg-migration/numeric-classification.json: 110 columns across
+ * 45 models) while the application reads and writes plain numbers. A
  * `result` extension is what makes those two facts consistent: it changes the
  * field's declared type as well as its value, so TypeScript and the runtime
  * agree. Without it the generated types promise `Decimal` while the code —
@@ -41,6 +41,12 @@ export const decimalToNumberExtension = Prisma.defineExtension({
           return Number(r.amount);
         },
       },
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
     },
     billingEvent: {
       amount: {
@@ -65,6 +71,12 @@ export const decimalToNumberExtension = Prisma.defineExtension({
       },
     },
     creditNote: {
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
       totalAmount: {
         needs: { totalAmount: true },
         compute(r) {
@@ -77,6 +89,12 @@ export const decimalToNumberExtension = Prisma.defineExtension({
         needs: { lineTotal: true },
         compute(r) {
           return Number(r.lineTotal);
+        },
+      },
+      quantity: {
+        needs: { quantity: true },
+        compute(r) {
+          return Number(r.quantity);
         },
       },
       saleUomFactor: {
@@ -97,6 +115,12 @@ export const decimalToNumberExtension = Prisma.defineExtension({
         needs: { amount: true },
         compute(r) {
           return r.amount === null || r.amount === undefined ? null : Number(r.amount);
+        },
+      },
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
         },
       },
     },
@@ -142,6 +166,14 @@ export const decimalToNumberExtension = Prisma.defineExtension({
         },
       },
     },
+    fxReferenceRate: {
+      rate: {
+        needs: { rate: true },
+        compute(r) {
+          return Number(r.rate);
+        },
+      },
+    },
     goodsReceivedItem: {
       unitCost: {
         needs: { unitCost: true },
@@ -151,6 +183,12 @@ export const decimalToNumberExtension = Prisma.defineExtension({
       },
     },
     invoice: {
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
       paidAmount: {
         needs: { paidAmount: true },
         compute(r) {
@@ -362,6 +400,14 @@ export const decimalToNumberExtension = Prisma.defineExtension({
         },
       },
     },
+    paymentReminderSettings: {
+      manualReviewAbove: {
+        needs: { manualReviewAbove: true },
+        compute(r) {
+          return Number(r.manualReviewAbove);
+        },
+      },
+    },
     posSession: {
       actualClosingBalance: {
         needs: { actualClosingBalance: true },
@@ -406,6 +452,14 @@ export const decimalToNumberExtension = Prisma.defineExtension({
         },
       },
     },
+    purchaseOrder: {
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
+    },
     purchaseOrderItem: {
       unitCost: {
         needs: { unitCost: true },
@@ -427,6 +481,12 @@ export const decimalToNumberExtension = Prisma.defineExtension({
         needs: { discountAmount: true },
         compute(r) {
           return Number(r.discountAmount);
+        },
+      },
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
         },
       },
       subtotal: {
@@ -481,6 +541,20 @@ export const decimalToNumberExtension = Prisma.defineExtension({
           return Number(r.amount);
         },
       },
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
+    },
+    recurringInvoice: {
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
     },
     recurringInvoiceItem: {
       discountAmount: {
@@ -527,6 +601,12 @@ export const decimalToNumberExtension = Prisma.defineExtension({
         needs: { discountAmount: true },
         compute(r) {
           return Number(r.discountAmount);
+        },
+      },
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
         },
       },
       paidAmount: {
@@ -589,6 +669,12 @@ export const decimalToNumberExtension = Prisma.defineExtension({
       },
     },
     supplierBill: {
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
       paidAmount: {
         needs: { paidAmount: true },
         compute(r) {
@@ -635,8 +721,32 @@ export const decimalToNumberExtension = Prisma.defineExtension({
           return Number(r.amount);
         },
       },
+      baseAmountSent: {
+        needs: { baseAmountSent: true },
+        compute(r) {
+          return r.baseAmountSent === null || r.baseAmountSent === undefined ? null : Number(r.baseAmountSent);
+        },
+      },
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
+      feeAmount: {
+        needs: { feeAmount: true },
+        compute(r) {
+          return r.feeAmount === null || r.feeAmount === undefined ? null : Number(r.feeAmount);
+        },
+      },
     },
     supplierPrice: {
+      exchangeRateToBase: {
+        needs: { exchangeRateToBase: true },
+        compute(r) {
+          return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
       unitCost: {
         needs: { unitCost: true },
         compute(r) {

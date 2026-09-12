@@ -84,12 +84,11 @@ function FormattedText({ text }: { text: string }) {
 
 export function BusinessCopilot() {
   const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      text: "Ask a management question about repairs, sales, finance, inventory, targets, receivables, or operational risks.\n\nI answer using your live business data only — no client PII, no invented numbers.",
-    },
-  ]);
+  // No seeded greeting. It listed the domains the suggested prompts below
+  // demonstrate by example, repeated the input's own placeholder, and stated
+  // the privacy claim already in the header — three ways of saying what one
+  // line and seven examples say better.
+  const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -145,7 +144,7 @@ export function BusinessCopilot() {
   }
 
   return (
-    <section className="dc-card flex flex-col overflow-hidden">
+    <section className="dc-card flex h-full flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--panel-strong)]/60 px-4 py-3">
         <div className="flex items-center gap-2.5">
@@ -157,20 +156,24 @@ export function BusinessCopilot() {
             </svg>
           </span>
           <div>
-            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">AI Business Copilot</p>
-            <p className="text-[0.75rem] text-[var(--ink-muted)]">Live data · no client PII</p>
+            <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Business Copilot</p>
+            <p className="text-[0.75rem] text-[var(--ink-muted)]">Reads your live data. No client details, no invented figures.</p>
           </div>
         </div>
-        <span className="rounded-full border border-slate-400/30 bg-slate-500/10 px-2.5 py-0.5 text-[0.75rem] font-semibold text-slate-600 dark:text-slate-400">
-          Aggregate only
-        </span>
       </div>
 
       {/* Message thread */}
       <div
         ref={scrollRef}
-        className="flex-1 space-y-4 overflow-y-auto px-4 py-4"
-        style={{ minHeight: 240, maxHeight: 420 }}
+        // flex-1 always, so an empty thread is what pushes the starters and
+        // the composer to the bottom of the panel. min-h-0 is what lets a flex
+        // child scroll instead of growing past its parent.
+        //
+        // The height cap applies to the stacked layout only: there the card
+        // sits in normal flow with no height to fill, so an uncapped thread
+        // would grow without bound. In the panel the panel supplies the height.
+        className={`min-h-0 flex-1 space-y-4 overflow-y-auto px-4 max-h-[420px] xl:max-h-none ${messages.length ? "py-4" : "py-0"}`}
+        style={messages.length ? { minHeight: 240 } : undefined}
       >
         {messages.map((msg, index) => (
           <div key={index} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
@@ -245,20 +248,37 @@ export function BusinessCopilot() {
         )}
       </div>
 
-      {/* Suggested questions */}
-      <div className="flex gap-2 overflow-x-auto border-t border-[var(--line)] px-4 py-2.5 scrollbar-none">
+      {/* Conversation starters.
+          Shown only before the conversation begins. Seven of them are a way in
+          when the panel is empty; once you are three questions deep they are
+          clutter sitting between you and the thread you are reading. A label
+          says what they are, so they read as offered rather than as controls
+          you were meant to have pressed. */}
+      {messages.length === 0 ? (
+      <div className="border-t border-[var(--line)] px-4 py-3">
+        <p className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">
+          Start with
+        </p>
+        <div className="flex flex-wrap gap-1.5">
         {SUGGESTED.map((q) => (
           <button
             key={q}
             type="button"
             onClick={() => ask(q)}
             disabled={isPending}
-            className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.75rem] font-medium text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)] disabled:opacity-50"
+            // Quiet by default. These were filled pills, and seven of them stacked
+            // in a narrow panel read as the loudest thing on the page — louder
+            // than the figures they are meant to help you ask about. Now an
+            // outline that recedes until hovered: suggestions should be
+            // available, not insistent.
+            className="shrink-0 rounded-full border border-[var(--line)]/60 px-3 py-1.5 text-[0.75rem] font-normal text-[var(--ink-muted)]/80 transition hover:border-[var(--accent)]/40 hover:bg-[var(--panel-strong)] hover:text-[var(--ink)] disabled:opacity-50"
           >
             {q}
           </button>
         ))}
+        </div>
       </div>
+      ) : null}
 
       {/* Input */}
       <form onSubmit={submit} className="flex items-end gap-2 border-t border-[var(--line)] px-4 py-3">

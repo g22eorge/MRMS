@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { amountInWords } from "@/lib/amount-in-words";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createElement } from "react";
 import { prisma } from "@/lib/prisma";
@@ -10,6 +11,7 @@ import { formatEATDocDate } from "@/lib/date-eat";
 import { compactText } from "@/lib/pdf/pdf-utils";
 import { InvoiceTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
 
+import { pickDocumentTerms } from "@/lib/quote-terms";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -75,7 +77,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   });
   const InvoiceDoc = InvoiceTemplateComponent(templateKey);
   const { resolveInvoiceLogo } = await import("@/lib/pdf/pdf-utils");
-  const logoUrl = await resolveInvoiceLogo();
+  const logoUrl = await resolveInvoiceLogo(orgId);
 
   const subtotal = invoice.lines.reduce((s, l) => s + l.lineTotal, 0);
   const taxAmount = invoice.lines.reduce((s, l) => s + (l.taxAmount ?? 0), 0);
@@ -91,6 +93,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     companyContacts: branding.companyContacts,
     companyEmail: branding.companyEmail ?? "",
     companyWebsite: branding.companyWebsite ?? "",
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl,
     documentTitle: "INVOICE",
     invoiceNumber: invoice.invoiceNumber,
@@ -116,14 +119,19 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     vatLabel: "Tax",
     vatAmount: formatMoney(taxAmount, currency),
     totalAmountPayable: formatMoney(subtotal + taxAmount, currency),
+    amountWords: amountInWords(subtotal + taxAmount, currency),
     estimatedDuration: "",
     approvalStatus: invoice.status,
     recommendation: "",
     notes: invoice.notes ?? "",
     status: invoice.status,
     currency,
-    termsText: branding.termsText ?? "",
+    termsText: pickDocumentTerms(branding.termsText, invoice.jobId ? "REPAIR" : "SALE"),
     footerText: branding.footerText ?? "",
+    // Without this the Payment To block is missing, so an invoice downloaded from
+    // Documents carried no bank details while the same invoice generated from the
+    // job did. Customers cannot pay what they cannot see.
+    paymentInstructions: branding.paymentInstructions ?? "",
     signatureCompanyLabel: "Authorized Signatory",
     signatureClientLabel: "Client Signature",
     lineItems: invoice.lines.map((l) => ({

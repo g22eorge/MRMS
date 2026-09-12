@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { StatCards } from "@/components/ui/StatCards";
+
 import { formatMoneyCompact, getAppCurrency } from "@/lib/currency";
 import { monthLabel } from "@/lib/date-ranges";
 import { routeLabel } from "@/lib/nav/registry";
@@ -7,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 
 import { DashboardHero } from "./shared";
 
+import { clientDisplayName } from "@/lib/client-name";
 export async function FinanceDashboard({ orgId }: { orgId: string }) {
   const currency = getAppCurrency();
   const today = new Date();
@@ -18,7 +21,7 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
   const [invoices, recentPayments, salesRevenue] = await Promise.all([
     prisma.invoice.findMany({
       where: { orgId },
-      select: { id: true, invoiceNumber: true, status: true, totalAmount: true, paidAmount: true, issuedAt: true, job: { select: { jobNumber: true, client: { select: { fullName: true } } } } },
+      select: { id: true, invoiceNumber: true, status: true, totalAmount: true, paidAmount: true, issuedAt: true, job: { select: { jobNumber: true, client: { select: { fullName: true, organization: true } } } } },
       orderBy: { issuedAt: "desc" },
       take: 50,
     }),
@@ -59,19 +62,37 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
         icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>}
       />
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
-          { label: "Total Invoiced", val: formatMoneyCompact(totalInvoiced, currency), href: "/documents/invoices", color: "text-[var(--ink)]" },
-          { label: "Collected",      val: formatMoneyCompact(totalCollected, currency), href: "/documents/invoices?status=PAID", color: "text-emerald-600" },
-          { label: "Outstanding",    val: formatMoneyCompact(totalOutstanding, currency), href: "/documents/invoices?status=ISSUED", color: totalOutstanding > 0 ? "text-[var(--accent)]" : "text-emerald-600" },
-          { label: "Overdue (30d+)", val: String(overdueCount), href: "/documents/invoices", color: overdueCount > 0 ? "text-red-400" : "text-[var(--ink-muted)]" },
-        ].map(t => (
-          <Link key={t.label} href={t.href} className="dc-card px-3 py-2.5 transition hover:-translate-y-[2px]">
-            <p className="text-[0.75rem] uppercase tracking-[0.14em] text-[var(--ink-muted)]">{t.label}</p>
-            <p className={`mt-1 text-[0.9375rem] font-black leading-tight ${t.color}`}>{t.val}</p>
-          </Link>
-        ))}
-      </div>
+      {/* StatCards rather than a hand-rolled band with a `color` field. This
+          reported state as the hue of a number and nothing else — "Overdue" in
+          red-400 said nothing to anyone scanning, printing, or unable to see
+          the hue. The shared component adds a rail and, for the two states that
+          demand action, a word.
+
+          Collected is not marked good on purpose: money already in the bank is
+          the resting state of the figure, and a permanent green badge on it
+          teaches the reader that the colours mean nothing. */}
+      <StatCards
+        columns={4}
+        cards={[
+          { label: "Total Invoiced", value: formatMoneyCompact(totalInvoiced, currency), href: "/documents/invoices" },
+          { label: "Collected", value: formatMoneyCompact(totalCollected, currency), href: "/documents/invoices?status=PAID", sub: "paid to date" },
+          {
+            label: "Outstanding",
+            value: formatMoneyCompact(totalOutstanding, currency),
+            href: "/documents/invoices?status=ISSUED",
+            tone: totalOutstanding > 0 ? "warn" : "good",
+            muted: totalOutstanding === 0,
+          },
+          {
+            label: "Overdue (30d+)",
+            value: String(overdueCount),
+            href: "/documents/invoices",
+            sub: "past due",
+            tone: overdueCount > 0 ? "crit" : "good",
+            muted: overdueCount === 0,
+          },
+        ]}
+      />
 
       <div className="grid gap-3 lg:grid-cols-2">
         <section className="dc-card px-3 py-2.5">
@@ -137,7 +158,7 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
                 <div key={inv.id} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
                   <div className="min-w-0">
                     <p className="mono truncate text-xs font-bold text-[var(--ink)]">{inv.invoiceNumber}</p>
-                    <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{inv.job?.client?.fullName ?? "—"} · {inv.job?.jobNumber ?? "—"}</p>
+                    <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{clientDisplayName(inv.job?.client)} · {inv.job?.jobNumber ?? "—"}</p>
                   </div>
                   <div className="ml-3 shrink-0 text-right">
                     <p className="text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(balance, currency)}</p>

@@ -7,6 +7,9 @@ import { getCurrentUserRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 
 import { NotificationPrefsForm } from "@/components/settings/NotificationPrefsForm";
+import { PaymentReminderSettingsCard } from "@/components/settings/PaymentReminderSettingsCard";
+import { WhatsAppReadinessNotice } from "@/components/notifications/WhatsAppReadinessNotice";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +20,23 @@ export default async function NotificationSettingsPage() {
   }
   const prefs = await getUserPreferences(user.id);
 
+  // Reminders speak to customers without a person deciding to, so the control
+  // sits with ADMIN alone rather than with everyone who can read notifications.
+  const canManageReminders = user.role === "ADMIN";
+  const reminderSettings = canManageReminders && user.orgId
+    ? await prisma.paymentReminderSettings.findUnique({ where: { orgId: user.orgId } })
+    : null;
+
   const canSeeOutbox = user.role === "ADMIN" || user.role === "OPS";
   const canSeeTemplates = user.role === "ADMIN" || user.role === "OPS";
   const canSeeWhatsApp = user.role === "ADMIN";
 
   return (
     <div className="space-y-4">
+      {/* Said here because this is where reminders are switched on. Renders
+          nothing once WhatsApp is configured. */}
+      <WhatsAppReadinessNotice orgId={user.orgId ?? undefined} />
+
       {/* Header */}
       <div className="dc-card overflow-hidden px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -50,6 +64,21 @@ export default async function NotificationSettingsPage() {
           )}
         </div>
       </div>
+
+      {canManageReminders && user.orgId ? (
+        <PaymentReminderSettingsCard
+          orgId={user.orgId}
+          settings={reminderSettings ? {
+            enabled: reminderSettings.enabled,
+            dryRun: reminderSettings.dryRun,
+            paymentTermsDays: reminderSettings.paymentTermsDays,
+            manualReviewAbove: reminderSettings.manualReviewAbove,
+            statementForMultiInvoice: reminderSettings.statementForMultiInvoice,
+            quietHourStart: reminderSettings.quietHourStart,
+            quietHourEnd: reminderSettings.quietHourEnd,
+          } : null}
+        />
+      ) : null}
 
       {canSeeOutbox ? (
         <div className="dc-card flex items-center justify-between px-4 py-3">

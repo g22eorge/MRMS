@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       to: toPhone,
       body,
       jobId: undefined,
-      type: "INVOICE_REMINDER" as any,
+      type: "INVOICE_REMINDER",
     });
     await writeSystemAuditEvent({
       orgId: orgId,

@@ -14,6 +14,7 @@ import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { revalidateCommunicationsOutbox } from "@/lib/communications/revalidate";
 import { deliverOutboundMessageForOrg, getOutboxRetryLimit, retryDueOutboundMessages } from "@/lib/notifications/whatsapp-outbox";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
@@ -22,13 +23,15 @@ type SearchParams = {
   type?: string;
   q?: string;
   page?: string;
+  size?: string;
 };
 
 const CHANNELS = Object.values(OutboundMessageChannel);
 const STATUSES = Object.values(OutboundMessageStatus);
 const TYPES = Object.values(OutboundMessageType);
 
-const PAGE_SIZE = 20;
+import { PAGE_SIZE, parsePageSize } from "@/lib/pagination";
+import { icontains } from "@/lib/db/search";
 
 // Borderless status pills — semantic colour via tint + text, no ring.
 const STATUS_STYLES: Record<string, string> = {
@@ -36,6 +39,9 @@ const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
   FAILED:  "bg-red-500/12 text-red-600 dark:text-red-400",
   DEAD:    "bg-[var(--panel-strong)] text-[var(--ink-muted)]",
+  // A dry-run reminder: the real message, never delivered. Blue rather than
+  // the muted grey it would otherwise inherit, so it does not read as failed.
+  PREVIEW: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
 };
 
 const CHANNEL_DOT: Record<string, string> = {
@@ -90,6 +96,7 @@ export default async function OutboxPage({
     : null;
   const q = typeof filters.q === "string" ? filters.q.trim() : "";
   const page = Math.max(1, Number.parseInt(filters.page ?? "1", 10) || 1);
+  const pageSize = parsePageSize(filters.size);
 
   const where: Prisma.OutboundMessageWhereInput = {
     orgId,
@@ -99,10 +106,10 @@ export default async function OutboxPage({
     ...(q
       ? {
           OR: [
-            { id: { contains: q , mode: "insensitive" as const} },
-            { to: { contains: q , mode: "insensitive" as const} },
-            { providerMessageId: { contains: q , mode: "insensitive" as const} },
-            { lastError: { contains: q , mode: "insensitive" as const} },
+            { id: icontains(q) },
+            { to: icontains(q) },
+            { providerMessageId: icontains(q) },
+            { lastError: icontains(q) },
           ],
         }
       : {}),
@@ -112,8 +119,8 @@ export default async function OutboxPage({
     prisma.outboundMessage.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         channel: true,
@@ -136,16 +143,28 @@ export default async function OutboxPage({
   ]);
 
   const byStatus = Object.fromEntries(counts.map((c) => [c.status, c._count.status]));
-  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
-  const rangeStart = filteredTotal === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(page * PAGE_SIZE, filteredTotal);
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize));
+  const rangeStart = filteredTotal === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, filteredTotal);
 
   // Preserve active filters when moving between pages.
+  function sizeHref(targetSize: number) {
+    const sp = new URLSearchParams({
+      ...(channel ? { channel } : {}),
+      ...(status ? { status } : {}),
+      ...(q ? { q } : {}),
+      ...(targetSize !== PAGE_SIZE ? { size: String(targetSize) } : {}),
+    });
+    const qs = sp.toString();
+    return qs ? `${COMMUNICATIONS_ROUTES.outbox}?${qs}` : COMMUNICATIONS_ROUTES.outbox;
+  }
+
   function pageHref(targetPage: number) {
     const params = new URLSearchParams({
       ...(channel ? { channel } : {}),
       ...(status ? { status } : {}),
       ...(q ? { q } : {}),
+      ...(pageSize !== PAGE_SIZE ? { size: String(pageSize) } : {}),
       ...(targetPage > 1 ? { page: String(targetPage) } : {}),
     });
     const qs = params.toString();
@@ -277,16 +296,13 @@ export default async function OutboxPage({
             Preferences
           </Link>
           <form action={retryNowAction}>
-            <button
-              type="submit"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[0.8125rem] font-bold text-black transition hover:brightness-105"
-            >
+            <SubmitButton bare className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 text-[0.8125rem] font-bold text-black transition hover:brightness-105">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5">
                 <path d="M21 12a9 9 0 1 1-2.64-6.36" />
                 <path d="M21 3v6h-6" />
               </svg>
               Run Retry
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>
@@ -372,6 +388,8 @@ export default async function OutboxPage({
         total={filteredTotal}
         unit="messages"
         hrefForPage={pageHref}
+        pageSize={pageSize}
+        hrefForSize={sizeHref}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 type AdjustType = "IN" | "OUT" | "ADJUST";
 
 type Props = {
@@ -100,17 +101,14 @@ export function StockAdjustModal({ partId, currentQty, action }: Props) {
             </label>
 
             <div className="flex gap-2 pt-1">
-              <button
-                type="submit"
-                onClick={(e) => {
-                  if (type === "OUT" && !window.confirm("Write off this stock? It removes units from on-hand and can't be undone.")) {
-                    e.preventDefault();
-                  }
-                }}
-                className="btn-premium flex-1 rounded-lg px-4 py-2 text-sm font-semibold"
-              >
+              <SubmitButton bare onClick={(e) => {
+ if (type === "OUT" && !window.confirm("Write off this stock? It removes units from on-hand and can't be undone.")) {
+ e.preventDefault();
+ }
+ }}
+ className="btn-premium flex-1 rounded-lg px-4 py-2 text-sm font-semibold">
                 {type === "IN" ? "Receive stock" : type === "OUT" ? "Issue stock" : "Correct count"}
-              </button>
+              </SubmitButton>
               <button
                 type="button"
                 onClick={() => setOpen(false)}

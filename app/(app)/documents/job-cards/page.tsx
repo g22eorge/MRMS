@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+import { flash } from "@/lib/flash";
 import { revalidatePath } from "next/cache";
 
 import { JobStatusBadge } from "@/components/jobs/JobStatusBadge";
@@ -18,6 +20,8 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { ensureQuotationFromJob } from "@/lib/commercial/document-workflow";
 
+import { clientDisplayName } from "@/lib/client-name";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 function DeviceIcon({ type }: { type: string }) {
   const cls = "inline-block h-3.5 w-3.5 shrink-0 text-[var(--ink-muted)]";
   switch (type) {
@@ -55,9 +59,10 @@ function DeviceIcon({ type }: { type: string }) {
   }
 }
 
-type SearchParams = { q?: string; status?: string; period?: string; page?: string };
+type SearchParams = { q?: string; status?: string; period?: string; page?: string; size?: string };
 
-const PAGE_SIZE = 20;
+import { PAGE_SIZE, PAGE_SIZES, parsePageSize } from "@/lib/pagination";
+import { icontains } from "@/lib/db/search";
 
 export default async function JobCardsPage({
   searchParams,
@@ -68,8 +73,9 @@ export default async function JobCardsPage({
   if (!can.generateJobCards(user)) redirect("/dashboard");
   await requireModule(OrgModule.JOBS);
 
-  const { q, status: statusFilter, period: periodFilter = "all", page: pageParam } = await searchParams;
+  const { q, status: statusFilter, period: periodFilter = "all", page: pageParam, size: sizeParam } = await searchParams;
   const page = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
+  const pageSize = parsePageSize(sizeParam);
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -78,7 +84,13 @@ export default async function JobCardsPage({
   async function convertJobCardToQuotationAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
-    if (!(["ADMIN", "OPS", "MANAGER", "SALES", "FINANCE"].includes(user.role) || can.viewFinancials(user))) return;
+    // A bare return told the caller nothing: the row menu's Convert to
+    // Quotation showed for TECH_MANAGER and TECHNICIAN_INTERNAL, the action
+    // stopped here, the page revalidated, and the user saw no quotation, no
+    // error and no toast — a button that looked ordinary and did nothing.
+    if (!(["ADMIN", "OPS", "MANAGER", "SALES", "FINANCE"].includes(user.role) || can.viewFinancials(user))) {
+      redirect(flash("/documents/job-cards", "You do not have permission to convert a job card to a quotation."));
+    }
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     const jobId = String(formData.get("jobId") ?? "").trim();
@@ -104,10 +116,10 @@ export default async function JobCardsPage({
     ...(q
       ? {
           OR: [
-            { jobNumber: { contains: q , mode: "insensitive" as const} },
-            { client: { fullName: { contains: q , mode: "insensitive" as const} } },
-            { brand: { contains: q , mode: "insensitive" as const} },
-            { model: { contains: q , mode: "insensitive" as const} },
+            { jobNumber: icontains(q) },
+            { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
+            { brand: icontains(q) },
+            { model: icontains(q) },
           ],
         }
       : {}),
@@ -117,8 +129,8 @@ export default async function JobCardsPage({
     prisma.job.findMany({
       where,
       orderBy: { receivedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         jobNumber: true,
@@ -128,7 +140,7 @@ export default async function JobCardsPage({
         deviceType: true,
         issueDescription: true,
         receivedAt: true,
-        client: { select: { fullName: true, phone: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
       },
     }),
     prisma.job.count({ where }),
@@ -138,11 +150,23 @@ export default async function JobCardsPage({
   const byStatus = Object.fromEntries(statusCounts.map((c) => [c.status, c._count.status]));
 
   // Preserve filters across pages.
+  function sizeHref(targetSize: number) {
+    const sp = new URLSearchParams({
+      ...(q ? { q } : {}),
+      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(periodFilter && periodFilter !== "all" ? { period: periodFilter } : {}),
+      ...(targetSize !== PAGE_SIZE ? { size: String(targetSize) } : {}),
+    });
+    const qs = sp.toString();
+    return qs ? `/documents/job-cards?${qs}` : "/documents/job-cards";
+  }
+
   function pageHref(targetPage: number) {
     const params = new URLSearchParams({
       ...(q ? { q } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
       ...(periodFilter && periodFilter !== "all" ? { period: periodFilter } : {}),
+      ...(pageSize !== PAGE_SIZE ? { size: String(pageSize) } : {}),
       ...(targetPage > 1 ? { page: String(targetPage) } : {}),
     });
     const qs = params.toString();
@@ -174,8 +198,6 @@ export default async function JobCardsPage({
 
       {/* Action row */}
       <PageHeader
-        title="Job Cards"
-        eyebrow="Documents"
         description={`${total} job card${total === 1 ? "" : "s"}`}
         actions={
           <Link
@@ -230,12 +252,9 @@ export default async function JobCardsPage({
             </option>
           ))}
         </select>
-        <button
-          type="submit"
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/40"
-        >
+        <SubmitButton bare className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-2 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/40">
           Filter
-        </button>
+        </SubmitButton>
         {(q || statusFilter) && (
           <Link
             href="/documents/job-cards"
@@ -251,7 +270,7 @@ export default async function JobCardsPage({
         rows={jobs}
         getRowKey={(job) => job.id}
         empty={q || statusFilter ? "No jobs match your filter." : "No jobs yet. Create a job first."}
-        pagination={{ page, pageSize: PAGE_SIZE, total, hrefForPage: pageHref, unit: "job cards" }}
+        pagination={{ page, pageSize, total, hrefForPage: pageHref, hrefForSize: sizeHref, unit: "job cards" }}
         columns={[
           {
             key: "job",
@@ -261,7 +280,7 @@ export default async function JobCardsPage({
                 <Link href={`/jobs/${job.id}`} className="mono font-semibold text-[var(--accent)] hover:underline">
                   {job.jobNumber}
                 </Link>
-                <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)] sm:hidden">{job.client.fullName}</p>
+                <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)] sm:hidden">{clientDisplayName(job.client)}</p>
               </>
             ),
           },
@@ -272,7 +291,7 @@ export default async function JobCardsPage({
             className: "hidden sm:table-cell",
             cell: (job) => (
               <>
-                <p className="font-medium text-[var(--ink)]">{job.client.fullName}</p>
+                <p className="font-medium text-[var(--ink)]">{clientDisplayName(job.client)}</p>
                 <p className="text-[0.75rem] text-[var(--ink-muted)]">{job.client.phone}</p>
               </>
             ),

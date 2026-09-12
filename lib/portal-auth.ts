@@ -42,6 +42,7 @@ const PORTAL_USER_SELECT = {
   email: true,
   role: true,
   isActive: true,
+  mustChangePassword: true,
   orgId: true,
   clientId: true,
   client: { select: CLIENT_ACCOUNT_SELECT },
@@ -53,7 +54,7 @@ const PORTAL_USER_SELECT = {
 export type PortalClientAccount = { id: string; fullName: string; organization: string | null; email: string | null; phone: string };
 
 export type PortalContext = {
-  portalUser: { id: string; name: string; email: string; role: string; orgId: string; clientId: string };
+  portalUser: { id: string; name: string; email: string; role: string; orgId: string; clientId: string; mustChangePassword: boolean };
   /** The account the login is currently acting for (from the account switcher). */
   client: PortalClientAccount;
   /** Every account this login can switch between (primary + linked), deduped. */
@@ -132,7 +133,7 @@ export async function getPortalSession(): Promise<PortalContext | null> {
   const active = (requested && accessibleClients.find((c) => c.id === requested)) || pu.client;
 
   return {
-    portalUser: { id: pu.id, name: pu.name, email: pu.email, role: pu.role, orgId: pu.orgId, clientId: pu.clientId },
+    portalUser: { id: pu.id, name: pu.name, email: pu.email, role: pu.role, orgId: pu.orgId, clientId: pu.clientId, mustChangePassword: pu.mustChangePassword },
     client: active,
     accessibleClients,
     org: pu.org,
@@ -162,6 +163,19 @@ export async function setActivePortalClient(clientId: string): Promise<boolean> 
 export async function requirePortalSession(): Promise<PortalContext> {
   const ctx = await getPortalSession();
   if (!ctx) redirect("/portal/login");
+  // A login still carrying the password an admin handed out sees nothing until
+  // it is replaced. Every portal page comes through here, so this is the one
+  // place the rule has to live — /portal/change-password calls
+  // requirePortalSessionAllowingPasswordChange instead, or it would bounce
+  // against itself.
+  if (ctx.portalUser.mustChangePassword) redirect("/portal/change-password");
+  return ctx;
+}
+
+/** For the change-password screen itself, which must load while the flag is set. */
+export async function requirePortalSessionAllowingPasswordChange(): Promise<PortalContext> {
+  const ctx = await getPortalSession();
+  if (!ctx) redirect("/portal/login");
   return ctx;
 }
 
@@ -175,4 +189,43 @@ export async function logoutPortal() {
   }
   store.delete(COOKIE);
   store.delete(ACTIVE_CLIENT_COOKIE);
+}
+
+/**
+ * Change a portal login's password after verifying the current one.
+ *
+ * Clears `mustChangePassword` and drops every other session for the login —
+ * changing a password is how someone reacts to a suspected compromise, so it
+ * has to end whoever else is holding a session. The caller's own session is
+ * kept so they are not bounced back to the login screen mid-flow.
+ */
+export async function changePortalPassword(params: {
+  portalUserId: string;
+  currentPassword: string;
+  newPassword: string;
+}): Promise<boolean> {
+  const pu = await prisma.portalUser.findUnique({
+    where: { id: params.portalUserId },
+    select: { id: true, passwordHash: true },
+  });
+  if (!pu?.passwordHash) return false;
+
+  const ok = await verifyPassword({ hash: pu.passwordHash, password: params.currentPassword });
+  if (!ok) return false;
+
+  const store = await cookies();
+  const raw = store.get(COOKIE)?.value;
+  const idx = raw ? raw.lastIndexOf(".") : -1;
+  const keepToken = raw && idx >= 0 ? raw.slice(0, idx) : null;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.portalUser.update({
+      where: { id: pu.id },
+      data: { passwordHash: await hashPortalPassword(params.newPassword), mustChangePassword: false },
+    });
+    await tx.portalSession.deleteMany({
+      where: { portalUserId: pu.id, ...(keepToken ? { token: { not: keepToken } } : {}) },
+    });
+  });
+  return true;
 }

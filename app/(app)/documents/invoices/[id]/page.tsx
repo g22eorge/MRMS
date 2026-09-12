@@ -21,6 +21,8 @@ import { CollectPaymentButton } from "@/components/documents/CollectPaymentButto
 import { InvoiceMoreMenu } from "@/components/documents/InvoiceMoreMenu";
 import { InvoiceCreateDialog } from "../InvoiceCreateDialog";
 
+import { createDeliveryNoteFromInvoice } from "@/lib/commercial/delivery-note-from-invoice";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const INVOICE_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
   ISSUED: "sky",
@@ -110,6 +112,21 @@ export default async function InvoiceDetailPage({
         },
         orderBy: { createdAt: "asc" },
       },
+      // Every payment mints a receipt through createReceiptForPayment, but this
+      // page never read them back, so the document it caused was invisible from
+      // the document that caused it.
+      receipts: { select: { id: true, receiptNumber: true, paymentId: true } },
+      // An invoice-sourced credit note reduces the invoice, and its refund pays
+      // out against it, but neither was readable from the invoice itself — the
+      // POS sale page shows both and this one showed nothing.
+      creditNotes: {
+        select: { id: true, creditNoteNumber: true, totalAmount: true, issuedAt: true, reason: true },
+        orderBy: { issuedAt: "desc" },
+      },
+      refunds: {
+        select: { id: true, amount: true, method: true, refundedAt: true, creditNoteId: true },
+        orderBy: { refundedAt: "desc" },
+      },
       payments: {
         select: {
           id: true,
@@ -180,6 +197,29 @@ export default async function InvoiceDetailPage({
     redirect(`/documents/invoices/${id}?sent=${ok ? "email" : "failed"}`);
   }
 
+  // The chain quotation -> invoice -> delivery note had no third step in the
+  // interface: this page listed delivery notes but offered no way to raise one,
+  // so the only route was the Delivery Notes page and picking the invoice back
+  // out of a dropdown. Payment is deliberately not checked — goods sold on
+  // credit are delivered before they are paid for.
+  async function createDeliveryNoteAction() {
+    "use server";
+    const { user: actor, orgId: actorOrg, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
+    if (!(can.viewFinancials(actor) || ["ADMIN", "OPS", "FRONT_DESK"].includes(actor.role))) return;
+    const result = await createDeliveryNoteFromInvoice({
+      orgId: actorOrg,
+      invoiceId: id,
+      actorUserId: actor.id,
+      // Who carried and who signed is filled in on the note itself; the names
+      // are not known at the moment the document is raised from the invoice.
+      deliveredByName: actor.name ?? "",
+      receivedByName: "",
+    });
+    if (!result.ok) redirect(`/documents/invoices/${id}?dn=failed`);
+    redirect(`/documents/delivery-notes/${result.deliveryNoteId}`);
+  }
+
   // ---- Edit dialog data (loaded only when ?edit=1) ----
   const sp = searchParams ? await searchParams : {};
   const isEdit = sp.edit === "1";
@@ -196,7 +236,7 @@ export default async function InvoiceDetailPage({
   }) : [];
   const jobs = isEdit ? await db.job.findMany({
     where: { orgId: orgId },
-    select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true } } },
+    select: { id: true, jobNumber: true, brand: true, model: true, client: { select: { fullName: true, phone: true, address: true, organization: true } } },
     orderBy: { receivedAt: "desc" },
   }) : [];
   const parts = isEdit ? await db.part.findMany({
@@ -250,22 +290,59 @@ export default async function InvoiceDetailPage({
     <>
       {canSend && invoice.client?.phone && (
         <form action={sendInvoiceWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</SubmitButton>
         </form>
       )}
       {canSend && invoice.client?.email && (
         <form action={sendInvoiceEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</SubmitButton>
         </form>
       )}
       <Link href={`/api/invoices/${invoice.id}/pdf`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">PDF</Link>
       <Link href={`/documents/invoices/${invoice.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Edit</Link>
+      {!isVoid && canSend && (
+        invoice.deliveryNotes.length > 0 ? (
+          <Link
+            href={`/documents/delivery-notes/${invoice.deliveryNotes[0].id}`}
+            className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium"
+          >
+            Delivery note
+          </Link>
+        ) : (
+          <form action={createDeliveryNoteAction} className="inline">
+            <SubmitButton bare pendingLabel="Creating…" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">
+              Create delivery note
+            </SubmitButton>
+          </form>
+        )
+      )}
     </>
   );
 
   const related = [
     ...(invoice.job ? [{ label: invoice.job.jobNumber, href: `/jobs/${invoice.job.id}`, sub: `${invoice.job.brand} ${invoice.job.model}`.trim() || "Job" }] : []),
-    ...invoice.deliveryNotes.map((dn) => ({ label: dn.deliveryNoteNumber, sub: `Delivered ${formatEATDate(dn.deliveredAt)}` })),
+    // These carried no href, so the numbers rendered as plain text and the
+    // chain dead-ended on the page that lists it.
+    ...invoice.deliveryNotes.map((dn) => ({
+      label: dn.deliveryNoteNumber,
+      href: `/documents/delivery-notes/${dn.id}`,
+      sub: `Delivered ${formatEATDate(dn.deliveredAt)}`,
+    })),
+    ...invoice.receipts.map((r) => ({
+      label: r.receiptNumber,
+      href: `/documents/receipts/${r.id}`,
+      sub: "Receipt",
+    })),
+    ...invoice.creditNotes.map((cn) => ({
+      label: cn.creditNoteNumber,
+      href: `/documents/credit-notes/${cn.id}`,
+      sub: `Credit note ${formatMoney(cn.totalAmount, currency)}`,
+    })),
+    ...invoice.refunds.map((r) => ({
+      label: formatMoney(r.amount, currency),
+      href: `/documents/refunds/${r.id}`,
+      sub: `Refund ${formatEATDate(r.refundedAt)}`,
+    })),
   ];
 
   const activity = [
@@ -406,8 +483,91 @@ export default async function InvoiceDetailPage({
                     { key: "method", header: "Method", cell: (row) => row.method },
                     { key: "reference", header: "Reference", cell: (row) => row.reference ?? "—" },
                     { key: "by", header: "Recorded by", cell: (row) => row.createdBy?.name ?? "—" },
+                    {
+                      key: "receipt",
+                      header: "Receipt",
+                      cell: (row) => {
+                        const receipt = invoice.receipts.find((r) => r.paymentId === row.id);
+                        return receipt ? (
+                          <Link href={`/documents/receipts/${receipt.id}`} className="mono text-[var(--accent)] hover:underline">
+                            {receipt.receiptNumber}
+                          </Link>
+                        ) : (
+                          <span className="text-[var(--ink-muted)]">—</span>
+                        );
+                      },
+                    },
                   ]}
                 />
+              </div>
+            )}
+
+            {(invoice.creditNotes.length > 0 || invoice.refunds.length > 0) && (
+              <div className={cardClass}>
+                <div className={cardHeadClass}>Credit Notes &amp; Refunds</div>
+                {invoice.creditNotes.length > 0 && (
+                  <DataTable
+                    frameless
+                    rows={invoice.creditNotes}
+                    getRowKey={(cn) => cn.id}
+                    empty="No credit notes."
+                    columns={[
+                      {
+                        key: "number",
+                        header: "CN #",
+                        cell: (row) => (
+                          <Link href={`/documents/credit-notes/${row.id}`} className="mono text-[var(--accent)] hover:underline">
+                            {row.creditNoteNumber}
+                          </Link>
+                        ),
+                      },
+                      { key: "issued", header: "Issued", cell: (row) => formatEATDate(row.issuedAt) },
+                      { key: "reason", header: "Reason", cell: (row) => row.reason ?? "—" },
+                      {
+                        key: "amount",
+                        header: "Amount",
+                        align: "right",
+                        className: "whitespace-nowrap tabular-nums",
+                        cell: (row) => formatMoney(row.totalAmount, currency),
+                      },
+                    ]}
+                  />
+                )}
+                {invoice.refunds.length > 0 && (
+                  <DataTable
+                    frameless
+                    rows={invoice.refunds}
+                    getRowKey={(r) => r.id}
+                    empty="No refunds."
+                    columns={[
+                      {
+                        key: "refund",
+                        header: "Refund",
+                        cell: (row) => (
+                          <Link href={`/documents/refunds/${row.id}`} className="text-[var(--accent)] hover:underline">
+                            {formatEATDate(row.refundedAt)}
+                          </Link>
+                        ),
+                      },
+                      { key: "method", header: "Method", cell: (row) => row.method },
+                      {
+                        key: "against",
+                        header: "Against",
+                        cell: (row) => {
+                          const cn = invoice.creditNotes.find((c) => c.id === row.creditNoteId);
+                          return cn ? <span className="mono">{cn.creditNoteNumber}</span> : <span className="text-[var(--ink-muted)]">—</span>;
+                        },
+                      },
+                      {
+                        key: "amount",
+                        header: "Amount",
+                        align: "right",
+                        className: "whitespace-nowrap tabular-nums",
+                        cell: (row) => formatMoney(row.amount, currency),
+                      },
+                    ]}
+                  />
+                )}
               </div>
             )}
 
@@ -420,7 +580,15 @@ export default async function InvoiceDetailPage({
                   getRowKey={(dn) => dn.id}
                   empty="No delivery notes."
                   columns={[
-                    { key: "number", header: "DN #", cell: (row) => row.deliveryNoteNumber },
+                    {
+                      key: "number",
+                      header: "DN #",
+                      cell: (row) => (
+                        <Link href={`/documents/delivery-notes/${row.id}`} className="mono text-[var(--accent)] hover:underline">
+                          {row.deliveryNoteNumber}
+                        </Link>
+                      ),
+                    },
                     { key: "date", header: "Delivered", cell: (row) => formatEATDate(row.deliveredAt) },
                     { key: "method", header: "Method", cell: (row) => row.deliveryMethod },
                     { key: "by", header: "Delivered by", cell: (row) => row.deliveredByName },

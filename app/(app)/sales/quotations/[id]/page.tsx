@@ -17,6 +17,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { assertOrgCanMutate } from "@/lib/org-write";
 import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
 import { formatMoney } from "@/lib/currency";
 import {
@@ -27,7 +28,9 @@ import {
   updateQuotationItem,
   updateQuotationStatus,
 } from "../../actions";
+import { clientDisplayName } from "@/lib/client-name";
 
+import { flash } from "@/lib/flash";
  const QUOTATION_STATUS_TONES: Record<QuotationStatus, BadgeTone> = {
   DRAFT: "neutral",
   SENT: "info",
@@ -82,7 +85,7 @@ export default async function QuotationDetailPage({
   // manual "Mark accepted" in between is redundant when you're invoicing anyway).
   const canAcceptAndInvoice = canAccept && can.createInvoices(user) && !quotation.convertedToInvoiceId;
   const canOverrideDiscount = can.overrideDiscount(user);
-  const recipientName = quotation.client?.fullName ?? quotation.lead?.fullName ?? null;
+  const recipientName = (quotation.client ? clientDisplayName(quotation.client) : null) ?? quotation.lead?.fullName ?? null;
   const recipientAddress = quotation.client?.address ?? null;
   const taxDisplayLabel = quotation.taxLabel ?? "Tax";
   const taxDisplayRate = quotation.taxRate ?? null;
@@ -202,6 +205,9 @@ export default async function QuotationDetailPage({
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     if (!can.createInvoices(user)) redirect(`/sales/quotations/${id}`);
+    // A permission check does not cover a read-only user or a suspended
+    // workspace, and this creates a financial document.
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     const quotation = await prisma.quotation.findFirst({
       where: {
@@ -229,7 +235,7 @@ export default async function QuotationDetailPage({
       });
       revalidatePath("/documents/invoices");
       revalidatePath("/documents/quotations");
-      redirect(`/documents/invoices/${invoice.id}?pay=1`);
+      redirect(flash(`/documents/invoices/${invoice.id}?pay=1`, "Quotation converted to invoice"));
     }
     redirect(`/sales/quotations/${id}`);
   }
@@ -238,6 +244,7 @@ export default async function QuotationDetailPage({
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     if (!can.approveQuotations(user) || !can.createInvoices(user)) redirect(`/sales/quotations/${id}`);
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     // Accept implicitly, then convert — collapses SENT → (accept) → ACCEPTED →
     // (convert) into one click. updateQuotationStatus validates the transition.
@@ -273,7 +280,7 @@ export default async function QuotationDetailPage({
       });
       revalidatePath("/documents/invoices");
       revalidatePath("/documents/quotations");
-      redirect(`/documents/invoices/${invoice.id}?pay=1`);
+      redirect(flash(`/documents/invoices/${invoice.id}?pay=1`, "Saved"));
     }
     redirect(`/sales/quotations/${id}`);
   }
@@ -450,10 +457,10 @@ export default async function QuotationDetailPage({
               className={field}
             />
             <input name="notes" defaultValue={quotation.notes ?? ""} placeholder="Notes" aria-label="Notes" className={field} />
-            <Button type="submit" variant="secondary" size="sm">Save</Button>
+            <SubmitButton variant="secondary" size="sm">Save</SubmitButton>
           </form>
           <form action={deleteAction} className="border-t border-[var(--line)] px-3 py-2.5">
-            <Button type="submit" variant="danger" size="sm">Delete Draft</Button>
+            <SubmitButton variant="danger" size="sm">Delete Draft</SubmitButton>
           </form>
         </section>
       ) : null}
@@ -475,7 +482,7 @@ export default async function QuotationDetailPage({
             {canOverrideDiscount ? (
               <input name="discount" type="number" min="0" max="100" step="any" defaultValue="0" aria-label="Discount percent" className={field} />
             ) : <input type="hidden" name="discount" value="0" />}
-            <Button type="submit" size="sm" className="px-4">Add</Button>
+            <SubmitButton size="sm" className="px-4">Add</SubmitButton>
           </form>
         ) : null}
 
@@ -489,36 +496,36 @@ export default async function QuotationDetailPage({
             {
               key: "description",
               header: "Item",
-              cell: (item) =>
+              cell: (item, _i, v) =>
                 canEditDraft ? (
-                  <input form={`quote-item-${item.id}`} name="description" defaultValue={item.description} aria-label="Description" className={cellInput} />
+                  <input form={`quote-item-${v}-${item.id}`} name="description" defaultValue={item.description} aria-label="Description" className={cellInput} />
                 ) : item.description,
             },
             {
               key: "qty",
               header: "Qty",
               className: "w-20 whitespace-nowrap tabular-nums",
-              cell: (item) =>
+              cell: (item, _i, v) =>
                 canEditDraft ? (
-                  <input form={`quote-item-${item.id}`} name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} aria-label="Quantity" className={cellInput} />
+                  <input form={`quote-item-${v}-${item.id}`} name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} aria-label="Quantity" className={cellInput} />
                 ) : item.quantity,
             },
             {
               key: "unitPrice",
               header: "Price",
               className: "w-32 whitespace-nowrap tabular-nums",
-              cell: (item) =>
+              cell: (item, _i, v) =>
                 canEditDraft ? (
-                  <input form={`quote-item-${item.id}`} name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} aria-label="Unit price" className={cellInput} />
+                  <input form={`quote-item-${v}-${item.id}`} name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} aria-label="Unit price" className={cellInput} />
                 ) : formatMoney(item.unitPrice, currency),
             },
             {
               key: "discount",
               header: "Disc",
               className: "w-20 whitespace-nowrap tabular-nums text-[var(--ink-muted)]",
-              cell: (item) =>
+              cell: (item, _i, v) =>
                 canEditDraft && canOverrideDiscount ? (
-                  <input form={`quote-item-${item.id}`} name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} aria-label="Discount percent" className={cellInput} />
+                  <input form={`quote-item-${v}-${item.id}`} name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} aria-label="Discount percent" className={cellInput} />
                 ) : item.discount > 0 ? `${item.discount}%` : <span className="opacity-30">&mdash;</span>,
             },
             {
@@ -530,20 +537,20 @@ export default async function QuotationDetailPage({
           ]}
           actions={
             canEditDraft
-              ? (item) => (
+              ? (item, _ai, v) => (
                   <div className="flex items-center justify-end gap-1.5">
-                    <form id={`quote-item-${item.id}`} action={updateItemAction}>
+                    <form id={`quote-item-${v}-${item.id}`} action={updateItemAction}>
                       <input type="hidden" name="itemId" value={item.id} />
                       {!canOverrideDiscount ? <input type="hidden" name="discount" value="0" /> : null}
-                      <button type="submit" title="Save line" className={iconBtn}>
+                      <SubmitButton bare title="Save line" className={iconBtn}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-                      </button>
+                      </SubmitButton>
                     </form>
                     <form action={removeItemAction}>
                       <input type="hidden" name="itemId" value={item.id} />
-                      <button type="submit" title="Remove line" className={iconBtnDanger}>
+                      <SubmitButton bare title="Remove line" className={iconBtnDanger}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                      </button>
+                      </SubmitButton>
                     </form>
                   </div>
                 )

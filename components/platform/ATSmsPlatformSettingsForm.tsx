@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { saveAtSettingsAction, clearPlatformKeyAction } from "@/app/(platform)/platform/settings/actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 type Configured = {
   AT_API_KEY: boolean;
   AT_USERNAME: boolean;
@@ -46,7 +47,13 @@ const FIELDS: {
 
 export function ATSmsPlatformSettingsForm({ configured }: Props) {
   const [saveState, saveAction, saving] = useActionState<{ ok: boolean; error?: string } | null, FormData>(saveAtSettingsAction, null);
-  const [, clearAction] = useActionState<{ ok: boolean; error?: string } | null, FormData>(clearPlatformKeyAction, null);
+  // The clear result is kept and shown. Discarding it is what made a broken
+  // Clear button indistinguishable from a working one.
+  const [cleared, setCleared] = useState<{ key: string; ok: boolean; error?: string } | null>(null);
+  const [clearPending, startClearTransition] = useTransition();
+  const [clearingKey, setClearingKey] = useState<string | null>(null);
+  const clearing = clearPending ? clearingKey : null;
+  const startClear = (fn: () => Promise<void>) => startClearTransition(fn);
 
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-5">
@@ -78,15 +85,46 @@ export function ATSmsPlatformSettingsForm({ configured }: Props) {
                   className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
                 />
                 {isInDb && (
-                  <form action={clearAction}>
-                    <input type="hidden" name="key" value={f.key} />
-                    <button type="submit" className="rounded-md px-2.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">
-                      Clear
-                    </button>
-                  </form>
+                  // type="button" with a direct call, deliberately using no
+                  // form machinery at all.
+                  //
+                  // This control was first a <form> nested inside the card's
+                  // form, which HTML forbids — the parser dropped it and the
+                  // button submitted the SAVE action with empty boxes, doing
+                  // nothing. Replacing it with formAction still left the result
+                  // discarded, so a failure looked exactly like a success and
+                  // exactly like a dead button. Three rounds were spent on
+                  // credentials because of it.
+                  //
+                  // A server action can be called directly from a client
+                  // component. No nesting to get wrong, no submitter semantics
+                  // to reason about, and the outcome is returned where it can
+                  // be shown.
+                  <button
+                    type="button"
+                    disabled={clearing === f.key}
+                    onClick={() => {
+                      setCleared(null);
+                      setClearingKey(f.key);
+                      startClear(async () => {
+                        const data = new FormData();
+                        data.set("key", f.key);
+                        const res = await clearPlatformKeyAction(null, data);
+                        setCleared({ key: f.key, ok: res.ok, error: res.error });
+                      });
+                    }}
+                    className="rounded-md px-2.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    {clearing === f.key ? "Clearing…" : "Clear"}
+                  </button>
                 )}
               </div>
               <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{f.hint}</p>
+              {cleared?.key === f.key && (
+                <p className={`mt-1 text-[0.75rem] font-semibold ${cleared.ok ? "text-emerald-600" : "text-red-600"}`}>
+                  {cleared.ok ? "Cleared." : cleared.error ?? "Could not clear."}
+                </p>
+              )}
             </div>
           );
         })}
@@ -94,13 +132,20 @@ export function ATSmsPlatformSettingsForm({ configured }: Props) {
         {saveState && !saveState.ok && <p className="text-xs text-red-600">{saveState.error ?? "Save failed"}</p>}
         {saveState?.ok && <p className="text-xs text-emerald-600">Settings saved successfully.</p>}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
-        >
+        {/* A tick above means a value was stored, not that it works — the page
+            reads the same table the form wrote to. Only the provider knows. */}
+        <p className="text-[0.75rem] text-[var(--ink-muted)]">
+          Saved is not the same as working.{" "}
+          <a href="/api/admin/sms-health" className="font-semibold text-[var(--accent)] underline underline-offset-2">
+            Check these credentials against Africa&apos;s Talking
+          </a>{" "}
+          — it reads your account balance, sends nothing, and costs nothing.
+        </p>
+
+        <SubmitButton bare disabled={saving}
+ className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
           {saving ? "Saving…" : "Save SMS Settings"}
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

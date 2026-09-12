@@ -28,7 +28,7 @@ export default function OpenGraphImage() {
             position: "absolute",
             inset: 0,
             background:
-              "radial-gradient(900px 450px at 18% 22%, rgba(212,175,55,0.22), transparent 55%), radial-gradient(720px 420px at 82% 70%, rgba(212,175,55,0.14), transparent 60%)",
+              "radial-gradient(900px 450px at 18% 22%, rgba(201, 162, 39,0.22), transparent 55%), radial-gradient(720px 420px at 82% 70%, rgba(201, 162, 39,0.14), transparent 60%)",
           }}
         />
 
@@ -55,7 +55,7 @@ export default function OpenGraphImage() {
               width: 520,
               height: 520,
               borderRadius: 999,
-              background: "radial-gradient(circle at 30% 30%, rgba(212,175,55,0.26), rgba(212,175,55,0.00) 65%)",
+              background: "radial-gradient(circle at 30% 30%, rgba(201, 162, 39,0.26), rgba(201, 162, 39,0.00) 65%)",
               filter: "blur(1px)",
             }}
           />
@@ -68,11 +68,11 @@ export default function OpenGraphImage() {
                   height: 72,
                   borderRadius: 999,
                   background: "#fff",
-                  border: "1px solid rgba(212,175,55,0.35)",
+                  border: "1px solid rgba(201, 162, 39,0.35)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 0 18px rgba(212,175,55,0.25)",
+                  boxShadow: "0 0 18px rgba(201, 162, 39,0.25)",
                   overflow: "hidden",
                 }}
               >
@@ -82,7 +82,7 @@ export default function OpenGraphImage() {
                 <div style={{ color: "rgba(255,255,255,0.86)", fontSize: 14, letterSpacing: 4, fontWeight: 700 }}>
                   EAGLE INFO SOLUTIONS
                 </div>
-                <div style={{ color: "rgba(212,175,55,0.92)", fontSize: 12, letterSpacing: 3, fontWeight: 700 }}>
+                <div style={{ color: "rgba(201, 162, 39,0.92)", fontSize: 12, letterSpacing: 3, fontWeight: 700 }}>
                   REPAIR MANAGEMENT
                 </div>
               </div>

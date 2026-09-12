@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { savePesapalSettingsAction, clearPesapalKeyAction, registerIpnAction } from "@/app/(platform)/platform/settings/actions";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 type Configured = {
   PESAPAL_CONSUMER_KEY: boolean;
   PESAPAL_CONSUMER_SECRET: boolean;
@@ -12,7 +13,7 @@ type Configured = {
   PESAPAL_IPN_ID_inDb: boolean;
 };
 
-type Props = { configured: Configured; webhookUrl: string; ipnId: string | null };
+type Props = { configured: Configured; webhookUrl: string; ipnId: string | null; ipnKey: string };
 
 const FIELDS: { key: "PESAPAL_CONSUMER_KEY" | "PESAPAL_CONSUMER_SECRET"; label: string; placeholder: string; hint: string }[] = [
   {
@@ -29,9 +30,16 @@ const FIELDS: { key: "PESAPAL_CONSUMER_KEY" | "PESAPAL_CONSUMER_SECRET"; label: 
   },
 ];
 
-export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
+export function PesapalSettingsForm({ configured, webhookUrl, ipnId, ipnKey }: Props) {
   const [saveState, saveAction, saving] = useActionState<{ ok: boolean; error?: string } | null, FormData>(savePesapalSettingsAction, null);
-  const [, clearAction] = useActionState<{ ok: boolean; error?: string } | null, FormData>(clearPesapalKeyAction, null);
+  // The row Clear buttons call the action directly and keep the result.
+  // Discarding it is what made a broken Clear indistinguishable from a working
+  // one for three rounds.
+  const [cleared, setCleared] = useState<{ key: string; ok: boolean; error?: string } | null>(null);
+  const [clearPending, startClearTransition] = useTransition();
+  const [clearingKey, setClearingKey] = useState<string | null>(null);
+  const clearing = clearPending ? clearingKey : null;
+  const startClear = (fn: () => Promise<void>) => startClearTransition(fn);
   const [ipnState, ipnAction, registering] = useActionState<{ ok: boolean; ipnId?: string; error?: string } | null, FormData>(registerIpnAction, null);
 
   return (
@@ -64,15 +72,46 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
                   className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] mono text-[var(--ink)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
                 />
                 {isInDb && (
-                  <form action={clearAction}>
-                    <input type="hidden" name="key" value={f.key} />
-                    <button type="submit" className="rounded-md px-2.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">
-                      Clear
-                    </button>
-                  </form>
+                  // type="button" with a direct call, deliberately using no
+                  // form machinery at all.
+                  //
+                  // This control was first a <form> nested inside the card's
+                  // form, which HTML forbids — the parser dropped it and the
+                  // button submitted the SAVE action with empty boxes, doing
+                  // nothing. Replacing it with formAction still left the result
+                  // discarded, so a failure looked exactly like a success and
+                  // exactly like a dead button. Three rounds were spent on
+                  // credentials because of it.
+                  //
+                  // A server action can be called directly from a client
+                  // component. No nesting to get wrong, no submitter semantics
+                  // to reason about, and the outcome is returned where it can
+                  // be shown.
+                  <button
+                    type="button"
+                    disabled={clearing === f.key}
+                    onClick={() => {
+                      setCleared(null);
+                      setClearingKey(f.key);
+                      startClear(async () => {
+                        const data = new FormData();
+                        data.set("key", f.key);
+                        const res = await clearPesapalKeyAction(null, data);
+                        setCleared({ key: f.key, ok: res.ok, error: res.error });
+                      });
+                    }}
+                    className="rounded-md px-2.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    {clearing === f.key ? "Clearing…" : "Clear"}
+                  </button>
                 )}
               </div>
               <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">{f.hint}</p>
+              {cleared?.key === f.key && (
+                <p className={`mt-1 text-[0.75rem] font-semibold ${cleared.ok ? "text-emerald-600" : "text-red-600"}`}>
+                  {cleared.ok ? "Cleared." : cleared.error ?? "Could not clear."}
+                </p>
+              )}
             </div>
           );
         })}
@@ -80,20 +119,17 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
         {saveState && !saveState.ok && <p className="text-xs text-red-600">{saveState.error ?? "Save failed"}</p>}
         {saveState?.ok && <p className="text-xs text-emerald-600">Settings saved successfully.</p>}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
-        >
+        <SubmitButton bare disabled={saving}
+ className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
           {saving ? "Saving…" : "Save Pesapal Settings"}
-        </button>
+        </SubmitButton>
       </form>
 
       {/* IPN registration */}
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-3 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">IPN (Webhook) URL</p>
+            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">IPN (Webhook) URL — expected</p>
             <p className="mt-0.5 mono text-xs text-[var(--ink)] break-all">{webhookUrl}</p>
           </div>
         </div>
@@ -108,19 +144,39 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
             </p>
           </div>
           <form action={ipnAction}>
-            <button
-              type="submit"
-              disabled={registering}
-              className="rounded-md bg-[var(--accent)]/15 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors disabled:opacity-50"
-            >
+            <SubmitButton bare disabled={registering}
+ className="rounded-md bg-[var(--accent)]/15 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/25 transition-colors disabled:opacity-50">
               {registering ? "Registering…" : (ipnState?.ipnId ?? ipnId) ? "Re-register IPN" : "Register IPN"}
-            </button>
+            </SubmitButton>
           </form>
           {configured.PESAPAL_IPN_ID_inDb && (
-            <form action={clearAction}>
-              <input type="hidden" name="key" value="PESAPAL_IPN_ID" />
-              <button type="submit" className="text-[0.75rem] text-red-500 underline underline-offset-2">Clear</button>
-            </form>
+            // Same direct call as the field Clears above. This one was a
+            // standalone form and did run — but its result went to the
+            // discarded first element of useActionState, so a failure was
+            // indistinguishable from a success, which is the half of that
+            // defect that actually cost the time.
+            <button
+              type="button"
+              disabled={clearing === ipnKey}
+              onClick={() => {
+                setCleared(null);
+                setClearingKey(ipnKey);
+                startClear(async () => {
+                  const data = new FormData();
+                  data.set("key", ipnKey);
+                  const res = await clearPesapalKeyAction(null, data);
+                  setCleared({ key: ipnKey, ok: res.ok, error: res.error });
+                });
+              }}
+              className="text-[0.75rem] text-red-500 underline underline-offset-2 disabled:opacity-50"
+            >
+              {clearing === ipnKey ? "Clearing…" : "Clear"}
+            </button>
+          )}
+          {cleared?.key === ipnKey && (
+            <span className={`text-[0.75rem] font-semibold ${cleared.ok ? "text-emerald-600" : "text-red-600"}`}>
+              {cleared.ok ? "Cleared." : cleared.error ?? "Could not clear."}
+            </span>
           )}
         </div>
 
@@ -130,6 +186,16 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId }: Props) {
         <p className="text-[0.75rem] text-[var(--ink-muted)]">
           Register this URL in your Pesapal dashboard, or click &quot;Register IPN&quot; above to do it automatically via the API.
           Set <code className="mono">PESAPAL_ENV=production</code> in env vars for live payments.
+        </p>
+        {/* An ID here means one was stored, not that it points at the URL above.
+            Nothing re-checks that after the first registration, so the check is
+            offered rather than implied. */}
+        <p className="text-[0.75rem] text-[var(--ink-muted)]">
+          An ID above only means one was stored. To confirm Pesapal actually sends notifications to
+          that URL — and that this deployment can take real money —{" "}
+          <a href="/api/admin/pesapal-health" className="underline underline-offset-2 text-[var(--accent)]">
+            run the payment readiness check
+          </a>.
         </p>
       </div>
     </div>

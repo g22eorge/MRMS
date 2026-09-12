@@ -14,13 +14,11 @@ export const PESAPAL_BASE =
     : "https://cybqa.pesapal.com/pesapalv3";
 
 // ── Plan prices (UGX) ─────────────────────────────────────────────────────────
-
-export const PLAN_PRICES: Record<string, number> = {
-  STANDARD:   35_000,
-  GROWTH:     75_000,
-  PREMIUM:   120_000,
-  ENTERPRISE: 200_000,
-};
+// Declared in lib/plan-prices.ts and re-exported here, where callers already
+// expect to find them. This file never used the table — it only held it, and
+// holding it in two places is what let the webhook verify against a ladder the
+// product had stopped selling.
+export { PLAN_PRICES } from "@/lib/plan-prices";
 
 export const CURRENCY = "UGX";
 
@@ -85,15 +83,72 @@ export async function getRegisteredIpns(): Promise<IpnEntry[]> {
   return pesapalFetch<IpnEntry[]>("/api/URLSetup/GetIpnList");
 }
 
-/** Get the stored IPN ID, or auto-register one if not yet stored. */
+/**
+ * The URL Pesapal is told to call back.
+ *
+ * Registration happens once and the resulting id is stored forever — nothing
+ * re-checks where it points. So a registration made while NEXT_PUBLIC_APP_URL
+ * was unset would pin every future payment notification to localhost, where it
+ * is delivered to nothing, and the only symptom is payments that never
+ * activate. Refusing here costs one loud failure; allowing it costs silent
+ * ones for the life of the deployment.
+ */
+export function ipnCallbackUrl(): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const local = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(baseUrl);
+  if (process.env.NODE_ENV === "production" && local) {
+    throw new Error(
+      "Refusing to register a localhost IPN URL in production: set NEXT_PUBLIC_APP_URL to the public app URL first. " +
+        "Pesapal stores this address permanently, and notifications sent to localhost are lost.",
+    );
+  }
+  return `${baseUrl}/api/webhooks/pesapal`;
+}
+
+export const IS_LIVE = PESAPAL_BASE.includes("pay.pesapal.com");
+
+/**
+ * Which stored IPN id applies, and why it is not just one key.
+ *
+ * An IPN id belongs to the Pesapal account that registered it. Sandbox and live
+ * are different accounts, so an id from one is meaningless to the other — but
+ * the setting was a single "PESAPAL_IPN_ID" with nothing recording where it
+ * came from. This deployment has only ever run against the sandbox, so the
+ * moment PESAPAL_ENV is set to production the stored sandbox id would be handed
+ * to the live host as notification_id, and the order is rejected or accepted and
+ * never notified. Going live would silently not work, and would look exactly
+ * like the defect it was meant to end.
+ *
+ * Keyed by environment, the flip registers a fresh id against the live account
+ * on its own, and switching back finds the sandbox one still there.
+ */
+export function ipnSettingKey(): string {
+  return IS_LIVE ? "PESAPAL_IPN_ID_LIVE" : "PESAPAL_IPN_ID_SANDBOX";
+}
+
+/**
+ * The stored id for the current environment.
+ *
+ * Falls back to the legacy un-namespaced key only in sandbox, which is sound
+ * rather than merely convenient: every value ever written under it was written
+ * while this deployment pointed at the sandbox. Reading it in live mode would
+ * reintroduce exactly the cross-account confusion this exists to prevent.
+ */
+export async function getStoredIpnId(): Promise<string | null> {
+  const { getPlatformSetting } = await import("@/lib/platform-settings");
+  const scoped = await getPlatformSetting(ipnSettingKey());
+  if (scoped) return scoped;
+  return IS_LIVE ? null : getPlatformSetting("PESAPAL_IPN_ID");
+}
+
+/** Get the stored IPN ID for this environment, or register one if absent. */
 export async function getOrCreateIpnId(): Promise<string> {
-  const { getPlatformSetting, setPlatformSetting } = await import("@/lib/platform-settings");
-  const stored = await getPlatformSetting("PESAPAL_IPN_ID");
+  const { setPlatformSetting } = await import("@/lib/platform-settings");
+  const stored = await getStoredIpnId();
   if (stored) return stored;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const ipnId = await registerIpn(`${baseUrl}/api/webhooks/pesapal`);
-  await setPlatformSetting("PESAPAL_IPN_ID", ipnId);
+  const ipnId = await registerIpn(ipnCallbackUrl());
+  await setPlatformSetting(ipnSettingKey(), ipnId);
   return ipnId;
 }
 

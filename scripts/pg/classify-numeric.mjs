@@ -59,9 +59,15 @@ const OVERRIDES = {
 const RATE_NAMES = /^(exchangeRateToBase|taxRate|rate)$/;
 const FACTOR_NAMES = /UomFactor$/;
 
-function classify(model, field) {
+function classify(model, field, native) {
   const key = `${model}.${field}`;
   if (OVERRIDES[key]) return OVERRIDES[key];
+  // Already converted: trust the precision that is in the schema.
+  if (native) {
+    for (const [name, spec] of Object.entries(CLASSES)) {
+      if (spec.native && spec.native === `@db.${native}`) return name;
+    }
+  }
   if (RATE_NAMES.test(field)) return "rate";
   if (FACTOR_NAMES.test(field)) return "factor";
   // Everything else in this schema's Float set is currency: amounts, totals,
@@ -74,8 +80,13 @@ const out = { generatedAt: new Date().toISOString(), classes: CLASSES, fields: [
 
 for (const [modelName, model] of models) {
   for (const col of model.columns.values()) {
-    if (col.type !== "Float") continue;
-    const cls = classify(modelName, col.field);
+    // Float OR Decimal: the classification has to describe every money column,
+    // not just the ones still awaiting conversion. Matching only Float made this
+    // lossy — a field already converted dropped out of the file, and with it out
+    // of the generated result extension, so it came back to the app as a Decimal
+    // object. BillingEvent.amount hit exactly that.
+    if (col.type !== "Float" && col.type !== "Decimal") continue;
+    const cls = classify(modelName, col.field, col.native);
     out.fields.push({
       model: modelName,
       field: col.field,

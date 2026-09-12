@@ -86,10 +86,10 @@ CREATE TYPE "NotificationChannel" AS ENUM ('DASHBOARD', 'WHATSAPP', 'EMAIL');
 CREATE TYPE "OutboundMessageChannel" AS ENUM ('WHATSAPP', 'EMAIL');
 
 -- CreateEnum
-CREATE TYPE "OutboundMessageStatus" AS ENUM ('PENDING', 'SENT', 'FAILED', 'DEAD');
+CREATE TYPE "OutboundMessageStatus" AS ENUM ('PENDING', 'SENT', 'FAILED', 'DEAD', 'PREVIEW');
 
 -- CreateEnum
-CREATE TYPE "OutboundMessageType" AS ENUM ('REPAIR_REQUEST_CONFIRMATION', 'FRONT_DESK_APPROVED', 'FRONT_DESK_REJECTED', 'INTAKE_APPROVED', 'INTAKE_REJECTED', 'JOB_CREATED', 'JOB_COMPLETED', 'JOB_STATUS_UPDATE', 'READY_FOR_PICKUP_NUDGE_1', 'READY_FOR_PICKUP_NUDGE_2', 'REPAIR_REQUEST_EMAIL_ALERT', 'ADMIN_TEST', 'STAFF_REPLY', 'INVOICE_REMINDER');
+CREATE TYPE "OutboundMessageType" AS ENUM ('REPAIR_REQUEST_CONFIRMATION', 'FRONT_DESK_APPROVED', 'FRONT_DESK_REJECTED', 'INTAKE_APPROVED', 'INTAKE_REJECTED', 'JOB_CREATED', 'JOB_COMPLETED', 'JOB_STATUS_UPDATE', 'READY_FOR_PICKUP_NUDGE_1', 'READY_FOR_PICKUP_NUDGE_2', 'REPAIR_REQUEST_EMAIL_ALERT', 'ADMIN_TEST', 'STAFF_REPLY', 'INVOICE_REMINDER', 'WARRANTY_CLAIM_UPDATE', 'CAMPAIGN_MESSAGE');
 
 -- CreateEnum
 CREATE TYPE "RepairRequestStatus" AS ENUM ('PENDING_INTAKE', 'PENDING_FRONT_DESK', 'APPROVED', 'REJECTED', 'CONVERTED_TO_JOB');
@@ -447,6 +447,7 @@ CREATE TABLE "Job" (
     "clientApproved" BOOLEAN,
     "approvalDate" TIMESTAMP(3),
     "quotedAt" TIMESTAMP(3),
+    "quotationNumber" TEXT,
     "repairTimeline" TEXT,
     "timelineMinMinutes" INTEGER,
     "timelineMaxMinutes" INTEGER,
@@ -479,6 +480,7 @@ CREATE TABLE "Invoice" (
     "dueDate" TIMESTAMP(3),
     "invoiceNumber" TEXT NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "status" "InvoiceStatus" NOT NULL DEFAULT 'ISSUED',
     "issuedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "totalAmount" DECIMAL(18,2) NOT NULL,
@@ -566,9 +568,11 @@ CREATE TABLE "Refund" (
 CREATE TABLE "CreditNote" (
     "id" TEXT NOT NULL,
     "orgId" TEXT NOT NULL,
-    "saleId" TEXT NOT NULL,
+    "saleId" TEXT,
+    "invoiceId" TEXT,
     "creditNoteNumber" TEXT NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "totalAmount" DECIMAL(18,2) NOT NULL,
     "issuedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "reason" TEXT,
@@ -587,7 +591,7 @@ CREATE TABLE "CreditNoteItem" (
     "creditNoteId" TEXT NOT NULL,
     "partId" TEXT,
     "description" TEXT NOT NULL,
-    "quantity" INTEGER NOT NULL,
+    "quantity" DECIMAL(18,2) NOT NULL,
     "unitPrice" DECIMAL(18,2) NOT NULL,
     "lineTotal" DECIMAL(18,2) NOT NULL,
     "saleUomFactor" DECIMAL(18,6),
@@ -609,6 +613,7 @@ CREATE TABLE "Sale" (
     "invoiceNumber" TEXT,
     "invoicedAt" TIMESTAMP(3),
     "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "subtotal" DECIMAL(18,2) NOT NULL DEFAULT 0,
     "discountAmount" DECIMAL(18,2) NOT NULL DEFAULT 0,
     "vatAmount" DECIMAL(18,2) NOT NULL DEFAULT 0,
@@ -833,6 +838,9 @@ CREATE TABLE "OutboundMessage" (
     "lockedAt" TIMESTAMP(3),
     "repairRequestId" TEXT,
     "jobId" TEXT,
+    "invoiceId" TEXT,
+    "clientId" TEXT,
+    "reminderStage" TEXT,
     "orgId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -916,6 +924,9 @@ CREATE TABLE "DocumentBrandingSettings" (
     "companyContacts" TEXT NOT NULL DEFAULT '+256772 006 344 | +256754 006 344',
     "companyEmail" TEXT,
     "companyWebsite" TEXT,
+    "companyTaxId" TEXT,
+    "companyLogoUrl" TEXT,
+    "companyLogoKey" TEXT,
     "documentTitle" TEXT NOT NULL DEFAULT 'Job Card',
     "quotePrefix" TEXT NOT NULL DEFAULT 'EIS',
     "quoteFormat" TEXT NOT NULL DEFAULT '{PREFIX} {M}/{YYYY}/{SEQ}',
@@ -925,10 +936,10 @@ CREATE TABLE "DocumentBrandingSettings" (
     "vatRatePercent" DECIMAL(12,6) NOT NULL DEFAULT 18,
     "vatInclusive" BOOLEAN NOT NULL DEFAULT false,
     "vatLabel" TEXT NOT NULL DEFAULT 'VAT',
-    "termsText" TEXT NOT NULL DEFAULT 'Quotation valid for 30 days from date issued.
-Repair work begins only after approval is recorded.
-Parts availability may affect final timeline.
-Hidden pre-existing faults may affect final outcome.
+    "termsText" TEXT NOT NULL DEFAULT 'We supply equipment and carry out repairs; only the terms relevant to this document apply.
+Goods are subject to stock availability and carry the manufacturer warranty only, where applicable.
+Repair work is carried out only after approval is recorded, and parts availability may affect the timeline.
+Pre-existing or hidden faults may affect the outcome of a repair.
 Uncollected devices may attract storage fees after notice.',
     "footerText" TEXT NOT NULL DEFAULT 'Powered by Duuka Pro Max — Eagle Info''s repair & business management platform. care.eagleinfosolutions.com',
     "paymentInstructions" TEXT NOT NULL DEFAULT '',
@@ -1123,6 +1134,8 @@ CREATE TABLE "PurchaseOrder" (
     "orgId" TEXT NOT NULL,
     "supplierId" TEXT NOT NULL,
     "status" "PurchaseOrderStatus" NOT NULL DEFAULT 'DRAFT',
+    "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "reference" TEXT,
     "orderedAt" TIMESTAMP(3),
     "expectedAt" TIMESTAMP(3),
@@ -1192,6 +1205,7 @@ CREATE TABLE "SupplierBill" (
     "poId" TEXT,
     "grnId" TEXT,
     "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "subtotal" DECIMAL(18,2) NOT NULL,
     "taxAmount" DECIMAL(18,2) NOT NULL DEFAULT 0,
     "totalAmount" DECIMAL(18,2) NOT NULL,
@@ -1225,7 +1239,10 @@ CREATE TABLE "SupplierPayment" (
     "orgId" TEXT NOT NULL,
     "billId" TEXT NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "amount" DECIMAL(18,2) NOT NULL,
+    "feeAmount" DECIMAL(18,2),
+    "baseAmountSent" DECIMAL(18,2),
     "method" "PaymentMethod" NOT NULL DEFAULT 'CASH',
     "reference" TEXT,
     "paidAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1452,6 +1469,7 @@ CREATE TABLE "CustomerApproval" (
     "status" TEXT NOT NULL DEFAULT 'PENDING',
     "amount" DECIMAL(18,2),
     "currency" TEXT,
+    "exchangeRateToBase" DECIMAL(12,6),
     "requestedById" TEXT,
     "respondedByName" TEXT,
     "responseNote" TEXT,
@@ -1581,6 +1599,7 @@ CREATE TABLE "SupplierPrice" (
     "description" TEXT NOT NULL,
     "unitCost" DECIMAL(18,2) NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "minQuantity" INTEGER,
     "leadTimeDays" INTEGER,
     "validFrom" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1676,6 +1695,7 @@ CREATE TABLE "RecurringInvoice" (
     "nextDueAt" TIMESTAMP(3) NOT NULL,
     "lastIssuedAt" TIMESTAMP(3),
     "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "notes" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "autoIssue" BOOLEAN NOT NULL DEFAULT false,
@@ -1726,6 +1746,7 @@ CREATE TABLE "Receipt" (
     "clientId" TEXT,
     "amount" DECIMAL(18,2) NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "issuedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "issuedById" TEXT,
     "voidedAt" TIMESTAMP(3),
@@ -1942,6 +1963,7 @@ CREATE TABLE "Quotation" (
     "quoteNumber" TEXT NOT NULL,
     "status" "QuotationStatus" NOT NULL DEFAULT 'DRAFT',
     "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "leadId" TEXT,
     "clientId" TEXT,
     "jobId" TEXT,
@@ -2104,6 +2126,8 @@ CREATE TABLE "BankTransaction" (
     "date" TIMESTAMP(3) NOT NULL,
     "description" TEXT NOT NULL,
     "amount" DECIMAL(18,2) NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "exchangeRateToBase" DECIMAL(12,6),
     "type" "BankTransactionType" NOT NULL,
     "reference" TEXT,
     "reconciledAt" TIMESTAMP(3),
@@ -2236,6 +2260,7 @@ CREATE TABLE "PortalUser" (
     "role" "PortalRole" NOT NULL DEFAULT 'IT_OFFICER',
     "passwordHash" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "mustChangePassword" BOOLEAN NOT NULL DEFAULT false,
     "lastLoginAt" TIMESTAMP(3),
     "createdById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -2281,6 +2306,35 @@ CREATE TABLE "RepairMessage" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "RepairMessage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PaymentReminderSettings" (
+    "id" TEXT NOT NULL,
+    "orgId" TEXT NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT false,
+    "dryRun" BOOLEAN NOT NULL DEFAULT true,
+    "paymentTermsDays" INTEGER NOT NULL DEFAULT 30,
+    "manualReviewAbove" DECIMAL(18,2) NOT NULL DEFAULT 2000000,
+    "statementForMultiInvoice" BOOLEAN NOT NULL DEFAULT true,
+    "quietHourStart" INTEGER NOT NULL DEFAULT 8,
+    "quietHourEnd" INTEGER NOT NULL DEFAULT 20,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PaymentReminderSettings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "FxReferenceRate" (
+    "id" TEXT NOT NULL,
+    "base" TEXT NOT NULL,
+    "quote" TEXT NOT NULL,
+    "rate" DECIMAL(12,6) NOT NULL,
+    "source" TEXT NOT NULL,
+    "fetchedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "FxReferenceRate_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -2429,6 +2483,9 @@ CREATE UNIQUE INDEX "Job_jobNumber_key" ON "Job"("jobNumber");
 CREATE UNIQUE INDEX "Job_invoiceNumber_key" ON "Job"("invoiceNumber");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Job_quotationNumber_key" ON "Job"("quotationNumber");
+
+-- CreateIndex
 CREATE INDEX "Job_orgId_idx" ON "Job"("orgId");
 
 -- CreateIndex
@@ -2535,6 +2592,9 @@ CREATE INDEX "CreditNote_orgId_issuedAt_idx" ON "CreditNote"("orgId", "issuedAt"
 
 -- CreateIndex
 CREATE INDEX "CreditNote_saleId_idx" ON "CreditNote"("saleId");
+
+-- CreateIndex
+CREATE INDEX "CreditNote_invoiceId_idx" ON "CreditNote"("invoiceId");
 
 -- CreateIndex
 CREATE INDEX "CreditNoteItem_creditNoteId_idx" ON "CreditNoteItem"("creditNoteId");
@@ -2657,6 +2717,12 @@ CREATE INDEX "OutboundMessage_providerMessageId_idx" ON "OutboundMessage"("provi
 CREATE INDEX "OutboundMessage_repairRequestId_idx" ON "OutboundMessage"("repairRequestId");
 
 -- CreateIndex
+CREATE INDEX "OutboundMessage_invoiceId_reminderStage_idx" ON "OutboundMessage"("invoiceId", "reminderStage");
+
+-- CreateIndex
+CREATE INDEX "OutboundMessage_clientId_reminderStage_idx" ON "OutboundMessage"("clientId", "reminderStage");
+
+-- CreateIndex
 CREATE INDEX "OutboundMessage_jobId_idx" ON "OutboundMessage"("jobId");
 
 -- CreateIndex
@@ -2709,6 +2775,9 @@ CREATE INDEX "RepairRequest_phone_idx" ON "RepairRequest"("phone");
 
 -- CreateIndex
 CREATE INDEX "RepairRequest_clientId_idx" ON "RepairRequest"("clientId");
+
+-- CreateIndex
+CREATE INDEX "RepairRequest_orgId_createdAt_idx" ON "RepairRequest"("orgId", "createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "RepairRequestSequence_orgId_year_key" ON "RepairRequestSequence"("orgId", "year");
@@ -2901,6 +2970,9 @@ CREATE INDEX "WarrantyClaim_orgId_status_openedAt_idx" ON "WarrantyClaim"("orgId
 
 -- CreateIndex
 CREATE INDEX "WarrantyClaim_originalJobId_idx" ON "WarrantyClaim"("originalJobId");
+
+-- CreateIndex
+CREATE INDEX "WarrantyClaim_warrantyJobId_idx" ON "WarrantyClaim"("warrantyJobId");
 
 -- CreateIndex
 CREATE INDEX "InventoryCategory_orgId_isActive_idx" ON "InventoryCategory"("orgId", "isActive");
@@ -3191,6 +3263,9 @@ CREATE INDEX "Campaign_orgId_status_idx" ON "Campaign"("orgId", "status");
 CREATE INDEX "CampaignContact_campaignId_status_idx" ON "CampaignContact"("campaignId", "status");
 
 -- CreateIndex
+CREATE INDEX "CampaignContact_orgId_idx" ON "CampaignContact"("orgId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "CampaignContact_campaignId_leadId_key" ON "CampaignContact"("campaignId", "leadId");
 
 -- CreateIndex
@@ -3249,6 +3324,15 @@ CREATE INDEX "RepairMessage_jobId_createdAt_idx" ON "RepairMessage"("jobId", "cr
 
 -- CreateIndex
 CREATE INDEX "RepairMessage_orgId_jobId_idx" ON "RepairMessage"("orgId", "jobId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PaymentReminderSettings_orgId_key" ON "PaymentReminderSettings"("orgId");
+
+-- CreateIndex
+CREATE INDEX "FxReferenceRate_fetchedAt_idx" ON "FxReferenceRate"("fetchedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "FxReferenceRate_base_quote_key" ON "FxReferenceRate"("base", "quote");
 
 -- CreateIndex
 CREATE INDEX "OrgWhatsAppConfig_phoneNumberId_idx" ON "OrgWhatsAppConfig"("phoneNumberId");
@@ -3401,6 +3485,9 @@ ALTER TABLE "CreditNote" ADD CONSTRAINT "CreditNote_orgId_fkey" FOREIGN KEY ("or
 ALTER TABLE "CreditNote" ADD CONSTRAINT "CreditNote_saleId_fkey" FOREIGN KEY ("saleId") REFERENCES "Sale"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "CreditNote" ADD CONSTRAINT "CreditNote_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "CreditNote" ADD CONSTRAINT "CreditNote_itemsReceivedBackById_fkey" FOREIGN KEY ("itemsReceivedBackById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -3507,6 +3594,12 @@ ALTER TABLE "OutboundMessage" ADD CONSTRAINT "OutboundMessage_repairRequestId_fk
 
 -- AddForeignKey
 ALTER TABLE "OutboundMessage" ADD CONSTRAINT "OutboundMessage_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OutboundMessage" ADD CONSTRAINT "OutboundMessage_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OutboundMessage" ADD CONSTRAINT "OutboundMessage_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OutboundMessage" ADD CONSTRAINT "OutboundMessage_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -3645,6 +3738,15 @@ ALTER TABLE "StockCountItem" ADD CONSTRAINT "StockCountItem_stockCountId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "StockCountItem" ADD CONSTRAINT "StockCountItem_partId_fkey" FOREIGN KEY ("partId") REFERENCES "Part"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "WarrantyClaim" ADD CONSTRAINT "WarrantyClaim_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "WarrantyClaim" ADD CONSTRAINT "WarrantyClaim_originalJobId_fkey" FOREIGN KEY ("originalJobId") REFERENCES "Job"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "WarrantyClaim" ADD CONSTRAINT "WarrantyClaim_warrantyJobId_fkey" FOREIGN KEY ("warrantyJobId") REFERENCES "Job"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PartLocationStock" ADD CONSTRAINT "PartLocationStock_partId_fkey" FOREIGN KEY ("partId") REFERENCES "Part"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -3870,4 +3972,7 @@ ALTER TABLE "PortalUserClient" ADD CONSTRAINT "PortalUserClient_clientId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "PortalSession" ADD CONSTRAINT "PortalSession_portalUserId_fkey" FOREIGN KEY ("portalUserId") REFERENCES "PortalUser"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PaymentReminderSettings" ADD CONSTRAINT "PaymentReminderSettings_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

@@ -13,6 +13,20 @@ export function compactText(value: string | null | undefined, max = 90): string 
   return `${flat.slice(0, max - 1)}...`;
 }
 
+/**
+ * True when a value carries information a reader would want printed.
+ *
+ * compactText/compactListText return the literal string "N/A" for an empty
+ * field, which is truthy — so the usual `{props.x ? <Text/> : null}` guard
+ * renders "Accessories: N/A" instead of omitting the line. Templates that care
+ * about a clean page should test with this rather than truthiness.
+ */
+export function hasValue(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const flat = value.trim().toLowerCase();
+  return flat !== "" && flat !== "n/a" && flat !== "-" && flat !== "none";
+}
+
 export function compactListText(value: string | null | undefined, max = 220): string {
   if (!value) return "N/A";
   const normalized = value
@@ -39,18 +53,44 @@ export async function toDataUriFromLocal(filePath: string, contentType: string):
 
 type LogoCandidate = { file: string; type: string };
 
+/**
+ * First candidate that exists, in list order.
+ *
+ * This used to be Promise.any over access(), which resolves with whichever
+ * check happens to settle first. The list read like a priority order but was
+ * not one, so which logo a document got came down to disk timing.
+ */
+async function firstExistingLogo(candidates: LogoCandidate[]): Promise<string | undefined> {
+  for (const c of candidates) {
+    try {
+      await access(c.file);
+      return await toDataUriFromLocal(c.file, c.type);
+    } catch {
+      // next candidate
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Documents print on white. The brand asset is white artwork on a solid black
+ * field, which lands as a black slab on paper, so a dark-on-transparent variant
+ * wins wherever one exists. The app UI keeps using the original.
+ */
+const DOC_LOGO_FIRST: LogoCandidate[] = [
+  { file: path.join(process.cwd(), "public", "eagle-info-logo-doc.png"), type: "image/png" },
+];
+
 /** Resolve logo for job-card and quotation PDFs (eagle-info-logo variants only). */
 export async function resolvePdfLogo(): Promise<string | undefined> {
-  const localCandidates: LogoCandidate[] = [
+  const local = await firstExistingLogo([
+    ...DOC_LOGO_FIRST,
     { file: path.join(process.cwd(), "public", "eagle-info-logo.png"), type: "image/png" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpeg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.webp"), type: "image/webp" },
-  ];
-  const winner = await Promise.any(
-    localCandidates.map((c) => access(c.file).then(() => c)),
-  ).catch(() => null);
-  if (winner) return toDataUriFromLocal(winner.file, winner.type);
+  ]);
+  if (local) return local;
 
   const baseUrl = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   if (baseUrl) {
@@ -62,9 +102,54 @@ export async function resolvePdfLogo(): Promise<string | undefined> {
   return undefined;
 }
 
-/** Resolve logo for invoice PDFs — also checks invoice-logo variants and INVOICE_LOGO_URL env. */
-export async function resolveInvoiceLogo(): Promise<string | undefined> {
-  const localCandidates: LogoCandidate[] = [
+/**
+ * Resolve the logo for a document PDF.
+ *
+ * The bundled files here are Eagle Info's, shipped in public/. This function
+ * takes no organisation and never did, so on the commercial deployment every
+ * tenant's quotations, invoices and receipts carried Eagle Info's logo — a new
+ * repair shop's first quotation went to their client under another business's
+ * mark. The company name, address and telephone numbers had the same fault
+ * through the branding defaults, so the document was another business's
+ * letterhead entirely.
+ *
+ * A bundled fallback is correct on care, which IS Eagle Info and has exactly
+ * one tenant. It is never correct on the commercial deployment: there, a
+ * document with no logo is right and a document with somebody else's is not.
+ * Until per-organisation logo storage exists, commercial documents print none.
+ */
+export async function resolveInvoiceLogo(orgId?: string | null): Promise<string | undefined> {
+  // Takes an orgId rather than a URL because several callers fetch branding in
+  // parallel with this and do not have it yet. One lookup here is cheaper than
+  // restructuring eight call sites into sequences.
+  let orgLogoUrl: string | null = null;
+  if (orgId) {
+    const { prisma } = await import("@/lib/prisma");
+    const row = await prisma.documentBrandingSettings
+      .findUnique({ where: { orgId }, select: { companyLogoUrl: true } })
+      .catch(() => null);
+    orgLogoUrl = row?.companyLogoUrl ?? null;
+  }
+
+  // The organisation's own logo wins, always. Everything below it is a
+  // deployment-wide fallback and can only ever be one tenant's.
+  if (orgLogoUrl) {
+    if (orgLogoUrl.startsWith("data:")) return orgLogoUrl;
+    const remote = await toDataUriFromRemote(orgLogoUrl);
+    if (remote) return remote;
+    // A stored logo that cannot be fetched prints nothing rather than falling
+    // through to a bundled file belonging to somebody else.
+    return undefined;
+  }
+
+  const { getDeploymentContext } = await import("@/lib/deployment-context");
+  const deployment = await getDeploymentContext().catch(() => null);
+  // Fail closed: if the deployment cannot be identified, do not brand the
+  // document with a logo that may belong to someone else.
+  if (!deployment || deployment.mode !== "CARE_SINGLE_TENANT") return undefined;
+
+  const local = await firstExistingLogo([
+    ...DOC_LOGO_FIRST,
     { file: path.join(process.cwd(), "public", "eagle-info-logo.png"), type: "image/png" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "eagle-info-logo.jpeg"), type: "image/jpeg" },
@@ -73,11 +158,8 @@ export async function resolveInvoiceLogo(): Promise<string | undefined> {
     { file: path.join(process.cwd(), "public", "invoice-logo.jpg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "invoice-logo.jpeg"), type: "image/jpeg" },
     { file: path.join(process.cwd(), "public", "invoice-logo.webp"), type: "image/webp" },
-  ];
-  const winner = await Promise.any(
-    localCandidates.map((c) => access(c.file).then(() => c)),
-  ).catch(() => null);
-  if (winner) return toDataUriFromLocal(winner.file, winner.type);
+  ]);
+  if (local) return local;
 
   const explicit = process.env.INVOICE_LOGO_URL;
   if (explicit) {

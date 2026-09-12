@@ -11,6 +11,7 @@ import { EagleInfoDocument, type EagleInfoLineItem } from "@/lib/pdf/EagleInfoDo
 import { resolveInvoiceLogo, prettyEnum } from "@/lib/pdf/pdf-utils";
 import { prisma } from "@/lib/prisma";
 
+import { clientContactName, clientDisplayName } from "@/lib/client-name";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         select: {
           creditNoteNumber: true,
           sale: { select: { client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+          invoice: {
+            select: {
+              client: { select: { fullName: true, phone: true, email: true, organization: true } },
+              job: { select: { client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+            },
+          },
         },
       },
       createdBy: { select: { name: true } },
@@ -66,13 +73,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const [branding, logoUrl] = await Promise.all([
     getDocumentBrandingSettings(orgId),
-    resolveInvoiceLogo(),
+    resolveInvoiceLogo(orgId),
   ]);
-  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join(", ");
+  const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
   const recipient = refund.invoice?.job?.client
     ?? refund.invoice?.client
     ?? refund.sale?.client
-    ?? refund.creditNote?.sale.client
+    ?? refund.creditNote?.sale?.client
+    ?? refund.creditNote?.invoice?.client
+    ?? refund.creditNote?.invoice?.job?.client
     ?? null;
   const source = refund.invoice?.invoiceNumber
     ?? refund.sale?.saleNumber
@@ -92,18 +101,25 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     companyAddress: address,
     companyPhone: branding.companyContacts || null,
     companyEmail: branding.companyEmail || null,
+    companyWebsite: branding.companyWebsite || null,
+    companyTaxId: branding.companyTaxId || null,
     companyLogoUrl: logoUrl || null,
     docTitle: "Refund",
     docNumber: refundNumber,
     docDate: formatEATDocDate(refund.refundedAt),
     terms: prettyEnum(refund.method),
     dueDate: null,
-    clientName: recipient?.fullName ?? "Walk-in",
+    clientName: clientDisplayName(recipient, "Walk-in"),
+    clientAttn: clientContactName(recipient),
     clientEmail: recipient?.email ?? null,
     clientPhone: recipient?.phone ?? null,
-    clientLocation: recipient?.organization ?? null,
+    clientLocation: null,
     lineItems,
     subTotal: formatMoney(refund.amount, refund.currency),
+    // The headline is the money that moved. "Balance Due UGX 0" is true of a
+    // refund and tells the reader nothing.
+    headlineLabel: "Amount Refunded",
+    headlineAmount: formatMoney(refund.amount, refund.currency),
     totalLabel: "Refund Total",
     totalAmount: formatMoney(refund.amount, refund.currency),
     paymentMade: formatMoney(refund.amount, refund.currency),

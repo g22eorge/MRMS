@@ -15,12 +15,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { PageEmptyState } from "@/components/page-state/PageEmptyState";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
 
 export default async function BankPage({
@@ -39,7 +40,14 @@ export default async function BankPage({
   const q = sp.q?.trim() ?? "";
   const txperiod = sp.txperiod ?? "";
   const page = parsePage(sp.page);
-  const currency = "UGX";
+  const pageSize = parsePageSize(sp.size);
+  // The organisation's own currency, not a literal. A tenant whose books are
+  // kept in KES was shown every figure on this page labelled UGX.
+  const currency =
+    (await prisma.organization.findUnique({
+      where: { id: user.orgId ?? "" },
+      select: { baseCurrency: true },
+    }).catch(() => null))?.baseCurrency ?? "UGX";
 
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -50,6 +58,10 @@ export default async function BankPage({
   async function createBankAccount(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // The page redirects anyone without viewFinancials, but a server action is
+    // invocable on its own and the render guard never runs for it. Bank
+    // accounts, transactions and reconciliation are the ledger's cash side.
+    if (!can.viewFinancials(actor)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const name = fd.get("name") as string;
@@ -68,6 +80,10 @@ export default async function BankPage({
   async function addTransaction(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // The page redirects anyone without viewFinancials, but a server action is
+    // invocable on its own and the render guard never runs for it. Bank
+    // accounts, transactions and reconciliation are the ledger's cash side.
+    if (!can.viewFinancials(actor)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const bankAccountId = fd.get("bankAccountId") as string;
@@ -97,6 +113,7 @@ export default async function BankPage({
   async function reconcile(fd: FormData) {
     "use server";
     const { user, org } = await requireOrgSession();
+    if (!can.viewFinancials(user)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const id = fd.get("id") as string;
     if (!user.orgId) return;
@@ -114,6 +131,10 @@ export default async function BankPage({
   async function deleteBankAccount(fd: FormData) {
     "use server";
     const { user: actor, org } = await requireOrgSession();
+    // The page redirects anyone without viewFinancials, but a server action is
+    // invocable on its own and the render guard never runs for it. Bank
+    // accounts, transactions and reconciliation are the ledger's cash side.
+    if (!can.viewFinancials(actor)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const db = orgDb(user.orgId);
     const id = fd.get("id") as string;
@@ -180,13 +201,16 @@ export default async function BankPage({
   const txDebitsTotal = transactions.filter((t) => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0);
 
   // Paginate the displayed transactions; KPIs/totals above stay whole-dataset.
-  const txPageView = paginationView(page, sortedTransactions.length);
+  const txPageView = paginationView(page, sortedTransactions.length, pageSize);
   const pageTransactions = sortedTransactions.slice(txPageView.skip, txPageView.skip + txPageView.take);
-  const bankHref = pageHrefBuilder("/finance/bank", {
+  const bankHrefFilters = {
     account: activeAccount?.id,
     q,
     txperiod: txperiod || "",
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const bankHref = pageHrefBuilder("/finance/bank", bankHrefFilters);
+  const bankHrefSize = sizeHrefBuilder("/finance/bank", bankHrefFilters);
 
   // Period analysis for active account
   const thisMonthTx = allTransactions.filter(
@@ -209,9 +233,7 @@ export default async function BankPage({
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <FormErrorBanner message={sp.error} />
       <PageHeader
-        eyebrow="Finance"
         title="Bank & cash"
-        description="Track the money in your bank and cash accounts."
         actions={
           <Link
             href="/finance/accounts"
@@ -295,12 +317,9 @@ export default async function BankPage({
             />
           </div>
           <div className="flex justify-end sm:col-span-4">
-            <button
-              type="submit"
-              className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold"
-            >
+            <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">
               Create
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </details>
@@ -461,12 +480,9 @@ export default async function BankPage({
                       />
                     </div>
                     <div className="flex items-end">
-                      <button
-                        type="submit"
-                        className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black"
-                      >
+                      <SubmitButton bare className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black">
                         Add
-                      </button>
+                      </SubmitButton>
                     </div>
                   </form>
                 </details>
@@ -491,7 +507,7 @@ export default async function BankPage({
                     {sp.txperiod && <input type="hidden" name="txperiod" value={sp.txperiod} />}
                     <input name="q" defaultValue={q} placeholder="Search…"
                       className="h-8 min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 text-sm outline-none" />
-                    <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-sm font-medium hover:bg-[var(--panel-strong)]">Search</button>
+                    <SubmitButton bare className="h-8 rounded-lg border border-[var(--line)] px-3 text-sm font-medium hover:bg-[var(--panel-strong)]">Search</SubmitButton>
                     {q && <a href={`/finance/bank?account=${activeAccount.id}`} className="h-8 rounded-lg border border-[var(--line)] px-3 text-sm font-medium leading-8 hover:bg-[var(--panel-strong)]">Clear</a>}
                   </form>
                 </div>
@@ -565,9 +581,9 @@ export default async function BankPage({
                   actions={(tx) => (
                     <form action={reconcile}>
                       <input type="hidden" name="id" value={tx.id} />
-                      <button type="submit" className="text-[var(--accent)] hover:underline">
+                      <SubmitButton bare className="text-[var(--accent)] hover:underline">
                         {tx.reconciledAt ? "Undo" : "Mark checked"}
-                      </button>
+                      </SubmitButton>
                     </form>
                   )}
                   tableFooter={
@@ -611,9 +627,9 @@ export default async function BankPage({
                               )}
                               <form action={reconcile}>
                                 <input type="hidden" name="id" value={tx.id} />
-                                <button type="submit" className="text-[0.8125rem] text-[var(--accent)] hover:underline">
+                                <SubmitButton bare className="text-[0.8125rem] text-[var(--accent)] hover:underline">
                                   {tx.reconciledAt ? "Undo" : "Mark checked"}
-                                </button>
+                                </SubmitButton>
                               </form>
                             </div>
                           </div>
@@ -637,6 +653,8 @@ export default async function BankPage({
                   total={txPageView.total}
                   unit="transactions"
                   hrefForPage={bankHref}
+          pageSize={pageSize}
+          hrefForSize={bankHrefSize}
                 />
               </>
             )}

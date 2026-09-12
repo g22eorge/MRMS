@@ -37,17 +37,16 @@ export const NAV: readonly NavItem[] = [
   { href: "/jobs", label: routeLabel("/jobs"), group: "service", roles: "all" },
   { href: "/intake", label: routeLabel("/intake"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK", "TECHNICIAN_INTERNAL", "SALES_MANAGER"] },
   { href: "/service", label: routeLabel("/service"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "FRONT_DESK"] },
+  { href: "/warranty", label: routeLabel("/warranty"), group: "service", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
 
-  // Inventory & Supply — the Inventory hub plus the daily-driver buying/stock
-  // shortcuts the owner keeps close (purchase orders, stock counts, suppliers,
-  // supplier bills, goods received). Locations, transfers and purchase requests
-  // are reached from inside these pages, so they stay out of the sidebar.
+  // Inventory & Supply — one entry, not seven.
+  //
+  // The sidebar used to carry purchase orders, goods received, supplier bills,
+  // stock counts and suppliers alongside the hub, which is the same page having
+  // two routes to it a few centimetres apart. Inventory is now arranged like
+  // Documents: the section is here, and every destination inside it is a tab on
+  // the hub, reachable from any of its sibling pages. See lib/inventory/routes.
   { href: "/inventory", label: routeLabel("/inventory"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS", "TECHNICIAN_INTERNAL"] },
-  { href: "/inventory/purchase-orders", label: routeLabel("/inventory/purchase-orders"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
-  { href: "/inventory/goods-received", label: routeLabel("/inventory/goods-received"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
-  { href: "/inventory/supplier-bills", label: routeLabel("/inventory/supplier-bills"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
-  { href: "/inventory/stock-counts", label: routeLabel("/inventory/stock-counts"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
-  { href: "/inventory/suppliers", label: routeLabel("/inventory/suppliers"), group: "stock", roles: ["ADMIN", "MANAGER", "TECH_MANAGER", "OPS"] },
 
   // Customers
   { href: "/clients", label: routeLabel("/clients"), group: "customers", roles: ["ADMIN", "MANAGER", "OPS", "FRONT_DESK", "SALES", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL", "FINANCE"] },
@@ -111,7 +110,7 @@ export const PINNED_HREFS: readonly string[] = ["/dashboard", "/jobs", "/clients
 const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ADMIN: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
+    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
     "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
@@ -121,7 +120,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ],
   MANAGER: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
+    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
     "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
@@ -131,7 +130,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ],
   TECH_MANAGER: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
+    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
     "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/payout-followups",
@@ -139,7 +138,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ],
   OPS: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints",
+    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
     "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",

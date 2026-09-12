@@ -13,6 +13,7 @@ type Props = {
   companyContacts: string;
   companyEmail?: string;
   companyWebsite?: string;
+  companyTaxId?: string | null;
   companyLogoUrl?: string;
   paymentInstructions?: string;
   invoiceNumber: string;
@@ -35,6 +36,7 @@ type Props = {
   vatLabel: string;
   vatAmount: string;
   totalAmountPayable: string;
+  amountWords?: string | null;
   paymentMade?: string;
   balanceDue?: string;
   isPaid: boolean;
@@ -51,7 +53,7 @@ type Props = {
 
 export function EagleInfoInvoiceAdapter(props: Props) {
   const address = [props.companyAddressLine1, props.companyAddressLine2]
-    .filter(Boolean).join(", ");
+    .filter(Boolean).join("\n");
 
   // Only show a VAT line when tax actually applies and is non-zero (the official
   // invoice omits the VAT row entirely when there's none).
@@ -91,6 +93,7 @@ export function EagleInfoInvoiceAdapter(props: Props) {
       companyPhone={props.companyContacts || null}
       companyEmail={props.companyEmail || null}
       companyWebsite={props.companyWebsite || null}
+      companyTaxId={props.companyTaxId || null}
       companyLogoUrl={props.companyLogoUrl || null}
       docTitle="Invoice"
       docNumber={props.invoiceNumber}
@@ -99,16 +102,18 @@ export function EagleInfoInvoiceAdapter(props: Props) {
       terms={props.termsText ? "As agreed" : null}
       dueDate={props.isPaid ? "Paid" : null}
       clientLabel="Bill To"
-      clientName={props.clientName}
+      clientName={props.clientOrganization || props.clientName}
+      clientAttn={props.clientOrganization ? props.clientName : null}
       clientEmail={props.clientEmail || null}
       clientPhone={props.clientPhone || null}
-      clientLocation={props.clientOrganization || null}
+      clientLocation={null}
       lineItems={items}
       subTotal={props.subtotalValue || props.repairCost || null}
       vatLabel={showVat ? props.vatLabel : null}
       vatAmount={showVat ? props.vatAmount : null}
       totalLabel="Total"
       totalAmount={props.totalAmountPayable}
+      amountInWords={props.amountWords || null}
       paymentMade={props.paymentMade ?? (props.isPaid ? props.totalAmountPayable : "UGX 0")}
       balanceDue={props.balanceDue ?? (props.isPaid ? "UGX 0" : props.totalAmountPayable)}
       notes={props.footerText || null}

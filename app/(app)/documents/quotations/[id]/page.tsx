@@ -8,6 +8,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+
 import { can } from "@/lib/permissions";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATDate } from "@/lib/date-eat";
@@ -25,6 +26,8 @@ import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail"
 import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 
+import { flash } from "@/lib/flash";
+import { PartPickerField } from "@/components/forms/PartPickerField";
 const QUOTATION_STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
   SENT: "sky",
@@ -45,6 +48,9 @@ const STATUS_LABEL: Record<string, string> = {
 
 const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
 const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
+
+/** Ties the line-item inputs to the "Save changes" form they submit with. */
+const EDIT_FORM_ID = "quotation-edit-form";
 
 export default async function QuotationDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const { user } = await getCurrentUserRole();
@@ -74,7 +80,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
       convertedToInvoiceId: true,
       client: { select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true } },
       job: { select: { id: true, jobNumber: true, brand: true, model: true, serialOrImei: true } },
-      items: { select: { id: true, description: true, quantity: true, unitPrice: true, discount: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
+      items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, discount: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!quotation) redirect("/documents/quotations");
@@ -98,6 +104,15 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
   // not been converted to an invoice. Once sent/accepted/converted it is locked.
   const canEdit = quotation.status === "DRAFT" && !quotation.convertedToInvoiceId;
   const isEdit = sp?.edit === "1" && canEdit;
+  // Only needed while editing, and only active stock is offerable.
+  const parts = isEdit
+    ? await prisma.part.findMany({
+        where: { orgId, isActive: true },
+        orderBy: { name: "asc" },
+        take: 500,
+        select: { id: true, sku: true, name: true, sellingPrice: true, unitCost: true, qtyOnHand: true },
+      })
+    : [];
   const sent = typeof sp?.sent === "string" ? sp.sent : undefined;
   const canDelete = ["ADMIN", "OPS"].includes(user.role);
   const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
@@ -120,15 +135,18 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
 
   async function convertToInvoiceAction() {
     "use server";
-    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    const { user: actor, orgId: actorOrg, org: actorOrgRec } = await requireOrgSession();
     if (!can.createInvoices(actor)) redirect("/dashboard");
+    // Creating an invoice must stop for a read-only user and for a suspended
+    // workspace. can.createInvoices covers neither.
+    assertOrgCanMutate({ access: actorOrgRec.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
     const orgRec = await prisma.organization.findUnique({ where: { id: actorOrg }, select: { baseCurrency: true } });
     const cur = normalizeCurrency(orgRec?.baseCurrency, "UGX");
     const invoice = await prisma.$transaction((tx) => ensureInvoiceFromQuotation(tx, { orgId: actorOrg, quotationId: id, currency: cur }));
     revalidatePath("/documents/quotations");
     if (invoice) {
       revalidatePath("/documents/invoices");
-      redirect(`/documents/invoices/${invoice.id}`);
+      redirect(flash(`/documents/invoices/${invoice.id}`, "Quotation converted to invoice"));
     }
     redirect(`/documents/quotations/${id}`);
   }
@@ -140,7 +158,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
     if (!["ADMIN", "OPS"].includes(actor.role)) redirect("/dashboard");
     await prisma.quotation.deleteMany({ where: { id, orgId: actorOrg } });
     revalidatePath("/documents/quotations");
-    redirect("/documents/quotations");
+    redirect(flash("/documents/quotations", "Quotation deleted"));
   }
 
   const status: { label: string; tone: BadgeTone } = {
@@ -158,12 +176,12 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
     <>
       {canSend && quotation.client?.phone && (
         <form action={sendQuotationWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</SubmitButton>
         </form>
       )}
       {canSend && quotation.client?.email && (
         <form action={sendQuotationEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</SubmitButton>
         </form>
       )}
       {/* Quotation PDF is served by the [id] route's GET — there is no /pdf subroute. */}
@@ -242,45 +260,43 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                   <div className="divide-y divide-[var(--line)]">
                     {quotation.items.map((item) => (
                       <div key={item.id} className="flex flex-wrap items-end gap-2 p-3">
-                        <form
-                          action={async (fd: FormData) => {
-                            "use server";
-                            await updateQuotationItem(String(fd.get("itemId") ?? ""), {
-                              description: String(fd.get("description") ?? ""),
-                              quantity: Number(fd.get("quantity")) || 1,
-                              unitPrice: Number(fd.get("unitPrice")) || 0,
-                              discount: Number(fd.get("discount")) || 0,
-                            });
-                            revalidatePath(`/documents/quotations/${id}`);
-                            redirect(`/documents/quotations/${id}?edit=1`);
-                          }}
-                          className="flex flex-1 flex-wrap items-end gap-2"
-                        >
-                          <input type="hidden" name="itemId" value={item.id} />
+                        {/* These inputs belong to the "Save changes" form at the
+                            bottom of the page, joined to it by id rather than by
+                            nesting — a form cannot contain the Remove form that
+                            sits alongside them. Every row therefore saves with
+                            the one Save button, which is what the button says. */}
+                        <div className="flex flex-1 flex-wrap items-end gap-2">
                           <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description
-                            <input name="description" defaultValue={item.description} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                            <PartPickerField
+                              parts={parts}
+                              formId={EDIT_FORM_ID}
+                              name={`desc__${item.id}`}
+                              partIdName={`part__${item.id}`}
+                              priceFieldName={`price__${item.id}`}
+                              defaultValue={item.description}
+                              defaultPartId={item.partId ?? ""}
+                            />
                           </label>
                           <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
-                            <input name="quantity" type="number" min="1" step="any" defaultValue={item.quantity} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                            <input form={EDIT_FORM_ID} name={`qty__${item.id}`} type="number" min="1" step="any" defaultValue={item.quantity} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                           </label>
                           <label className="w-24 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Unit Price
-                            <input name="unitPrice" type="number" min="0" step="any" defaultValue={item.unitPrice} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                            <input form={EDIT_FORM_ID} name={`price__${item.id}`} type="number" min="0" step="any" defaultValue={item.unitPrice} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                           </label>
                           <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
-                            <input name="discount" type="number" min="0" max="100" step="any" defaultValue={item.discount} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                            <input form={EDIT_FORM_ID} name={`disc__${item.id}`} type="number" min="0" max="100" step="any" defaultValue={item.discount} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                           </label>
-                          <button type="submit" className="btn-premium-secondary h-9 rounded-md px-3 text-[0.75rem] font-semibold">Save</button>
-                        </form>
+                        </div>
                         <form
                           action={async (fd: FormData) => {
                             "use server";
                             await removeQuotationItem(String(fd.get("itemId") ?? ""));
                             revalidatePath(`/documents/quotations/${id}`);
-                            redirect(`/documents/quotations/${id}?edit=1`);
+                            redirect(flash(`/documents/quotations/${id}?edit=1`, "Line item removed"));
                           }}
                         >
                           <input type="hidden" name="itemId" value={item.id} />
-                          <button type="submit" className="h-9 rounded-md border border-red-500/30 px-3 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</button>
+                          <SubmitButton bare className="h-9 rounded-md border border-red-500/30 px-3 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</SubmitButton>
                         </form>
                       </div>
                     ))}
@@ -289,17 +305,18 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                         "use server";
                         await addQuotationItem(id, {
                           description: String(fd.get("description") ?? ""),
+                          partId: String(fd.get("partId") ?? "") || null,
                           quantity: Number(fd.get("quantity")) || 1,
                           unitPrice: Number(fd.get("unitPrice")) || 0,
                           discount: Number(fd.get("discount")) || 0,
                         });
                         revalidatePath(`/documents/quotations/${id}`);
-                        redirect(`/documents/quotations/${id}?edit=1`);
+                        redirect(flash(`/documents/quotations/${id}?edit=1`, "Line item added"));
                       }}
                       className="flex flex-wrap items-end gap-2 bg-[var(--panel-strong)]/40 p-3"
                     >
                       <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Add line
-                        <input name="description" required placeholder="New line item" className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                        <PartPickerField parts={parts} required placeholder="New line item — or pick from inventory" />
                       </label>
                       <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
                         <input name="quantity" type="number" min="1" step="any" defaultValue={1} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
@@ -310,8 +327,23 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                       <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Disc %
                         <input name="discount" type="number" min="0" max="100" step="any" defaultValue={0} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                       </label>
-                      <button type="submit" className="btn-premium h-9 rounded-md px-3 text-[0.75rem] font-bold">Add line</button>
+                      <SubmitButton bare className="btn-premium h-9 rounded-md px-3 text-[0.75rem] font-bold">Add line</SubmitButton>
                     </form>
+                  </div>
+                  {/* The Save button for these rows lives further down the page,
+                      in the card that owns the form. Repeating it here means the
+                      edit can be saved from where it was made. */}
+                  <div className="flex items-center justify-between gap-3 border-t border-[var(--line)] px-4 py-3">
+                    <p className="text-[0.75rem] text-[var(--ink-muted)]">
+                      Line changes save with the quotation.
+                    </p>
+                    <SubmitButton
+                      bare
+                      form={EDIT_FORM_ID}
+                      className="btn-premium rounded-lg px-4 py-2 text-[0.75rem] font-bold"
+                    >
+                      Save changes
+                    </SubmitButton>
                   </div>
                   <div className="flex flex-col items-end gap-1 border-t border-[var(--line)] px-4 py-3">
                     <div className="flex w-full max-w-xs justify-between text-[0.8125rem]"><span className="text-[var(--ink-muted)]">Subtotal</span><span className="mono font-medium">{formatMoney(subtotal, currency)}</span></div>
@@ -367,10 +399,43 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                       notes: String(fd.get("notes") ?? "").trim() || null,
                     },
                   });
+                  // The line-item inputs post with this form, so the one button
+                  // labelled "Save changes" saves the lines too. It previously
+                  // saved only the fields in this card while each row carried
+                  // its own small Save: editing a price and clicking the obvious
+                  // primary button discarded the edit and then said
+                  // "Quotation saved", which is the worst possible outcome —
+                  // silent loss with a success message on top.
+                  // Re-read the rows rather than closing over quotation.items:
+                  // a server action serialises everything it captures, and the
+                  // loaded rows carry Prisma types that have no business
+                  // crossing that boundary.
+                  const rows = await prisma.quotationItem.findMany({
+                    where: { quotationId: id, quotation: { orgId: actorOrg } },
+                    select: { id: true, quantity: true, unitPrice: true, discount: true },
+                  });
+                  for (const item of rows) {
+                    const price = Number(fd.get(`price__${item.id}`));
+                    const qty = Number(fd.get(`qty__${item.id}`));
+                    const disc = Number(fd.get(`disc__${item.id}`));
+                    const desc = fd.get(`desc__${item.id}`);
+                    // A row missing from the payload is a row that was not
+                    // rendered; leave it alone rather than overwrite it with
+                    // defaults.
+                    if (desc === null) continue;
+                    await updateQuotationItem(item.id, {
+                      description: String(desc),
+                      partId: String(fd.get(`part__${item.id}`) ?? "") || null,
+                      quantity: Number.isFinite(qty) && qty > 0 ? qty : item.quantity,
+                      unitPrice: Number.isFinite(price) && price >= 0 ? price : item.unitPrice,
+                      discount: Number.isFinite(disc) && disc >= 0 ? disc : item.discount,
+                    });
+                  }
                   revalidatePath(`/documents/quotations/${id}`);
                   revalidatePath("/documents/quotations");
-                  redirect(`/documents/quotations/${id}`);
+                  redirect(flash(`/documents/quotations/${id}`, "Quotation saved"));
                 }}
+                id={EDIT_FORM_ID}
                 className={cardClass}
               >
                 <div className={cardHeadClass}>Edit quotation</div>
@@ -389,7 +454,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                   <textarea name="notes" defaultValue={quotation.notes ?? ""} rows={4} className="w-full resize-y rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]/50" />
                 </div>
                 <div className="flex items-center gap-2 border-t border-[var(--line)] px-4 py-3">
-                  <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold">Save changes</button>
+                  <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-bold">Save changes</SubmitButton>
                   <Link href={`/documents/quotations/${quotation.id}`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Cancel</Link>
                 </div>
               </form>

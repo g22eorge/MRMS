@@ -1,16 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { effectiveRateFromSettlement, readCurrencyAndRate, rowToBase, toBaseAmount } from "@/lib/currency";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { postSupplierPayment } from "@/lib/accounting/post";
+import { postSupplierPayment, postSupplierTransferFee } from "@/lib/accounting/post";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
 
+import { findRecentDuplicate } from "@/lib/dedup";
 async function requireInventoryManager() {
   const ctx = await requireOrgSession();
   if (!can.manageInventory(ctx.user)) redirect("/inventory");
@@ -51,7 +53,15 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
   const poId = String(formData.get("poId") ?? "").trim() || null;
   const grnId = String(formData.get("grnId") ?? "").trim() || null;
   const supplierRef = String(formData.get("supplierRef") ?? "").trim() || null;
-  const currency = String(formData.get("currency") ?? org.baseCurrency).trim().toUpperCase() || org.baseCurrency;
+  // Validated, not trusted. This was free text, so "usdollar" would have been
+  // stored as a currency and every conversion against it silently scored zero.
+  const money = readCurrencyAndRate({
+    currency: String(formData.get("currency") ?? org.baseCurrency).trim().toUpperCase() || org.baseCurrency,
+    exchangeRate: formData.get("exchangeRate"),
+    baseCurrency: org.baseCurrency,
+  });
+  if (money.error) return { error: money.error };
+  const currency = money.currency;
   const taxAmount = Math.max(0, Number(String(formData.get("taxAmount") ?? "0").trim()) || 0);
   const issuedAtRaw = String(formData.get("issuedAt") ?? "").trim();
   const dueAtRaw = String(formData.get("dueAt") ?? "").trim();
@@ -89,15 +99,28 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
     if (dup) return { error: `This goods-received note is already billed on ${dup.billNumber}` };
   }
   if (poId) {
-    const [poItems, priorBills] = await Promise.all([
+    const [po, poItems, priorBills] = await Promise.all([
+      prisma.purchaseOrder.findUnique({ where: { id: poId }, select: { currency: true, exchangeRateToBase: true } }),
       prisma.purchaseOrderItem.findMany({ where: { poId }, select: { qtyOrdered: true, unitCost: true } }),
-      prisma.supplierBill.findMany({ where: { orgId, poId, status: { not: "CANCELLED" } }, select: { subtotal: true } }),
+      prisma.supplierBill.findMany({
+        where: { orgId, poId, status: { not: "CANCELLED" } },
+        select: { subtotal: true, currency: true, exchangeRateToBase: true },
+      }),
     ]);
-    const poValue = poItems.reduce((sum, i) => sum + i.qtyOrdered * i.unitCost, 0);
-    const alreadyBilled = priorBills.reduce((sum, b) => sum + b.subtotal, 0);
-    if (poValue > 0 && alreadyBilled + subtotal > poValue + 0.01) {
+    // Everything converted to base before comparing. These three figures can
+    // each be in a different currency — a shilling PO, an earlier USD bill and
+    // this AED one — and the old check added them together as bare numbers,
+    // then labelled the result with whichever currency happened to be current.
+    const base = org.baseCurrency;
+    const poValue = toBaseAmount({
+      amount: poItems.reduce((sum, i) => sum + i.qtyOrdered * i.unitCost, 0),
+      currency: po?.currency ?? base, baseCurrency: base, exchangeRateToBase: po?.exchangeRateToBase ?? null,
+    });
+    const alreadyBilled = priorBills.reduce((sum, b) => sum + rowToBase({ amount: b.subtotal, currency: b.currency, exchangeRateToBase: b.exchangeRateToBase }, base), 0);
+    const thisBillBase = toBaseAmount({ amount: subtotal, currency, baseCurrency: base, exchangeRateToBase: money.exchangeRateToBase });
+    if (poValue > 0 && alreadyBilled + thisBillBase > poValue + 0.01) {
       return {
-        error: `Billing ${currency} ${(alreadyBilled + subtotal).toLocaleString()} would exceed the PO value of ${currency} ${poValue.toLocaleString()} (already billed ${currency} ${alreadyBilled.toLocaleString()})`,
+        error: `Billing ${base} ${(alreadyBilled + thisBillBase).toLocaleString()} would exceed the PO value of ${base} ${poValue.toLocaleString()} (already billed ${base} ${alreadyBilled.toLocaleString()})`,
       };
     }
   }
@@ -113,6 +136,7 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
       poId,
       grnId,
       currency,
+      exchangeRateToBase: money.exchangeRateToBase,
       subtotal,
       taxAmount,
       totalAmount,
@@ -177,6 +201,12 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
   const reference = String(formData.get("reference") ?? "").trim() || null;
   const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim() || null;
+  // What actually left the bank, and what the charges were. Both in base
+  // currency, because that is what the statement shows.
+  const feeRaw = String(formData.get("feeAmount") ?? "").replace(/,/g, "").trim();
+  const sentRaw = String(formData.get("baseAmountSent") ?? "").replace(/,/g, "").trim();
+  const feeAmount = feeRaw ? Number(feeRaw) : null;
+  const baseAmountSent = sentRaw ? Number(sentRaw) : null;
 
   if (!billId) return;
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -195,13 +225,39 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
     const balance = bill.totalAmount - bill.paidAmount;
     if (amount > balance) return null;
 
+    // Paying a supplier bill twice overstates what we have paid out and throws
+    // the bill's balance off, so the same amount arriving twice in seconds is
+    // treated as one submission.
+    const dup = await findRecentDuplicate(tx.supplierPayment, {
+      orgId, billId, amount, createdById: session.user.id,
+    });
+    if (dup) return null;
+
     const nextPaid = bill.paidAmount + amount;
+    const payCurrency = bill.currency || org.baseCurrency;
+
+    // The rate is derived from the settlement, never typed and never fetched:
+    // what a transfer actually costs is the bank's rate plus a spread that no
+    // public feed publishes, and it is already implied by what left the account.
+    const settledRate = payCurrency === org.baseCurrency
+      ? null
+      : effectiveRateFromSettlement({ amount, baseAmountSent, feeAmount });
+    // Base value of the goods themselves, excluding the charge.
+    const goodsBase = payCurrency === org.baseCurrency
+      ? amount
+      : settledRate
+        ? amount * settledRate
+        : Math.max(0, (baseAmountSent ?? 0) - (feeAmount ?? 0));
+
     const supplierPayment = await tx.supplierPayment.create({
       data: {
         orgId,
         billId,
-        currency: bill.currency || org.baseCurrency,
+        currency: payCurrency,
+        exchangeRateToBase: settledRate,
         amount,
+        feeAmount: Number.isFinite(feeAmount as number) && (feeAmount as number) > 0 ? feeAmount : null,
+        baseAmountSent: Number.isFinite(baseAmountSent as number) && (baseAmountSent as number) > 0 ? baseAmountSent : null,
         method: method as never,
         reference,
         paidAt: paidAtRaw ? new Date(paidAtRaw) : new Date(),
@@ -218,14 +274,28 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
       },
     });
     // C5: cash-basis ledger post — Dr Cost of Sales, Cr Cash.
+    // The ledger is kept in base currency. Posting `amount` directly put AED
+    // 1,000 into the books as 1,000 shillings.
     await postSupplierPayment(tx, {
       orgId,
       userId: session.user.id,
-      amount,
+      amount: goodsBase,
       date: supplierPayment.paidAt ?? undefined,
       reference: `supplier-pay:${supplierPayment.id}`,
       description: `Supplier payment on bill ${billId}`,
     });
+    // The charge is a finance cost, posted apart from the goods so cost of
+    // sales stays the cost of what was bought.
+    if (feeAmount && feeAmount > 0) {
+      await postSupplierTransferFee(tx, {
+        orgId,
+        userId: session.user.id,
+        amount: feeAmount,
+        date: supplierPayment.paidAt ?? undefined,
+        reference: `supplier-fee:${supplierPayment.id}`,
+        description: `Transfer charge on bill ${billId}`,
+      });
+    }
     return { currency: bill.currency || org.baseCurrency };
   });
 

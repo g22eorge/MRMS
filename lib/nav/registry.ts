@@ -26,6 +26,7 @@ const defs = [
   { href: "/technicians/payouts", label: "My Payouts" },
   { href: "/field", label: "Field" },
   { href: "/complaints", label: "Complaints" },
+  { href: "/warranty", label: "Warranty" },
   { href: "/clients", label: "Clients" },
   { href: "/service", label: "Service Hub" },
 
@@ -52,8 +53,8 @@ const defs = [
   { href: "/documents/job-cards", label: "Job Cards" },
   { href: "/documents/quotations", label: "Quotations", shortLabel: "Quotes" },
   { href: "/documents/invoices", label: "Invoices" },
-  { href: "/documents/receipts", label: "Receipts" },
   { href: "/documents/delivery-notes", label: "Delivery Notes", shortLabel: "Delivery" },
+  { href: "/documents/receipts", label: "Receipts" },
   { href: "/documents/credit-notes", label: "Credit Notes" },
   { href: "/documents/refunds", label: "Refunds" },
   { href: "/documents/templates", label: "Templates" },

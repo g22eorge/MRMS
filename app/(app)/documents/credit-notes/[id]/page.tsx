@@ -15,7 +15,9 @@ import { sanitizeText } from "@/lib/sanitize";
 import { shareCreditNoteDocument } from "@/lib/notifications/share-document";
 import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
 import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail";
+import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const cardClass = "overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]";
 const cardHeadClass = "border-b border-[var(--line)] px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
 const clientSelect = { fullName: true, phone: true, email: true, organization: true, address: true } as const;
@@ -45,6 +47,14 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
       itemsReceivedBackBy: { select: { name: true } },
       createdBy: { select: { name: true } },
       sale: { select: { id: true, saleNumber: true, client: { select: clientSelect } } },
+      invoice: {
+        select: {
+          id: true,
+          invoiceNumber: true,
+          client: { select: clientSelect },
+          job: { select: { client: { select: clientSelect } } },
+        },
+      },
       items: { select: { id: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
       refunds: { select: { id: true, amount: true, method: true, refundedAt: true }, orderBy: { refundedAt: "desc" } },
     },
@@ -57,7 +67,7 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
   const refundedTotal = creditNote.refunds.reduce((s, r) => s + r.amount, 0);
   const outstanding = Math.max(0, total - refundedTotal);
   const received = !!creditNote.itemsReceivedBackAt;
-  const client = creditNote.sale?.client ?? null;
+  const client = creditNoteParent(creditNote).client ?? null;
   const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "MANAGER"].includes(user.role);
 
   async function sendCreditNoteWhatsAppAction() {
@@ -83,12 +93,12 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
     <>
       {canSend && client?.phone && (
         <form action={sendCreditNoteWhatsAppAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">WhatsApp</SubmitButton>
         </form>
       )}
       {canSend && client?.email && (
         <form action={sendCreditNoteEmailAction} className="inline">
-          <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</button>
+          <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Email</SubmitButton>
         </form>
       )}
       <Link href={`/api/credit-notes/${creditNote.id}`} className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-bold">PDF</Link>
@@ -105,6 +115,9 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
 
   const related = [
     ...(creditNote.sale ? [{ label: creditNote.sale.saleNumber, href: `/pos/${creditNote.sale.id}`, sub: "Sale" }] : []),
+    ...(creditNote.invoice
+      ? [{ label: creditNote.invoice.invoiceNumber, href: `/documents/invoices/${creditNote.invoice.id}`, sub: "Invoice" }]
+      : []),
     ...creditNote.refunds.map((r) => ({ label: formatMoney(r.amount, currency), href: `/documents/refunds/${r.id}`, sub: `Refund · ${r.method.replaceAll("_", " ")}` })),
   ];
 

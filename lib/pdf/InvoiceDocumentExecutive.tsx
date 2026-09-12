@@ -3,12 +3,14 @@
  * Dark slate/charcoal header, gold accent, premium feel for enterprise clients.
  */
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { AmountInWordsLine } from "@/lib/pdf/house";
 
 import { LineItemsTable, type PdfLineItem } from "./pdf-line-items";
 
+import { QuotationPromoStrip, type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 const NAVY  = "#0f172a";
 const SLATE = "#1e293b";
-const GOLD  = "#d4af37";
+const GOLD  = "#C9A227";
 const GOLD2 = "#f6e27a";
 const MID   = "#475569";
 const LITE  = "#94a3b8";
@@ -25,7 +27,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 28, paddingTop: 20, paddingBottom: 16,
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
   },
-  logo:   { width: 56, height: 56, marginRight: 12 },
+  logo:   { width: 56, height: 56 },
+  // Same reason as the quotation twin: dark mark, near-black header.
+  logoChip: { backgroundColor: WHITE, borderRadius: 4, padding: 4, marginRight: 12 },
   coRow:  { flexDirection: "row", alignItems: "center" },
   coName: { fontSize: 14, fontWeight: 700, color: WHITE, marginBottom: 2 },
   coTag:  { fontSize: 8.2, color: GOLD, fontWeight: 600, marginBottom: 2 },
@@ -83,15 +87,18 @@ const s = StyleSheet.create({
 
 type Props = {
   companyName: string; companyTagline?: string; companyAddressLine1: string; companyAddressLine2: string;
-  companyContacts: string; companyEmail?: string; companyWebsite?: string; companyLogoUrl?: string;
+  companyContacts: string; companyEmail?: string; companyWebsite?: string;
+  companyTaxId?: string | null; companyLogoUrl?: string;
   documentTitle: string; quotationNumber: string; dateIssued: string; validUntil: string;
   repairId: string; preparedByName: string; preparedByRole: string;
   clientName: string; clientPhone: string; clientEmail: string; clientOrganization: string;
   deviceType: string; deviceLabel: string; serialOrImei: string; accessories: string; physicalCondition: string;
   customerIssue: string; diagnosisSummary: string; scopeOfWork: string;
   repairCost: string; vatApplicable: boolean; vatLabel: string; vatAmount: string; totalAmountPayable: string;
+  amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  promo?: QuotationPromo | null;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
   lineItems?:     PdfLineItem[];
@@ -119,8 +126,12 @@ export function InvoiceDocumentExecutive(props: Props) {
         {/* ── Dark header ── */}
         <View style={s.header}>
           <View style={s.coRow}>
-            {/* eslint-disable-next-line jsx-a11y/alt-text */}
-            {props.companyLogoUrl ? <Image style={s.logo} src={props.companyLogoUrl} /> : null}
+            {props.companyLogoUrl ? (
+              <View style={s.logoChip}>
+                {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt prop. */}
+                <Image style={s.logo} src={props.companyLogoUrl} />
+              </View>
+            ) : null}
             <View>
               <Text style={s.coName}>{props.companyName}</Text>
               {props.companyTagline ? <Text style={s.coTag}>{props.companyTagline}</Text> : null}
@@ -128,6 +139,7 @@ export function InvoiceDocumentExecutive(props: Props) {
               <Text style={s.coLine}>{props.companyAddressLine2}</Text>
               <Text style={s.coLine}>{props.companyContacts}{props.companyEmail ? ` · ${props.companyEmail}` : ""}</Text>
               {props.companyWebsite ? <Text style={s.coLine}>{props.companyWebsite}</Text> : null}
+              {props.companyTaxId ? <Text style={s.coLine}>TIN: {props.companyTaxId}</Text> : null}
             </View>
           </View>
           <View style={s.docSide}>
@@ -211,6 +223,11 @@ export function InvoiceDocumentExecutive(props: Props) {
             </View>
           )}
 
+          {/* Outside both branches: the line-items table and the repair cost
+              breakdown are mutually exclusive, and the line belonged to only
+              one of them. */}
+          <AmountInWordsLine value={props.amountWords} />
+
           {/* ── Terms ── */}
           <View style={[s.wideCard, { marginBottom: 14 }]}>
             <Text style={s.secLbl}>Terms &amp; Conditions</Text>
@@ -235,6 +252,8 @@ export function InvoiceDocumentExecutive(props: Props) {
         </View>
 
         <Text style={s.footer}>{props.footerText}</Text>
+        <QuotationPromoStrip promo={props.promo} />
+
       </Page>
     </Document>
   );

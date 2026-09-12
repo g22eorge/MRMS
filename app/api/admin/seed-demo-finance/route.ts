@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { assertPlatformAdmin } from "@/lib/platform-admin";
+import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { normalizeCurrency } from "@/lib/currency";
 
@@ -93,6 +94,15 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await assertPlatformAdmin();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Bounds what a hijacked admin session can do in a burst, and stops a
+  // repeated click re-running this while the first run is still working.
+  const rl = await rateLimit.platformAdmin(user.id);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many admin operations. Wait a moment and retry." },
+      { status: 429, headers: rateLimitHeaders(rl.retryAfterMs) },
+    );
+  }
 
   const url = new URL(req.url);
   const orgId = url.searchParams.get("orgId")?.trim() || user.orgId || "";

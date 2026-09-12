@@ -10,9 +10,9 @@ import { RowActionsMenu, MenuSection, MenuActionButton, MenuDestructiveRow } fro
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SendCampaignButton } from "@/components/shared/SendCampaignButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { Button, buttonClasses } from "@/components/ui/Button";
+import { buttonClasses } from "@/components/ui/Button";
 import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
-import { parsePage, paginationView, pageHrefBuilder } from "@/lib/pagination";
+import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
@@ -23,6 +23,8 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { clientDisplayName } from "@/lib/client-name";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 const CAMPAIGN_TYPES: CampaignType[] = ["EMAIL", "SMS", "CALL", "WHATSAPP"];
 const CAMPAIGN_STATUSES: CampaignStatus[] = ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"];
 const CONTACT_STATUSES: CampaignContactStatus[] = ["PENDING", "SENT", "OPENED", "RESPONDED", "OPTED_OUT"];
@@ -95,6 +97,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const selectedId = sp.id ?? null;
   const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.size);
   const statusFilter = CAMPAIGN_STATUSES.includes(sp.status as CampaignStatus) ? (sp.status as CampaignStatus) : null;
   const q = (sp.q ?? "").trim();
 
@@ -217,8 +220,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         // including one here threw PrismaClientValidationError and 500'd the
         // page for every selected campaign. Delivery state comes from `status`.
         include: {
-          lead: { select: { fullName: true, phone: true, email: true, status: true } },
-          client: { select: { fullName: true, phone: true, email: true } },
+          lead: { select: { fullName: true, phone: true, email: true, status: true, organization: true } },
+          client: { select: { fullName: true, phone: true, email: true, organization: true } },
         },
       })
     : [];
@@ -240,13 +243,16 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     return true;
   });
 
-  const pageView = paginationView(page, filtered.length);
+  const pageView = paginationView(page, filtered.length, pageSize);
   const pageCampaigns = filtered.slice(pageView.skip, pageView.skip + pageView.take);
-  const campaignsHref = pageHrefBuilder("/sales/campaigns", {
+  const campaignsHrefFilters = {
     id: selectedId ?? "",
     status: statusFilter ?? "",
     q,
-  });
+    size: pageSize !== PAGE_SIZE ? pageSize : "",
+  };
+  const campaignsHref = pageHrefBuilder("/sales/campaigns", campaignsHrefFilters);
+  const campaignsHrefSize = sizeHrefBuilder("/sales/campaigns", campaignsHrefFilters);
 
   function href(next: { id?: string | null; status?: CampaignStatus | null; q?: string }) {
     const params = new URLSearchParams();
@@ -290,10 +296,10 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         className="rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1 text-[0.75rem] outline-none focus:border-[var(--accent)]/50">
         {CONTACT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
-      <button type="submit" title="Apply status"
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
+      <SubmitButton bare title="Apply status"
+ className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-      </button>
+      </SubmitButton>
     </form>
   );
 
@@ -372,9 +378,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           {/* ══ DESKTOP HEADER ══ */}
           <div className="hidden lg:block">
             <PageHeader
-              eyebrow="Sales"
               title="Campaigns"
-              description="Outreach campaigns for leads and clients"
               actions={
                 <DisclosureTrigger
                   className={buttonClasses("primary", "sm", { className: "px-4 font-bold" })}
@@ -425,7 +429,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             placeholder="Search by campaign name..."
             className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
           />
-          <Button type="submit" variant="secondary" size="sm">Search</Button>
+          <SubmitButton variant="secondary" size="sm">Search</SubmitButton>
           {hasFilters ? (
             <Link href={href({ status: null, q: "" })} className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
           ) : null}
@@ -456,7 +460,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
               />
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <Button type="submit" size="sm" className="px-4 font-bold">Create Campaign</Button>
+              <SubmitButton size="sm" className="px-4 font-bold">Create Campaign</SubmitButton>
               <DisclosureClose className="text-xs font-medium text-[var(--ink-muted)] underline-offset-2 hover:underline">Cancel</DisclosureClose>
             </div>
           </form>
@@ -523,6 +527,8 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
               total={pageView.total}
               unit="campaigns"
               hrefForPage={campaignsHref}
+          pageSize={pageSize}
+          hrefForSize={campaignsHrefSize}
             />
           </div>
 
@@ -612,12 +618,12 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                   <form action={addLeadsToCampaign}>
                     <input type="hidden" name="campaignId" value={selected.id} />
                     <input type="hidden" name="source" value="all_leads" />
-                    <Button type="submit" variant="secondary" size="sm">All active leads</Button>
+                    <SubmitButton variant="secondary" size="sm">All active leads</SubmitButton>
                   </form>
                   <form action={addLeadsToCampaign}>
                     <input type="hidden" name="campaignId" value={selected.id} />
                     <input type="hidden" name="source" value="all_clients" />
-                    <Button type="submit" variant="secondary" size="sm">All clients</Button>
+                    <SubmitButton variant="secondary" size="sm">All clients</SubmitButton>
                   </form>
                 </div>
               </section>
@@ -642,7 +648,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                       <div className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-bold text-[var(--ink)]">{person.fullName}</p>
+                            <p className="truncate font-bold text-[var(--ink)]">{clientDisplayName(person)}</p>
                             <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                               {person.phone} · {cc.lead ? "Lead" : "Client"}
                               {cc.sentAt ? ` · sent ${formatEATDate(cc.sentAt)}` : ""}
@@ -665,7 +671,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                         if (!person) return null;
                         return (
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-[var(--ink)]">{person.fullName}</p>
+                            <p className="truncate font-semibold text-[var(--ink)]">{clientDisplayName(person)}</p>
                             <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{person.phone} · {cc.lead ? "Lead" : "Client"}</p>
                           </div>
                         );

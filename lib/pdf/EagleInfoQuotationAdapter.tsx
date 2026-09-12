@@ -4,6 +4,7 @@
  */
 import { EagleInfoDocument, type EagleInfoLineItem } from "./EagleInfoDocument";
 
+import { type QuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
 type Props = {
   companyName: string;
   companyTagline?: string;
@@ -12,6 +13,7 @@ type Props = {
   companyContacts: string;
   companyEmail?: string;
   companyWebsite?: string;
+  companyTaxId?: string | null;
   companyLogoUrl?: string;
   paymentInstructions?: string;
   quotationNumber: string;
@@ -24,6 +26,7 @@ type Props = {
   clientPhone: string;
   clientEmail: string;
   clientOrganization: string;
+  promo?: QuotationPromo | null;
   deviceType: string;
   deviceLabel: string;
   serialOrImei: string;
@@ -37,6 +40,7 @@ type Props = {
   vatLabel: string;
   vatAmount: string;
   totalAmountPayable: string;
+  amountWords?: string | null;
   estimatedDuration: string;
   approvalStatus: string;
   recommendation: string;
@@ -51,7 +55,7 @@ type Props = {
 
 export function EagleInfoQuotationAdapter(props: Props) {
   const address = [props.companyAddressLine1, props.companyAddressLine2]
-    .filter(Boolean).join(", ");
+    .filter(Boolean).join("\n");
 
   const showVat = props.vatApplicable && !!props.vatAmount && props.vatAmount !== "UGX 0";
 
@@ -87,6 +91,7 @@ export function EagleInfoQuotationAdapter(props: Props) {
       companyPhone={props.companyContacts || null}
       companyEmail={props.companyEmail || null}
       companyWebsite={props.companyWebsite || null}
+      companyTaxId={props.companyTaxId || null}
       companyLogoUrl={props.companyLogoUrl || null}
       docTitle="Estimate"
       docNumber={props.quotationNumber}
@@ -94,16 +99,19 @@ export function EagleInfoQuotationAdapter(props: Props) {
       primaryDateLabel="Quote Date:"
       terms={`Valid until ${props.validUntil}`}
       dueDate={props.estimatedDuration ? `ETA: ${props.estimatedDuration}` : null}
-      clientName={props.clientName}
+      clientName={props.clientOrganization || props.clientName}
+      clientAttn={props.clientOrganization ? props.clientName : null}
       clientEmail={props.clientEmail || null}
       clientPhone={props.clientPhone || null}
-      clientLocation={props.clientOrganization || null}
+      clientLocation={null}
+      promo={props.promo ?? null}
       lineItems={items}
       subTotal={showVat ? props.repairCost : null}
       vatLabel={showVat ? props.vatLabel : null}
       vatAmount={showVat ? props.vatAmount : null}
       totalLabel="Total"
       totalAmount={props.totalAmountPayable}
+      amountInWords={props.amountWords || null}
       paymentMade="UGX 0"
       balanceDue={props.totalAmountPayable}
       notes={notesArr.join("\n\n") || "Looking forward to your business."}

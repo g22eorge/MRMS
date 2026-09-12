@@ -10,6 +10,8 @@ import { isPlatformAdminEmail } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { flash } from "@/lib/flash";
 async function createArticleAction(formData: FormData) {
   "use server";
   const { user, orgId, org } = await requireOrgSession();
@@ -65,7 +67,7 @@ async function saveSettingsAction(formData: FormData) {
     },
   });
   revalidatePath("/settings/ai");
-  redirect("/settings/ai?saved=1");
+  redirect(flash("/settings/ai?saved=1", "Settings saved"));
 }
 
 async function toggleArticleAction(formData: FormData) {
@@ -150,7 +152,7 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
             </label>
           ))}
           <input name="model" defaultValue={settings?.model ?? ""} placeholder="Model override, e.g. gemini-1.5-flash" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none md:col-span-2" />
-          <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm">Save AI Settings</button>
+          <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-sm">Save AI Settings</SubmitButton>
         </div>
       </form>
 
@@ -170,7 +172,7 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
             <option value="org">This workspace only</option>
             <option value="global">Global default</option>
           </select>
-          <button type="submit" className="btn-premium rounded-lg px-4 py-2 text-sm">Save Article</button>
+          <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-sm">Save Article</SubmitButton>
         </form>
 
         <div className="dc-card px-3 py-2.5">
@@ -205,9 +207,9 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
                 <form action={toggleArticleAction}>
                   <input type="hidden" name="id" value={article.id} />
                   <input type="hidden" name="isActive" value={String(article.isActive)} />
-                  <button type="submit" className="rounded-lg border border-[var(--line)] px-2 py-1 text-[0.8125rem] text-[var(--ink-muted)]">
+                  <SubmitButton bare className="rounded-lg border border-[var(--line)] px-2 py-1 text-[0.8125rem] text-[var(--ink-muted)]">
                     {article.isActive ? "Disable" : "Enable"}
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
               <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">{article.content}</p>

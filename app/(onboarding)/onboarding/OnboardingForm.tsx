@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { PLAN_PRICES } from "@/lib/plan-prices";
 import { useFormStatus } from "react-dom";
 import { OrgModule } from "@prisma/client";
 
@@ -17,12 +18,17 @@ import { TRIAL_DAYS } from "@/lib/billing-access";
 // ── Plan display metadata ─────────────────────────────────────────────────────
 
 // Branded Duuka ladder, harmonised to the accent (gold) — no per-tier rainbow.
+// Prices come from PLAN_PRICES, never from here. This block used to carry its
+// own copy, so the figure a prospect was quoted at signup and the figure
+// checkout charged were two independent facts that happened to agree — the same
+// shape as the two price tables that made every payment fail, one step earlier
+// in the funnel and on the screen where a customer decides.
 const PLAN_META = {
-  STARTER:    { label: "Duuka",        price: null,    color: "text-[var(--ink)]",     bg: "bg-[var(--panel-strong)]", border: "border-[var(--line)]" },
-  STANDARD:   { label: "Duuka Plus",   price: 35_000,  color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
-  GROWTH:     { label: "Duuka Pro",    price: 75_000,  color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
-  PREMIUM:    { label: "Duuka Max",    price: 120_000, color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
-  ENTERPRISE: { label: "Duuka ProMax", price: 200_000, color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
+  STARTER:    { label: "Duuka",        price: null,                     color: "text-[var(--ink)]",     bg: "bg-[var(--panel-strong)]", border: "border-[var(--line)]" },
+  STANDARD:   { label: "Duuka Plus",   price: PLAN_PRICES.STANDARD,     color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
+  GROWTH:     { label: "Duuka Pro",    price: PLAN_PRICES.GROWTH,       color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
+  PREMIUM:    { label: "Duuka Max",    price: PLAN_PRICES.PREMIUM,      color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
+  ENTERPRISE: { label: "Duuka ProMax", price: PLAN_PRICES.ENTERPRISE,   color: "text-[var(--accent)]",  bg: "bg-[var(--accent)]/5",     border: "border-[var(--accent)]/25" },
 } as const;
 
 const ALL_MODULES = Object.keys(MODULE_LABELS) as OrgModule[];

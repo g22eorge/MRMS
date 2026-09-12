@@ -93,7 +93,7 @@ export async function getUnreadNotifications(userId: string, limit = 20, opts?: 
         select: {
           id: true,
           jobNumber: true,
-          ...(includeClient ? { client: { select: { fullName: true, phone: true } } } : {}),
+          ...(includeClient ? { client: { select: { fullName: true, phone: true, organization: true } } } : {}),
         },
       },
     },
@@ -111,7 +111,7 @@ export async function getAllNotifications(userId: string, limit = 50, opts?: { i
         select: {
           id: true,
           jobNumber: true,
-          ...(includeClient ? { client: { select: { fullName: true, phone: true } } } : {}),
+          ...(includeClient ? { client: { select: { fullName: true, phone: true, organization: true } } } : {}),
         },
       },
     },
@@ -442,12 +442,24 @@ async function sendClientPaymentConfirmation(input: {
       where: { orgId: input.orgId, jobs: { some: { id: input.jobId } } },
       select: { phone: true, fullName: true },
     })
-    .catch(() => null);
+    .catch((err) => {
+      console.error(`[payment-confirmation] could not read the client for job ${input.jobNumber}:`, err);
+      return null;
+    });
 
+  // No phone on file is a legitimate reason not to send, and not an error, so
+  // it stays silent. A lookup that failed is a different thing, and collapsing
+  // the two meant a database blip read as "this customer has no number".
   if (!client?.phone) return;
 
   const body = `Hi ${client.fullName}, we've received your payment of ${input.currency} ${input.amount.toLocaleString()} for job ${input.jobNumber}. Thank you! — Your Repair Team`;
 
+  // This is the one that mattered. The outbox exists so a failed message is
+  // visible afterwards — but that only holds once a row exists. If enqueueing
+  // itself throws there is no row to find, so the confirmation leaves no trace
+  // at all rather than a FAILED one, and the customer is never told their
+  // payment landed. The send still must not break the payment, so the failure
+  // is logged rather than rethrown.
   const enqueueResult = await enqueueWhatsAppMessage({
     orgId: input.orgId,
     to: client.phone,
@@ -455,10 +467,18 @@ async function sendClientPaymentConfirmation(input: {
     type: OutboundMessageType.JOB_STATUS_UPDATE,
     jobId: input.jobId,
     provider: "meta",
-  }).catch(() => null);
+  }).catch((err) => {
+    console.error(`[payment-confirmation] job ${input.jobNumber}: nothing was queued, so no outbox row exists to inspect:`, err);
+    return null;
+  });
 
   if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
-    await deliverOutboundMessage(enqueueResult.outboxId).catch(() => null);
+    // Safe to swallow: the row is written, so a delivery failure is already
+    // recorded on it as lastError and the retry cron will sweep it.
+    await deliverOutboundMessage(enqueueResult.outboxId).catch((err) => {
+      console.warn(`[payment-confirmation] job ${input.jobNumber}: delivery attempt failed; the outbox row carries the reason:`, err);
+      return null;
+    });
   }
 }
 
@@ -1016,7 +1036,69 @@ export async function notifyPaymentReceived({
   // Client-facing confirmation (best-effort). Only when a jobId is supplied —
   // callers omit it for refunds so a refund never sends a "payment received".
   if (jobId) {
-    await sendClientPaymentConfirmation({ orgId, jobId, jobNumber, amount, currency }).catch(() => {});
+    // Still caught, deliberately: telling the customer must never be able to
+    // fail the recording of their payment. But it is no longer caught silently.
+    await sendClientPaymentConfirmation({ orgId, jobId, jobNumber, amount, currency }).catch((err) => {
+      console.error(`[payment-confirmation] job ${jobNumber}: confirmation failed after the payment was recorded:`, err);
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Warranty claim raised or settled
+// ---------------------------------------------------------------------------
+
+/**
+ * Tells the customer their warranty claim moved.
+ *
+ * A claim is the one moment a customer is most anxious and least informed —
+ * they have brought a device back and want to know whether it will be covered.
+ * Ordinary status changes already message them; claims did not.
+ *
+ * Best-effort, exactly like the payment confirmation above: no phone means no
+ * message, and a provider failure leaves a FAILED outbox row on the job rather
+ * than throwing back into the action that settled the claim. Settling a claim
+ * must not fail because a message could not go out.
+ */
+export async function notifyWarrantyClaim(input: {
+  orgId: string;
+  jobId: string;
+  jobNumber: string;
+  event: "OPENED" | "RESOLVED" | "REJECTED";
+  resolution?: string | null;
+}) {
+  const client = await prisma.client
+    .findFirst({
+      where: { orgId: input.orgId, jobs: { some: { id: input.jobId } } },
+      select: { phone: true, fullName: true },
+    })
+    .catch(() => null);
+
+  if (!client?.phone) return;
+
+  const name = client.fullName?.trim() || "there";
+  const outcome = input.resolution?.trim();
+
+  // Rejection is the message that most needs to read like a person wrote it:
+  // say the decision, give the reason, and leave the door open.
+  const body =
+    input.event === "OPENED"
+      ? `Hi ${name}, we've logged a warranty claim on job ${input.jobNumber}. We'll look at it and come back to you shortly. — Your Repair Team`
+      : input.event === "RESOLVED"
+        ? `Hi ${name}, your warranty claim on job ${input.jobNumber} has been settled.${outcome ? ` ${outcome}` : ""} — Your Repair Team`
+        : `Hi ${name}, we've reviewed your warranty claim on job ${input.jobNumber} and we're not able to cover this one.${outcome ? ` ${outcome}` : ""} Please get in touch if you'd like to talk it through. — Your Repair Team`;
+
+  const enqueueResult = await enqueueWhatsAppMessage({
+    orgId: input.orgId,
+    to: client.phone,
+    body,
+    type: OutboundMessageType.WARRANTY_CLAIM_UPDATE,
+    jobId: input.jobId,
+    provider: "meta",
+  }).catch(() => null);
+
+  if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+    await deliverOutboundMessage(enqueueResult.outboxId).catch(() => null);
   }
 }
 

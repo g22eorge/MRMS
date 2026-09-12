@@ -7,10 +7,11 @@ import React from "react";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
+import { clientDisplayName } from "@/lib/client-name";
 
 type Branding = {
   documentTitle?: string | null; companyName?: string | null; companyContacts?: string | null;
-  companyEmail?: string | null; companyWebsite?: string | null;
+  companyEmail?: string | null; companyWebsite?: string | null; companyTaxId?: string | null;
   companyAddressLine1?: string | null; companyAddressLine2?: string | null;
   vatRatePercent?: number | null;
 } | null;
@@ -18,7 +19,7 @@ type Branding = {
 type Sale = {
   saleNumber: string; status: string; createdAt: Date; currency?: string | null;
   branch: { name: string } | null;
-  client: { fullName: string; phone: string | null } | null;
+  client: { fullName: string; phone: string | null; organization?: string | null } | null;
   subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number; paidAmount: number;
   items: Array<{ id: string; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
   payments: Array<{ id: string; amount: number; method: string; reference: string | null; receivedAt: Date }>;
@@ -68,6 +69,9 @@ export function SaleReceiptDocumentThermal({ sale, branding }: { sale: Sale; bra
         {branding?.companyAddressLine2 ? <Text style={s.line}>{branding.companyAddressLine2}</Text> : null}
         {branding?.companyContacts     ? <Text style={s.line}>{branding.companyContacts}</Text>     : null}
         {branding?.companyEmail        ? <Text style={s.line}>{branding.companyEmail}</Text>        : null}
+        {/* An 80mm roll has no room for the amount in words, but the TIN is a
+            legal requirement on a receipt and fits on one short line. */}
+        {branding?.companyTaxId        ? <Text style={s.line}>TIN: {branding.companyTaxId}</Text>     : null}
         {branding?.companyWebsite      ? <Text style={s.line}>{branding.companyWebsite}</Text>      : null}
 
         <View style={s.dashedDiv} />
@@ -76,7 +80,7 @@ export function SaleReceiptDocumentThermal({ sale, branding }: { sale: Sale; bra
         <Text style={s.receiptLbl}>{branding?.documentTitle || "RECEIPT"}</Text>
         <View style={s.metaRow}><Text style={s.metaLbl}>No.</Text><Text style={s.metaVal}>{sale.saleNumber}</Text></View>
         <View style={s.metaRow}><Text style={s.metaLbl}>Date</Text><Text style={s.metaVal}>{sale.createdAt.toLocaleString("en-GB", { timeZone: "Africa/Nairobi" })}</Text></View>
-        <View style={s.metaRow}><Text style={s.metaLbl}>Customer</Text><Text style={s.metaVal}>{sale.client?.fullName ?? "Walk-in"}</Text></View>
+        <View style={s.metaRow}><Text style={s.metaLbl}>Customer</Text><Text style={s.metaVal}>{clientDisplayName(sale.client, "Walk-in")}</Text></View>
         {sale.client?.phone ? <View style={s.metaRow}><Text style={s.metaLbl}>Phone</Text><Text style={s.metaVal}>{sale.client.phone}</Text></View> : null}
         {sale.branch        ? <View style={s.metaRow}><Text style={s.metaLbl}>Branch</Text><Text style={s.metaVal}>{sale.branch.name}</Text></View>  : null}
 

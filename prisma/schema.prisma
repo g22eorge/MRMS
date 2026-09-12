@@ -5,6 +5,18 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// A literal, and it has to stay one. This was briefly env("DATABASE_URL") and
+// that broke every deploy on both projects: `vercel-build` sets DATABASE_URL to
+// the real libsql:// URL for `prisma migrate deploy`, and the sqlite provider
+// rejects any env value that is not file: — "the URL must start with the
+// protocol file:", pointing at this line. A literal validates whatever the
+// environment holds, and prisma.config.ts supplies the real connection through
+// its `datasource` override, which is how Turso has always been reached.
+//
+// It is not what the CLI actually connects to. prisma.config.ts decides that,
+// and runtime is decided by lib/prisma.ts, which passes an explicit
+// datasourceUrl so a test run can be pointed at prisma/test.db rather than
+// writing to the database somebody is working in.
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -53,54 +65,56 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users                  User[]
-  clients                Client[]
-  devices                Device[]
-  jobs                   Job[]
-  parts                  Part[]
-  repairRequests         RepairRequest[]
-  repairRequestSequences RepairRequestSequence[]
-  brandingSettings       DocumentBrandingSettings?
-  commTemplates          CommunicationTemplate[]
-  commPolicies           CommunicationPolicy[]
-  notifications          Notification[]
-  outboundMessages       OutboundMessage[]
-  inboundMessages        InboundMessage[]
-  invoices               Invoice[]
-  payments               Payment[]
-  refunds                Refund[]
-  creditNotes            CreditNote[]
-  sales                  Sale[]
-  deliveryNotes          DeliveryNote[]
-  auditLogs              AuditLog[]
-  invites                UserInvite[]
-  branches               Branch[]
-  departments            Department[]  @relation("OrgDepartments")
-  suppliers              Supplier[]
-  purchaseRequests       PurchaseRequest[]
-  purchaseOrders         PurchaseOrder[]
-  stockTransfers         StockTransfer[]
-  goodsReceivedNotes     GoodsReceived[]
-  supplierBills          SupplierBill[]
-  supplierPayments       SupplierPayment[]
-  stockCounts            StockCount[]
-  userGroups             UserGroup[]
-  complaints             Complaint[]
-  salesTargets           SalesTarget[]
-  moduleGrants           OrgModuleGrant[]
-  leads                  Lead[]
-  quotations             Quotation[]
-  posSessions            PosSession[]
-  fieldVisits            FieldVisit[]
-  taxRates               TaxRate[]
-  expenses               Expense[]
-  recurringInvoices      RecurringInvoice[]
-  chartOfAccounts        ChartOfAccount[]
-  journalEntries         JournalEntry[]
-  bankAccounts           BankAccount[]
-  bankTransactions       BankTransaction[]
-  campaigns              Campaign[]
-  portalUsers            PortalUser[] @relation("OrgPortalUsers")
+  users                   User[]
+  clients                 Client[]
+  devices                 Device[]
+  jobs                    Job[]
+  parts                   Part[]
+  repairRequests          RepairRequest[]
+  repairRequestSequences  RepairRequestSequence[]
+  brandingSettings        DocumentBrandingSettings?
+  commTemplates           CommunicationTemplate[]
+  commPolicies            CommunicationPolicy[]
+  notifications           Notification[]
+  outboundMessages        OutboundMessage[]
+  inboundMessages         InboundMessage[]
+  invoices                Invoice[]
+  payments                Payment[]
+  refunds                 Refund[]
+  creditNotes             CreditNote[]
+  sales                   Sale[]
+  deliveryNotes           DeliveryNote[]
+  auditLogs               AuditLog[]
+  invites                 UserInvite[]
+  branches                Branch[]
+  departments             Department[]              @relation("OrgDepartments")
+  suppliers               Supplier[]
+  purchaseRequests        PurchaseRequest[]
+  purchaseOrders          PurchaseOrder[]
+  stockTransfers          StockTransfer[]
+  goodsReceivedNotes      GoodsReceived[]
+  supplierBills           SupplierBill[]
+  supplierPayments        SupplierPayment[]
+  stockCounts             StockCount[]
+  userGroups              UserGroup[]
+  complaints              Complaint[]
+  salesTargets            SalesTarget[]
+  moduleGrants            OrgModuleGrant[]
+  leads                   Lead[]
+  quotations              Quotation[]
+  posSessions             PosSession[]
+  fieldVisits             FieldVisit[]
+  taxRates                TaxRate[]
+  expenses                Expense[]
+  recurringInvoices       RecurringInvoice[]
+  chartOfAccounts         ChartOfAccount[]
+  journalEntries          JournalEntry[]
+  bankAccounts            BankAccount[]
+  bankTransactions        BankTransaction[]
+  campaigns               Campaign[]
+  portalUsers             PortalUser[]              @relation("OrgPortalUsers")
+  warrantyClaims          WarrantyClaim[]
+  paymentReminderSettings PaymentReminderSettings?
 
   @@index([slug])
   @@index([isActive])
@@ -510,17 +524,17 @@ enum StockTransferStatus {
 }
 
 model Client {
-  id           String        @id @default(cuid())
+  id           String       @id @default(cuid())
   fullName     String
   phone        String
   email        String?
   organization String?
   address      String?
   notes        String?
-  orgId        String 
-  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   jobs              Job[]
   devices           Device[]
@@ -533,8 +547,9 @@ model Client {
   recurringInvoices RecurringInvoice[]
   campaignContacts  CampaignContact[]
   receipts          Receipt[]
-  portalUsers       PortalUser[] @relation("ClientPortalUsers")
+  portalUsers       PortalUser[]       @relation("ClientPortalUsers")
   linkedPortalUsers PortalUserClient[] @relation("ClientLinkedPortalUsers")
+  outboundMessages  OutboundMessage[]
 
   @@unique([phone, orgId])
   @@index([orgId])
@@ -542,11 +557,11 @@ model Client {
 }
 
 model Device {
-  id       String        @id @default(cuid())
+  id       String       @id @default(cuid())
   clientId String
-  client   Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  orgId    String 
-  org      Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client   Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   deviceType    DeviceType
   brand         String
@@ -576,22 +591,22 @@ model ClientNote {
 }
 
 model Job {
-  id            String        @id @default(cuid())
-  jobNumber     String        @unique
-  status        JobStatus     @default(RECEIVED)
+  id            String       @id @default(cuid())
+  jobNumber     String       @unique
+  status        JobStatus    @default(RECEIVED)
   repairPath    RepairPath?
-  orgId         String 
-  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   branchId      String?
-  branch        Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branch        Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   clientId      String
-  client        Client        @relation(fields: [clientId], references: [id])
+  client        Client       @relation(fields: [clientId], references: [id])
   deviceId      String?
-  device        Device?       @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  device        Device?      @relation(fields: [deviceId], references: [id], onDelete: SetNull)
   createdById   String
-  createdBy     User          @relation("CreatedBy", fields: [createdById], references: [id])
+  createdBy     User         @relation("CreatedBy", fields: [createdById], references: [id])
   assignedToId  String?
-  assignedTo    User?         @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedTo    User?        @relation("AssignedTo", fields: [assignedToId], references: [id])
   deviceType    DeviceType
   brand         String
   model         String
@@ -645,6 +660,11 @@ model Job {
   clientApproved     Boolean?
   approvalDate       DateTime?
   quotedAt           DateTime?
+  // Job quotations print a number but never create a Quotation row, so the
+  // number has to live here — allocated once from DocumentSequence and reused
+  // forever, exactly as invoiceNumber above. Before this existed the number was
+  // derived from jobNumber on every render, inheriting its format each time.
+  quotationNumber    String?   @unique
 
   repairTimeline     String?
   timelineMinMinutes Int?
@@ -655,16 +675,16 @@ model Job {
   workDone           String?
   partsReplaced      String?
 
-  receivedAt     DateTime        @default(now())
-  completedAt    DateTime?
+  receivedAt        DateTime        @default(now())
+  completedAt       DateTime?
   // Warranty coverage on the completed repair (shown in the client portal).
   warrantyMonths    Int?
   warrantyExpiresAt DateTime?
-  deliveredAt    DateTime?
-  deliveryMethod DeliveryMethod? // PICKUP, DELIVERY, COURIER
-  deliveredTo    String? // name of person who received
-  closedAt       DateTime?
-  updatedAt      DateTime        @updatedAt
+  deliveredAt       DateTime?
+  deliveryMethod    DeliveryMethod? // PICKUP, DELIVERY, COURIER
+  deliveredTo       String? // name of person who received
+  closedAt          DateTime?
+  updatedAt         DateTime        @updatedAt
 
   photos                    Photo[]
   auditLogs                 AuditLog[]
@@ -674,6 +694,8 @@ model Job {
   inboundMessages           InboundMessage[]
   partReservations          PartReservation[]
   stockTransactions         PartStockTransaction[]
+  warrantyClaims            WarrantyClaim[]                @relation("WarrantyClaimOriginalJob")
+  warrantyRepairFor         WarrantyClaim[]                @relation("WarrantyClaimWarrantyJob")
   quotations                Quotation[]                    @relation("JobQuotation")
   fieldVisits               FieldVisit[]                   @relation("JobFieldVisits")
   technicianPayouts         TechnicianPayout[]
@@ -712,25 +734,32 @@ model Invoice {
   subject     String?
   dueDate     DateTime?
 
-  invoiceNumber String        @unique
-  currency      String        @default("UGX")
-  status        InvoiceStatus @default(ISSUED)
-  issuedAt      DateTime      @default(now())
-  totalAmount   Decimal @db.Decimal(18, 2)
+  invoiceNumber      String        @unique
+  currency           String        @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  status             InvoiceStatus @default(ISSUED)
+  issuedAt           DateTime      @default(now())
+  totalAmount        Decimal @db.Decimal(18, 2)
 
   paidAmount Decimal @db.Decimal(18, 2)     @default(0)
   paidAt     DateTime?
 
   notes String?
 
-  lines         InvoiceLine[]
-  payments      Payment[]
-  refunds       Refund[]
-  deliveryNotes DeliveryNote[]
-  attachments   InvoiceAttachment[]
-  receipts      Receipt[]
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  lines            InvoiceLine[]
+  payments         Payment[]
+  refunds          Refund[]
+  deliveryNotes    DeliveryNote[]
+  outboundMessages OutboundMessage[]
+  creditNotes      CreditNote[]
+  attachments      InvoiceAttachment[]
+  receipts         Receipt[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
   @@index([orgId, issuedAt])
   @@index([orgId, status])
@@ -778,7 +807,7 @@ model Payment {
   receivedAt DateTime      @default(now())
 
   createdById String?
-  createdBy   User?   @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?               @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   receipts    Receipt[]
   allocations PaymentAllocation[]
 
@@ -844,15 +873,26 @@ model CreditNote {
   orgId String
   org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  // Credit notes are for merchandise sales only (Sale-based).
-  saleId String
-  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  // A credit note hangs off EXACTLY ONE parent: a POS sale or an invoice.
+  // Both are nullable because SQLite has no way to express "one or the other"
+  // as a column constraint, and a CHECK cannot be added to an existing table.
+  // The invariant is enforced in application code — see creditNoteParent().
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
-  creditNoteNumber String   @unique
-  currency         String   @default("UGX")
-  totalAmount      Decimal @db.Decimal(18, 2)
-  issuedAt         DateTime @default(now())
-  reason           String?
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  creditNoteNumber   String   @unique
+  currency           String   @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  totalAmount        Decimal @db.Decimal(18, 2)
+  issuedAt           DateTime @default(now())
+  reason             String?
 
   // Stock return is only applied when items are physically received back.
   itemsReceivedBackAt   DateTime?
@@ -869,6 +909,7 @@ model CreditNote {
 
   @@index([orgId, issuedAt])
   @@index([saleId])
+  @@index([invoiceId])
 }
 
 model CreditNoteItem {
@@ -876,12 +917,15 @@ model CreditNoteItem {
   creditNoteId String
   creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
 
-  partId      String?
-  part        Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
-  description String
-  quantity    Int
-  unitPrice   Decimal @db.Decimal(18, 2)
-  lineTotal   Decimal @db.Decimal(18, 2)
+  partId        String?
+  part          Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
+  description   String
+  // Float, like InvoiceLine.quantity: an invoice line can legitimately be
+  // fractional (a UoM factor of 0.5), and an Int here would silently truncate
+  // the returned amount when crediting one.
+  quantity      Decimal @db.Decimal(18, 2)
+  unitPrice     Decimal @db.Decimal(18, 2)
+  lineTotal     Decimal @db.Decimal(18, 2)
   // Base stock units per 1 sale unit, snapshot at credit-note time so the
   // return-to-stock uses the same factor even if the product's changes later.
   saleUomFactor Decimal? @db.Decimal(18, 6)
@@ -914,6 +958,12 @@ model Sale {
   invoicedAt    DateTime?
 
   currency String @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
 
   subtotal       Decimal @db.Decimal(18, 2)     @default(0)
   discountAmount Decimal @db.Decimal(18, 2)     @default(0)
@@ -1004,10 +1054,10 @@ model SaleItem {
   partId String?
   part   Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
 
-  description String
-  quantity    Int    @default(1)
-  unitPrice   Decimal @db.Decimal(18, 2)
-  lineTotal   Decimal @db.Decimal(18, 2)
+  description   String
+  quantity      Int    @default(1)
+  unitPrice     Decimal @db.Decimal(18, 2)
+  lineTotal     Decimal @db.Decimal(18, 2)
   // Base stock units per 1 sale unit, snapshot at sale time so stock reverses
   // by the same factor even if the product's saleUomFactor later changes.
   saleUomFactor Decimal? @db.Decimal(18, 6)
@@ -1023,19 +1073,19 @@ model SaleItem {
 }
 
 model Part {
-  id           String        @id @default(cuid())
-  sku          String
-  name         String
-  manufacturer String?
-  unitCost     Decimal? @db.Decimal(18, 2)
-  sellingPrice Decimal? @db.Decimal(18, 2)
-  category     String?
-  description  String?
-  taxable      Boolean       @default(true)
-  taxRate      Decimal? @db.Decimal(12, 6)
-  baseUom      String?
-  saleUom      String?
-  purchaseUom  String?
+  id                String       @id @default(cuid())
+  sku               String
+  name              String
+  manufacturer      String?
+  unitCost          Decimal? @db.Decimal(18, 2)
+  sellingPrice      Decimal? @db.Decimal(18, 2)
+  category          String?
+  description       String?
+  taxable           Boolean      @default(true)
+  taxRate           Decimal? @db.Decimal(12, 6)
+  baseUom           String?
+  saleUom           String?
+  purchaseUom       String?
   // Base stock units per 1 sale/purchase unit (null = 1:1). qtyOnHand is in
   // base units; sales multiply by saleUomFactor, receipts by purchaseUomFactor.
   saleUomFactor     Decimal? @db.Decimal(18, 6)
@@ -1046,14 +1096,14 @@ model Part {
   // it Int did not stop SQLite storing the fraction — it only made Prisma hand
   // back a non-integer typed as Int, so stock totals, reorder comparisons and
   // the negative-stock guard all read a value the type said was impossible.
-  qtyOnHand    Decimal @db.Decimal(18, 3)         @default(0)
-  qtyReserved  Int           @default(0)
-  reorderLevel Int           @default(0)
-  isActive     Boolean       @default(true)
-  orgId        String 
-  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  qtyOnHand         Decimal @db.Decimal(18, 3)        @default(0)
+  qtyReserved       Int          @default(0)
+  reorderLevel      Int          @default(0)
+  isActive          Boolean      @default(true)
+  orgId             String
+  org               Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   reservations         PartReservation[]
   transactions         PartStockTransaction[]
@@ -1149,20 +1199,20 @@ model OneTimeExternalTechAssignment {
 }
 
 model Photo {
-  id         String   @id @default(cuid())
-  jobId      String
-  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  url        String
-  label      String?
+  id           String   @id @default(cuid())
+  jobId        String
+  job          Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  url          String
+  label        String?
   // Client portal: photos default to INTERNAL; staff mark ones the customer may
   // see as "CLIENT". orgId scopes the serving/ownership checks; storageKey lets
   // us delete the blob when the row is removed.
   orgId        String?
-  visibility   String  @default("INTERNAL")
+  visibility   String   @default("INTERNAL")
   storageKey   String?
   mimeType     String?
   uploadedById String?
-  uploadedAt DateTime @default(now())
+  uploadedAt   DateTime @default(now())
 
   @@index([jobId, uploadedAt])
   @@index([jobId, visibility])
@@ -1231,6 +1281,10 @@ enum OutboundMessageStatus {
   SENT
   FAILED
   DEAD
+  /// Written by a dry run: the exact message that would have gone out, kept so
+  /// it can be read before the feature is allowed to speak. The retry sweep
+  /// takes only PENDING and FAILED, so a PREVIEW row can never be delivered.
+  PREVIEW
 }
 
 enum OutboundMessageType {
@@ -1250,6 +1304,8 @@ enum OutboundMessageType {
   ADMIN_TEST
   STAFF_REPLY
   INVOICE_REMINDER
+  WARRANTY_CLAIM_UPDATE
+  CAMPAIGN_MESSAGE
 }
 
 model Notification {
@@ -1317,6 +1373,19 @@ model OutboundMessage {
   repairRequest   RepairRequest? @relation(fields: [repairRequestId], references: [id], onDelete: SetNull)
   jobId           String?
   job             Job?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  // Without this a payment reminder cannot be traced to the invoice it chases,
+  // so nothing can answer "have we already asked?" — which is the difference
+  // between a reminder system and a way to pester customers.
+  invoiceId       String?
+  invoice         Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  // A statement covers a client rather than one invoice, so it needs its own
+  // link — without it there is no way to ask whether this client has already
+  // had one this month.
+  clientId        String?
+  client          Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  // Which rung of the reminder ladder this message was: "T-7", "DUE", "+3".
+  // Kept as text so the ladder can change shape without a migration.
+  reminderStage   String?
   orgId           String?
   org             Organization?  @relation(fields: [orgId], references: [id], onDelete: SetNull)
 
@@ -1327,6 +1396,8 @@ model OutboundMessage {
   @@index([channel, status, nextAttemptAt])
   @@index([providerMessageId])
   @@index([repairRequestId])
+  @@index([invoiceId, reminderStage])
+  @@index([clientId, reminderStage])
   @@index([jobId])
   @@index([templateKey])
 }
@@ -1412,6 +1483,19 @@ model DocumentBrandingSettings {
   companyContacts       String        @default("+256772 006 344 | +256754 006 344")
   companyEmail          String?
   companyWebsite        String?
+  // Tax Identification Number, printed in the company block on every document.
+  // Nullable because an org that is not registered should print nothing rather
+  // than an empty label.
+  companyTaxId          String?
+  /// This organisation's own logo, stored in blob storage rather than on disk.
+  /// The previous mechanism wrote every upload to public/eagle-info-logo.png —
+  /// one shared file with a hardcoded name — so on the multi-tenant deployment
+  /// a tenant uploading their logo replaced it for every other tenant, and on a
+  /// read-only serverless filesystem the write failed outright.
+  companyLogoUrl        String?
+  /// The storage key, kept so a replaced or removed logo can be deleted rather
+  /// than orphaned in the bucket.
+  companyLogoKey        String?
   documentTitle         String        @default("Job Card")
   quotePrefix           String        @default("EIS")
   quoteFormat           String        @default("{PREFIX} {M}/{YYYY}/{SEQ}")
@@ -1421,7 +1505,7 @@ model DocumentBrandingSettings {
   vatRatePercent        Decimal @db.Decimal(12, 6)         @default(18)
   vatInclusive          Boolean       @default(false)
   vatLabel              String        @default("VAT")
-  termsText             String        @default("Quotation valid for 30 days from date issued.\nRepair work begins only after approval is recorded.\nParts availability may affect final timeline.\nHidden pre-existing faults may affect final outcome.\nUncollected devices may attract storage fees after notice.")
+  termsText             String        @default("We supply equipment and carry out repairs; only the terms relevant to this document apply.\nGoods are subject to stock availability and carry the manufacturer warranty only, where applicable.\nRepair work is carried out only after approval is recorded, and parts availability may affect the timeline.\nPre-existing or hidden faults may affect the outcome of a repair.\nUncollected devices may attract storage fees after notice.")
   footerText            String        @default("Powered by Duuka Pro Max — Eagle Info's repair & business management platform. care.eagleinfosolutions.com")
   paymentInstructions   String        @default("")
   paymentAccounts       String        @default("")
@@ -1520,7 +1604,7 @@ model RepairRequest {
   pickupNotes            String?
 
   // Linked job (set when converted to a job)
-  linkedJobId String?
+  linkedJobId             String?
   // Portal attribution: set when a corporate client submits via the client portal.
   clientId                String?
   submittedByPortalUserId String?
@@ -1537,6 +1621,7 @@ model RepairRequest {
   @@index([requestStatus, createdAt])
   @@index([phone])
   @@index([clientId])
+  @@index([orgId, createdAt])
 }
 
 // Allocates human-friendly repair request numbers safely under concurrency.
@@ -1753,19 +1838,25 @@ model PurchaseRequestItem {
 }
 
 model PurchaseOrder {
-  id         String              @id @default(cuid())
-  orgId      String
-  org        Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  supplierId String
-  supplier   Supplier            @relation(fields: [supplierId], references: [id])
-  status     PurchaseOrderStatus @default(DRAFT)
-  reference  String?
-  orderedAt  DateTime?
-  expectedAt DateTime?
-  receivedAt DateTime?
-  notes      String?
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
+  id                 String              @id @default(cuid())
+  orgId              String
+  org                Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  supplierId         String
+  supplier           Supplier            @relation(fields: [supplierId], references: [id])
+  status             PurchaseOrderStatus @default(DRAFT)
+  /// A purchase order raised on a foreign supplier is priced in that supplier's
+  /// currency. It carried none, so a USD bill was compared against a shilling
+  /// PO value as though the two numbers were the same kind of thing.
+  currency           String              @default("UGX")
+  /// Units of base per 1 unit of `currency`, snapshotted when the PO was raised.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  reference          String?
+  orderedAt          DateTime?
+  expectedAt         DateTime?
+  receivedAt         DateTime?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   items              PurchaseOrderItem[]
   purchaseRequests   PurchaseRequest[]
@@ -1838,30 +1929,35 @@ model GoodsReceivedItem {
 }
 
 model SupplierBill {
-  id          String             @id @default(cuid())
-  orgId       String
-  org         Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  billNumber  String             @unique
-  supplierRef String?
-  status      SupplierBillStatus @default(POSTED)
-  supplierId  String
-  supplier    Supplier           @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-  poId        String?
-  po          PurchaseOrder?     @relation(fields: [poId], references: [id], onDelete: SetNull)
-  grnId       String?
-  grn         GoodsReceived?     @relation(fields: [grnId], references: [id], onDelete: SetNull)
-  currency    String             @default("UGX")
-  subtotal    Decimal @db.Decimal(18, 2)
-  taxAmount   Decimal @db.Decimal(18, 2)              @default(0)
-  totalAmount Decimal @db.Decimal(18, 2)
-  paidAmount  Decimal @db.Decimal(18, 2)              @default(0)
-  issuedAt    DateTime           @default(now())
-  dueAt       DateTime?
-  notes       String?
-  createdById String
-  createdBy   User               @relation("SupplierBillCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id                 String             @id @default(cuid())
+  orgId              String
+  org                Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  billNumber         String             @unique
+  supplierRef        String?
+  status             SupplierBillStatus @default(POSTED)
+  supplierId         String
+  supplier           Supplier           @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  poId               String?
+  po                 PurchaseOrder?     @relation(fields: [poId], references: [id], onDelete: SetNull)
+  grnId              String?
+  grn                GoodsReceived?     @relation(fields: [grnId], references: [id], onDelete: SetNull)
+  currency           String             @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  subtotal           Decimal @db.Decimal(18, 2)
+  taxAmount          Decimal @db.Decimal(18, 2)              @default(0)
+  totalAmount        Decimal @db.Decimal(18, 2)
+  paidAmount         Decimal @db.Decimal(18, 2)              @default(0)
+  issuedAt           DateTime           @default(now())
+  dueAt              DateTime?
+  notes              String?
+  createdById        String
+  createdBy          User               @relation("SupplierBillCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   items    SupplierBillItem[]
   payments SupplierPayment[]
@@ -1887,20 +1983,35 @@ model SupplierBillItem {
 }
 
 model SupplierPayment {
-  id          String        @id @default(cuid())
-  orgId       String
-  org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  billId      String
-  bill        SupplierBill  @relation(fields: [billId], references: [id], onDelete: Cascade)
-  currency    String        @default("UGX")
-  amount      Decimal @db.Decimal(18, 2)
-  method      PaymentMethod @default(CASH)
-  reference   String?
-  paidAt      DateTime      @default(now())
-  note        String?
-  createdById String
-  createdBy   User          @relation("SupplierPaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  createdAt   DateTime      @default(now())
+  id                 String        @id @default(cuid())
+  orgId              String
+  org                Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  billId             String
+  bill               SupplierBill  @relation(fields: [billId], references: [id], onDelete: Cascade)
+  currency           String        @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  amount             Decimal @db.Decimal(18, 2)
+  /// The transfer charge, in BASE currency, paid on top of `amount`. Sending
+  /// money abroad costs money and the fee is charged separately from the sum
+  /// the supplier receives — recording only the latter understates what left
+  /// the account, every single time.
+  feeAmount          Decimal? @db.Decimal(18, 2)
+  /// What actually left the bank, in BASE currency, including the fee. This is
+  /// the figure on the statement and the only one that can be reconciled. The
+  /// effective rate is derived from it rather than typed, so the books match
+  /// the bank instead of matching a rate someone looked up.
+  baseAmountSent     Decimal? @db.Decimal(18, 2)
+  method             PaymentMethod @default(CASH)
+  reference          String?
+  paidAt             DateTime      @default(now())
+  note               String?
+  createdById        String
+  createdBy          User          @relation("SupplierPaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime      @default(now())
 
   @@index([orgId, paidAt])
   @@index([billId])
@@ -2013,7 +2124,6 @@ model OrgUsageSnapshot {
   @@index([orgId, metric, capturedAt])
 }
 
-
 model CustomerConsent {
   id          String    @id @default(cuid())
   orgId       String
@@ -2124,18 +2234,23 @@ model RepairTask {
 }
 
 model CustomerApproval {
-  id              String    @id @default(cuid())
-  orgId           String
-  jobId           String
-  approvalType    String
-  status          String    @default("PENDING")
-  amount          Decimal? @db.Decimal(18, 2)
-  currency        String?
-  requestedById   String?
-  respondedByName String?
-  responseNote    String?
-  requestedAt     DateTime  @default(now())
-  respondedAt     DateTime?
+  id                 String    @id @default(cuid())
+  orgId              String
+  jobId              String
+  approvalType       String
+  status             String    @default("PENDING")
+  amount             Decimal? @db.Decimal(18, 2)
+  currency           String?
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  requestedById      String?
+  respondedByName    String?
+  responseNote       String?
+  requestedAt        DateTime  @default(now())
+  respondedAt        DateTime?
 
   @@index([orgId, jobId, status])
   @@index([orgId, requestedAt])
@@ -2156,19 +2271,31 @@ model QualityCheck {
   @@index([orgId, jobId, status])
 }
 
+/// A warranty claim against a completed repair.
+///
+/// The two job links are deliberately different shapes. `originalJob` is the
+/// repair being claimed against and is what gives the claim its meaning, so the
+/// claim is a child of that job. `warrantyJob` is the follow-up repair raised to
+/// honour the claim; it may not exist yet, and if it is later removed the claim
+/// itself must survive with the link cleared — the obligation outlives the
+/// second visit.
 model WarrantyClaim {
-  id            String    @id @default(cuid())
+  id            String       @id @default(cuid())
   orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   originalJobId String
+  originalJob   Job          @relation("WarrantyClaimOriginalJob", fields: [originalJobId], references: [id], onDelete: Cascade)
   warrantyJobId String?
-  status        String    @default("OPEN")
+  warrantyJob   Job?         @relation("WarrantyClaimWarrantyJob", fields: [warrantyJobId], references: [id], onDelete: SetNull)
+  status        String       @default("OPEN")
   reason        String
   resolution    String?
-  openedAt      DateTime  @default(now())
+  openedAt      DateTime     @default(now())
   closedAt      DateTime?
 
   @@index([orgId, status, openedAt])
   @@index([originalJobId])
+  @@index([warrantyJobId])
 }
 
 model InventoryCategory {
@@ -2268,19 +2395,24 @@ model StockTransferItem {
 }
 
 model SupplierPrice {
-  id           String    @id @default(cuid())
-  orgId        String
-  supplierId   String
-  partId       String?
-  sku          String?
-  description  String
-  unitCost     Decimal @db.Decimal(18, 2)
-  currency     String    @default("UGX")
-  minQuantity  Int?
-  leadTimeDays Int?
-  validFrom    DateTime  @default(now())
-  validTo      DateTime?
-  createdAt    DateTime  @default(now())
+  id                 String    @id @default(cuid())
+  orgId              String
+  supplierId         String
+  partId             String?
+  sku                String?
+  description        String
+  unitCost           Decimal @db.Decimal(18, 2)
+  currency           String    @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  minQuantity        Int?
+  leadTimeDays       Int?
+  validFrom          DateTime  @default(now())
+  validTo            DateTime?
+  createdAt          DateTime  @default(now())
 
   @@index([orgId, supplierId, validFrom])
   @@index([partId, validFrom])
@@ -2373,24 +2505,29 @@ model Expense {
 }
 
 model RecurringInvoice {
-  id           String       @id @default(cuid())
-  orgId        String
-  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  clientId     String
-  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  subject      String
-  invoiceType  InvoiceType  @default(SERVICE)
-  frequency    String // WEEKLY | MONTHLY | QUARTERLY | ANNUAL
-  nextDueAt    DateTime
-  lastIssuedAt DateTime?
-  currency     String       @default("UGX")
-  notes        String?
-  isActive     Boolean      @default(true)
-  autoIssue    Boolean      @default(false)
-  createdById  String
-  createdBy    User         @relation("RecurringInvoiceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id                 String       @id @default(cuid())
+  orgId              String
+  org                Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  clientId           String
+  client             Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  subject            String
+  invoiceType        InvoiceType  @default(SERVICE)
+  frequency          String // WEEKLY | MONTHLY | QUARTERLY | ANNUAL
+  nextDueAt          DateTime
+  lastIssuedAt       DateTime?
+  currency           String       @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  notes              String?
+  isActive           Boolean      @default(true)
+  autoIssue          Boolean      @default(false)
+  createdById        String
+  createdBy          User         @relation("RecurringInvoiceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   items RecurringInvoiceItem[]
 
@@ -2426,26 +2563,31 @@ model DocumentTaxLine {
 }
 
 model Receipt {
-  id            String    @id @default(cuid())
-  orgId         String
-  receiptNumber String    @unique
-  paymentId     String?
-  payment       Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  saleId        String?
-  sale          Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  invoiceId     String?
-  invoice       Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  branchId      String?
-  branch        Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  clientId      String?
-  client        Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  amount        Decimal @db.Decimal(18, 2)
-  currency      String    @default("UGX")
-  issuedAt      DateTime  @default(now())
-  issuedById    String?
-  issuedBy      User?     @relation("ReceiptIssuedBy", fields: [issuedById], references: [id], onDelete: SetNull)
-  voidedAt      DateTime?
-  voidReason    String?
+  id                 String    @id @default(cuid())
+  orgId              String
+  receiptNumber      String    @unique
+  paymentId          String?
+  payment            Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  saleId             String?
+  sale               Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  invoiceId          String?
+  invoice            Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  branchId           String?
+  branch             Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  clientId           String?
+  client             Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  amount             Decimal @db.Decimal(18, 2)
+  currency           String    @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  issuedAt           DateTime  @default(now())
+  issuedById         String?
+  issuedBy           User?     @relation("ReceiptIssuedBy", fields: [issuedById], references: [id], onDelete: SetNull)
+  voidedAt           DateTime?
+  voidReason         String?
 
   @@unique([orgId, paymentId])
   @@index([orgId, issuedAt])
@@ -2793,21 +2935,26 @@ model LeadActivity {
 }
 
 enum QuotationStatus {
- DRAFT
- SENT
- ACCEPTED
- REJECTED
- EXPIRED
- VOID
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  VOID
 }
 
 model Quotation {
-  id          String          @id @default(cuid())
-  orgId       String?
-  org         Organization?   @relation(fields: [orgId], references: [id], onDelete: SetNull)
-  quoteNumber String          @unique
-  status      QuotationStatus @default(DRAFT)
-  currency    String          @default("UGX")
+  id                 String          @id @default(cuid())
+  orgId              String?
+  org                Organization?   @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  quoteNumber        String          @unique
+  status             QuotationStatus @default(DRAFT)
+  currency           String          @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
 
   leadId   String?
   lead     Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
@@ -3058,18 +3205,26 @@ enum BankTransactionType {
 }
 
 model BankTransaction {
-  id            String              @id @default(cuid())
-  bankAccountId String
-  bankAccount   BankAccount         @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  orgId         String
-  org           Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  date          DateTime
-  description   String
-  amount        Decimal @db.Decimal(18, 2) // positive always; type distinguishes direction
-  type          BankTransactionType
-  reference     String?
-  reconciledAt  DateTime?
-  createdAt     DateTime            @default(now())
+  id                 String              @id @default(cuid())
+  bankAccountId      String
+  bankAccount        BankAccount         @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  orgId              String
+  org                Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  date               DateTime
+  description        String
+  amount             Decimal @db.Decimal(18, 2) // positive always; type distinguishes direction
+  /// A transaction on a foreign-currency account. Was absent entirely,
+  /// so every balance summed dollars and shillings as one number.
+  currency           String              @default("UGX")
+  /// Units of base currency per 1 unit of `currency`, snapshotted when the row
+  /// was written. Null means the row is already in base currency. Never look up
+  /// a live rate at render time: an old document would change value every time
+  /// someone opened it.
+  exchangeRateToBase Decimal? @db.Decimal(12, 6)
+  type               BankTransactionType
+  reference          String?
+  reconciledAt       DateTime?
+  createdAt          DateTime            @default(now())
 
   @@index([bankAccountId, date])
   @@index([orgId, date])
@@ -3141,6 +3296,7 @@ model CampaignContact {
   @@unique([campaignId, leadId])
   @@unique([campaignId, clientId])
   @@index([campaignId, status])
+  @@index([orgId])
 }
 
 // ── AI Knowledge & Feedback ──────────────────────────────────────────────────
@@ -3232,23 +3388,29 @@ enum PortalRole {
 }
 
 model PortalUser {
-  id           String     @id @default(cuid())
-  orgId        String
-  org          Organization @relation("OrgPortalUsers", fields: [orgId], references: [id], onDelete: Cascade)
-  clientId     String
-  client       Client     @relation("ClientPortalUsers", fields: [clientId], references: [id], onDelete: Cascade)
-  name         String
-  email        String
-  phone        String?
-  department   String?
-  position     String?
-  role         PortalRole @default(IT_OFFICER)
-  passwordHash String?
-  isActive     Boolean    @default(true)
-  lastLoginAt  DateTime?
-  createdById  String? // staff user who provisioned this portal login
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                 String       @id @default(cuid())
+  orgId              String
+  org                Organization @relation("OrgPortalUsers", fields: [orgId], references: [id], onDelete: Cascade)
+  clientId           String
+  client             Client       @relation("ClientPortalUsers", fields: [clientId], references: [id], onDelete: Cascade)
+  name               String
+  email              String
+  phone              String?
+  department         String?
+  position           String?
+  role               PortalRole   @default(IT_OFFICER)
+  passwordHash       String?
+  isActive           Boolean      @default(true)
+  /**
+   * Set when an admin issues or resets a login, so the customer is made to
+   * replace the password they were handed before they can see anything. The
+   * admin knows that initial password; nobody should keep using it.
+   */
+  mustChangePassword Boolean      @default(false)
+  lastLoginAt        DateTime?
+  createdById        String? // staff user who provisioned this portal login
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   sessions      PortalSession[]
   linkedClients PortalUserClient[]
@@ -3308,6 +3470,65 @@ model RepairMessage {
 
   @@index([jobId, createdAt])
   @@index([orgId, jobId])
+}
+
+/// Per-org control of automatic payment reminders.
+///
+/// Off by default and dry-run by default, deliberately: this is the only
+/// feature in the system that contacts a customer without a person deciding to,
+/// and the failure mode — chasing someone who has already paid, or at 6am — is
+/// paid for in goodwill rather than in errors.
+model PaymentReminderSettings {
+  id    String       @id @default(cuid())
+  orgId String       @unique
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(false)
+  /// Render and log every reminder but send nothing to customers. The way to
+  /// watch a ladder for a fortnight before it speaks on the business's behalf.
+  dryRun  Boolean @default(true)
+
+  /// Used when an invoice carries no due date of its own, which is most of them.
+  paymentTermsDays Int @default(30)
+
+  /// Above this balance a reminder is not sent; a task is raised instead. A
+  /// large debt is a conversation, and a template answering it reads as one.
+  manualReviewAbove Decimal @db.Decimal(18, 2) @default(2000000)
+
+  /// A client holding several unpaid invoices gets one statement rather than
+  /// one message per invoice.
+  statementForMultiInvoice Boolean @default(true)
+
+  /// Local hours, inclusive start, exclusive end. Nothing sends outside them.
+  quietHourStart Int @default(8)
+  quietHourEnd   Int @default(20)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A published reference exchange rate, cached for comparison only.
+///
+/// Never used to post or convert anything. What a business actually pays to
+/// move money abroad is a bureau's rate plus a spread that no feed publishes,
+/// so posting from here would make the books disagree with the bank while
+/// looking authoritative. Its only job is to answer "how far above the
+/// published rate did that transfer settle?" — which is the number that shows
+/// which channel is quietly expensive.
+model FxReferenceRate {
+  id        String   @id @default(cuid())
+  /// Currency being priced, e.g. AED.
+  base      String
+  /// Currency it is priced in, e.g. UGX.
+  quote     String
+  /// Units of `quote` per 1 unit of `base`.
+  rate      Decimal @db.Decimal(12, 6)
+  /// Where it came from, so a suspect number can be traced.
+  source    String
+  fetchedAt DateTime @default(now())
+
+  @@unique([base, quote])
+  @@index([fetchedAt])
 }
 
 // ── Raw-SQL legacy tables, promoted to models ────────────────────────────────

@@ -1,4 +1,5 @@
 import { requirePortalSession } from "@/lib/portal-auth";
+import { INCOMING_PAYMENT } from "@/lib/finance/payment-kinds";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
@@ -25,7 +26,7 @@ export default async function PortalDocumentsPage() {
         select: {
           id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, currency: true, status: true, issuedAt: true,
           payments: {
-            where: { kind: "PAYMENT" },
+            where: { ...INCOMING_PAYMENT },
             orderBy: { receivedAt: "desc" },
             select: { id: true, amount: true, currency: true, receivedAt: true, method: true },
           },

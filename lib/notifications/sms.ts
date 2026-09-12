@@ -1,5 +1,7 @@
 import { checkSmsQuota, incrementSmsUsage } from "@/lib/notifications/sms-quota";
 import { normalizeUgPhone } from "@/lib/phone";
+import { atApiBase, atStatusAccepted, atStatusExplanation } from "@/lib/notifications/sms-format";
+import { getAtApiKey, getAtUsername, getAtSenderId } from "@/lib/platform-settings";
 
 export interface AtSmsConfig {
   apiKey: string;
@@ -7,9 +9,28 @@ export interface AtSmsConfig {
   senderId?: string;
 }
 
-export function getAtConfig(
+/**
+ * Async because the platform-settings tier is a database read.
+ *
+ * It used to consult only the per-org row and process.env, while the platform
+ * settings form wrote the credentials to the database — so a key entered there
+ * was stored, displayed as configured, and never used to send anything.
+ */
+/**
+ * Whether a string can be an Africa's Talking sender ID at all.
+ *
+ * Alphanumeric, eleven characters at most. Shared by the settings form, which
+ * refuses to store anything else, and the health check, which reports a stored
+ * value that should never have got in. Both matter: validating only at the
+ * point of entry leaves existing bad values invisible, and validating only in
+ * the check lets new ones be created.
+ */
+export * from "@/lib/notifications/sms-format";
+
+export async function getAtConfig(
   orgCfg?: { atApiKey?: string | null; atUsername?: string | null; atSenderId?: string | null } | null,
-): AtSmsConfig | null {
+): Promise<AtSmsConfig | null> {
+  // A tenant's own credentials still win: their sender ID, their bill.
   if (orgCfg?.atApiKey && orgCfg?.atUsername) {
     return {
       apiKey: orgCfg.atApiKey,
@@ -17,17 +38,21 @@ export function getAtConfig(
       senderId: orgCfg.atSenderId ?? undefined,
     };
   }
-  const apiKey = process.env.AT_API_KEY;
-  const username = process.env.AT_USERNAME;
+
+  const [apiKey, username, senderId] = await Promise.all([
+    getAtApiKey(),
+    getAtUsername(),
+    getAtSenderId(),
+  ]);
   if (!apiKey || !username) return null;
   // Org's registered sender ID takes priority over the platform default
-  return { apiKey, username, senderId: orgCfg?.atSenderId ?? process.env.AT_SENDER_ID };
+  return { apiKey, username, senderId: orgCfg?.atSenderId ?? senderId ?? undefined };
 }
 
-export function smsIsConfigured(
+export async function smsIsConfigured(
   orgCfg?: { atApiKey?: string | null; atUsername?: string | null } | null,
-): boolean {
-  return Boolean(getAtConfig(orgCfg));
+): Promise<boolean> {
+  return Boolean(await getAtConfig(orgCfg));
 }
 
 export async function sendSms(
@@ -45,7 +70,7 @@ export async function sendSms(
     }
   }
 
-  const config = cfg ?? getAtConfig();
+  const config = cfg ?? (await getAtConfig());
   if (!config) return { success: false, error: "SMS not configured" };
 
   const to = normalizeUgPhone(phone, { format: "e164" });
@@ -54,7 +79,7 @@ export async function sendSms(
   if (config.senderId) params.set("from", config.senderId);
 
   try {
-    const res = await fetch("https://api.africastalking.com/version1/messaging", {
+    const res = await fetch(`${atApiBase(config.username)}/version1/messaging`, {
       method: "POST",
       headers: {
         apiKey: config.apiKey,
@@ -71,11 +96,17 @@ export async function sendSms(
 
     const data = await res.json();
     const recipient = data?.SMSMessageData?.Recipients?.[0];
-    if (recipient?.statusCode === 101) {
+    // 100 Processed, 101 Sent and 102 Queued are all acceptances. Only 101 used
+    // to count, so a queued message — which is the default, enqueue being 1 —
+    // was recorded as a failure though it had been accepted and would deliver.
+    if (atStatusAccepted(recipient?.statusCode)) {
       if (orgId) void incrementSmsUsage(orgId);
       return { success: true, messageId: String(recipient.messageId) };
     }
-    return { success: false, error: recipient?.status ?? "Unknown SMS error" };
+    return {
+      success: false,
+      error: atStatusExplanation(recipient?.statusCode, recipient?.status),
+    };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
@@ -84,12 +115,12 @@ export async function sendSms(
 export async function smsHealthCheck(
   cfg?: AtSmsConfig | null,
 ): Promise<{ ok: boolean; error?: string }> {
-  const config = cfg ?? getAtConfig();
+  const config = cfg ?? (await getAtConfig());
   if (!config) return { ok: false, error: "SMS not configured" };
 
   try {
     const res = await fetch(
-      `https://api.africastalking.com/version1/user?username=${encodeURIComponent(config.username)}`,
+      `${atApiBase(config.username)}/version1/user?username=${encodeURIComponent(config.username)}`,
       {
         headers: { apiKey: config.apiKey, Accept: "application/json" },
       },

@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+
+import { findRecentDuplicate } from "@/lib/dedup";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { LeadSource, LeadStatus, QuotationStatus } from "@prisma/client";
@@ -15,10 +17,13 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { notifyLeadStatus, notifyQuotationStatus } from "@/lib/notifications";
 import { createQuotationRecord, type CreateQuotationInput } from "@/lib/sales/quotation-service";
 
+import { flash } from "@/lib/flash";
 const createLeadSchema = z.object({
   fullName: z.string().min(2),
   phone: z.string().min(3),
-  email: z.string().optional(),
+  // A lead's address becomes a client's address on conversion, so it has to
+  // clear the same bar the client forms apply.
+  email: z.string().email("Enter a valid email address, or leave it blank").optional().or(z.literal("")),
   organization: z.string().optional(),
   interest: z.string().optional(),
   source: z.string().optional(),
@@ -31,7 +36,7 @@ const createLeadSchema = z.object({
 const updateLeadDetailsSchema = z.object({
   fullName: z.string().min(2),
   phone: z.string().min(3),
-  email: z.string().optional(),
+  email: z.string().email("Enter a valid email address, or leave it blank").optional().or(z.literal("")),
   organization: z.string().optional(),
   interest: z.string().optional(),
   source: z.string().optional(),
@@ -68,11 +73,28 @@ export async function createLead(data: {
     if (!assignee) throw new Error("Assigned user not found");
   }
 
+  // The same lead arriving twice is a double submission, not two customers.
+  // A minute is generous next to the 10s default, but re-keying the identical
+  // name and number for a second real person inside one minute does not happen,
+  // whereas a stalled request being retried does.
+  const phone = sanitizeText(parsed.data.phone);
+  const fullName = sanitizeText(parsed.data.fullName);
+  const dup = await findRecentDuplicate(
+    prisma.lead,
+    { orgId, phone, fullName, createdById: user.id },
+    { windowMs: 60_000 },
+  ).catch(() => null);
+  if (dup) {
+    // Same shape as a fresh create, so no caller has to know which path ran.
+    revalidatePath("/sales");
+    return dup;
+  }
+
   const lead = await prisma.lead.create({
     data: {
-      fullName: sanitizeText(parsed.data.fullName),
+      fullName,
       orgId,
-      phone: sanitizeText(parsed.data.phone),
+      phone,
       email: sanitizeOptionalText(parsed.data.email),
       organization: sanitizeOptionalText(parsed.data.organization),
       interest: sanitizeOptionalText(parsed.data.interest),
@@ -422,9 +444,24 @@ export async function updateQuotationStatus(quotationId: string, status: Quotati
   }
 }
 
+/**
+ * Turn a caller-supplied partId into one we are willing to store.
+ *
+ * The id arrives in a form body, so it is not trusted: an id belonging to
+ * another org would otherwise link a line to a stock item its tenant cannot
+ * see. Anything that does not resolve within this org clears the link rather
+ * than failing the save — the line is still a valid free-text line.
+ */
+async function resolveOrgPartId(partId: string | null | undefined, orgId: string): Promise<string | null> {
+  const id = partId?.trim();
+  if (!id) return null;
+  const part = await prisma.part.findFirst({ where: { id, orgId }, select: { id: true } });
+  return part?.id ?? null;
+}
+
 export async function addQuotationItem(
   quotationId: string,
-  item: { description: string; quantity: number; unitPrice: number; discount: number },
+  item: { description: string; quantity: number; unitPrice: number; discount: number; partId?: string | null },
 ) {
   const { user, orgId, org } = await requireOrgSession();
   assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
@@ -437,6 +474,9 @@ export async function addQuotationItem(
   await prisma.quotationItem.create({
     data: {
       quotationId,
+      // Scoped: a partId from a form is a caller-supplied id, so it is only
+      // honoured when the part belongs to this org.
+      partId: await resolveOrgPartId(item.partId, orgId),
       description: sanitizeText(item.description),
       quantity: item.quantity,
       unitPrice: item.unitPrice,
@@ -475,7 +515,7 @@ export async function updateQuotationDetails(
 
 export async function updateQuotationItem(
   itemId: string,
-  item: { description: string; quantity: number; unitPrice: number; discount: number },
+  item: { description: string; quantity: number; unitPrice: number; discount: number; partId?: string | null },
 ) {
   const { user, orgId, org } = await requireOrgSession();
   assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
@@ -494,6 +534,7 @@ export async function updateQuotationItem(
   await prisma.quotationItem.update({
     where: { id: itemId },
     data: {
+      partId: await resolveOrgPartId(item.partId, orgId),
       description: sanitizeText(item.description),
       quantity: item.quantity,
       unitPrice: item.unitPrice,
@@ -533,5 +574,5 @@ export async function deleteQuotation(quotationId: string) {
   await prisma.quotation.delete({ where: { id: quotationId } });
 
   revalidatePath("/sales");
-  redirect("/sales?tab=quotations");
+  redirect(flash("/sales?tab=quotations", "Quotation deleted"));
 }
