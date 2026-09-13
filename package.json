@@ -61,7 +61,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
-    "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "6.19.3",
     "@react-email/components": "^1.0.12",
     "@react-pdf/renderer": "^4.3.2",
@@ -72,7 +71,7 @@
     "date-fns": "^4.1.0",
     "heic-convert": "^2.1.0",
     "ioredis": "^5.10.1",
-    "next": "16.2.12",
+    "next": "16.3.5",
     "prisma": "6.19.3",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
@@ -96,7 +95,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
@@ -104,7 +103,7 @@
     "defu": "6.1.7",
     "postcss": "8.5.25",
     "ws": "8.21.1",
-    "sharp": "0.35.3",
+    "sharp": "0.35.4",
     "nanoid": "3.3.18"
   },
   "ignoreScripts": [

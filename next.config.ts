@@ -18,20 +18,29 @@ import type { NextConfig } from "next";
  *
  * blob: for images — object-URL previews before file upload.
  *
- * https://vercel.live — Vercel preview comments widget (safe in prod; no-op
- * when not in a preview deployment).
+ * This used to allow vercel.live, va.vercel-scripts.com, va.vercel-analytics.com
+ * and a Pusher websocket, for the preview-comments widget and @vercel/analytics.
+ * Neither can run here: the deployment is a container behind our own proxy and
+ * the analytics package is gone. A script-src origin that nothing legitimate
+ * will ever load is only useful to an attacker who finds an injection point, so
+ * they are removed rather than left as harmless no-ops.
+ *
+ * connect-src 'self' is safe with @vercel/blob still in the tree: lib/blob-storage
+ * is `server-only` and every caller is a route handler or server action, so the
+ * browser uploads to /api/upload on this origin and the server forwards. Add the
+ * blob host back here only if an upload ever moves to @vercel/blob/client.
  */
 const isProduction = process.env.NODE_ENV === "production";
 
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   // No turso.io: the browser never spoke to the database directly even on
   // Turso, and the database is now inside the deployment's own network.
-  "connect-src 'self' https://vercel.live wss://ws-us3.pusher.com https://va.vercel-analytics.com",
+  "connect-src 'self'",
   "frame-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",

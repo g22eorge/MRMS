@@ -15,6 +15,21 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
+# bun resolves Next's optional SWC binary to the musl build on these Debian
+# images, and a musl binary cannot load against glibc — both `next build` and
+# `next dev` die with "Failed to load SWC binary for linux/<arch>". It stayed
+# hidden while an older lockfile happened to carry both variants; a clean
+# install surfaces it. Fetch the glibc build explicitly, at whatever version
+# Next itself resolved to, so the two can never drift. --no-save leaves
+# package.json and bun.lock untouched, so the host install is unaffected.
+RUN v="$(bun -e 'console.log(require("/app/node_modules/next/package.json").version)')" \
+ && case "$(uname -m)" in \
+      aarch64) swc="linux-arm64-gnu" ;; \
+      x86_64)  swc="linux-x64-gnu" ;; \
+      *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;; \
+    esac \
+ && bun add --no-save "@next/swc-${swc}@${v}"
+
 # ── build ───────────────────────────────────────────────────────────────────
 FROM oven/bun:1-debian AS builder
 WORKDIR /app
@@ -143,6 +158,21 @@ RUN apt-get update \
 
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
+
+# bun resolves Next's optional SWC binary to the musl build on these Debian
+# images, and a musl binary cannot load against glibc — both `next build` and
+# `next dev` die with "Failed to load SWC binary for linux/<arch>". It stayed
+# hidden while an older lockfile happened to carry both variants; a clean
+# install surfaces it. Fetch the glibc build explicitly, at whatever version
+# Next itself resolved to, so the two can never drift. --no-save leaves
+# package.json and bun.lock untouched, so the host install is unaffected.
+RUN v="$(bun -e 'console.log(require("/app/node_modules/next/package.json").version)')" \
+ && case "$(uname -m)" in \
+      aarch64) swc="linux-arm64-gnu" ;; \
+      x86_64)  swc="linux-x64-gnu" ;; \
+      *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;; \
+    esac \
+ && bun add --no-save "@next/swc-${swc}@${v}"
 # Generate the client at build time so the first start is not delayed by it. The
 # entrypoint regenerates when prisma/schema.prisma has changed.
 COPY prisma ./prisma
