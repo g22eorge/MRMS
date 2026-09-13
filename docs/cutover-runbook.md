@@ -77,7 +77,16 @@ whole window.
 9. **Import.**
    ```bash
    docker compose run --rm --no-deps -v "$(pwd)/final.db:/app/final.db:ro" \
-     migrate node scripts/pg/import.mjs final.db --truncate --resolve-duplicates
+     migrate node scripts/pg/import.mjs final.db --truncate --resolve-duplicates --resolve-orphans
+
+   Both resolve flags are required and neither is a rubber stamp: the importer
+   refuses to run unless every problem it found has a policy written down in
+   `docs/pg-migration/import-map.json`, and it prints every row it changes. A
+   problem with no policy is a decision the cutover has not made yet — read it,
+   decide, record it there, and only then re-run. In particular `--resolve-orphans`
+   will only null a foreign key whose relation declares `onDelete: SetNull` on a
+   nullable column, so it can never quietly discard a link the datamodel treats
+   as mandatory.
    ```
    Every duplicate resolution is printed. **Keep that output** — it is the record
    of which rows were changed and why.

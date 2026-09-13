@@ -9,6 +9,8 @@
  *   node scripts/pg/import.mjs <dump.db> [options]
  *
  *   --check       validate only: enum labels, dropped-column emptiness, orphans
+ *   --resolve-orphans     apply the orphan policies in import-map.json
+ *   --resolve-duplicates  apply the duplicate policies in import-map.json
  *   --truncate    empty the target tables first (required for a clean re-run)
  *   --batch=N     rows per insert (default 500)
  *
@@ -32,7 +34,10 @@ const batchSize = Number(args.find((a) => a.startsWith("--batch="))?.split("=")[
 const dumpArg = args.find((a) => !a.startsWith("--"));
 
 if (!dumpArg) {
-  console.error("usage: node scripts/pg/import.mjs <dump.db> [--check] [--truncate] [--batch=N]");
+  console.error(
+    "usage: node scripts/pg/import.mjs <dump.db> [--check] [--truncate] [--batch=N]" +
+      " [--resolve-duplicates] [--resolve-orphans]",
+  );
   process.exit(2);
 }
 const dumpPath = path.resolve(process.cwd(), dumpArg);
@@ -55,6 +60,17 @@ const droppedColumns = importMap.droppedColumns ?? {};
  */
 const duplicatePolicy = importMap.duplicatePolicy ?? {};
 const resolveDuplicates = args.includes("--resolve-duplicates");
+/**
+ * How to resolve rows whose foreign key points at a parent that is not there,
+ * keyed by "Table.column". SQLite did not enforce foreign keys, so a row deleted
+ * in production could leave children pointing at nothing; Postgres will reject
+ * those on insert. Only "nullOrphan" is supported, and only where the datamodel
+ * declares the relation `onDelete: SetNull` with a nullable column — which makes
+ * nulling not a repair but a replay of what the database would have done itself.
+ * Applied only with --resolve-orphans, and every change is printed.
+ */
+const orphanPolicy = importMap.orphanPolicy ?? {};
+const resolveOrphans = args.includes("--resolve-orphans");
 
 const sqlite = createClient({ url: `file:${dumpPath}` });
 const prisma = new PrismaClient({ log: ["error"] });
@@ -81,6 +97,9 @@ const models = Prisma.dmmf.datamodel.models.map((m) => {
         columns: f.relationFromFields,
         targetTable: target?.dbName ?? f.type,
         targetColumns: f.relationToFields ?? ["id"],
+        // What Postgres would itself do to an orphan if the parent were deleted
+        // through the database rather than around it, as SQLite allowed.
+        onDelete: f.relationOnDelete ?? null,
       });
       continue;
     }
@@ -278,9 +297,19 @@ async function validate(order, present) {
       );
       const n = Number(r.rows[0].n);
       if (n > 0) {
-        problems.push(
-          `${m.table}.${col} has ${n} row(s) referencing a missing ${target.table}.${ref} — Postgres will reject these`,
-        );
+        const description =
+          `${m.table}.${col} has ${n} row(s) referencing a missing ${target.table}.${ref}` +
+          ` — Postgres will reject these`;
+        const policy = orphanPolicy[`${m.table}.${col}`];
+        if (!policy) {
+          problems.push(description);
+        } else if (resolveOrphans) {
+          notes.push(`${description} — resolving with "${policy.resolver}"`);
+        } else {
+          problems.push(
+            `${description} — policy "${policy.resolver}" available; re-run with --resolve-orphans to apply it`,
+          );
+        }
       }
     }
   }
@@ -434,12 +463,67 @@ const RESOLVERS = {
   },
 };
 
+/**
+ * Null a foreign key whose parent is gone.
+ *
+ * Refuses unless the datamodel says this is exactly what the database would have
+ * done on its own: the relation declared `onDelete: SetNull` and the column is
+ * nullable. Under those two conditions the orphan is not damaged data needing a
+ * judgement call — it is a row SQLite left behind because it enforced no foreign
+ * keys, and nulling it reproduces the state a Postgres delete would have
+ * produced. Anything else is a question about the business records and belongs
+ * in a named resolver, not here.
+ */
+async function nullOrphans(table, column) {
+  const m = byTable.get(table);
+  if (!m) throw new Error(`import: orphan policy names unknown table ${table}`);
+  const fk = m.foreignKeys.find((f) => f.columns.length === 1 && f.columns[0] === column);
+  if (!fk) throw new Error(`import: ${table}.${column} is not a single-column foreign key`);
+  if (fk.onDelete !== "SetNull") {
+    throw new Error(
+      `import: ${table}.${column} declares onDelete: ${fk.onDelete ?? "none"}, not SetNull —` +
+        ` nulling its orphans would not match what the database does`,
+    );
+  }
+  const scalar = m.columns.find((c) => c.name === column);
+  if (!scalar || scalar.required) {
+    throw new Error(`import: ${table}.${column} is required; its orphans cannot be nulled`);
+  }
+
+  const target = byTable.get(fk.targetTable);
+  const [ref] = fk.targetColumns;
+  const orphans = await sqlite.execute(
+    `SELECT s."id" AS id, s.${q(column)} AS missing FROM ${q(table)} s
+     WHERE s.${q(column)} IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM ${q(target.table)} t WHERE t.${q(ref)} = s.${q(column)})`,
+  );
+  return orphans.rows.map((row) => ({
+    table,
+    id: String(row.id),
+    set: { [column]: null },
+    why: `${target.table} ${String(row.missing)} no longer exists; onDelete: SetNull`,
+  }));
+}
+
+const ORPHAN_RESOLVERS = { nullOrphan: nullOrphans };
+
 async function plannedResolutions() {
   const planned = [];
   for (const [key, policy] of Object.entries(duplicatePolicy)) {
     const resolver = RESOLVERS[policy.resolver];
     if (!resolver) throw new Error(`import: no resolver named "${policy.resolver}" for ${key}`);
     planned.push(...(await resolver()));
+  }
+  return planned;
+}
+
+async function plannedOrphanResolutions() {
+  const planned = [];
+  for (const [key, policy] of Object.entries(orphanPolicy)) {
+    const resolver = ORPHAN_RESOLVERS[policy.resolver];
+    if (!resolver) throw new Error(`import: no orphan resolver named "${policy.resolver}" for ${key}`);
+    const dot = key.lastIndexOf(".");
+    planned.push(...(await resolver(key.slice(0, dot), key.slice(dot + 1))));
   }
   return planned;
 }
@@ -509,9 +593,12 @@ const deferredSelfRefs = [];
 
 // Resolved before anything is written, so a row never has to be corrected after
 // the constraint has already rejected it.
-const resolutions = resolveDuplicates ? await plannedResolutions() : [];
+const resolutions = [
+  ...(resolveDuplicates ? await plannedResolutions() : []),
+  ...(resolveOrphans ? await plannedOrphanResolutions() : []),
+];
 if (resolutions.length) {
-  console.log(`\n  applying ${resolutions.length} duplicate resolution(s):`);
+  console.log(`\n  applying ${resolutions.length} resolution(s):`);
   for (const change of resolutions) {
     const fields = Object.entries(change.set).map(([k, v]) => `${k}=${v === null ? "NULL" : v}`).join(", ");
     console.log(`    ${change.table} ${change.id}: ${fields}  (${change.why})`);

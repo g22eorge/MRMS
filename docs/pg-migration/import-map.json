@@ -1,6 +1,6 @@
 {
-  "note": "Consumed by scripts/pg/import-postgres.mjs. Every dropped column was verified to be either zero-row or 100% NULL, with no code references, at the time of the decision. The importer re-verifies this and refuses to run if a dropped column turns out to hold data.",
-  "decidedAt": "2026-08-25",
+  "note": "Consumed by scripts/pg/import.mjs. Every dropped column was verified to be either zero-row or 100% NULL, with no code references, at the time of the decision. The importer re-verifies this and refuses to run if a dropped column turns out to hold data.",
+  "decidedAt": "2026-09-13",
   "droppedColumns": {
     "OutboundMessage": {
       "campaignContactId": "221 rows in table, 0 non-null. Zero code references. Added by DDL for a campaign-message link that was never built."
@@ -65,6 +65,25 @@
         "orgId"
       ],
       "why": "legacy singleton's orgId cleared by the branding-singleton resolver"
+    },
+    "Receipt": {
+      "columnsCleared": [
+        "paymentId"
+      ],
+      "rows": 2,
+      "why": "orphaned payment ids nulled by the nullOrphan policy \u2014 see orphanPolicy"
     }
+  },
+  "orphanPolicy": {
+    "Receipt.paymentId": {
+      "resolver": "nullOrphan",
+      "finding": "Two receipts point at a Payment.id that is not in the dump: EIS/RCT/2026/0029 (UGX 650,000) and EIS/RCT/2026/0030 (UGX 450,000). Both are already voided, both carry voidReason \"Payment deleted\", and both were voided within 40 minutes of being issued on 2026-08-30. The payments were deleted in the application; SQLite enforced no foreign keys, so the dangling id string stayed behind.",
+      "decision": "Null Receipt.paymentId on those two rows. The datamodel declares the relation onDelete: SetNull with a nullable column, so this is not a repair but a replay: had the delete gone through Postgres, the database would have nulled the column itself. Nothing is lost \u2014 the receipt, its number, amount, invoice link, issuer, void reason and void timestamp all import unchanged, and the void reason already records where the payment went.",
+      "rejected": "Skipping the two receipt rows. They are real issued-then-voided documents inside a numbered sequence; dropping them would leave two gaps in EIS/RCT/2026 that nothing explains."
+    }
+  },
+  "dumps": {
+    "mrms-prod.db": "2026-08-25",
+    "mrms-prod-2.db": "2026-09-12 \u2014 the dump this map is currently verified against"
   }
 }

@@ -86,6 +86,16 @@ const worker = new Worker(
   },
 );
 
+// A worker that logs only failures is indistinguishable from one that never
+// started — the container sits "running" either way. Say so on both events.
+worker.on("ready", () => {
+  console.info(`[worker] ready — queue "${worker.name}", concurrency ${worker.opts.concurrency}`);
+});
+
+worker.on("error", (err) => {
+  console.error("[worker] connection error:", err.message);
+});
+
 worker.on("completed", (job) => {
   console.info(`[worker] completed ${job.name} id=${job.id}`);
 });

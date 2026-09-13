@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 
 import { prisma } from "@/lib/prisma";
 
-const baselinePath = process.argv[2] ?? "docs/pg-migration/baseline.mrms-prod.json";
+const baselinePath = process.argv[2] ?? "docs/pg-migration/baseline.mrms-prod-2.json";
 const baseline = JSON.parse(readFileSync(baselinePath, "utf8")) as {
   tables: Record<string, { rows: number; sums?: Record<string, { sum: number | null; nonNull: number }> }>;
 };
@@ -88,6 +88,36 @@ const mismatched = await prisma.$queryRaw<Array<{ n: number }>>`
   JOIN "Invoice" i ON i."invoiceNumber" = j."invoiceNumber"
   WHERE j."invoiceNumber" IS NOT NULL AND i."jobId" IS NOT NULL AND i."jobId" <> j.id`;
 ok("every kept number sits on the job its Invoice references", Number(mismatched[0].n) === 0, String(mismatched[0].n));
+
+console.log("\n-- orphan resolution did what it claimed --");
+// The two receipts whose Payment was deleted in production. Nulling the key is
+// what onDelete: SetNull would have done; the documents themselves must survive
+// it whole, which is the reason nulling was chosen over skipping the rows.
+const orphanReceipts = await prisma.$queryRaw<
+  Array<{ receiptNumber: string; paymentId: string | null; amount: number; voidReason: string | null }>
+>`
+  SELECT "receiptNumber", "paymentId", "amount", "voidReason"
+  FROM "Receipt" WHERE "voidReason" = 'Payment deleted' ORDER BY "receiptNumber"`;
+ok(
+  "both payment-deleted receipts imported",
+  orphanReceipts.length === 2,
+  `${orphanReceipts.length} rows`,
+);
+ok(
+  "their dangling paymentId is null, not a broken reference",
+  orphanReceipts.every((r) => r.paymentId === null),
+  orphanReceipts.map((r) => `${r.receiptNumber}=${r.paymentId ?? "NULL"}`).join(" "),
+);
+ok(
+  "and nothing else about them was lost",
+  orphanReceipts.reduce((sum, r) => sum + Number(r.amount), 0) === 1_100_000,
+  orphanReceipts.map((r) => `${r.receiptNumber}:${r.amount}`).join(" "),
+);
+const danglingPayments = await prisma.$queryRaw<Array<{ n: number }>>`
+  SELECT COUNT(*)::int AS n FROM "Receipt" r
+  LEFT JOIN "Payment" p ON p.id = r."paymentId"
+  WHERE r."paymentId" IS NOT NULL AND p.id IS NULL`;
+ok("no receipt points at a payment that is gone", Number(danglingPayments[0].n) === 0, String(danglingPayments[0].n));
 
 console.log("\n-- dates landed as real instants --");
 const oldest = await prisma.auditLog.findFirst({ orderBy: { createdAt: "asc" }, select: { createdAt: true } });

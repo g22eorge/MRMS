@@ -94,10 +94,10 @@ reports clean:
 ```bash
 docker compose run --rm --no-deps \
   -v "$(pwd)/mrms-prod.db:/app/mrms-prod.db:ro" \
-  migrate node scripts/pg/import.mjs mrms-prod.db --truncate --resolve-duplicates
+  migrate node scripts/pg/import.mjs mrms-prod.db --truncate --resolve-duplicates --resolve-orphans
 
 docker compose run --rm --no-deps migrate \
-  node scripts/pg/verify-import.mjs docs/pg-migration/baseline.mrms-prod.json
+  node scripts/pg/verify-import.mjs docs/pg-migration/baseline.mrms-prod-2.json
 docker compose run --rm --no-deps migrate bun scripts/pg/verify-business.ts
 ```
 
