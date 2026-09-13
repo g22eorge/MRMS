@@ -28,6 +28,7 @@ import { clientDisplayName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
+import { isMissingTableError } from "@/lib/db-errors";
 function saleStatusTone(status: string): BadgeTone {
   if (status === "PAID") return "success";
   if (status === "VOID") return "danger";
@@ -244,8 +245,10 @@ export default async function PosPage({
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
+    // Postgres says `relation "Sale" does not exist`, never SQLite's wording,
+    // so the old string match could not fire here. isMissingTableError keys off
+    // the Prisma error code and knows both dialects.
+    if (isMissingTableError(err)) dbNeedsFix = true;
     sales = [];
   }
 

@@ -44,6 +44,7 @@ import { formatMoney, isSupportedCurrency, normalizeCurrency, toBaseAmount } fro
 import { syncJobInvoiceLines } from "@/lib/commercial/job-invoice-lines";
 
 import { clientDisplayName } from "@/lib/client-name";
+import { isMissingTableError } from "@/lib/db-errors";
 const workflowReasonValues = [
   "NONE",
   "PARTS_PENDING",
@@ -1307,8 +1308,11 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
       }),
     ]);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("onetimeexternaltechassignment")) {
+    // The table is in the datamodel and arrives with the migrations, so "not yet
+    // deployed" is only reachable if migrations genuinely have not run. The old
+    // condition also matched any error merely mentioning the model — an ordinary
+    // constraint violation reported itself as an undeployed schema.
+    if (isMissingTableError(error)) {
       return { error: "One-time external assignments are not yet deployed to this database. Apply the latest schema changes and try again." };
     }
     return { error: "Failed to save one-time external assignment" };

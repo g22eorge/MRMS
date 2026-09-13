@@ -3553,6 +3553,22 @@ model PlatformSetting {
   updatedAt DateTime @updatedAt
 }
 
+/// Per-organisation SMS sends, counted by calendar month against the plan quota.
+///
+/// This table used to be created at runtime by lib/notifications/sms-quota.ts
+/// with `CREATE TABLE IF NOT EXISTS`, which left it outside the datamodel and so
+/// invisible to migrations, the drift report and /api/admin/db-health — and its
+/// unquoted column names meant Postgres folded them to lowercase.
+model SmsUsage {
+  orgId String
+  year  Int
+  month Int
+  count Int    @default(0)
+
+  @@id([orgId, year, month])
+  @@index([year, month])
+}
+
 /// Per-organisation WhatsApp/SMS provider credentials. Resolved by orgId so a
 /// tenant's messages never go out through another tenant's number.
 model OrgWhatsAppConfig {

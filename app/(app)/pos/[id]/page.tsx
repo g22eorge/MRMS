@@ -32,6 +32,7 @@ import { computeLinesVat } from "@/lib/commercial/vat";
 import { clientDisplayName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
+import { isMissingTableError } from "@/lib/db-errors";
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
 /**
@@ -208,8 +209,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
+    if (isMissingTableError(err)) dbNeedsFix = true;
     sale = null;
   }
 
