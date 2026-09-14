@@ -498,7 +498,7 @@ export default async function DeliveryNotesPage({
                 <p className="text-[0.75rem] text-[var(--ink-muted)]">{n.deliveredByName} → {n.receivedByName}</p>
                 {/* Client + source visible on mobile (those columns hidden at md/lg) */}
                 <p className="mt-0.5 font-medium text-[var(--ink)] lg:hidden">
-                  {n.invoice?.job?.client ? clientDisplayName(n.invoice.job.client) : n.sale?.client ? clientDisplayName(n.sale.client) : ""}
+                  {clientDisplayName(n.invoice?.job?.client ?? n.invoice?.client ?? n.sale?.client, "")}
                 </p>
               </>
             ),
@@ -524,7 +524,7 @@ export default async function DeliveryNotesPage({
             header: "Client",
             headerClassName: "hidden lg:table-cell",
             className: "hidden text-[var(--ink-muted)] lg:table-cell",
-            cell: (n) => clientDisplayName(n.invoice?.job?.client ?? n.sale?.client, "-"),
+            cell: (n) => clientDisplayName(n.invoice?.job?.client ?? n.invoice?.client ?? n.sale?.client, "-"),
           },
           {
             key: "delivered",
