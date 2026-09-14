@@ -267,7 +267,9 @@ export default async function JobDetailPage({
 
   type OutboundRow = {
     id: string; to: string; body: string; type: string;
+    status: string;
     sentAt: Date | null; createdAt: Date; providerDeliveryStatus: string | null;
+    lastError: string | null;
   };
   type InboundRow = {
     id: string; from: string; body: string | null; mediaType: string | null;
@@ -280,7 +282,9 @@ export default async function JobDetailPage({
   if (canSeeMessages) {
     const msgSelect = {
       id: true, to: true, body: true, type: true,
+      status: true,
       sentAt: true, createdAt: true, providerDeliveryStatus: true,
+      lastError: true,
     } as const;
 
     // Messages linked directly to the job

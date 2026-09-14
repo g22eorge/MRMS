@@ -121,9 +121,11 @@ type OutboundMsg = {
   to: string;
   body: string;
   type: string;
+  status: string;
   sentAt: Date | null;
   createdAt: Date;
   providerDeliveryStatus: string | null;
+  lastError: string | null;
 };
 
 type ThreadEntry =
@@ -150,6 +152,30 @@ function DeliveryDot({ status }: { status: string | null }) {
   return (
     <span className={`text-[0.75rem] font-medium ${color}`} title={status}>
       {status === "read" ? "Read" : status === "delivered" ? "Delivered" : status === "sent" ? "Sent" : status === "failed" ? "Failed" : status}
+    </span>
+  );
+}
+
+const OUTBOX_STATUS_STYLES: Record<string, { label: string; cls: string }> = {
+  PENDING: { label: "Queued", cls: "text-amber-600 dark:text-amber-400" },
+  FAILED: { label: "Failed", cls: "text-red-600 dark:text-red-400" },
+  DEAD: { label: "Dead", cls: "text-[var(--ink-muted)]" },
+  PREVIEW: { label: "Preview", cls: "text-sky-600 dark:text-sky-400" },
+};
+
+/**
+ * The outbox status of a generated message. The delivery dot below shows what
+ * Meta reports once sent; this shows whether the app ever got it out. Two
+ * states look identical without it: a message queued-but-never-sent and one
+ * actually delivered are both just bubbles here, and that is how whole runs of
+ * status messages silently went nowhere.
+ */
+function OutboxStatusBadge({ status, lastError }: { status: string | null; lastError?: string | null }) {
+  if (!status || status === "SENT") return null;
+  const s = OUTBOX_STATUS_STYLES[status] ?? { label: status, cls: "text-[var(--ink-muted)]" };
+  return (
+    <span className={`font-bold uppercase tracking-wide ${s.cls}`} title={status === "PENDING" && lastError ? lastError : undefined}>
+      {s.label}
     </span>
   );
 }
@@ -324,8 +350,17 @@ function MessagesTab({
                         {m.type.replaceAll("_", " ").toLowerCase()}
                       </span>
                     )}
+                    <OutboxStatusBadge status={m.status} lastError={m.lastError} />
                     <DeliveryDot status={m.providerDeliveryStatus} />
                   </div>
+                  {m.status !== "SENT" && m.lastError ? (
+                    <p
+                      className="mt-0.5 max-w-[85%] truncate text-right text-[0.7rem] text-red-600/90 dark:text-red-400/90"
+                      title={m.lastError}
+                    >
+                      {m.lastError}
+                    </p>
+                  ) : null}
                 </div>
               );
             } else {
@@ -591,9 +626,11 @@ type Props = {
       to: string;
       body: string;
       type: string;
+      status: string;
       sentAt: Date | null;
       createdAt: Date;
       providerDeliveryStatus: string | null;
+      lastError: string | null;
     }>;
     oneTimeExternalAssignment?: {
       technicianName: string;
