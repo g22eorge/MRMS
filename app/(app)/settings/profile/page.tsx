@@ -2,6 +2,9 @@ import { getCurrentUserRole } from "@/lib/session";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
 import { ProfileForm } from "@/components/settings/ProfileForm";
 
+// Reads the live session; never prerender.
+export const dynamic = "force-dynamic";
+
 export default async function ProfilePage() {
   const { user } = await getCurrentUserRole();
 
