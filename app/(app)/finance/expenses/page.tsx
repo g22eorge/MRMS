@@ -26,6 +26,7 @@ import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, si
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { icontains } from "@/lib/db/search";
+import { CreateExpenseDialog, type ExpenseFormState } from "./CreateExpenseDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -225,7 +226,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     };
   }).filter((x) => x.count > 0);
 
-  async function createExpenseAction(formData: FormData) {
+  async function createExpenseAction(_prev: ExpenseFormState, formData: FormData): Promise<ExpenseFormState> {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
@@ -246,10 +247,10 @@ export default async function ExpensesPage({ searchParams }: Props) {
     // HTML `required` attribute and is then trimmed to "" here — made Save
     // Expense do nothing at all, with no message. Tell the user instead.
     if (!description) {
-      redirect(`/finance/expenses?error=${encodeURIComponent("Enter a description for this expense.")}`);
+      return { error: "Enter a description for this expense." };
     }
     if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
-      redirect(`/finance/expenses?error=${encodeURIComponent("Enter an amount greater than zero.")}`);
+      return { error: "Enter an amount greater than zero." };
     }
 
     const category = CATEGORIES.includes(categoryRaw as ExpenseCategory)
@@ -267,8 +268,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     if (dupExpense) {
       // Double-submit guard. Silently returning here looked identical to a
       // broken button, so name it — the expense is already recorded.
-      revalidatePath("/finance/expenses");
-      redirect(`/finance/expenses?error=${encodeURIComponent("That expense was just recorded — not saving it twice.")}`);
+      return { error: "That expense was just recorded — not saving it twice." };
     }
 
     const inner = `EXP-${new Date().getFullYear()}-`;
@@ -319,6 +319,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     });
 
     revalidatePath("/finance/expenses");
+    return null;
   }
 
   async function deleteExpenseAction(formData: FormData) {
@@ -425,132 +426,13 @@ export default async function ExpensesPage({ searchParams }: Props) {
               ↓ CSV
             </Link>
             {canWrite && (
-          <details className="group relative">
-            <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[0.75rem]">
-              + Record Expense
-            </summary>
-            <div className="absolute right-0 top-full z-20 mt-2 w-96 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-xl">
-              <p className="mb-3 text-[0.75rem] font-bold text-[var(--ink)]">Record Business Expense</p>
-              <form action={createExpenseAction} className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                    Description *
-                  </label>
-                  <input
-                    name="description"
-                    required
-                    placeholder="What was this expense for?"
-                    className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                  />
-
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                      Amount *
-                    </label>
-                    <input
-                      name="amount"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      required
-                      placeholder="0.00"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                    />
-                  </div>
-                  {/* Currency locked to org base — hidden field */}
-                  <input type="hidden" name="currency" value="UGX" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                      Category
-                    </label>
-                    <select
-                      name="category"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                      Payment Method
-                    </label>
-                    <select
-                      name="method"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                    >
-                      <option value="">— none —</option>
-                      {METHODS.map((m) => (
-                        <option key={m} value={m}>{m.replace(/_/g, " ")}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                {/* Rarely-needed fields stay in the form (native <details> keeps
-                    them in the DOM so they still submit) but collapse by default
-                    so "rent, 500k, cash" is a three-field job. */}
-                <details className="rounded-lg border border-[var(--line)]">
-                  <summary className="cursor-pointer select-none px-3 py-2 text-[0.8125rem] font-semibold text-[var(--ink)]">
-                    More details <span className="font-normal text-[var(--ink-muted)]">— optional</span>
-                  </summary>
-                  <div className="space-y-3 px-3 pb-3">
-                    <div>
-                      <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                        Date paid <span className="font-normal">(defaults to today)</span>
-                      </label>
-                      <input
-                        name="paidAt"
-                        type="date"
-                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                      />
-                    </div>
-                    {suppliers.length > 0 && (
-                      <div>
-                        <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                          Supplier
-                        </label>
-                        <select
-                          name="supplierId"
-                          className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                        >
-                          <option value="">— none —</option>
-                          {suppliers.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    <div>
-                      <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                        Reference / Receipt #
-                      </label>
-                      <input
-                        name="reference"
-                        placeholder="Invoice or receipt number"
-                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Notes</label>
-                      <textarea
-                        name="notes"
-                        rows={2}
-                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                      />
-                    </div>
-                  </div>
-                </details>
-                <SubmitButton bare pendingLabel="Saving…" className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold disabled:opacity-60">
-                  Save Expense
-                </SubmitButton>
-              </form>
-            </div>
-          </details>
+            <CreateExpenseDialog
+              action={createExpenseAction}
+              categories={CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))}
+              methods={METHODS.map((m) => ({ value: m, label: m.replace(/_/g, " ") }))}
+              suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
+              currency={currency}
+            />
             )}
           </>
         }

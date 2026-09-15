@@ -26,7 +26,14 @@ export type PageHeaderProps = {
 export function PageHeader({ title, eyebrow, description, actions, kpis }: PageHeaderProps) {
   return (
     <>
-      <div className="dc-card overflow-hidden">
+      {/* No overflow-hidden here: header actions are interactive controls whose
+          open state can extend beyond the card's box. The old <details>
+          popovers (Record Expense, tax rates, recurring templates) were
+          anchored top-full below the card, and clipping the card rendered them
+          invisible — the popup was in the DOM, focusable and unusable, so the
+          buttons read as dead. Nothing in a header is full-bleed, so nothing
+          here needs clipping. */}
+      <div className="dc-card">
         <div className="flex items-center justify-between gap-3 px-4 py-2.5">
           <div className="min-w-0">
             {eyebrow ? (

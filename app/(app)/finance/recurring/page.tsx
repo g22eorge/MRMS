@@ -19,6 +19,7 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { clientDisplayName } from "@/lib/client-name";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { CreateRecurringTemplateDialog, type RecurringFormState } from "./CreateRecurringTemplateDialog";
 export const dynamic = "force-dynamic";
 
 const FREQUENCIES = ["WEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL"] as const;
@@ -86,7 +87,7 @@ export default async function RecurringInvoicesPage({
   const currency = org.baseCurrency ?? "UGX";
   const now = new Date();
 
-  async function createRecurringAction(formData: FormData) {
+  async function createRecurringAction(_prev: RecurringFormState, formData: FormData): Promise<RecurringFormState> {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     if (!can.viewFinancials(user)) redirect("/dashboard");
@@ -102,7 +103,7 @@ export default async function RecurringInvoicesPage({
     const startDateRaw = String(formData.get("startDate") ?? "").trim();
 
     if (!clientId || !subject) {
-      redirect(`/finance/recurring?error=${encodeURIComponent("Pick a client and give the recurring invoice a subject.")}`);
+      return { error: "Pick a client and give the recurring invoice a subject." };
     }
 
     const frequency = (FREQUENCIES as readonly string[]).includes(freqRaw) ? (freqRaw as Frequency) : "MONTHLY";
@@ -117,7 +118,7 @@ export default async function RecurringInvoicesPage({
     const discounts = formData.getAll("itemDiscount").map((v) => Number(String(v)) || 0);
 
     if (descriptions.length === 0) {
-      redirect(`/finance/recurring?error=${encodeURIComponent("Add at least one line to the recurring invoice.")}`);
+      return { error: "Add at least one line to the recurring invoice." };
     }
 
     const items = descriptions.map((desc, i) => {
@@ -153,6 +154,7 @@ export default async function RecurringInvoicesPage({
     });
 
     revalidatePath("/finance/recurring");
+    return null;
   }
 
   async function toggleRecurringAction(formData: FormData) {
@@ -331,85 +333,15 @@ export default async function RecurringInvoicesPage({
           { label: "Due Now", value: dueNow, sub: "ready to issue", tone: dueNow > 0 ? "warn" : "neutral", muted: dueNow === 0 },
         ]}
         actions={
-        <details className="group relative">
-          <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[0.75rem]">
-            + New Template
-          </summary>
-          <div className="absolute right-0 top-full z-20 mt-2 w-[420px] rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-xl">
-            <p className="mb-3 text-[0.75rem] font-bold text-[var(--ink)]">New Recurring Invoice</p>
-            <form action={createRecurringAction} className="space-y-3">
-              <div>
-                <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Client *</label>
-                <select name="clientId" required className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]">
-                  <option value="">Select client…</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{clientDisplayName(c)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Subject *</label>
-                <input name="subject" required placeholder="e.g. Monthly maintenance contract" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Frequency</label>
-                  <select name="frequency" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]">
-                    {FREQUENCIES.map((f) => (
-                      <option key={f} value={f}>{FREQ_LABELS[f]}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Invoice Type</label>
-                  <select name="invoiceType" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]">
-                    {INVOICE_TYPES.map((t) => (
-                      <option key={t} value={t}>{TYPE_LABELS[t]}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Start / Next Due</label>
-                  <input name="startDate" type="date" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Currency</label>
-                  <input name="currency" defaultValue={currency} className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
-                </div>
-              </div>
-              {/* Line items */}
-              <div>
-                <p className="mb-1.5 text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Line Items *</p>
-                <div className="space-y-1.5">
-                  <div className="grid grid-cols-[1fr_60px_80px] gap-1 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-                    <span>Description</span><span className="text-right">Qty</span><span className="text-right">Price</span>
-                  </div>
-                  {([0, 1, 2] as const).map((i) => (
-                    <div key={i} className="grid grid-cols-[1fr_60px_80px] gap-1">
-                      <input name="itemDescription" placeholder={i === 0 ? "Service description" : "Optional"} className="input-base rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]" />
-                      <input name="itemQty" type="number" min="0.01" step="0.01" defaultValue={i === 0 ? "1" : ""} placeholder="1" className="input-base rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem] text-right" />
-                      <input name="itemPrice" type="number" min="0" step="0.01" placeholder="0.00" className="input-base rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem] text-right" />
-                      <input name="itemDiscount" type="hidden" defaultValue="0" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink)]">
-                <input type="checkbox" name="autoIssue" className="rounded" />
-                Auto-issue invoice when due (requires scheduled job)
-              </label>
-              <div>
-                <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Notes</label>
-                <textarea name="notes" rows={2} className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
-              </div>
-              <SubmitButton bare className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
-                Create Template
-              </SubmitButton>
-            </form>
-          </div>
-        </details>
+        <CreateRecurringTemplateDialog
+          action={createRecurringAction}
+          clients={clients.map((c) => ({ id: c.id, name: clientDisplayName(c) }))}
+          frequencies={[...FREQUENCIES]}
+          freqLabels={FREQ_LABELS}
+          invoiceTypes={[...INVOICE_TYPES]}
+          typeLabels={TYPE_LABELS}
+          currency={currency}
+        />
         }
       />
 
