@@ -16,6 +16,12 @@ type Configured = {
 
 type Props = { configured: Configured };
 
+const FIELDS = [
+  { name: "ANTHROPIC_API_KEY" as const, label: "API Key", type: "password", placeholder: "Enter API key", hint: "Platform-wide Anthropic API key for AI Guide and Business Copilot." },
+  { name: "ANTHROPIC_GUIDE_MODEL" as const, label: "Guide Model", placeholder: "e.g., claude-3-5-sonnet-20241022", hint: "Model used by the AI Guide for repair diagnostics." },
+  { name: "ANTHROPIC_COPILOT_MODEL" as const, label: "Copilot Model", placeholder: "e.g., claude-3-5-haiku-20241022", hint: "Model used by the Business Copilot for general queries." },
+];
+
 export function AnthropicSettingsForm({ configured }: Props) {
   const [saveState, saveAction, saving] = useActionState<{ ok: boolean; error?: string } | null, FormData>(
     saveAnthropicSettingsAction,

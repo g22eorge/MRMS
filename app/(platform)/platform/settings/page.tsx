@@ -1,4 +1,4 @@
-import { getAiSettings } from "@/lib/platform-settings";
+import { getAiSettings, getPlatformSettings } from "@/lib/platform-settings";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { PesapalSettingsForm } from "@/components/platform/PesapalSettingsForm";
 import { ATSmsPlatformSettingsForm } from "@/components/platform/ATSmsPlatformSettingsForm";
@@ -28,7 +28,7 @@ export default async function PlatformSettingsPage() {
 
   const aiSettings = await getAiSettings();
 
-  const stored: Record<string, string | null> = {
+  const platformSettings: Record<string, string | null> = {
     PESAPAL_CONSUMER_KEY: stored.PESAPAL_CONSUMER_KEY ?? null,
     PESAPAL_CONSUMER_SECRET: stored.PESAPAL_CONSUMER_SECRET ?? null,
     [ipnKey]: stored[ipnKey] ?? null,
@@ -46,25 +46,25 @@ export default async function PlatformSettingsPage() {
     ANTHROPIC_COPILOT_MODEL: aiSettings.copilotModel,
   };
   for (const key of Object.keys(aiStored) as Array<keyof typeof aiStored>) {
-    stored[key] = aiStored[key] ?? null;
+    platformSettings[key] = aiStored[key] ?? null;
   }
 
   const configured = {
-    PESAPAL_CONSUMER_KEY: !!stored.PESAPAL_CONSUMER_KEY || !!process.env.PESAPAL_CONSUMER_KEY,
-    PESAPAL_CONSUMER_SECRET: !!stored.PESAPAL_CONSUMER_SECRET || !!process.env.PESAPAL_CONSUMER_SECRET,
+    PESAPAL_CONSUMER_KEY: !!platformSettings.PESAPAL_CONSUMER_KEY || !!process.env.PESAPAL_CONSUMER_KEY,
+    PESAPAL_CONSUMER_SECRET: !!platformSettings.PESAPAL_CONSUMER_SECRET || !!process.env.PESAPAL_CONSUMER_SECRET,
     PESAPAL_IPN_ID: !!ipnId,
-    PESAPAL_CONSUMER_KEY_inDb: !!stored.PESAPAL_CONSUMER_KEY,
-    PESAPAL_CONSUMER_SECRET_inDb: !!stored.PESAPAL_CONSUMER_SECRET,
-    PESAPAL_IPN_ID_inDb: !!stored[ipnKey],
+    PESAPAL_CONSUMER_KEY_inDb: !!platformSettings.PESAPAL_CONSUMER_KEY,
+    PESAPAL_CONSUMER_SECRET_inDb: !!platformSettings.PESAPAL_CONSUMER_SECRET,
+    PESAPAL_IPN_ID_inDb: !!platformSettings[ipnKey],
   };
 
   const atConfigured = {
-    AT_API_KEY: !!stored.AT_API_KEY || !!process.env.AT_API_KEY,
-    AT_USERNAME: !!stored.AT_USERNAME || !!process.env.AT_USERNAME,
-    AT_SENDER_ID: !!stored.AT_SENDER_ID || !!process.env.AT_SENDER_ID,
-    AT_API_KEY_inDb: !!stored.AT_API_KEY,
-    AT_USERNAME_inDb: !!stored.AT_USERNAME,
-    AT_SENDER_ID_inDb: !!stored.AT_SENDER_ID,
+    AT_API_KEY: !!platformSettings.AT_API_KEY || !!process.env.AT_API_KEY,
+    AT_USERNAME: !!platformSettings.AT_USERNAME || !!process.env.AT_USERNAME,
+    AT_SENDER_ID: !!platformSettings.AT_SENDER_ID || !!process.env.AT_SENDER_ID,
+    AT_API_KEY_inDb: !!platformSettings.AT_API_KEY,
+    AT_USERNAME_inDb: !!platformSettings.AT_USERNAME,
+    AT_SENDER_ID_inDb: !!platformSettings.AT_SENDER_ID,
   };
 
   const aiFormConfigured = {
