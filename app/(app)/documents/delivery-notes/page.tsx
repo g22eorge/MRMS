@@ -1,3 +1,8 @@
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time — prerendering crashed the build here. Aligns with
+// the force-dynamic convention on every other document list page.
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";

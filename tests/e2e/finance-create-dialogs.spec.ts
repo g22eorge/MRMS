@@ -138,3 +138,153 @@ test("/finance/expenses: a rejected expense says why, inside the panel", async (
   await expect(dialog.getByText("Enter a description for this expense.")).toBeVisible();
   await expect(dialog).toBeVisible();
 });
+
+test("receipts: the source-picker dropdown is not clipped by the modal panel", async ({ page }) => {
+  await login(page);
+  await page.goto("/documents/receipts");
+  await page.waitForLoadState("networkidle");
+
+  await page.getByRole("button", { name: "+ Receipt" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+
+  // The picker lives inside the panel whose class string is
+  // `panel-shadow relative z-10 w-full overflow-hidden ...`. While the dropdown
+  // was an absolutely-positioned child of the picker, that overflow-hidden was its
+  // containing block, and it clipped the list the moment it grew past the input.
+  // No search term: focus opens the list with every outstanding source,
+  // whatever the seed text is; the option count below still fails loudly when
+  // none exist.
+  const listbox = page.getByRole("listbox");
+  const input = dialog.getByPlaceholder(/Search by customer, invoice or sale number/);
+  await input.click();
+  await expect(listbox).toBeVisible();
+
+  const options = listbox.getByRole("option");
+  expect(await options.count(), "nothing outstanding matched — seed a sale or invoice first").toBeGreaterThan(0);
+
+  const report = await listbox.evaluate((b) => {
+    const box = (b as HTMLElement).getBoundingClientRect();
+    const panel = (b as HTMLElement).closest(".panel-shadow") as HTMLElement | null;
+    const pr = panel ? panel.getBoundingClientRect() : null;
+    const cx = box.left + box.width / 2;
+    const hit = document.elementFromPoint(cx, box.bottom - 3);
+    return {
+      box: {
+        top: Math.round(box.top),
+        bottom: Math.round(box.bottom),
+        left: Math.round(box.left),
+        right: Math.round(box.right),
+      },
+      // null means the dropdown is no longer a descendant of `.panel-shadow`, so
+      // there is no panel edge it could have been clipped against.
+      overflowPastPanelRight: pr ? Math.round(box.right - pr.right) : null,
+      overflowPastPanelBottom: pr ? Math.round(box.bottom - pr.bottom) : null,
+      bottomPointHitsDropdown: !!(hit && b.contains(hit)),
+    };
+  });
+
+  // The dropdown must be fully reachable: probing the bottom edge of the listbox
+  // must land on the dropdown itself, not on whatever sits behind it (which is
+  // what the clipped list looked like).
+  expect(report.bottomPointHitsDropdown, "dropdown bottom edge is clipped by the modal panel's overflow-hidden").toBe(true);
+
+  // The dropdown is portaled to document.body with position:fixed, so it is no
+  // longer a child of .panel-shadow and cannot be clipped by its overflow rule.
+  expect(report.overflowPastPanelBottom).toBe(null);
+  expect(report.overflowPastPanelRight).toBe(null);
+
+  // And the dropdown must be within the viewport, not pushed out of bounds.
+  const size = page.viewportSize();
+  if (size) {
+    expect(report.box.right, "dropdown runs off the right edge").toBeLessThanOrEqual(size.width);
+    expect(report.box.bottom, "dropdown runs off the bottom edge").toBeLessThanOrEqual(size.height);
+  }
+});
+
+test("delivery notes: the source-picker list flips above the input when it sits at the window's bottom edge", async ({ page }) => {
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 1280, height: 380 });
+  await login(page);
+  await page.goto("/documents/delivery-notes");
+  await page.waitForLoadState("networkidle");
+
+  await page.getByRole("button", { name: "Create Delivery Note" }).click();
+  const input = page.getByPlaceholder("Search invoices and sales by customer, number or job…");
+  await input.click();
+  const listbox = page.getByRole("listbox");
+  await expect(listbox).toBeVisible();
+  const options = listbox.getByRole("option");
+  expect(await options.count(), "no invoice or sale sources — seed documents first").toBeGreaterThan(0);
+
+  // Park the input 20px above the bottom edge of the window. The room below
+  // (8px once the gap and margin are paid) can never fit the list, so the
+  // picker must flip it above the input instead of anchoring it past the
+  // bottom edge, where no scroll could reach it.
+  await input.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const target = window.innerHeight - 20;
+    let scrolled = false;
+    let ancestor: HTMLElement | null = el.parentElement;
+    while (ancestor) {
+      if (ancestor.scrollHeight > ancestor.clientHeight + 4 && /(auto|scroll)/.test(getComputedStyle(ancestor).overflowY)) {
+        ancestor.scrollTop += r.bottom - target;
+        scrolled = true;
+        break;
+      }
+      ancestor = ancestor.parentElement;
+    }
+    if (!scrolled) window.scrollBy(0, r.bottom - target);
+  });
+  // The picker re-caps its fixed list on scroll (capture phase, so container
+  // scrolls count). Settled means: inside the window and clear of the input —
+  // which can only hold once that reposition has actually applied.
+  await page
+    .waitForFunction(
+      () => {
+        const list = document.querySelector('[role="listbox"]') as HTMLElement | null;
+        const combo = document.querySelector('[role="combobox"]') as HTMLElement | null;
+        if (!list || !combo) return false;
+        const lb = list.getBoundingClientRect();
+        const cb = combo.getBoundingClientRect();
+        const withinWindow = lb.top >= -1 && lb.bottom <= window.innerHeight + 1;
+        const clearOfInput = lb.bottom <= cb.top + 1 || lb.top >= cb.bottom - 1;
+        return withinWindow && clearOfInput;
+      },
+      undefined,
+      { timeout: 15000 },
+    )
+    .catch(() => {
+      throw new Error("the list never settled inside the window and clear of the input after the scroll");
+    });
+
+  const m = await page.evaluate(() => {
+    const list = document.querySelector('[role="listbox"]') as HTMLElement;
+    const combo = document.querySelector('[role="combobox"]') as HTMLElement;
+    const lb = list.getBoundingClientRect();
+    const cb = combo.getBoundingClientRect();
+    return {
+      listTop: Math.round(lb.top),
+      listBottom: Math.round(lb.bottom),
+      listHeight: Math.round(lb.height),
+      inputTop: Math.round(cb.top),
+      inputBottom: Math.round(cb.bottom),
+      innerHeight: window.innerHeight,
+    };
+  });
+
+  // The scroll must actually have parked the input at the bottom edge, or this
+  // test would pass vacuously.
+  expect(
+    Math.abs(m.inputBottom - (m.innerHeight - 20)),
+    "could not park the picker input at the bottom edge — no scrollable container?",
+  ).toBeLessThanOrEqual(4);
+
+  // Absolute invariants: the fixed list sits above the input, fully inside the
+  // window. (scrollHeight exceeding the cap is correct — the list scrolls; the
+  // defect was rows laid out outside the window, which no scroll can reach.)
+  expect(m.listTop, "list starts above the window").toBeGreaterThanOrEqual(0);
+  expect(m.listBottom, "list hangs past the bottom of the window").toBeLessThanOrEqual(m.innerHeight + 1);
+  expect(m.listBottom, "list opened downward past an input parked at the bottom edge instead of flipping up").toBeLessThanOrEqual(m.inputTop + 1);
+  expect(m.listHeight, "the cap grew past its ceiling").toBeLessThanOrEqual(288);
+});

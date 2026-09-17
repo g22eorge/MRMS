@@ -3,6 +3,11 @@
  * Replaces the old bottom-sheet drawer. Opens like a native screen.
  * Desktop: renders the same content but inside the normal sidebar layout.
  */
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time. Aligns with the force-dynamic convention used
+// across the app.
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 
 import { can } from "@/lib/permissions";

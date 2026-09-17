@@ -1,3 +1,8 @@
+// The whole segment reads the live session (requireOrgSession here and in nested
+// layouts), so no page beneath it may be prerendered at build time — the build
+// crashes on it. Covers every page in this segment in one place.
+export const dynamic = "force-dynamic";
+
 import { ClientOnlySidebar } from "@/components/layout/ClientOnlySidebar";
 import { FlashToast } from "@/components/ui/FlashToast";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";

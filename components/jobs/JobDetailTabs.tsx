@@ -541,6 +541,9 @@ type Props = {
       | "UNREPAIRABLE"
       | "CUSTOMER_CANCELLED"
       | "OTHER"
+      | "CLIENT_APPROVED"
+      | "CLIENT_APPROVED_PARTS_PENDING"
+      | "CLIENT_APPROVED_AWAITING_DEVICE"
       | null;
     statusNote?: string | null;
     updatedAt: Date;
@@ -1552,40 +1555,35 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                     <Link href="/settings/users" className="text-[var(--accent)] underline">Settings → Users</Link> to pick from a list.
                   </p>
                 ) : null}
-                {showOneTimeForm || oneTimeExternal ? (
+                {showOneTimeForm ? (
+                  // Gated to "form is open" only. The old condition included
+                  // oneTimeExternal, which forced the sentinel-valued select
+                  // below onto every job that has a one-time record — so the
+                  // default submitted value was "__one_time__", the server
+                  // answered "Invalid assignee", and the whole save (notes,
+                  // parts, everything) was discarded until the tech was
+                  // re-picked by hand, several times.
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div className="min-w-0 sm:col-span-2">
                       <div className="flex items-center gap-2">
                         <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
-                          Assignment
+                          Assigned technician
                         </label>
-                        {!oneTimeExternal && (
-                          <button
-                            type="button"
-                            onClick={() => setShowOneTimeForm(false)}
-                            className="text-[0.75rem] text-[var(--accent)] underline"
-                          >
-                            ← Back to list
-                          </button>
-                        )}
                       </div>
                       <select
                         id="assignedToId"
                         name="assignedToId"
-                        // defaultValue, not value: pinned to the sentinel it was
-                        // a controlled select that could never change, so this
-                        // form always posted "__one_time__". On any job with a
-                        // one-time external tech, saving diagnosis notes came
-                        // back "Invalid assignee. Select an active technician."
-                        // and discarded everything typed. The sibling select
-                        // below has always done it this way.
-                        defaultValue="__one_time__"
+                        // Snapshotted when the one-time form was opened, so the
+                        // form submits the technician actually in force while
+                        // typing. The stale constant default made the select
+                        // display and submit the "__one_time__" sentinel on
+                        // any job with a one-time record, which the server
+                        // rejected — losing notes and parts with it.
+                        defaultValue={job.assignedTo?.id ?? (oneTimeExternal ? "__one_time_current__" : "")}
                         className={fieldClass}
                         onChange={(e) => {
                           if (e.target.value === "__one_time__") {
                             setShowOneTimeForm(true);
-                          } else {
-                            setShowOneTimeForm(false);
                           }
                         }}
                       >
@@ -1597,6 +1595,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                               {technician.name} ({technician.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"})
                             </option>
                           ))}
+                        {oneTimeExternal ? (
+                          <option value="__one_time_current__">One-time external: {oneTimeExternal.technicianName}</option>
+                        ) : null}
                         <option value="__one_time__">One-Time External...</option>
                       </select>
                     </div>
@@ -2467,6 +2468,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   <label className="mb-1.5 block text-xs font-medium text-[var(--ink-muted)]">Workflow reason</label>
                   <select name="workflowReason" defaultValue={job.workflowReason ?? "NONE"} className={fieldClass}>
                     <option value="NONE">No specific reason</option>
+                    <option value="CLIENT_APPROVED">Client approved — repair proceeding</option>
+                    <option value="CLIENT_APPROVED_PARTS_PENDING">Client approved — parts pending</option>
+                    <option value="CLIENT_APPROVED_AWAITING_DEVICE">Client approved — awaiting device hand-in</option>
                     <option value="PARTS_PENDING">Parts pending</option>
                     <option value="SPECIALIST_ESCALATION">Specialist escalation</option>
                     <option value="CLIENT_DECLINED">Client declined</option>

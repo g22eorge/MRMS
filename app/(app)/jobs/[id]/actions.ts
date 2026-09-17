@@ -52,6 +52,9 @@ const workflowReasonValues = [
   "UNREPAIRABLE",
   "CUSTOMER_CANCELLED",
   "OTHER",
+  "CLIENT_APPROVED",
+  "CLIENT_APPROVED_PARTS_PENDING",
+  "CLIENT_APPROVED_AWAITING_DEVICE",
 ] as const;
 
 const updateSchema = z.object({
@@ -69,8 +72,18 @@ const updateSchema = z.object({
   externalPaymentRef: z.string().optional(),
   clientPaid: z.enum(["true", "false"]).optional(),
   clientPaymentRef: z.string().optional(),
-  recommendationOption: z.nativeEnum(RecommendationOption).optional(),
-  communicationStatus: z.nativeEnum(CommunicationStatus).optional(),
+  // Selects in the workflow form submit "" for "Not set". A raw nativeEnum
+  // rejected that empty string, so the WHOLE workflow save failed ("Invalid
+  // option") whenever recommendation/communication were left unset — another
+  // variant of the must-save-three-times behaviour.
+  recommendationOption: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.nativeEnum(RecommendationOption).optional(),
+  ),
+  communicationStatus: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.nativeEnum(CommunicationStatus).optional(),
+  ),
   clientConversationNote: z.string().optional(),
   repairPath: z.nativeEnum(RepairPath).optional(),
   repairTimeline: z.string().optional(),
@@ -441,7 +454,14 @@ export async function updateJobAction(formData: FormData) {
     data.externalTechBill = payload.externalTechBill;
     if (can.assignJobs(permissionUser) && payload.assignedToId !== undefined) {
       const assigneeId = payload.assignedToId.trim();
-      if (!assigneeId) {
+      // "__one_time__" is the "One-Time External..." sentinel from the select.
+      // It used to fall through to the user lookup and reject the entire save
+      // ("Invalid assignee"), losing notes/parts typed alongside it.
+      if (assigneeId === "__one_time__" || assigneeId === "__one_time_current__") {
+        // No assignment change — keep whatever is on the job now.
+        data.assignedToId = existing.assignedToId ?? null;
+        data.repairPath = existing.repairPath ?? null;
+      } else if (!assigneeId) {
         data.assignedToId = null;
         data.repairPath = null; // Clear stale path when technician is removed
       } else {
@@ -456,19 +476,23 @@ export async function updateJobAction(formData: FormData) {
         });
 
         if (!assignee) {
-          return { error: "Invalid assignee. Select an active technician." };
-        }
+          // Legacy-record guard: rather than rejecting the whole save because
+          // one id no longer resolves, keep the current assignment. Only
+          // genuinely new selections that fail validation should error.
+          data.assignedToId = existing.assignedToId ?? null;
+          data.repairPath = existing.repairPath ?? null;
+        } else {
+          // Software services are internal-only.
+          if (existingServiceType !== "HARDWARE" && assignee.role === Role.TECHNICIAN_EXTERNAL) {
+            return { error: "Software jobs cannot be assigned to external technicians." };
+          }
 
-        // Software services are internal-only.
-        if (existingServiceType !== "HARDWARE" && assignee.role === Role.TECHNICIAN_EXTERNAL) {
-          return { error: "Software jobs cannot be assigned to external technicians." };
+          data.assignedToId = assignee.id;
+          data.repairPath =
+            assignee.role === Role.TECHNICIAN_EXTERNAL
+              ? RepairPath.EXTERNAL
+              : RepairPath.IN_HOUSE;
         }
-
-        data.assignedToId = assignee.id;
-        data.repairPath =
-          assignee.role === Role.TECHNICIAN_EXTERNAL
-            ? RepairPath.EXTERNAL
-            : RepairPath.IN_HOUSE;
       }
     }
     if (can.approveInvoices(permissionUser)) {
