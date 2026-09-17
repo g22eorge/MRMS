@@ -7,7 +7,7 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
 import { amountInWords } from "@/lib/amount-in-words";
-import { clientDisplayName } from "@/lib/client-name";
+import { saleCustomerName } from "@/lib/client-name";
 
 type Branding = {
   documentTitle?: string | null; companyName?: string | null; companyContacts?: string | null;
@@ -18,6 +18,7 @@ type Branding = {
 
 type Sale = {
   saleNumber: string; status: string; createdAt: Date; currency?: string | null;
+  name?: string | null;
   branch: { name: string } | null;
   client: { fullName: string; phone: string | null; organization?: string | null } | null;
   subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number; paidAmount: number;
@@ -119,7 +120,7 @@ export function SaleReceiptDocumentExecutive({ sale, branding }: { sale: Sale; b
 
         {/* Strip */}
         <View style={s.strip}>
-          <View style={s.stripItem}><Text style={s.stripLbl}>Customer</Text><Text style={s.stripVal}>{clientDisplayName(sale.client, "Walk-in")}</Text></View>
+          <View style={s.stripItem}><Text style={s.stripLbl}>Customer</Text><Text style={s.stripVal}>{saleCustomerName(sale, "Walk-in")}</Text></View>
           {sale.branch ? <View style={s.stripItem}><Text style={s.stripLbl}>Branch</Text><Text style={s.stripVal}>{sale.branch.name}</Text></View> : null}
           <View style={s.stripItem}><Text style={s.stripLbl}>Status</Text><Text style={s.stripVal}>{sale.status}</Text></View>
           <View style={s.stripItem}><Text style={s.stripLbl}>Amount Paid</Text><Text style={s.stripValGold}>{formatMoney(sale.paidAmount, currency)}</Text></View>

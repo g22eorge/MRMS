@@ -5,7 +5,7 @@
 import { EagleInfoDocument, type EagleInfoLineItem } from "./EagleInfoDocument";
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
 import { amountInWords } from "@/lib/amount-in-words";
-import { clientContactName, clientDisplayName } from "@/lib/client-name";
+import { clientContactName, saleCustomerName } from "@/lib/client-name";
 
 import { pickDocumentTerms } from "@/lib/quote-terms";
 type Branding = {
@@ -31,6 +31,7 @@ type Branding = {
 
 type Sale = {
   saleNumber: string;
+  name?: string | null;
   status: string;
   createdAt: Date;
   currency?: string | null;
@@ -103,7 +104,7 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
       // A settled sale led with "Balance Due UGX 0", which is true and useless.
       headlineLabel={balance > 0 ? "Balance Due" : "Amount Paid"}
       headlineAmount={balance > 0 ? formatMoney(balance, currency) : formatMoney(sale.paidAmount, currency)}
-      clientName={clientDisplayName(sale.client, "Walk-in Customer")}
+      clientName={saleCustomerName(sale, "Walk-in Customer")}
       clientAttn={clientContactName(sale.client)}
       clientPhone={sale.client?.phone ?? null}
       clientEmail={null}

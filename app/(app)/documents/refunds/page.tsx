@@ -30,7 +30,7 @@ import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, si
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
-import { clientDisplayName } from "@/lib/client-name";
+import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { flash } from "@/lib/flash";
@@ -404,11 +404,11 @@ export default async function RefundsPage({
     saleId: true,
     creditNoteId: true,
     invoice: { select: { invoiceNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } }, job: { select: { id: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } } } },
-    sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+    sale: { select: { saleNumber: true, name: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
     creditNote: {
       select: {
         creditNoteNumber: true,
-        sale: { select: { client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+        sale: { select: { saleNumber: true, name: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
         invoice: {
           select: {
             client: { select: { fullName: true, phone: true, email: true, organization: true } },
@@ -456,6 +456,7 @@ export default async function RefundsPage({
       select: {
         id: true,
         saleNumber: true,
+        name: true,
         paidAmount: true,
         currency: true,
         client: { select: { fullName: true, phone: true, organization: true } },
@@ -471,7 +472,7 @@ export default async function RefundsPage({
         creditNoteNumber: true,
         totalAmount: true,
         currency: true,
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, organization: true } } } },
+        sale: { select: { saleNumber: true, name: true, client: { select: { fullName: true, phone: true, organization: true } } } },
         invoice: {
           select: {
             invoiceNumber: true,
@@ -547,7 +548,7 @@ export default async function RefundsPage({
     {
       label: "Sales",
       options: refundableSales.map((sale) => {
-        const who = clientDisplayName(sale.client, "Walk-in");
+        const who = saleCustomerName(sale, "Walk-in");
         return {
           value: `sale:${sale.id}`,
           label: `${who} — ${sale.saleNumber}`,
@@ -591,6 +592,9 @@ export default async function RefundsPage({
       : r.saleId
       ? `/pos/${r.saleId}`
       : null;
+    // A POS sale with no client row is labelled by the name the till typed, so
+    // a walk-in refund is not an anonymous "—".
+    const saleName = r.sale?.name ?? r.creditNote?.sale?.name ?? null;
     const clientName = clientDisplayName(
       r.invoice?.job?.client ??
         r.invoice?.client ??
@@ -598,7 +602,7 @@ export default async function RefundsPage({
         r.creditNote?.sale?.client ??
         r.creditNote?.invoice?.client ??
         r.creditNote?.invoice?.job?.client,
-      "—",
+      saleName?.trim() || "—",
     );
     const recipientPhone =
       r.invoice?.job?.client?.phone ??

@@ -951,6 +951,7 @@ async function runDbFix() {
         "clientId" TEXT,
         "status" TEXT NOT NULL DEFAULT 'OPEN',
         "saleNumber" TEXT NOT NULL UNIQUE,
+        "name" TEXT,
         "billingMode" TEXT NOT NULL DEFAULT 'CASH',
         "invoiceNumber" TEXT,
         "invoicedAt" DATETIME,
@@ -990,6 +991,7 @@ async function runDbFix() {
     await addSaleColumn("clientId", "TEXT");
     await addSaleColumn("status", "TEXT", "'OPEN'");
     await addSaleColumn("saleNumber", "TEXT");
+    await addSaleColumn("name", "TEXT");
     await addSaleColumn("billingMode", "TEXT", "'CASH'");
     await addSaleColumn("invoiceNumber", "TEXT");
     await addSaleColumn("invoicedAt", "DATETIME");

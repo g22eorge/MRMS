@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clientContactName, clientDisplayName, clientFullLabel } from "@/lib/client-name";
+import { clientContactName, clientDisplayName, clientFullLabel, saleCustomerName } from "@/lib/client-name";
 
 const corporate = { fullName: "Saaka Noah", organization: "C-Care IHK" };
 const individual = { fullName: "Grace Apio", organization: null };
@@ -47,5 +47,33 @@ describe("clientFullLabel", () => {
 
   it("is just the name for an individual", () => {
     expect(clientFullLabel(individual)).toBe("Grace Apio");
+  });
+});
+
+describe("saleCustomerName", () => {
+  it("names a walk-in sale by the name the till typed on it", () => {
+    expect(saleCustomerName({ name: "Grace Apio", client: null })).toBe("Grace Apio");
+  });
+
+  it("lets a linked client win, because the account is authoritative", () => {
+    expect(saleCustomerName({ name: "Counter 2", client: corporate })).toBe("C-Care IHK");
+    expect(saleCustomerName({ name: "Counter 2", client: individual })).toBe("Grace Apio");
+  });
+
+  it("trims the sale's own name", () => {
+    expect(saleCustomerName({ name: "  Grace Apio  " })).toBe("Grace Apio");
+  });
+
+  it("falls back only when neither the client nor the sale is named", () => {
+    expect(saleCustomerName({})).toBe("Walk-in");
+    expect(saleCustomerName({ name: "   " })).toBe("Walk-in");
+    expect(saleCustomerName({ name: "", client: { fullName: "", organization: "" } })).toBe("Walk-in");
+    expect(saleCustomerName(null)).toBe("Walk-in");
+    expect(saleCustomerName(undefined)).toBe("Walk-in");
+  });
+
+  it("keeps the caller's wording for the nameless walk-in", () => {
+    expect(saleCustomerName({}, "Walk-in Customer")).toBe("Walk-in Customer");
+    expect(saleCustomerName({ name: "Grace Apio" }, "Walk-in Customer")).toBe("Grace Apio");
   });
 });

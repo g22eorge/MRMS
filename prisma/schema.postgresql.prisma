@@ -960,6 +960,7 @@ model Sale {
 
   status     SaleStatus @default(OPEN)
   saleNumber String     @unique
+  name       String?
 
   billingMode   SaleBillingMode @default(CASH)
   invoiceNumber String?

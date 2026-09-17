@@ -664,6 +664,8 @@ export default async function CreditNotesPage({
             { creditNoteNumber: icontains(q) },
             { reason: icontains(q) },
             { sale: { saleNumber: icontains(q) } },
+            // A walk-in sale is found by the name the till typed on it.
+            { sale: { name: icontains(q) } },
             { sale: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } },
             { invoice: { invoiceNumber: icontains(q) } },
             { invoice: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } },
@@ -683,7 +685,7 @@ export default async function CreditNotesPage({
     prisma.creditNote.findMany({
       where: creditNotesWhere,
       include: {
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+        sale: { select: { saleNumber: true, name: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
         invoice: {
           select: {
             invoiceNumber: true,
@@ -708,6 +710,7 @@ export default async function CreditNotesPage({
       select: {
         id: true,
         saleNumber: true,
+        name: true,
         totalAmount: true,
         currency: true,
         client: { select: { fullName: true, phone: true, organization: true } },
@@ -884,6 +887,7 @@ export default async function CreditNotesPage({
                     key: `sale:${sale.id}`,
                     kind: "sale" as const,
                     reference: sale.saleNumber,
+                    name: sale.name,
                     totalAmount: sale.totalAmount,
                     currency: sale.currency,
                     client: sale.client,

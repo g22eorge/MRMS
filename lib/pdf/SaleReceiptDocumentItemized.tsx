@@ -15,7 +15,7 @@
  */
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
-import { clientDisplayName } from "@/lib/client-name";
+import { saleCustomerName } from "@/lib/client-name";
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
 import { amountInWords } from "@/lib/amount-in-words";
 
@@ -36,6 +36,7 @@ type Branding = {
 
 type Sale = {
   saleNumber: string;
+  name?: string | null;
   status: string;
   createdAt: Date;
   currency?: string | null;
@@ -171,7 +172,7 @@ export function SaleReceiptDocumentItemized({ sale, branding }: { sale: Sale; br
         <View style={s.meta}>
           <View style={s.metaCell}>
             <Text style={s.label}>Customer</Text>
-            <Text style={s.value}>{clientDisplayName(sale.client, "Walk-in")}</Text>
+            <Text style={s.value}>{saleCustomerName(sale, "Walk-in")}</Text>
             {sale.client?.phone ? <Text style={s.tdMuted}>{sale.client.phone}</Text> : null}
           </View>
           <View style={s.metaCell}>

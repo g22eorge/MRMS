@@ -21,6 +21,7 @@ import { PosAddItemFields } from "@/components/pos/PosAddItemFields";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { FormField, FormRow, FormSelect, FormTextarea } from "@/components/ui/form-field";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { DocumentShareMenuSection } from "@/components/documents/DocumentShareMenuSection";
@@ -34,7 +35,8 @@ import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { computeLinesVat } from "@/lib/commercial/vat";
-import { clientDisplayName } from "@/lib/client-name";
+import { saleCustomerName } from "@/lib/client-name";
+import { sanitizeOptionalText } from "@/lib/sanitize";
 
 import { flash } from "@/lib/flash";
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
@@ -137,6 +139,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   let sale: {
     id: string;
     saleNumber: string;
+    name: string | null;
     status: string;
     billingMode: "CASH" | "INVOICE";
     invoiceNumber: string | null;
@@ -182,14 +185,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     creditNoteId: string | null;
   }> = [];
 
-  const deliveryNotes: never[] = [];
-
   try {
     sale = await prisma.sale.findFirst({
       where: { id, orgId },
       select: {
         id: true,
         saleNumber: true,
+        name: true,
         status: true,
         billingMode: true,
         invoiceNumber: true,
@@ -287,19 +289,26 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
     const saleId = String(formData.get("saleId") ?? "").trim();
     const branchId = String(formData.get("branchId") ?? "").trim() || null;
-    const notes = String(formData.get("notes") ?? "").trim();
+    // Bounded + whitespace-collapsed, like every other free-text write in the app.
+    const name = sanitizeOptionalText(String(formData.get("name") ?? ""))?.slice(0, 80) ?? null;
+    const notes = sanitizeOptionalText(String(formData.get("notes") ?? ""))?.slice(0, 500) ?? null;
     if (!saleId) return;
+
+    // A voided sale is a historical record: its details and its receipt are frozen.
+    const target = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
+    if (!target) return;
+    if (target.status === "VOID") posReject(saleId, "This sale is void, so its details can no longer be edited.");
 
     if (branchId) {
       const branch = await prisma.branch.findFirst({ where: { id: branchId, orgId, isActive: true }, select: { id: true } });
-      if (!branch) return;
+      if (!branch) posReject(saleId, "That branch is not available in this workspace.");
     }
 
     await prisma.sale.updateMany({
       where: { id: saleId, orgId },
-      data: { branchId, notes: notes || null },
+      data: { name, branchId, notes },
     });
-    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: saleId, action: "POS_SALE_UPDATED", summary: "POS sale metadata updated" });
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: saleId, action: "POS_SALE_UPDATED", summary: `POS sale details updated${name ? ` (name: ${name})` : ""}` });
 
     revalidatePath(`/pos/${saleId}`);
     revalidatePath("/pos");
@@ -993,6 +1002,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   const canDeleteSale = user.role === "ADMIN" && sale.status === "OPEN" && !sale.invoicedAt && sale._count.payments === 0 && sale._count.creditNotes === 0 && sale._count.refunds === 0;
 
   const isOpen = sale.status === "OPEN";
+  // Details stay editable until the sale is voided — after that it is history.
+  const canEditDetails = sale.status !== "VOID";
   const refundedTotal = refunds.reduce((sum, r) => sum + r.amount, 0);
 
   // Share the sale receipt PDF with the customer through the outbox (WhatsApp/email).
@@ -1075,21 +1086,68 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
-          {/* -- Sale settings -- */}
+          {/* -- Sale details — the sale's own settings: what it is called, which
+              branch it belongs to, and the internal note. -- */}
           <section className="dc-card overflow-hidden">
-            <form action={updateSaleAction} className="grid gap-2 p-3 md:grid-cols-[200px_minmax(0,1fr)_auto]">
-              <input type="hidden" name="saleId" value={sale.id} />
-              <select name="branchId" defaultValue={sale.branchId ?? ""} aria-label="Branch" className={field}>
-                <option value="">No branch</option>
-                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-              <input name="notes" defaultValue={sale.notes ?? ""} placeholder="Sale note" className={field} />
-              <SubmitButton variant="secondary" size="sm" pendingLabel="Saving…">Save</SubmitButton>
-            </form>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+              <p className={cardLabel}>Sale details</p>
+              <p className="text-[0.75rem] text-[var(--ink-muted)]">
+                {canEditDetails ? "Names the customer when no client is linked" : "Voided sales are read-only"}
+              </p>
+            </div>
+
+            {canEditDetails ? (
+              <form action={updateSaleAction} className="space-y-3 p-4">
+                <input type="hidden" name="saleId" value={sale.id} />
+                <FormRow>
+                  <FormField
+                    label="Sale name"
+                    name="name"
+                    defaultValue={sale.name ?? ""}
+                    placeholder="Optional"
+                    maxLength={80}
+                    hint="Shown as the customer when no client is linked"
+                  />
+                  <FormSelect label="Branch" name="branchId" defaultValue={sale.branchId ?? ""}>
+                    <option value="">No branch</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </FormSelect>
+                </FormRow>
+                <FormTextarea
+                  label="Internal note"
+                  name="notes"
+                  defaultValue={sale.notes ?? ""}
+                  placeholder="Optional — not printed on the receipt"
+                  rows={2}
+                  maxLength={500}
+                />
+                <div className="flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
+                  <span className="text-[0.75rem] text-[var(--ink-muted)]">Saved with the sale, and written to the audit log.</span>
+                  <SubmitButton size="sm" pendingLabel="Saving…">Save details</SubmitButton>
+                </div>
+              </form>
+            ) : (
+              <dl className="divide-y divide-[var(--line)]">
+                {([
+                  ["Sale name", sale.name ?? null],
+                  ["Branch", sale.branch?.name ?? "No branch"],
+                  ["Internal note", sale.notes ?? null],
+                ] as const).map(([label, value]) => (
+                  <div key={label} className="flex items-start justify-between gap-3 px-5 py-2.5">
+                    <dt className="text-[0.75rem] text-[var(--ink-muted)]">{label}</dt>
+                    <dd className="max-w-[70%] text-right text-[0.8125rem] font-semibold text-[var(--ink)] [overflow-wrap:anywhere]">
+                      {value || <span className="text-[var(--ink-muted)]/40">—</span>}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </section>
 
-      {/* -- Items -- */}
-      <section className="dc-card overflow-hidden">
+          {/* -- Items -- */}
+          <section className="dc-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
           <p className={cardLabel}>Items</p>
           <p className="text-[0.75rem] text-[var(--ink-muted)]">
@@ -1465,12 +1523,19 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             { label: "Balance", value: balance > 0 ? formatMoney(balance, saleCurrency) : "Cleared" },
             ...(refundedTotal > 0 ? [{ label: "Refunded", value: formatMoney(refundedTotal, saleCurrency) }] : []),
             { label: "Items", value: sale.items.length },
+            // The customer card above already shows this for a walk-in.
+            ...(sale.client && sale.name ? [{ label: "Sale name", value: sale.name }] : []),
             { label: "Branch", value: sale.branch?.name ?? "No branch" },
+            ...(sale.notes ? [{ label: "Note", value: sale.notes }] : []),
             { label: "Created", value: formatEATDateTime(sale.createdAt) },
             ...(sale.paidAt ? [{ label: "Paid at", value: formatEATDateTime(sale.paidAt) }] : []),
             ...(sale.invoiceNumber ? [{ label: "Invoice", value: sale.invoiceNumber }] : []),
           ] as SummaryRow[]}
-          party={{ title: "Customer", name: clientDisplayName(sale.client, "Walk-in") }}
+          party={{
+            title: "Customer",
+            name: saleCustomerName(sale),
+            lines: sale.client ? [sale.client.phone, sale.client.email] : undefined,
+          }}
         />
       </div>
     </div>

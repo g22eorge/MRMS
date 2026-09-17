@@ -35,7 +35,7 @@ import {
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
-import { clientDisplayName } from "@/lib/client-name";
+import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
@@ -359,7 +359,7 @@ export default async function DeliveryNotesPage({
       where: { orgId, status: { in: ["OPEN", "PAID", "PARTIALLY_RETURNED"] } },
       orderBy: { createdAt: "desc" },
       take: 80,
-      select: { id: true, saleNumber: true, totalAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
+      select: { id: true, saleNumber: true, name: true, totalAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
     }).catch(() => []),
   ]);
   const hasDeliverySources = invoiceOptions.length > 0 || saleOptions.length > 0;
@@ -395,7 +395,7 @@ export default async function DeliveryNotesPage({
     {
       label: "Sales",
       options: saleOptions.map((sale) => {
-        const who = clientDisplayName(sale.client, "Walk-in");
+        const who = saleCustomerName(sale, "Walk-in");
         return {
           value: `sale:${sale.id}`,
           label: `${who} — ${sale.saleNumber}`,

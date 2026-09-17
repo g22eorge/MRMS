@@ -29,7 +29,7 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
-import { clientDisplayName } from "@/lib/client-name";
+import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
@@ -66,7 +66,7 @@ export default async function PosPage({
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
-  if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
+  if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK", "OPERATIONS_MANAGER"].includes(user.role))) {
     redirect("/dashboard");
   }
 
@@ -92,6 +92,7 @@ export default async function PosPage({
     ? {
         OR: [
           { saleNumber: icontains(q) },
+          { name: icontains(q) },
           { notes: icontains(q) },
           { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
         ],
@@ -126,7 +127,7 @@ export default async function PosPage({
     const { user: _u2, orgId: _orgId2, org } = await requireOrgSession();
     assertOrgCanMutate({ access: org.access, userRole: _u2.role, userAccessMode: _u2.accessMode, kind: "GENERAL" });
     const db = orgDb(_orgId2);
-    if (!(can.viewFinancials(_u2) || ["ADMIN", "OPS", "FRONT_DESK"].includes(_u2.role))) redirect("/dashboard");
+    if (!(can.viewFinancials(_u2) || ["ADMIN", "OPS", "FRONT_DESK", "OPERATIONS_MANAGER"].includes(_u2.role))) redirect("/dashboard");
 
     // Double-submit guard: a double-tap on "New Sale" would open two empty tills.
     // Reuse the just-created empty draft (nothing is lost — it has no items yet).
@@ -215,6 +216,7 @@ export default async function PosPage({
   let sales: Array<{
     id: string;
     saleNumber: string;
+    name: string | null;
     status: string;
     currency: string | null;
     totalAmount: number;
@@ -237,6 +239,7 @@ export default async function PosPage({
       select: {
         id: true,
         saleNumber: true,
+        name: true,
         status: true,
         currency: true,
         totalAmount: true,
@@ -388,7 +391,7 @@ export default async function PosPage({
                 <input
                   name="q"
                   defaultValue={q}
-                  placeholder="Sale number, client or note..."
+                  placeholder="Sale number, name, client or note..."
                   className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[0.8125rem] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
                 />
                 {q ? (
@@ -481,7 +484,7 @@ export default async function PosPage({
             name="q"
             defaultValue={q}
             aria-label="Search sales"
-            placeholder="Search by sale number, client or note..."
+            placeholder="Search by sale number, name, client or note..."
             className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
           />
           <SubmitButton variant="secondary" size="sm">Search</SubmitButton>
@@ -521,13 +524,15 @@ export default async function PosPage({
                       : s.status === "VOID" ? "bg-red-500/15 text-red-600"
                       : "bg-[var(--accent)]/15 text-[var(--accent)]"
                     }`}>
-                      {(s.client?.fullName?.[0] ?? "W").toUpperCase()}
+                      {(saleCustomerName(s)[0] ?? "W").toUpperCase()}
                     </div>
                   </Link>
                   <Link href={`/pos/${s.id}`} className="min-w-0 flex-1 active:opacity-70">
-                    <p className="truncate font-bold text-[var(--ink)]">{clientDisplayName(s.client, "Walk-in")}</p>
+                    <p className="truncate font-bold text-[var(--ink)]">{saleCustomerName(s)}</p>
                     <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                       <span className="mono">{s.saleNumber}</span>
+                      {/* Only when it is not already the customer label above. */}
+                      {s.client && s.name ? <>{" · "}{s.name}</> : null}
                       {" · "}{formatEATDate(s.createdAt)}
                       {s.createdBy ? <> · {s.createdBy.name}</> : null}
                     </p>
@@ -560,12 +565,14 @@ export default async function PosPage({
                 ),
               },
               {
-                key: "client",
-                header: "Client",
+                key: "customer",
+                header: "Customer",
                 cell: (s) =>
-                  s.client
-                    ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(s.client)}</Link>
-                    : <span className="text-[var(--ink-muted)]">Walk-in</span>,
+                  s.client ? (
+                    <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(s.client)}</Link>
+                  ) : (
+                    <span className={s.name ? "font-medium text-[var(--ink)]" : "text-[var(--ink-muted)]"}>{saleCustomerName(s)}</span>
+                  ),
               },
               {
                 key: "createdBy",

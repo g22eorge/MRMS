@@ -32,7 +32,7 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { type SourceGroup } from "@/components/documents/DocumentSourcePicker";
 import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { CreateReceiptDialog, type ReceiptFormState } from "./CreateReceiptDialog";
-import { clientDisplayName } from "@/lib/client-name";
+import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
 import { icontains } from "@/lib/db/search";
 
 export default async function ReceiptsPage({
@@ -402,6 +402,7 @@ export default async function ReceiptsPage({
   type SaleOption = {
     id: string;
     saleNumber: string;
+    name: string | null;
     totalAmount: number;
     paidAmount: number;
     currency: string | null;
@@ -419,7 +420,7 @@ export default async function ReceiptsPage({
       where: { orgId, status: { not: "VOID" } },
       orderBy: { createdAt: "desc" },
       take: 80,
-      select: { id: true, saleNumber: true, totalAmount: true, paidAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
+      select: { id: true, saleNumber: true, name: true, totalAmount: true, paidAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
     }).then((rows: SaleOption[]) => rows.filter((sale) => sale.paidAmount < sale.totalAmount)),
   ]);
   // Customer first, so the person paying is what you search for and read.
@@ -439,7 +440,7 @@ export default async function ReceiptsPage({
     {
       label: "Sales",
       options: saleOptions.map((sale) => {
-        const who = clientDisplayName(sale.client, "Walk-in");
+        const who = saleCustomerName(sale, "Walk-in");
         return {
           value: `sale:${sale.id}`,
           label: `${who} — ${sale.saleNumber}`,
