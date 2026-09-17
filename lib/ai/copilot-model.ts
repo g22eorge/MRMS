@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 import type { BusinessDataPack } from "@/lib/ai/business-metrics";
+import { getAnthropicApiKey, getCopilotModel as getStoredCopilotModel } from "@/lib/platform-settings";
 
 /**
  * The Business Copilot's model call: Claude, over the workspace's own numbers.
@@ -31,12 +32,14 @@ function supportsEffort(model: string): boolean {
   return !/haiku|sonnet-4-5/i.test(model);
 }
 
-export function copilotModel(): string {
-  return process.env.ANTHROPIC_COPILOT_MODEL?.trim() || DEFAULT_MODEL;
+export async function copilotModel(): Promise<string> {
+  const stored = await getStoredCopilotModel();
+  if (stored) return stored;
+  return DEFAULT_MODEL;
 }
 
-export function copilotConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+export async function copilotConfigured(): Promise<boolean> {
+  return Boolean(await getAnthropicApiKey());
 }
 
 /**
@@ -120,11 +123,11 @@ export async function askCopilot(params: {
   dataPack: BusinessDataPack;
   orgKnowledge?: string;
 }): Promise<{ text: string; usage: { cacheRead: number; cacheWrite: number; input: number; output: number } } | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured.");
 
   const client = new Anthropic({ apiKey });
-  const model = copilotModel();
+  const model = await copilotModel();
 
   const system: Anthropic.TextBlockParam[] = [
     {

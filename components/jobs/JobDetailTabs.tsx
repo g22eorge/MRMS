@@ -1530,7 +1530,11 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       {segment === "work" ? (
         <div className="space-y-4">
           <form
-            action={(formData) => {
+            onSubmit={(event) => {
+              // Keep entered values on success or validation errors. A React
+              // form action resets uncontrolled selects to their initial default.
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
               formData.set("jobId", job.id);
               formData.set("expectedUpdatedAt", expectedUpdatedAt);
               startDiagnosisTransition(async () => {
@@ -2415,7 +2419,11 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         <div className={`${panelShellClass} space-y-4`}>
           {canUpdateClientCommunication ? (
             <form
-              action={(formData) => {
+              onSubmit={(event) => {
+                // Keep entered values on success or validation errors. A React
+                // form action resets uncontrolled selects to their initial default.
+                event.preventDefault();
+                const formData = new FormData(event.currentTarget);
                 formData.set("jobId", job.id);
                 formData.set("expectedUpdatedAt", expectedUpdatedAt);
                 startCommunicationTransition(async () => {

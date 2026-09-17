@@ -45,7 +45,7 @@ export async function deletePlatformSetting(key: string): Promise<void> {
  *
  * getPlatformSetting catches every read error and returns null, so a missing
  * value and an unreadable table are indistinguishable to every caller. That is
- * usually the right trade — a settings lookup should not take a page down — but
+ * usually the right trade -- a settings lookup should not take a page down -- but
  * it makes "no Pesapal credentials configured" ambiguous exactly when someone
  * is trying to find out why payments do not work.
  *
@@ -91,7 +91,84 @@ export async function getPlatformSettings(keys: string[]): Promise<Record<string
   return result;
 }
 
-// ── Pesapal ──────────────────────────────────────────────────────────────────
+// -- Anthropic AI (platform-wide) ----------------------------------------------------------------------------------------------------
+
+const AI_KEYS = [
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_GUIDE_MODEL",
+  "ANTHROPIC_COPILOT_MODEL",
+] as const;
+
+/**
+ * Platform-wide Anthropic API key.
+ *
+ * Stored value wins, then environment. This mirrors the Pesapal/AT precedence
+ * that already exists in this module: the platform settings UI is the source of
+ * truth an admin can reach, and env is only a fallback for deploys that have not
+ * been migrated to the store yet.
+ */
+export async function getAnthropicApiKey(): Promise<string | null> {
+  const db = await getPlatformSetting("ANTHROPIC_API_KEY");
+  return db ?? process.env.ANTHROPIC_API_KEY ?? null;
+}
+
+/**
+ * Model override for the AI Guide. Null means use the code default.
+ */
+export async function getGuideModel(): Promise<string | null> {
+  const db = await getPlatformSetting("ANTHROPIC_GUIDE_MODEL");
+  if (db?.trim()) return db.trim();
+  return process.env.ANTHROPIC_GUIDE_MODEL?.trim() ?? null;
+}
+
+/**
+ * Model override for the Business Copilot. Null means use the code default.
+ */
+export async function getCopilotModel(): Promise<string | null> {
+  const db = await getPlatformSetting("ANTHROPIC_COPILOT_MODEL");
+  if (db?.trim()) return db.trim();
+  return process.env.ANTHROPIC_COPILOT_MODEL?.trim() ?? null;
+}
+
+/**
+ * Convenience check used by pages that only need to know whether the AI stack
+ * has any usable configuration.
+ */
+export async function aiPlatformConfigured(): Promise<boolean> {
+  return Boolean(await getAnthropicApiKey());
+}
+
+/**
+ * AI settings keys currently managed through the platform settings UI.
+ *
+ * Keep this aligned with the forms and actions that read/write these keys. If
+ * a new AI-related platform setting is added, add it here so the settings page
+ * can enumerate the known keys instead of hard-coding the list in three places.
+ */
+export const AI_SETTINGS_KEYS = [
+  ...AI_KEYS,
+] as const;
+
+export type AiSettingsRead = {
+  apiKey: string | null;
+  guideModel: string | null;
+  copilotModel: string | null;
+  configured: boolean;
+};
+
+export async function getAiSettings(): Promise<AiSettingsRead> {
+  const [apiKey, guideModel, copilotModel] = await Promise.all([
+    getAnthropicApiKey(),
+    getGuideModel(),
+    getCopilotModel(),
+  ]);
+  return {
+    apiKey,
+    guideModel,
+    copilotModel,
+    configured: Boolean(apiKey),
+  };
+}
 
 /**
  * Africa's Talking credentials, from the database first.
@@ -99,8 +176,8 @@ export async function getPlatformSettings(keys: string[]): Promise<Record<string
  * These were saved by the platform settings form into PlatformSetting and then
  * read by nobody: getAtConfig consulted the per-org config row and
  * process.env, never the database. So an administrator could enter a key,
- * watch the page show it as configured — the page reads the same table the form
- * wrote to — and send no SMS at all, with nothing anywhere saying why. Exactly
+ * watch the page show it as configured -- the page reads the same table the form
+ * wrote to -- and send no SMS at all, with nothing anywhere saying why. Exactly
  * the shape of the Pesapal defect, in the integration next to it.
  *
  * Same precedence as the Pesapal helpers below: stored value, then environment.
