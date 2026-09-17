@@ -65,7 +65,7 @@ CREATE TYPE "DeviceType" AS ENUM ('PHONE_ANDROID', 'PHONE_IPHONE', 'TABLET', 'WI
 CREATE TYPE "TimelineConfidence" AS ENUM ('FIRM', 'ESTIMATED', 'PARTS_DEPENDENT');
 
 -- CreateEnum
-CREATE TYPE "WorkflowReason" AS ENUM ('NONE', 'PARTS_PENDING', 'SPECIALIST_ESCALATION', 'CLIENT_DECLINED', 'UNREPAIRABLE', 'CUSTOMER_CANCELLED', 'OTHER');
+CREATE TYPE "WorkflowReason" AS ENUM ('NONE', 'PARTS_PENDING', 'SPECIALIST_ESCALATION', 'CLIENT_DECLINED', 'UNREPAIRABLE', 'CUSTOMER_CANCELLED', 'OTHER', 'CLIENT_APPROVED', 'CLIENT_APPROVED_PARTS_PENDING', 'CLIENT_APPROVED_AWAITING_DEVICE');
 
 -- CreateEnum
 CREATE TYPE "PartReservationStatus" AS ENUM ('RESERVED', 'CONSUMED', 'RELEASED');
@@ -609,6 +609,7 @@ CREATE TABLE "Sale" (
     "posSessionId" TEXT,
     "status" "SaleStatus" NOT NULL DEFAULT 'OPEN',
     "saleNumber" TEXT NOT NULL,
+    "name" TEXT,
     "billingMode" "SaleBillingMode" NOT NULL DEFAULT 'CASH',
     "invoiceNumber" TEXT,
     "invoicedAt" TIMESTAMP(3),
@@ -925,6 +926,8 @@ CREATE TABLE "DocumentBrandingSettings" (
     "companyEmail" TEXT,
     "companyWebsite" TEXT,
     "companyTaxId" TEXT,
+    "companyLogoUrl" TEXT,
+    "companyLogoKey" TEXT,
     "documentTitle" TEXT NOT NULL DEFAULT 'Job Card',
     "quotePrefix" TEXT NOT NULL DEFAULT 'EIS',
     "quoteFormat" TEXT NOT NULL DEFAULT '{PREFIX} {M}/{YYYY}/{SEQ}',
