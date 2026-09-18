@@ -1326,6 +1326,7 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
   const jobUpdate: Record<string, unknown> = {
     repairPath: RepairPath.EXTERNAL,
     assignedToId: null,
+    externalDiagnosis: sanitizeOptionalText(payload.instructions) || undefined,
   };
 
   if (nextStatus) {
