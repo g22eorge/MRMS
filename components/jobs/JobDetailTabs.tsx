@@ -20,7 +20,7 @@ import { PhotoUploader } from "@/components/shared/PhotoUploader";
 import { resolveTechCost } from "@/lib/billing";
 import { formatEATDateTime , formatElapsedHours } from "@/lib/date-eat";
 import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
-import { JobStatus, normalizeJobStatus, canTransitionJobStatus } from "@/lib/job-status";
+import { JobStatus, normalizeJobStatus, canTransitionJobStatus, jobStageIndex } from "@/lib/job-status";
 import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
 import type { JobDocumentTimelineEntry } from "@/lib/jobs/job-document-timeline-shared";
 import { can } from "@/lib/permissions";
@@ -952,16 +952,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         : "Not set";
   const repairCostLabel = "Technician Cost";
   const stageLabels = ["Intake", "Diagnosis", "Approval", "Repair", job.status === "CLOSED" ? "Closed" : "Complete"];
-  const currentStageIndex =
-    job.status === "RECEIVED"
-      ? 0
-      : job.status === "DIAGNOSING"
-        ? 1
-        : job.status === "AWAITING_APPROVAL"
-          ? 2
-          : (["REFERRED", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[]).includes(job.status)
-            ? 3
-            : 4;
+  const currentStageIndex = jobStageIndex(job.status);
   const nextActionByStatus: Record<ReturnType<typeof normalizeJobStatus>, string> = {
     RECEIVED: "Start diagnosis",
     DIAGNOSING: "Capture diagnosis and set repair path",

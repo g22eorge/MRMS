@@ -146,3 +146,41 @@ export function isOpenJobStatus(status: JobStatus | string) {
 export function isCompletedJobStatus(status: JobStatus | string) {
   return status === "COMPLETED" || status === "DELIVERED";
 }
+
+/**
+ * Progress-rail stage for a job status: 0 Intake, 1 Diagnosis, 2 Approval,
+ * 3 Repair, 4 Complete/Closed.
+ *
+ * Every status is mapped explicitly. The rail previously listed only six
+ * statuses and defaulted everything else to 4, so jobs in the external
+ * chain (REFERRED→…→RETURNED_FROM_EXTERNAL) or WAITING_FOR_PARTS showed a
+ * full "Complete" bar while the status buttons below correctly offered
+ * repair steps — the exact mismatch reported on EIS/2026/0060.
+ */
+export function jobStageIndex(status: JobStatus | string): number {
+  switch (status) {
+    case "RECEIVED":
+      return 0;
+    case "DIAGNOSING":
+      return 1;
+    case "AWAITING_APPROVAL":
+      return 2;
+    case "REFERRED":
+    case "PENDING_EXTERNAL_ASSIGNMENT":
+    case "ASSIGNED_ONE_TIME_EXTERNAL":
+    case "IN_EXTERNAL_REPAIR":
+    case "RETURNED_FROM_EXTERNAL":
+    case "IN_REPAIR":
+    case "WAITING_FOR_PARTS":
+    case "READY_FOR_PICKUP":
+      return 3;
+    case "DELIVERED":
+    case "COMPLETED":
+    case "CLOSED":
+      return 4;
+    default:
+      // Unknown future status: show Repair (work ongoing) rather than
+      // Complete — a wrong "ongoing" understates, a wrong "complete" lies.
+      return 3;
+  }
+}
