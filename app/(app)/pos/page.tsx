@@ -143,17 +143,32 @@ export default async function PosPage({
     // org has opted in (Settings -> Branding -> VAT). Cashiers can still flip it
     // per-sale on the sale page.
     const branding = await getDocumentBrandingSettings(_orgId2);
-    const sale = await db.sale.create({
-      data: {
-        orgId: _orgId2,
-        saleNumber,
-        status: "OPEN",
-        // currency uses schema default
-        taxApplicable: branding.vatDefaultApplicable,
-        createdById: _u2.id,
-      },
-      select: { id: true },
-    });
+    // Currency must be the org base currency from birth: the till rejects
+    // payments on non-base sales, so the schema default would strand every
+    // sale for non-UGX orgs as unpayable.
+    // Sale-number allocation is read-max-then-create against a globally-unique
+    // column: retry on collision instead of 500ing on concurrent New Sale taps.
+    let sale: { id: string } | null = null;
+    for (let attempt = 0; attempt < 3 && !sale; attempt += 1) {
+      const numbered = attempt === 0 ? saleNumber : await nextSaleNumber(db, _orgId2);
+      try {
+        sale = await db.sale.create({
+          data: {
+            orgId: _orgId2,
+            saleNumber: numbered,
+            status: "OPEN",
+            currency: org.baseCurrency,
+            taxApplicable: branding.vatDefaultApplicable,
+            createdById: _u2.id,
+          },
+          select: { id: true },
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002" && attempt < 2) continue;
+        throw error;
+      }
+    }
+    if (!sale) redirect("/pos?error=" + encodeURIComponent("Could not number the new sale. Please try again."));
 
     revalidatePath("/pos");
     redirect(flash(`/pos/${sale.id}`, "Sale created"));
@@ -191,10 +206,10 @@ export default async function PosPage({
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
         if (!item.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: item.partId }, select: { id: true, qtyOnHand: true } });
+        const part = await tx.part.findFirst({ where: { id: item.partId, orgId: _orgId3 }, select: { id: true, qtyOnHand: true } });
         if (!part) continue;
         const baseQty = Math.abs(item.quantity) * (item.saleUomFactor ?? 1);
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
+        await tx.part.updateMany({ where: { id: part.id, orgId: _orgId3 }, data: { qtyOnHand: { increment: baseQty } } });
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
@@ -207,7 +222,7 @@ export default async function PosPage({
           },
         });
       }
-      await tx.sale.deleteMany({ where: { id: sale.id } });
+      await tx.sale.deleteMany({ where: { id: sale.id, orgId: _orgId3 } });
     });
 
     revalidatePath("/pos");

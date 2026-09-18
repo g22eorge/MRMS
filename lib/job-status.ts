@@ -101,23 +101,17 @@ export function canTransitionJobStatus(
         "IN_REPAIR",
         "WAITING_FOR_PARTS",
         "READY_FOR_PICKUP",
+        "DELIVERED",
         "COMPLETED",
         "CLOSED",
       ] as JobStatus[]
     ).includes(nextStatus);
   }
+  // OPS runs the shop floor: the full chain, so pressing a status always
+  // opens the next options until the job completes. (Previously the UI
+  // offered steps the server then rejected; now offer and permission match.)
   if (user.role === "OPS" || user.role === "OPERATIONS_MANAGER") {
-    return (
-      [
-        "DIAGNOSING",
-        "REFERRED",
-        "AWAITING_APPROVAL",
-        "CLOSED",
-        "IN_REPAIR",
-        "READY_FOR_PICKUP",
-        "COMPLETED",
-      ] as JobStatus[]
-    ).includes(nextStatus);
+    return true;
   }
   return false;
 }

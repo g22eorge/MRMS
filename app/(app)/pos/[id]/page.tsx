@@ -58,7 +58,7 @@ async function recalcSaleTotals(
 ) {
   const items = await tx.saleItem.findMany({ where: { saleId }, select: { partId: true, lineTotal: true } });
   const subtotal = items.reduce((sum, it) => sum + (it.lineTotal ?? 0), 0);
-  const current = await tx.sale.findUnique({ where: { id: saleId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
+  const current = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
   const currency = normalizeCurrency(current?.currency, "UGX");
   // VAT config: read the three fields we need on the SAME transaction connection
   // with a minimal SELECT. Do NOT use getDocumentBrandingSettings() here — it runs
@@ -113,8 +113,8 @@ async function recalcSaleTotals(
   const vatAmount = roundMoney(raw.vatAmount, currency);
   const totalAmount = roundMoney(raw.totalAmount, currency);
 
-  await tx.sale.update({
-    where: { id: saleId },
+  await tx.sale.updateMany({
+    where: { id: saleId, orgId },
     data: {
       subtotal,
       discountAmount,
@@ -417,7 +417,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       if (item.partId) {
         const priced = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { name: true, sellingPrice: true } });
         if (priced?.sellingPrice != null && unitPrice < priced.sellingPrice) {
-          const cur = await tx.sale.findFirst({ where: { id: saleId }, select: { currency: true } });
+          const cur = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { currency: true } });
           posReject(saleId, `${priced.name} cannot be sold below its minimum of ${formatMoney(priced.sellingPrice, normalizeCurrency(cur?.currency, org.baseCurrency))}.`);
         }
       }
@@ -428,10 +428,21 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         if (!part) return;
         // Move stock by the line's snapshot factor so it stays consistent with
         // the original decrement even if the product's factor changed since.
+        // Guarded atomic write: the row only moves when enough stock is really
+        // there, so two concurrent edits cannot both pass and oversell.
         const baseDelta = delta * (item.saleUomFactor ?? 1);
-        const nextQty = part.qtyOnHand - baseDelta;
-        if (nextQty < 0) posReject(saleId, "Not enough stock for that quantity.");
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: nextQty } });
+        if (baseDelta > 0) {
+          const moved = await tx.part.updateMany({
+            where: { id: part.id, orgId, qtyOnHand: { gte: baseDelta } },
+            data: { qtyOnHand: { decrement: baseDelta } },
+          });
+          if (!moved.count) posReject(saleId, "Not enough stock for that quantity.");
+        } else {
+          await tx.part.updateMany({
+            where: { id: part.id, orgId },
+            data: { qtyOnHand: { increment: -baseDelta } },
+          });
+        }
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
@@ -474,7 +485,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
         if (part) {
           const baseQty = Math.abs(item.quantity) * (item.saleUomFactor ?? 1);
-          await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
+          await tx.part.updateMany({ where: { id: part.id, orgId }, data: { qtyOnHand: { increment: baseQty } } });
           await tx.partStockTransaction.create({
             data: {
               partId: part.id,
@@ -516,6 +527,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     if (!saleId) return;
     if (!partId && !description) posReject(saleId, "Choose a product or enter an item description.");
     if (!Number.isFinite(qty) || qty <= 0) posReject(saleId, "Enter a valid quantity.");
+    // SaleItem.quantity is an Int — a fractional qty would die as a Prisma
+    // validation 500 after stock was already decremented. Reject cleanly.
+    if (!Number.isInteger(qty)) posReject(saleId, "Quantity must be a whole number.");
     if (priceProvided && (!Number.isFinite(unitPrice) || unitPrice < 0)) posReject(saleId, "Enter a valid unit price.");
     if (!priceProvided && !partId) posReject(saleId, "Enter a unit price for a custom item.");
 
@@ -538,7 +552,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         saleFactor = part.saleUomFactor && part.saleUomFactor > 0 ? part.saleUomFactor : 1;
         costAtSale = part.unitCost ?? null;
         const baseQty = Math.abs(qty) * saleFactor;
-        if (part.qtyOnHand - baseQty < 0) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
+        // Atomic guarded decrement: only moves when the stock is really there,
+        // so two concurrent tills cannot both pass the check and oversell.
+        const moved = await tx.part.updateMany({
+          where: { id: part.id, orgId, qtyOnHand: { gte: baseQty } },
+          data: { qtyOnHand: { decrement: baseQty } },
+        });
+        if (!moved.count) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
 
         resolvedPartId = part.id;
         resolvedDescription = part.name;
@@ -551,7 +571,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           posReject(saleId, `${part.name} cannot be sold below its minimum of ${formatMoney(part.sellingPrice, lineCurrency)}.`);
         }
 
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand - baseQty } });
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
@@ -577,7 +596,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   // Flip VAT on/off for this specific sale (overrides the org default per-sale).
   async function toggleSaleVatAction(formData: FormData) {
     "use server";
-    const { user, orgId } = await requireOrgSession();
+    const { user, orgId, org } = await requireOrgSession();
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
@@ -629,12 +648,31 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     await ensureMoneySchema();
 
     await prisma.$transaction(async (tx) => {
+      // Re-read inside the txn: status, items and paid total must be true at
+      // write time, not page-load time.
+      const liveSale = await tx.sale.findFirst({
+        where: { id: saleId, orgId },
+        select: { id: true, status: true, totalAmount: true, paidAmount: true },
+      });
+      if (!liveSale || liveSale.status === "VOID") posReject(saleId, "This sale is void — no payment can be recorded.");
+      const lineCount = await tx.saleItem.count({ where: { saleId } });
+      if (lineCount === 0 || !(liveSale.totalAmount > 0)) {
+        posReject(saleId, "Add items to the sale before taking payment.");
+      }
+      const balanceDue = Math.max(0, liveSale.totalAmount - liveSale.paidAmount);
+      const roundedAmount = roundMoney(amount, saleCurrency);
+      if (roundedAmount <= 0) posReject(saleId, "Enter a valid payment amount.");
+      // No change handling exists at the till: anything over the balance would
+      // sit as unaccounted credit, so refuse it like the receipts flow does.
+      if (roundedAmount > balanceDue) {
+        posReject(saleId, `That is more than the ${formatMoney(balanceDue, saleCurrency)} balance due.`);
+      }
       // Double-submit guard: an identical till payment landed seconds ago — reuse
       // it instead of recording the same money twice.
       const dupPayment = await findRecentDuplicate(tx.payment, {
         orgId,
         saleId,
-        amount,
+        amount: roundedAmount,
         method: safeMethod,
         kind: "PAYMENT",
       });
@@ -646,7 +684,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           invoiceId: null,
           currency: saleCurrency,
           exchangeRateToBase: null,
-          amount,
+          amount: roundedAmount,
           method: safeMethod,
           reference: reference || null,
           createdById: session.user.id,
@@ -662,7 +700,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         paymentId: payment.id,
         saleId,
         clientId: existingSale.clientId,
-        amount,
+        amount: roundedAmount,
         currency: saleCurrency,
         issuedById: session.user.id,
       });
@@ -706,7 +744,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       if (!raw) continue;
       const qty = Math.max(0, Math.floor(Number(raw)));
       if (!Number.isFinite(qty) || qty <= 0) continue;
-      if (qty > it.quantity) continue;
+      // A typed over-quantity used to be silently dropped, hiding mistakes.
+      // Say so instead.
+      if (qty > it.quantity) posReject(saleId, `Return quantity for "${it.description}" exceeds the ${it.quantity} sold.`);
       picked.push({
         saleItemId: it.id,
         description: it.description,
@@ -735,6 +775,16 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       // Double-submit guard: an identical credit note for this sale landed seconds ago.
       const dupCn = await findRecentDuplicate(tx.creditNote, { orgId, saleId, totalAmount });
       if (dupCn) return { id: dupCn.id, creditNoteNumber: dupCn.creditNoteNumber, deduped: true };
+
+      // Re-check the cumulative cap inside the txn: two concurrent returns
+      // both passed the outside read and both would insert → over-credit.
+      const priorInTx = await tx.creditNote.aggregate({
+        where: { orgId, saleId },
+        _sum: { totalAmount: true },
+      });
+      if ((priorInTx._sum.totalAmount ?? 0) + totalAmount > existingSale.totalAmount) {
+        posReject(saleId, "This return exceeds the value of the sale.");
+      }
 
       const creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote", orgId);
 
@@ -838,14 +888,14 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       }
 
       for (const [partId, returned] of returnByPart) {
-        await tx.part.update({
-          where: { id: partId },
-          data: { qtyOnHand: returnedById.get(partId)!.qtyOnHand + returned },
+        await tx.part.updateMany({
+          where: { id: partId, orgId },
+          data: { qtyOnHand: { increment: returned } },
         });
       }
 
-      await tx.creditNote.update({
-        where: { id: creditNoteId },
+      await tx.creditNote.updateMany({
+        where: { id: creditNoteId, orgId },
         data: {
           itemsReceivedBackAt: new Date(),
           itemsReceivedBackById: session.user.id,
@@ -949,6 +999,30 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     // ensure the ledger/FX schema exists before opening the txn.
     await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
+      // In-txn rechecks: the ceiling and dedupe above read outside, so two
+      // concurrent refunds (even for differing amounts) both passed and both
+      // paid out. Recheck against the rows we write beside.
+      const dupInTx = await findRecentDuplicate(tx.refund, {
+        orgId,
+        saleId,
+        creditNoteId: creditNote.id,
+        amount,
+        method: safeMethod,
+      });
+      if (dupInTx) return { id: dupInTx.id, deduped: true };
+      const priorRefunds = await tx.refund.findMany({
+        where: { orgId, creditNoteId: creditNote.id },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
+      });
+      const priorBase = priorRefunds.reduce(
+        (sum, r) => sum + toBaseAmount({ amount: r.amount, currency: r.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: r.exchangeRateToBase }),
+        0,
+      );
+      const noteBase = toBaseAmount({ amount: creditNote.totalAmount, currency: cnCurrency, baseCurrency: org.baseCurrency, exchangeRateToBase: null });
+      const amountBase = toBaseAmount({ amount, currency, baseCurrency: org.baseCurrency, exchangeRateToBase });
+      if (amountBase > Math.max(0, noteBase - priorBase)) {
+        posReject(saleId, "Refund exceeds the remaining refundable amount on this credit note.");
+      }
       const created = await tx.refund.create({
         data: {
           orgId,
@@ -981,17 +1055,19 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         reference: `refund:${created.id}`,
         description: `Refund on sale ${saleId} (credit note ${creditNote.id})`,
       });
-      return created;
+      return { ...created, deduped: false };
     });
 
-    await writeSystemAuditEvent({
-      orgId,
-      actorUserId: user.id,
-      entityType: "Refund",
-      entityId: refund.id,
-      action: "REFUND_CREATED",
-      summary: `Refund ${formatMoney(amount, currency)} for sale ${saleId} against credit note ${creditNoteId}`,
-    });
+    if (!("deduped" in refund && refund.deduped)) {
+      await writeSystemAuditEvent({
+        orgId,
+        actorUserId: user.id,
+        entityType: "Refund",
+        entityId: refund.id,
+        action: "REFUND_CREATED",
+        summary: `Refund ${formatMoney(amount, currency)} for sale ${saleId} against credit note ${creditNoteId}`,
+      });
+    }
 
     revalidatePath(`/pos/${saleId}`);
     revalidatePath("/reports");
@@ -1245,8 +1321,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             <form
               action={async (formData: FormData) => {
                 "use server";
-                const { user, orgId } = await requireOrgSession();
+                const { user, orgId, org } = await requireOrgSession();
                 if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+                assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
                 const saleId = String(formData.get("saleId") ?? "").trim();
                 const raw = String(formData.get("discountAmount") ?? "").trim();
                 if (!saleId) return;
@@ -1260,7 +1337,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                   const itemsAgg = await tx.saleItem.aggregate({ where: { saleId }, _sum: { lineTotal: true } });
                   const subtotal = itemsAgg._sum.lineTotal ?? 0;
                   const capped = Math.max(0, Math.min(discountAmount, subtotal));
-                  await tx.sale.update({ where: { id: saleId }, data: { discountAmount: capped } });
+                  await tx.sale.updateMany({ where: { id: saleId, orgId }, data: { discountAmount: capped } });
                   await recalcSaleTotals(tx, saleId, orgId);
                 });
 
