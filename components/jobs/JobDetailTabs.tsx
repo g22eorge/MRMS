@@ -20,7 +20,7 @@ import { PhotoUploader } from "@/components/shared/PhotoUploader";
 import { resolveTechCost } from "@/lib/billing";
 import { formatEATDateTime , formatElapsedHours } from "@/lib/date-eat";
 import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
-import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { JobStatus, normalizeJobStatus, canTransitionJobStatus } from "@/lib/job-status";
 import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
 import type { JobDocumentTimelineEntry } from "@/lib/jobs/job-document-timeline-shared";
 import { can } from "@/lib/permissions";
@@ -686,6 +686,12 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const [billInput, setBillInput] = useState<string>(job.clientBill != null ? String(job.clientBill) : "");
   const [vatInput, setVatInput] = useState<boolean>(job.vatApplicable ?? false);
   const [showOneTimeForm, setShowOneTimeForm] = useState(false);
+  // Live value of the Assign-technician select inside the diagnosis form.
+  // Null means "untouched — derive from the saved job". Tracking it lets the
+  // notes box follow the dropdown: pick an internal tech and the internal box
+  // shows, pick an external tech and the external box shows — then one Save
+  // writes the assignment, the right notes column, and parts together.
+  const [assignedSelect, setAssignedSelect] = useState<string | null>(null);
   const [isDiagnosisPending, startDiagnosisTransition] = useTransition();
   const [isOneTimeExternalPending, startOneTimeExternalTransition] = useTransition();
   const [isRepairPending, startRepairTransition] = useTransition();
@@ -698,6 +704,19 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const [completionFlowOpen, setCompletionFlowOpen] = useState(false);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
   const [showPayoutForm, setShowPayoutForm] = useState(false);
+  // Fresh concurrency token echoed back by saves. Every job write bumps
+  // updatedAt, so a second save reusing the page-load token always
+  // stale-rejects ("changed since you opened it"). Each success refreshes the
+  // token here; a fresh server render resets it (render-phase adjust, the
+  // React-endorsed alternative to syncing state inside an effect).
+  const jobUpdatedAtKey = job.updatedAt ? new Date(job.updatedAt).getTime() : null;
+  const [timestampToken, setTimestampToken] = useState<{ key: number | null; value: string | null }>({
+    key: jobUpdatedAtKey,
+    value: null,
+  });
+  if (timestampToken.key !== jobUpdatedAtKey) {
+    setTimestampToken({ key: jobUpdatedAtKey, value: null });
+  }
 
   useEffect(() => {
     if (!savedSection) return;
@@ -735,6 +754,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       return;
     }
     toast.success("Status updated");
+    acceptFreshTimestamp(res);
     setSavedSection("status");
     const changedTo = res.statusChangedTo ?? explicitNextStatus;
     if (
@@ -777,7 +797,11 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   };
 
   const statusKey = normalizeJobStatus(job.status);
-  const statusActions = allowedStatusTransitions[job.status] ?? allowedStatusTransitions[statusKey] ?? [];
+  const allStatusActions = allowedStatusTransitions[job.status] ?? allowedStatusTransitions[statusKey] ?? [];
+  // Offer only what the server will accept for this role — unfiltered buttons
+  // that always answered "You do not have permission" were a recurring
+  // dead-end (e.g. internal tech → approval, OPS → start diagnosis).
+  const statusActions = allStatusActions.filter((s) => canTransitionJobStatus(permissionUser, s));
   const isTerminal = job.status === "COMPLETED" || job.status === "CLOSED";
   const existingMargin =
     typeof job.clientBill === "number"
@@ -866,7 +890,13 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             ? { type: "link" as const, label: "Generate Job Card", href: `/api/jobs/${job.id}/job-card` }
             : null;
 
-  const expectedUpdatedAt = new Date(job.updatedAt).toISOString();
+  const expectedUpdatedAt = timestampToken.value ?? new Date(job.updatedAt).toISOString();
+  function acceptFreshTimestamp(res: unknown) {
+    if (res && typeof res === "object" && "updatedAt" in res) {
+      const stamp = (res as { updatedAt?: unknown }).updatedAt;
+      if (typeof stamp === "string" && stamp) setTimestampToken({ key: jobUpdatedAtKey, value: stamp });
+    }
+  }
   const assignedRole = job.assignedTo?.role;
   const diagnosisMode: "internal" | "external" =
     assignedRole === "TECHNICIAN_EXTERNAL"
@@ -876,6 +906,41 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           : job.repairPath === "EXTERNAL"
             ? "external"
             : "internal";
+  // Technicians get a filtered view (internal sees internal, external sees
+  // external). Everyone else (ADMIN/OPS/managers) sees BOTH fields: hiding one
+  // by assignment meant the hidden value could never be edited, which read as
+  // "diagnostic notes not saving" whenever the job sat on the other path.
+  const canSeeBothDiagnoses =
+    role !== "TECHNICIAN_INTERNAL" &&
+    role !== "TECHNICIAN_EXTERNAL" &&
+    role !== "TECH_FIELD";
+  // Dropdown-driven notes mode for staff with the assign control: the visible
+  // notes box follows the technician picked in the select above, so the notes
+  // always land in the column matching the assignment. Falls back to the saved
+  // job when the select is untouched or absent.
+  const liveDiagnosisMode: "internal" | "external" = (() => {
+    if (!canAssignJobs || assignedSelect === null) return diagnosisMode;
+    if (assignedSelect === "__one_time__" || assignedSelect === "__one_time_current__") return "external";
+    if (!assignedSelect) return job.repairPath === "EXTERNAL" ? "external" : "internal";
+    const picked = technicians.find((t) => t.id === assignedSelect);
+    if (!picked) return diagnosisMode;
+    return picked.role === "TECHNICIAN_EXTERNAL" ? "external" : "internal";
+  })();
+  const showInternalDiagnosis =
+    canSeeBothDiagnoses || (role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external");
+  const showExternalDiagnosis = canSeeBothDiagnoses || diagnosisMode !== "internal";
+  // What the staff editor actually displays: single box following the dropdown.
+  // Technicians keep their filtered view.
+  const displayInternalDiagnosis = !canSeeBothDiagnoses
+    ? showInternalDiagnosis
+    : liveDiagnosisMode !== "external";
+  const displayExternalDiagnosis = !canSeeBothDiagnoses
+    ? showExternalDiagnosis
+    : liveDiagnosisMode !== "internal";
+  // Server allows ADMIN/OPS to persist diagnosis (no editDiagnosis gate there);
+  // the button used to require can.editDiagnosis, which OPS lacks, so OPS saw a
+  // dead Save and read it as notes not saving. Align with the server.
+  const canSaveDiagnosis = can.editDiagnosis(permissionUser) || role === "OPS" || role === "ADMIN";
   const derivedRepairPath = assignedRole
     ? diagnosisMode === "external"
       ? "EXTERNAL (from assigned technician)"
@@ -1047,7 +1112,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </div>
           {!isTerminal && statusActions.length > 0 ? (
             <form
-              action={(fd) => {
+              onSubmit={(event) => {
+                event.preventDefault();
+                const fd = new FormData();
                 fd.set("jobId", job.id);
                 fd.set("nextStatus", statusActions[0]);
                 fd.set("expectedUpdatedAt", expectedUpdatedAt);
@@ -1091,7 +1158,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               ) : (
                 <form
                   key={status}
-                  action={(fd) => {
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const fd = new FormData();
                     fd.set("jobId", job.id);
                     fd.set("nextStatus", status);
                     fd.set("expectedUpdatedAt", expectedUpdatedAt);
@@ -1188,7 +1257,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
         {/* Primary workflow CTA */}
         {!isTerminal && statusActions.length > 0 ? (
-          <form action={(fd) => {
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            const fd = new FormData();
             fd.set("jobId", job.id);
             fd.set("nextStatus", statusActions[0]);
             fd.set("expectedUpdatedAt", expectedUpdatedAt);
@@ -1545,6 +1616,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 }
                 toast.success("Diagnosis updated");
                 setSavedSection("diagnosis");
+                acceptFreshTimestamp(res);
+                // Selection is now persisted — drop the live override so the
+                // notes box re-derives from the refreshed job, not stale state.
+                setAssignedSelect(null);
                 router.refresh();
               });
             }}
@@ -1586,6 +1661,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                         defaultValue={job.assignedTo?.id ?? (oneTimeExternal ? "__one_time_current__" : "")}
                         className={fieldClass}
                         onChange={(e) => {
+                          setAssignedSelect(e.target.value);
                           if (e.target.value === "__one_time__") {
                             setShowOneTimeForm(true);
                           }
@@ -1624,6 +1700,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                         defaultValue={job.assignedTo?.id ?? ""}
                         className={fieldClass}
                         onChange={(e) => {
+                          setAssignedSelect(e.target.value);
                           if (e.target.value === "__one_time__") {
                             setShowOneTimeForm(true);
                           }
@@ -1651,23 +1728,39 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               </div>
             ) : null}
 
-            {role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external" ? (
-              <textarea
-                name="diagnosisNotes"
-                defaultValue={job.diagnosisNotes ?? ""}
-                placeholder="Internal diagnosis notes"
-                className={areaClass}
-              />
+            {showInternalDiagnosis ? (
+              <div className={canSeeBothDiagnoses && !displayInternalDiagnosis ? "hidden" : undefined}>
+                {canSeeBothDiagnoses ? (
+                  <label htmlFor="diagnosisNotes" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                    Internal diagnosis notes
+                  </label>
+                ) : null}
+                <textarea
+                  id="diagnosisNotes"
+                  name="diagnosisNotes"
+                  defaultValue={job.diagnosisNotes ?? ""}
+                  placeholder="Internal diagnosis notes"
+                  className={areaClass}
+                />
+              </div>
             ) : null}
-            {diagnosisMode !== "internal" ? (
-              <textarea
-                name="externalDiagnosis"
-                defaultValue={job.externalDiagnosis ?? ""}
-                placeholder="External diagnosis"
-                className={areaClass}
-              />
+            {showExternalDiagnosis ? (
+              <div className={canSeeBothDiagnoses && !displayExternalDiagnosis ? "hidden" : undefined}>
+                {canSeeBothDiagnoses ? (
+                  <label htmlFor="externalDiagnosis" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                    External diagnosis
+                  </label>
+                ) : null}
+                <textarea
+                  id="externalDiagnosis"
+                  name="externalDiagnosis"
+                  defaultValue={job.externalDiagnosis ?? ""}
+                  placeholder="External diagnosis"
+                  className={areaClass}
+                />
+              </div>
             ) : null}
-            {diagnosisMode === "internal" ? (
+            {!canSeeBothDiagnoses && diagnosisMode === "internal" ? (
               <p className="text-xs text-[var(--ink-muted)]">External diagnosis is hidden for internal technician flow.</p>
             ) : null}
             <textarea
@@ -1680,7 +1773,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
-                disabled={(isTerminal && !canAssignJobs) || !can.editDiagnosis(permissionUser) || isDiagnosisPending}
+                disabled={(isTerminal && !canAssignJobs) || !canSaveDiagnosis || isDiagnosisPending}
                 className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60"
               >
                 Save
@@ -1698,9 +1791,18 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </form>
 
           {showOneTimeExternalPanel ? (
-            <form
-              action={(formData) => {
-                formData.set("jobId", job.id);
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            // new FormData(form) excludes the clicked submit button, but the
+            // status buttons below carry nextStatus as name/value — merge the
+            // submitter back in so the move is not silently dropped.
+            const submitter = (event.nativeEvent as unknown as { submitter?: HTMLElement | null }).submitter;
+            const submitName = submitter?.getAttribute("name");
+            const submitValue = submitter?.getAttribute("value");
+            if (submitName && submitValue) formData.set(submitName, submitValue);
+            formData.set("jobId", job.id);
                 formData.set("expectedUpdatedAt", expectedUpdatedAt);
                 startOneTimeExternalTransition(async () => {
                   const res = await updateOneTimeExternalAssignmentAction(formData);
@@ -1709,6 +1811,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                     return;
                   }
                   toast.success("One-time external technician saved");
+                  acceptFreshTimestamp(res);
                   setSavedSection("oneTimeExternal");
                   router.refresh();
                 });
@@ -1833,7 +1936,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
       {segment === "work" ? (
         <form
-          action={(formData) => {
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
             formData.set("jobId", job.id);
             formData.set("expectedUpdatedAt", expectedUpdatedAt);
             startRepairTransition(async () => {
@@ -1843,6 +1948,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 return;
               }
               toast.success("Repair log updated");
+              acceptFreshTimestamp(res);
               setSavedSection("repair");
               router.refresh();
             });
@@ -1872,7 +1978,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
       {segment === "money" && canViewFinancials ? (
         <form
-          action={(formData) => {
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
             formData.set("jobId", job.id);
             formData.set("expectedUpdatedAt", expectedUpdatedAt);
             startFinancialTransition(async () => {
@@ -1882,6 +1990,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 return;
               }
               toast.success("Financials updated");
+              acceptFreshTimestamp(res);
               setSavedSection("financials");
               router.refresh();
             });
@@ -2100,6 +2209,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                               const res = await recordClientPaymentAction(fd);
                               if (res.error) { toast.error(res.error); return; }
                               toast.success("Payment recorded");
+                              acceptFreshTimestamp(res);
                               setShowAddPaymentForm(false);
                               router.refresh();
                             });
@@ -2289,6 +2399,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                               const res = await recordTechnicianPayoutAction(fd);
                               if (res.error) { toast.error(res.error); return; }
                               toast.success("Technician payout recorded");
+                              acceptFreshTimestamp(res);
                               setShowPayoutForm(false);
                               router.refresh();
                             });
@@ -2430,6 +2541,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   const res = await updateJobAction(formData);
                   if (res.error) { toast.error(res.error); return; }
                   toast.success("Workflow updated");
+                  acceptFreshTimestamp(res);
                   setSavedSection("workflow");
                   router.refresh();
                 });
@@ -2584,7 +2696,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           }}
         />
         <form
-          action={(formData) => {
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
             formData.set("jobId", job.id);
             formData.set("expectedUpdatedAt", expectedUpdatedAt);
             startStatusTransition(async () => {

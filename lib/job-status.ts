@@ -67,6 +67,61 @@ export const ACTIVE_STATUSES_EXPECTING_CONTACT = ACTIVE_JOB_STATUSES.filter(
 export type JobStatus = (typeof JOB_STATUSES)[number];
 export type UiJobStatus = (typeof UI_JOB_STATUSES)[number];
 
+import type { Role } from "@prisma/client";
+import { can } from "./permissions";
+
+/**
+ * Single source of truth for who may move a job TO a status. Used by the
+ * server action (enforcement) and the job page (which buttons to offer), so
+ * the two cannot drift: every offered button succeeds, every hidden one
+ * would have been rejected.
+ *
+ * Internal techs can submit for approval (external techs already could), and
+ * OPS can start diagnosis (RECEIVED→DIAGNOSING is the first step of every
+ * job) — both were offered by the UI and rejected by the server.
+ */
+export function canTransitionJobStatus(
+  user: { role: Role; permissions?: string[] },
+  nextStatus: JobStatus,
+): boolean {
+  if (user.role === "ADMIN") return true;
+  if (user.role === "TECHNICIAN_EXTERNAL") {
+    return (["AWAITING_APPROVAL", "RETURNED_FROM_EXTERNAL"] as JobStatus[]).includes(nextStatus);
+  }
+  if (user.role === "TECHNICIAN_INTERNAL" || can.editDiagnosis(user)) {
+    return (
+      [
+        "DIAGNOSING",
+        "REFERRED",
+        "PENDING_EXTERNAL_ASSIGNMENT",
+        "ASSIGNED_ONE_TIME_EXTERNAL",
+        "IN_EXTERNAL_REPAIR",
+        "RETURNED_FROM_EXTERNAL",
+        "AWAITING_APPROVAL",
+        "IN_REPAIR",
+        "WAITING_FOR_PARTS",
+        "READY_FOR_PICKUP",
+        "COMPLETED",
+        "CLOSED",
+      ] as JobStatus[]
+    ).includes(nextStatus);
+  }
+  if (user.role === "OPS" || user.role === "OPERATIONS_MANAGER") {
+    return (
+      [
+        "DIAGNOSING",
+        "REFERRED",
+        "AWAITING_APPROVAL",
+        "CLOSED",
+        "IN_REPAIR",
+        "READY_FOR_PICKUP",
+        "COMPLETED",
+      ] as JobStatus[]
+    ).includes(nextStatus);
+  }
+  return false;
+}
+
 export function normalizeJobStatus(status: JobStatus): UiJobStatus {
   // Legacy external assignment states now surface as a single UI stage.
   if (status === "PENDING_EXTERNAL_ASSIGNMENT" || status === "ASSIGNED_ONE_TIME_EXTERNAL") {
