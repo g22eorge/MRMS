@@ -85,12 +85,32 @@ const updateSchema = z.object({
     z.nativeEnum(CommunicationStatus).optional(),
   ),
   clientConversationNote: z.string().optional(),
-  repairPath: z.nativeEnum(RepairPath).optional(),
+  // An unselected repair-path select and untouched timeline builder inputs
+  // submit "". NativeEnum/positive-number schemas rejected those empty
+  // strings, so the WHOLE save failed ("Invalid option" / "Too small") and
+  // the diagnosis notes typed alongside were discarded — the second-save
+  // behaviour. Same preprocess as the recommendation/communication selects.
+  repairPath: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.nativeEnum(RepairPath).optional(),
+  ),
   repairTimeline: z.string().optional(),
-  timelineMinValue: z.coerce.number().positive().optional(),
-  timelineMaxValue: z.coerce.number().positive().optional(),
-  timelineUnit: z.enum(["HOUR", "DAY", "WEEK"]).optional(),
-  timelineConfidence: z.enum(["FIRM", "ESTIMATED", "PARTS_DEPENDENT"]).optional(),
+  timelineMinValue: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().positive().optional(),
+  ),
+  timelineMaxValue: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce.number().positive().optional(),
+  ),
+  timelineUnit: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["HOUR", "DAY", "WEEK"]).optional(),
+  ),
+  timelineConfidence: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["FIRM", "ESTIMATED", "PARTS_DEPENDENT"]).optional(),
+  ),
   timelineNote: z.string().optional(),
   workflowReason: z.enum(workflowReasonValues).optional(),
   statusNote: z.string().optional(),
