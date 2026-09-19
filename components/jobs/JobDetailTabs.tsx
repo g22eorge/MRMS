@@ -20,7 +20,7 @@ import { PhotoUploader } from "@/components/shared/PhotoUploader";
 import { resolveTechCost } from "@/lib/billing";
 import { formatEATDateTime , formatElapsedHours } from "@/lib/date-eat";
 import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
-import { JobStatus, normalizeJobStatus, canTransitionJobStatus, jobStageIndex } from "@/lib/job-status";
+import { JobStatus, normalizeJobStatus, canTransitionJobStatus, jobStageIndex, primaryNextStatus } from "@/lib/job-status";
 import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
 import type { JobDocumentTimelineEntry } from "@/lib/jobs/job-document-timeline-shared";
 import { can } from "@/lib/permissions";
@@ -802,6 +802,17 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   // that always answered "You do not have permission" were a recurring
   // dead-end (e.g. internal tech → approval, OPS → start diagnosis).
   const statusActions = allStatusActions.filter((s) => canTransitionJobStatus(permissionUser, s));
+  // The big button follows the happy path (IN_REPAIR → READY_FOR_PICKUP, not
+  // the WAITING_FOR_PARTS side branch that leads the raw list), so repeated
+  // presses walk the job to completion. Alternates still list everything.
+  const primaryStatusAction = primaryNextStatus(job.status, statusActions);
+  // The diagnosis card's advance button only makes sense while the job is
+  // still in the diagnosis phase. Later (repair/pickup/…), the primary step
+  // is something like Completed — offering that from a diagnosis save is
+  // nonsense, so the card drops back to Save-only there.
+  const diagnosisAdvanceTo = ["RECEIVED", "DIAGNOSING", "REFERRED"].includes(job.status)
+    ? primaryStatusAction
+    : null;
   const isTerminal = job.status === "COMPLETED" || job.status === "CLOSED";
   const existingMargin =
     typeof job.clientBill === "number"
@@ -1101,17 +1112,17 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               </div>
             ))}
           </div>
-          {!isTerminal && statusActions.length > 0 ? (
+          {!isTerminal && primaryStatusAction ? (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
                 const fd = new FormData();
                 fd.set("jobId", job.id);
-                fd.set("nextStatus", statusActions[0]);
+                fd.set("nextStatus", primaryStatusAction);
                 fd.set("expectedUpdatedAt", expectedUpdatedAt);
                 startStatusTransition(async () => {
                   const res = await updateJobAction(fd);
-                  handleStatusUpdateResult(res, statusActions[0]);
+                  handleStatusUpdateResult(res, primaryStatusAction);
                 });
               }}
             >
@@ -1132,10 +1143,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           ) : null}
         </div>
         {/* Every other valid transition stays one click away — nothing is hidden. */}
-        {!isTerminal && statusActions.length > 1 ? (
+        {!isTerminal && statusActions.filter((s) => s !== primaryStatusAction).length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2">
             <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Or move to</span>
-            {statusActions.slice(1).map((status) =>
+            {statusActions.filter((s) => s !== primaryStatusAction).map((status) =>
               status === "CLOSED" ? (
                 <button
                   key={status}
@@ -1247,16 +1258,16 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </div>
 
         {/* Primary workflow CTA */}
-        {!isTerminal && statusActions.length > 0 ? (
+        {!isTerminal && primaryStatusAction ? (
           <form onSubmit={(event) => {
             event.preventDefault();
             const fd = new FormData();
             fd.set("jobId", job.id);
-            fd.set("nextStatus", statusActions[0]);
+            fd.set("nextStatus", primaryStatusAction);
             fd.set("expectedUpdatedAt", expectedUpdatedAt);
             startStatusTransition(async () => {
               const res = await updateJobAction(fd);
-              handleStatusUpdateResult(res, statusActions[0]);
+              handleStatusUpdateResult(res, primaryStatusAction);
             });
           }}>
             <SubmitButton bare disabled={isStatusPending}
@@ -1597,6 +1608,11 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               // form action resets uncontrolled selects to their initial default.
               event.preventDefault();
               const formData = new FormData(event.currentTarget);
+              // "Save & advance" merges its target status in (new FormData
+              // excludes the clicked button); plain Save moves nothing.
+              const submitter = (event.nativeEvent as unknown as { submitter?: HTMLElement | null }).submitter;
+              const advanceTo = submitter?.getAttribute("data-advance-to");
+              if (advanceTo) formData.set("nextStatus", advanceTo);
               formData.set("jobId", job.id);
               formData.set("expectedUpdatedAt", expectedUpdatedAt);
               startDiagnosisTransition(async () => {
@@ -1605,13 +1621,19 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   toast.error(res.error);
                   return;
                 }
-                toast.success("Diagnosis updated");
-                setSavedSection("diagnosis");
                 acceptFreshTimestamp(res);
                 // Selection is now persisted — drop the live override so the
                 // notes box re-derives from the refreshed job, not stale state.
                 setAssignedSelect(null);
-                router.refresh();
+                if (advanceTo) {
+                  // Moving status shares the completion-flow handling (modal,
+                  // toasts) with the progress-bar buttons.
+                  handleStatusUpdateResult(res, advanceTo as JobStatus);
+                } else {
+                  toast.success("Diagnosis updated");
+                  setSavedSection("diagnosis");
+                  router.refresh();
+                }
               });
             }}
             className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
@@ -1769,6 +1791,17 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               >
                 Save
               </button>
+              {diagnosisAdvanceTo && diagnosisAdvanceTo !== "CLOSED" ? (
+                <button
+                  type="submit"
+                  data-advance-to={diagnosisAdvanceTo}
+                  title={`Save diagnosis and move to ${prettyEnum(diagnosisAdvanceTo)}`}
+                  disabled={(isTerminal && !canAssignJobs) || !canSaveDiagnosis || isDiagnosisPending}
+                  className="btn-premium-secondary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                >
+                  Save & advance to {prettyEnum(diagnosisAdvanceTo)}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => router.back()}
@@ -1786,29 +1819,22 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           onSubmit={(event) => {
             event.preventDefault();
             const formData = new FormData(event.currentTarget);
-            // new FormData(form) excludes the clicked submit button, but the
-            // status buttons below carry nextStatus as name/value — merge the
-            // submitter back in so the move is not silently dropped.
-            const submitter = (event.nativeEvent as unknown as { submitter?: HTMLElement | null }).submitter;
-            const submitName = submitter?.getAttribute("name");
-            const submitValue = submitter?.getAttribute("value");
-            if (submitName && submitValue) formData.set(submitName, submitValue);
             formData.set("jobId", job.id);
-                formData.set("expectedUpdatedAt", expectedUpdatedAt);
-                startOneTimeExternalTransition(async () => {
-                  const res = await updateOneTimeExternalAssignmentAction(formData);
-                  if (res.error) {
-                    toast.error(res.error);
-                    return;
-                  }
-                  toast.success("One-time external technician saved");
-                  acceptFreshTimestamp(res);
-                  setSavedSection("oneTimeExternal");
-                  router.refresh();
-                });
-              }}
-              className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
-            >
+            formData.set("expectedUpdatedAt", expectedUpdatedAt);
+            startOneTimeExternalTransition(async () => {
+              const res = await updateOneTimeExternalAssignmentAction(formData);
+              if (res.error) {
+                toast.error(res.error);
+                return;
+              }
+              toast.success("One-time external technician saved");
+              acceptFreshTimestamp(res);
+              setSavedSection("oneTimeExternal");
+              router.refresh();
+            });
+          }}
+          className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
+        >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold text-[var(--ink-muted)]">One-time external tech</p>
                 <div className="shrink-0">
@@ -2681,6 +2707,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 return;
               }
               toast.success("Status updated");
+              acceptFreshTimestamp(res);
               setSavedSection("status");
               router.refresh();
             });
@@ -2690,6 +2717,14 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           onSubmit={(event) => {
             event.preventDefault();
             const formData = new FormData(event.currentTarget);
+            // new FormData(form) excludes the clicked submit button, but the
+            // status buttons carry nextStatus as name/value — without merging
+            // the submitter back in, the save runs with no move and the chain
+            // never advances.
+            const submitter = (event.nativeEvent as unknown as { submitter?: HTMLElement | null }).submitter;
+            const submitName = submitter?.getAttribute("name");
+            const submitValue = submitter?.getAttribute("value");
+            if (submitName && submitValue) formData.set(submitName, submitValue);
             formData.set("jobId", job.id);
             formData.set("expectedUpdatedAt", expectedUpdatedAt);
             startStatusTransition(async () => {
@@ -2718,9 +2753,13 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 value={status === "CLOSED" ? undefined : status}
                 disabled={isStatusPending}
                 onClick={status === "CLOSED" ? () => setConfirmClose(true) : undefined}
-                className="btn-premium-dark rounded-lg px-3 py-1.5 text-[0.8125rem]"
+                className={
+                  status === "CLOSED" || status !== primaryStatusAction
+                    ? "rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-60"
+                    : "rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60"
+                }
               >
-                Set {prettyEnum(status)}
+                {prettyEnum(status)}
               </button>
             ))}
           </div>

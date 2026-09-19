@@ -71,14 +71,47 @@ import type { Role } from "@prisma/client";
 import { can } from "./permissions";
 
 /**
+ * Happy-path next step per status: what the primary CTA should do. The raw
+ * transition lists lead with side branches (IN_REPAIR leads with
+ * WAITING_FOR_PARTS), so pressing the big button diverted away from
+ * completion instead of toward it. Alternates still list every option.
+ */
+export const PRIMARY_NEXT_STATUS: Partial<Record<JobStatus, JobStatus>> = {
+  RECEIVED: "DIAGNOSING",
+  DIAGNOSING: "IN_REPAIR",
+  REFERRED: "AWAITING_APPROVAL",
+  PENDING_EXTERNAL_ASSIGNMENT: "IN_EXTERNAL_REPAIR",
+  ASSIGNED_ONE_TIME_EXTERNAL: "IN_EXTERNAL_REPAIR",
+  IN_EXTERNAL_REPAIR: "AWAITING_APPROVAL",
+  WAITING_FOR_PARTS: "IN_REPAIR",
+  RETURNED_FROM_EXTERNAL: "IN_REPAIR",
+  AWAITING_APPROVAL: "IN_REPAIR",
+  IN_REPAIR: "READY_FOR_PICKUP",
+  READY_FOR_PICKUP: "COMPLETED",
+  DELIVERED: "COMPLETED",
+};
+
+/**
+ * The primary move from a status, restricted to steps the role may actually
+ * take (falls back to the first visible option, then null when terminal).
+ */
+export function primaryNextStatus(
+  fromStatus: JobStatus,
+  visibleNext: JobStatus[],
+): JobStatus | null {
+  const preferred = PRIMARY_NEXT_STATUS[fromStatus];
+  if (preferred && visibleNext.includes(preferred)) return preferred;
+  return visibleNext[0] ?? null;
+}
+/**
  * Single source of truth for who may move a job TO a status. Used by the
  * server action (enforcement) and the job page (which buttons to offer), so
  * the two cannot drift: every offered button succeeds, every hidden one
  * would have been rejected.
  *
- * Internal techs can submit for approval (external techs already could), and
- * OPS can start diagnosis (RECEIVED→DIAGNOSING is the first step of every
- * job) — both were offered by the UI and rejected by the server.
+ * Internal techs can submit for approval and record handover (external
+ * techs already could submit estimates) — both were offered by the UI and
+ * rejected by the server.
  */
 export function canTransitionJobStatus(
   user: { role: Role; permissions?: string[] },

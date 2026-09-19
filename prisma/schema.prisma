@@ -107,6 +107,7 @@ model Organization {
   taxRates                TaxRate[]
   expenses                Expense[]
   recurringInvoices       RecurringInvoice[]
+  recurringExpenses       RecurringExpense[]
   chartOfAccounts         ChartOfAccount[]
   journalEntries          JournalEntry[]
   bankAccounts            BankAccount[]
@@ -231,6 +232,7 @@ model User {
   stockCountsApproved       StockCount[]             @relation("StockCountApprovedBy")
   expensesCreated           Expense[]                @relation("ExpenseCreatedBy")
   recurringInvoicesCreated  RecurringInvoice[]       @relation("RecurringInvoiceCreatedBy")
+  recurringExpensesCreated  RecurringExpense[]       @relation("RecurringExpenseCreatedBy")
   journalEntriesCreated     JournalEntry[]           @relation("JournalEntryCreatedBy")
   campaignsCreated          Campaign[]               @relation("CampaignCreatedBy")
   receiptsIssued            Receipt[]                @relation("ReceiptIssuedBy")
@@ -1266,6 +1268,7 @@ enum NotificationType {
   FIELD_VISIT_COMPLETED
   CREDIT_NOTE_ISSUED
   REFUND_ISSUED
+  PAYABLE_DUE
   BILLING
   PORTAL_MESSAGE
 }
@@ -1746,6 +1749,7 @@ model Supplier {
   goodsReceivedNotes GoodsReceived[]
   supplierBills      SupplierBill[]
   expenses           Expense[]
+  recurringExpenses  RecurringExpense[]
 
   @@index([orgId])
 }
@@ -2492,6 +2496,10 @@ model Expense {
   currency           String          @default("UGX")
   exchangeRateToBase Float?
   paidAt             DateTime?
+  // When the money is (or was) due. Null = payable on record (ages from
+  // creation). Populated for rent-type obligations so maturity, buckets and
+  // due-soon nudges work the same as supplier-bill due dates.
+  dueAt              DateTime?
   method             PaymentMethod?
   supplierId         String?
   supplier           Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
@@ -2504,6 +2512,7 @@ model Expense {
   createdAt          DateTime        @default(now())
 
   @@index([orgId, paidAt])
+  @@index([orgId, dueAt])
   @@index([orgId, category])
   @@index([orgId, createdAt])
   @@index([supplierId])
@@ -2551,6 +2560,34 @@ model RecurringInvoiceItem {
   lineTotal          Float
 
   @@index([recurringInvoiceId])
+}
+
+// Payables-side mirror of RecurringInvoice: a rent / retainer / subscription
+// template that issues UNPAID Expense rows on schedule, so recurring
+// obligations appear as owed (and age) instead of being retyped monthly.
+model RecurringExpense {
+  id          String          @id @default(cuid())
+  orgId       String
+  org         Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  description String
+  category    ExpenseCategory @default(OTHER)
+  amount      Float
+  currency    String          @default("UGX")
+  supplierId  String?
+  supplier    Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  frequency   String // WEEKLY | MONTHLY | QUARTERLY | ANNUAL
+  nextDueAt   DateTime
+  lastIssuedAt DateTime?
+  isActive    Boolean         @default(true)
+  autoIssue   Boolean         @default(true)
+  notes       String?
+  createdById String
+  createdBy   User            @relation("RecurringExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([orgId, isActive, nextDueAt])
+  @@index([supplierId])
 }
 
 model DocumentTaxLine {

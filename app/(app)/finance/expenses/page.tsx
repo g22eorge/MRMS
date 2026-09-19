@@ -13,7 +13,7 @@ import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
-import { postExpensePayment } from "@/lib/accounting/post";
+import { postExpensePayment, reverseJournalEntry } from "@/lib/accounting/post";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -82,6 +82,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     : undefined;
   const q = sp.q?.trim() ?? "";
   const periodFilter = (sp.period ?? "all") as "all" | "this_month" | "last_month" | "ytd";
+  const statusFilter = (sp.status ?? "all") as "all" | "paid" | "unpaid";
   const page = parsePage(sp.page);
   const pageSize = parsePageSize(sp.size);
 
@@ -111,6 +112,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   const where: Prisma.ExpenseWhereInput = {
     ...(catFilter ? { category: catFilter } : {}),
+    ...(statusFilter === "paid" ? { paidAt: { not: null } } : {}),
+    ...(statusFilter === "unpaid" ? { paidAt: null } : {}),
     // paidAt where it exists, falling back to createdAt — the same pairing the
     // KPI tiles on this page already use, so the chip and the tiles agree.
     ...(periodRange
@@ -185,6 +188,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
     rowToBase(e, currency);
 
   const totalAmount = statsRows.reduce((sum, e) => sum + toBase(e), 0);
+  // What the business still owes: recorded but never paid. Previously these
+  // rows were invisible as debt (no filter, no total) while the ledger had
+  // already booked them as paid.
+  const unpaidRows = statsRows.filter((e) => !e.paidAt);
+  const unpaidTotal = unpaidRows.reduce((sum, e) => sum + toBase(e), 0);
 
   const thisMonthAmount = statsRows
     .filter((e) => {
@@ -261,6 +269,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
         ? (methodRaw as PaymentMethod)
         : null;
     const paidAt = paidAtRaw ? new Date(paidAtRaw) : null;
+    const dueAtRaw = String(formData.get("dueAt") ?? "").trim();
+    const dueAt = dueAtRaw ? new Date(`${dueAtRaw}T12:00:00.000Z`) : null;
+    if (dueAt && Number.isNaN(dueAt.getTime())) {
+      return { error: "Enter a valid due date." };
+    }
 
     // Double-submit guard: an identical expense landed seconds ago — reuse it
     // instead of recording (and paying out) the same money twice.
@@ -291,30 +304,36 @@ export default async function ExpensesPage({ searchParams }: Props) {
         reference,
         notes,
         paidAt,
+        dueAt,
         createdById: user.id,
         orgId,
       },
     });
 
-    // C5: cash-basis ledger post — Dr Operating Expenses, Cr Cash. Idempotent
-    // on the expense id, so a retry or backfill won't double-post.
-    await ensureMoneySchema();
-    await prisma.$transaction((tx) =>
-      postExpensePayment(tx, {
-        orgId,
-        userId: user.id,
-        amount: amountRaw,
-        date: paidAt ?? undefined,
-        reference: `expense:${expense.id}`,
-        description: `Expense ${expenseNumber} — ${description}`,
-      }),
-    );
+    // C5: cash-basis ledger post — Dr Operating Expenses, Cr Cash — but ONLY
+    // when money actually left: an unpaid expense is owed, not spent. Posting
+    // on create booked phantom cash-outs and hid the debt. The mark-paid
+    // action below posts with the same idempotency key, so legacy rows that
+    // were posted while unpaid are never double-posted when paid for real.
+    if (paidAt) {
+      await ensureMoneySchema();
+      await prisma.$transaction((tx) =>
+        postExpensePayment(tx, {
+          orgId,
+          userId: user.id,
+          amount: amountRaw,
+          date: paidAt ?? undefined,
+          reference: `expense:${expense.id}`,
+          description: `Expense ${expenseNumber} — ${description}`,
+        }),
+      );
+    }
 
     await writeSystemAuditEvent({
       entityType: "Expense",
       entityId: expense.id,
       action: "EXPENSE_CREATED",
-      summary: `${expenseNumber} — ${description} — ${currency} ${amountRaw.toLocaleString()}`,
+      summary: `${expenseNumber} — ${description} — ${currency} ${amountRaw.toLocaleString()}${paidAt ? "" : " (recorded as owed)"}`,
       actorUserId: user.id,
     });
 
@@ -322,10 +341,78 @@ export default async function ExpensesPage({ searchParams }: Props) {
     return null;
   }
 
+  async function markExpensePaidAction(formData: FormData) {
+    "use server";
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
+    const db = orgDb(orgId);
+    if (!can.viewFinancials(user)) redirect("/dashboard");
+
+    const fail = (message: string): never =>
+      redirect(`/finance/expenses?error=${encodeURIComponent(message)}`);
+
+    const expenseId = String(formData.get("expenseId") ?? "").trim();
+    if (!expenseId) return;
+    const methodRaw = String(formData.get("method") ?? "").trim();
+    const method =
+      methodRaw && METHODS.includes(methodRaw as PaymentMethod)
+        ? (methodRaw as PaymentMethod)
+        : null;
+    const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
+    const paidAt = paidAtRaw ? new Date(`${paidAtRaw}T12:00:00.000Z`) : new Date();
+    if (Number.isNaN(paidAt.getTime())) fail("Enter a valid payment date.");
+
+    const expense = await db.expense.findFirst({
+      where: { id: expenseId },
+      select: { id: true, expenseNumber: true, description: true, amount: true, paidAt: true },
+    });
+    if (!expense) return;
+    if (expense.paidAt) fail(`${expense.expenseNumber} is already paid.`);
+
+    // Double-pay guard lives inside the txn below (re-reads paidAt beside
+    // the write); concurrent taps serialize and the loser sees PAID.
+
+    await ensureMoneySchema();
+    await prisma.$transaction(async (tx) => {
+      const live = await tx.expense.findFirst({ where: { id: expenseId, orgId }, select: { id: true, paidAt: true } });
+      if (!live) throw new Error("Expense not found.");
+      if (live.paidAt) throw new Error(`${expense.expenseNumber} is already paid.`);
+      await tx.expense.updateMany({
+        where: { id: expenseId, orgId, paidAt: null },
+        data: { paidAt, ...(method ? { method } : {}) },
+      });
+      // Idempotent on `expense:<id>`: rows posted while unpaid (legacy bug)
+      // are skipped, genuinely new pays post exactly once.
+      await postExpensePayment(tx, {
+        orgId,
+        userId: user.id,
+        amount: expense.amount,
+        date: paidAt,
+        reference: `expense:${expenseId}`,
+        description: `Expense ${expense.expenseNumber} — ${expense.description}`,
+      });
+    }).catch((error: unknown) => {
+      // Prisma P2025 / our thrown Errors surface as the banner, not a 500.
+      // NEXT_REDIRECT (from fail()) must propagate.
+      if (error instanceof Error && "digest" in error) throw error;
+      fail(error instanceof Error ? error.message : "Could not mark the expense paid.");
+    });
+
+    await writeSystemAuditEvent({
+      entityType: "Expense",
+      entityId: expenseId,
+      action: "EXPENSE_PAID",
+      summary: `${expense.expenseNumber} — ${expense.description} marked paid`,
+      actorUserId: user.id,
+    });
+
+    revalidatePath("/finance/expenses");
+  }
+
   async function deleteExpenseAction(formData: FormData) {
     "use server";
-    const { user, org } = await requireOrgSession();
-    const db = orgDb(user.orgId);
+    const { user, org, orgId } = await requireOrgSession();
+    const db = orgDb(orgId);
     if (!["ADMIN"].includes(user.role)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
@@ -338,7 +425,19 @@ export default async function ExpensesPage({ searchParams }: Props) {
     });
     if (!expense) return;
 
-    await db.expense.delete({ where: { id: expenseId } });
+    // Deleting a paid expense must take its ledger post with it, or the P&L
+    // keeps money that no longer exists anywhere. Same reversal helper the
+    // receipt/refund deletes use; no-ops when nothing was posted (unpaid).
+    await ensureMoneySchema();
+    await prisma.$transaction(async (tx) => {
+      await reverseJournalEntry(tx, {
+        orgId,
+        userId: user.id,
+        originalReference: `expense:${expenseId}`,
+        description: `Reversal — deleted ${expense.expenseNumber}`,
+      });
+      await tx.expense.deleteMany({ where: { id: expenseId, orgId } });
+    });
 
     await writeSystemAuditEvent({
       entityType: "Expense",
@@ -353,25 +452,67 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   const canWrite = can.viewFinancials(user);
   const canDelete = ["ADMIN"].includes(user.role);
+  const todayInput = new Date().toISOString().slice(0, 10);
 
   // Named so the same actions menu renders in the desktop table AND mobile card.
-  const renderExpenseActions = canDelete
-    ? (expense: (typeof expenses)[number]) => (
-        <RowActionsMenu label="Expense actions">
-          <MenuDestructiveRow>
-            <form action={deleteExpenseAction}>
-              <input type="hidden" name="expenseId" value={expense.id} />
-              <ConfirmSubmitButton
-                message={`Delete expense ${expense.expenseNumber}? This cannot be undone.`}
-                className="w-full text-left text-[0.75rem] text-red-600"
-              >
-                Delete
-              </ConfirmSubmitButton>
-            </form>
-          </MenuDestructiveRow>
-        </RowActionsMenu>
-      )
-    : undefined;
+  // Mark-paid is a finance action (anyone who can write), Delete stays ADMIN.
+  const renderExpenseActions =
+    canDelete || canWrite
+      ? (expense: (typeof expenses)[number]) => (
+          <RowActionsMenu label="Expense actions">
+            {!expense.paidAt && canWrite ? (
+              <form action={markExpensePaidAction} className="space-y-2 border-b border-[var(--line)] px-3 py-2.5">
+                <input type="hidden" name="expenseId" value={expense.id} />
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                  Mark paid · {expense.currency} {expense.amount.toLocaleString()}
+                </p>
+                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                  Date paid
+                  <input
+                    name="paidAt"
+                    type="date"
+                    defaultValue={todayInput}
+                    required
+                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                  />
+                </label>
+                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                  Method
+                  <select
+                    name="method"
+                    defaultValue={expense.method ?? ""}
+                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                  >
+                    <option value="">— none —</option>
+                    {METHODS.map((m) => (
+                      <option key={m} value={m}>{m.replace(/_/g, " ")}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black"
+                >
+                  Mark paid
+                </button>
+              </form>
+            ) : null}
+            {canDelete ? (
+              <MenuDestructiveRow>
+                <form action={deleteExpenseAction}>
+                  <input type="hidden" name="expenseId" value={expense.id} />
+                  <ConfirmSubmitButton
+                    message={`Delete expense ${expense.expenseNumber}? This cannot be undone.`}
+                    className="w-full text-left text-[0.75rem] text-red-600"
+                  >
+                    Delete
+                  </ConfirmSubmitButton>
+                </form>
+              </MenuDestructiveRow>
+            ) : null}
+          </RowActionsMenu>
+        )
+      : undefined;
 
   const filterUrl = (params: Record<string, string | undefined>) => {
     const base = new URLSearchParams();
@@ -381,9 +522,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
     // produced the same URL and none of them could ever become active.
     const nextPeriod =
       params.period !== undefined ? params.period : periodFilter !== "all" ? periodFilter : "";
+    const nextStatus =
+      params.status !== undefined ? params.status : statusFilter !== "all" ? statusFilter : "";
     if (nextCat) base.set("category", nextCat);
     if (nextQ) base.set("q", nextQ);
     if (nextPeriod) base.set("period", nextPeriod);
+    if (nextStatus) base.set("status", nextStatus);
     const s = base.toString();
     return `/finance/expenses${s ? `?${s}` : ""}`;
   };
@@ -395,6 +539,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     category: catFilter ?? "",
     q,
     period: periodFilter !== "all" ? periodFilter : "",
+    status: statusFilter !== "all" ? statusFilter : "",
     size: pageSize !== PAGE_SIZE ? pageSize : "",
   };
   const expensesHref = pageHrefBuilder("/finance/expenses", expensesHrefFilters);
@@ -413,6 +558,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
         description={`${total} record${total !== 1 ? "s" : ""}`}
         actions={
           <>
+            <Link
+              href="/finance/recurring-expenses"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+            >
+              Schedules →
+            </Link>
             <Link
               href="/finance/reports/pl"
               className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
@@ -438,7 +589,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
         }
       />
 
-      <StatCards columns={4} cards={[
+      <StatCards columns={5} cards={[
           {
             label: "This Month",
             value: formatMoneyCompact(thisMonthAmount, currency),
@@ -454,6 +605,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
               prevYtdTotal > 0
                 ? `${ytdDelta > 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(ytdDelta), currency)} vs ${thisYear - 1} YTD`
                 : undefined,
+          },
+          {
+            label: "Owes (unpaid)",
+            value: unpaidRows.length > 0 ? formatMoneyCompact(unpaidTotal, currency) : "—",
+            sub: unpaidRows.length > 0 ? `${unpaidRows.length} open` : "Nothing owed",
           },
           {
             label: "Avg / Month",
@@ -475,18 +631,32 @@ export default async function ExpensesPage({ searchParams }: Props) {
         ]} />
 
       {/* ── PERIOD CHIPS ─────────────────────────────────────────────────── */}
-      <div className="flex gap-2">
-        {([
-          { label: "All time", value: "all" },
-          { label: "This month", value: "this_month" },
-          { label: "Last month", value: "last_month" },
-          { label: "YTD", value: "ytd" },
-        ] as const).map(({ label, value }) => (
-          <Link key={value} href={filterUrl({ period: value === "all" ? "" : value })}
-            className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${periodFilter === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
-            {label}
-          </Link>
-        ))}
+      <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2">
+          {([
+            { label: "All time", value: "all" },
+            { label: "This month", value: "this_month" },
+            { label: "Last month", value: "last_month" },
+            { label: "YTD", value: "ytd" },
+          ] as const).map(({ label, value }) => (
+            <Link key={value} href={filterUrl({ period: value === "all" ? "" : value })}
+              className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${periodFilter === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
+              {label}
+            </Link>
+          ))}
+        </div>
+        <div className="flex gap-2 sm:ml-auto">
+          {([
+            { label: "All", value: "all" },
+            { label: "Paid", value: "paid" },
+            { label: "Unpaid", value: "unpaid" },
+          ] as const).map(({ label, value }) => (
+            <Link key={value} href={filterUrl({ status: value === "all" ? "" : value })}
+              className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${statusFilter === value ? "border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-amber-500/40 hover:text-[var(--ink)]"}`}>
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* ── FILTER BAR ───────────────────────────────────────────────────── */}
@@ -537,7 +707,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
           frameless
           rows={expenses}
           getRowKey={(expense) => expense.id}
-          empty={q || catFilter ? "No expenses match your filters." : "No expenses recorded yet."}
+          empty={
+            q || catFilter || statusFilter !== "all"
+              ? "No expenses match your filters."
+              : "No expenses recorded yet."
+          }
           columns={[
             {
               key: "number",
@@ -591,8 +765,18 @@ export default async function ExpensesPage({ searchParams }: Props) {
               key: "paid",
               header: "Paid",
               headerClassName: "hidden lg:table-cell",
-              className: "hidden text-[0.75rem] text-[var(--ink-muted)] lg:table-cell",
-              cell: (expense) => fmt(expense.paidAt),
+              className: "hidden text-[0.75rem] lg:table-cell",
+              cell: (expense) =>
+                expense.paidAt ? (
+                  <span className="text-[var(--ink-muted)]">{fmt(expense.paidAt)}</span>
+                ) : (
+                  <span>
+                    <StatusBadge tone="warning">Unpaid</StatusBadge>
+                    {expense.dueAt ? (
+                      <span className="mt-0.5 block text-[var(--ink-muted)]">Due {fmt(expense.dueAt)}</span>
+                    ) : null}
+                  </span>
+                ),
             },
             {
               key: "amount",
@@ -619,11 +803,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
               <div className="min-w-0">
                 <p className="mono truncate font-bold text-[var(--ink)]">{expense.expenseNumber}</p>
                 <p className="mt-0.5 truncate text-[var(--ink)]">{expense.description}</p>
-                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {fmt(expense.paidAt ?? expense.createdAt)}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {expense.paidAt ? fmt(expense.paidAt) : `Owes${expense.dueAt ? ` · due ${fmt(expense.dueAt)}` : ""}`}</p>
                 <p className="mt-1 font-semibold tabular-nums text-[var(--ink)]">{expense.currency} {expense.amount.toLocaleString()}</p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <StatusBadge tone={toneFor(CATEGORY_TONES, expense.category)}>{CATEGORY_LABELS[expense.category]}</StatusBadge>
+                {!expense.paidAt ? <StatusBadge tone="warning">Unpaid</StatusBadge> : null}
                 {renderExpenseActions ? renderExpenseActions(expense) : null}
               </div>
             </div>

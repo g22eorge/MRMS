@@ -2215,6 +2215,7 @@ async function runDbFix() {
       "currency"           TEXT     NOT NULL DEFAULT 'UGX',
       "exchangeRateToBase" REAL,
       "paidAt"             DATETIME,
+      "dueAt"              DATETIME,
       "method"             TEXT,
       "supplierId"         TEXT,
       "branchId"           TEXT,
@@ -2229,9 +2230,46 @@ async function runDbFix() {
     )`);
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Expense_expenseNumber_key" ON "Expense"("expenseNumber")`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Expense_orgId_paidAt_idx"   ON "Expense"("orgId","paidAt")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Expense_orgId_dueAt_idx"   ON "Expense"("orgId","dueAt")`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Expense_orgId_category_idx" ON "Expense"("orgId","category")`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Expense_supplierId_idx"     ON "Expense"("supplierId")`);
     changes.push({ kind: "create_table", detail: "Created Expense" });
+  } else {
+    const expenseCols = await tableColumns("Expense");
+    if (!expenseCols.has("dueAt")) {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Expense" ADD COLUMN "dueAt" DATETIME`);
+      expenseCols.add("dueAt");
+      changes.push({ kind: "alter_table", detail: "Added Expense.dueAt" });
+    }
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Expense_orgId_dueAt_idx" ON "Expense"("orgId","dueAt")');
+  }
+
+  // RecurringExpense — payables-side schedule templates (Phase: creditors)
+  if (!(await tableExists("RecurringExpense"))) {
+    await prisma.$executeRawUnsafe(`CREATE TABLE "RecurringExpense" (
+      "id"           TEXT     NOT NULL PRIMARY KEY,
+      "orgId"        TEXT     NOT NULL,
+      "description"  TEXT     NOT NULL,
+      "category"     TEXT     NOT NULL DEFAULT 'OTHER',
+      "amount"       REAL     NOT NULL,
+      "currency"     TEXT     NOT NULL DEFAULT 'UGX',
+      "supplierId"   TEXT,
+      "frequency"    TEXT     NOT NULL,
+      "nextDueAt"    DATETIME NOT NULL,
+      "lastIssuedAt" DATETIME,
+      "isActive"     BOOLEAN  NOT NULL DEFAULT true,
+      "autoIssue"    BOOLEAN  NOT NULL DEFAULT true,
+      "notes"        TEXT,
+      "createdById"  TEXT     NOT NULL,
+      "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "RecurringExpense_orgId_fkey"       FOREIGN KEY ("orgId")       REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "RecurringExpense_supplierId_fkey"  FOREIGN KEY ("supplierId")  REFERENCES "Supplier"     ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+      CONSTRAINT "RecurringExpense_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"         ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    )`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RecurringExpense_orgId_isActive_nextDueAt_idx" ON "RecurringExpense"("orgId","isActive","nextDueAt")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RecurringExpense_supplierId_idx" ON "RecurringExpense"("supplierId")`);
+    changes.push({ kind: "create_table", detail: "Created RecurringExpense" });
   }
 
   // RecurringInvoice

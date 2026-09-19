@@ -64,13 +64,15 @@ const defs = [
   { href: "/finance/expenses", label: "Expenses" },
   { href: "/finance/tax-rates", label: "Tax Rates" },
   { href: "/finance/recurring", label: "Recurring" },
+  { href: "/finance/recurring-expenses", label: "Expense Schedules" },
   { href: "/finance/accounts", label: "Chart of Accounts" },
   { href: "/finance/journal", label: "Journal Entries" },
   { href: "/finance/bank", label: "Bank" },
   { href: "/finance/reports", label: "Financial Reports" },
   { href: "/finance/reports/pl", label: "P&L" },
   { href: "/finance/reports/balance-sheet", label: "Balance Sheet" },
-  { href: "/payout-followups", label: "Collections & Payouts", shortLabel: "Collect & Pay" },
+  { href: "/payout-followups", label: "Collections", shortLabel: "Collect" },
+  { href: "/payables", label: "Payables" },
 
   // Analytics
   { href: "/reports", label: "Reports" },

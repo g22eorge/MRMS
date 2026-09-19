@@ -77,7 +77,7 @@ CREATE TYPE "StockTransactionType" AS ENUM ('IN', 'OUT', 'ADJUST');
 CREATE TYPE "StockTransferStatus" AS ENUM ('REQUESTED', 'APPROVED', 'DISPATCHED', 'RECEIVED', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "NotificationType" AS ENUM ('STATUS_CHANGE', 'APPROVAL_NEEDED', 'JOB_ASSIGNED', 'ESTIMATE_SUBMITTED', 'PAYMENT_RECEIVED', 'PAYOUT_GENERATED', 'TIMELINE_UPDATED', 'DELAY_NOTE_ADDED', 'STOCK_LOW', 'STOCK_OUT', 'JOB_CREATED', 'REPAIR_REQUEST_RECEIVED', 'QUOTATION_ACCEPTED', 'QUOTATION_REJECTED', 'LEAD_WON', 'LEAD_LOST', 'PURCHASE_REQUEST_SUBMITTED', 'PURCHASE_REQUEST_APPROVED', 'STOCK_RECEIVED', 'STOCK_TRANSFER_UPDATED', 'STOCK_COUNT_APPROVED', 'FIELD_VISIT_COMPLETED', 'CREDIT_NOTE_ISSUED', 'REFUND_ISSUED', 'BILLING', 'PORTAL_MESSAGE');
+CREATE TYPE "NotificationType" AS ENUM ('STATUS_CHANGE', 'APPROVAL_NEEDED', 'JOB_ASSIGNED', 'ESTIMATE_SUBMITTED', 'PAYMENT_RECEIVED', 'PAYOUT_GENERATED', 'TIMELINE_UPDATED', 'DELAY_NOTE_ADDED', 'STOCK_LOW', 'STOCK_OUT', 'JOB_CREATED', 'REPAIR_REQUEST_RECEIVED', 'QUOTATION_ACCEPTED', 'QUOTATION_REJECTED', 'LEAD_WON', 'LEAD_LOST', 'PURCHASE_REQUEST_SUBMITTED', 'PURCHASE_REQUEST_APPROVED', 'STOCK_RECEIVED', 'STOCK_TRANSFER_UPDATED', 'STOCK_COUNT_APPROVED', 'FIELD_VISIT_COMPLETED', 'CREDIT_NOTE_ISSUED', 'REFUND_ISSUED', 'PAYABLE_DUE', 'BILLING', 'PORTAL_MESSAGE');
 
 -- CreateEnum
 CREATE TYPE "NotificationChannel" AS ENUM ('DASHBOARD', 'WHATSAPP', 'EMAIL');
@@ -1674,6 +1674,7 @@ CREATE TABLE "Expense" (
     "currency" TEXT NOT NULL DEFAULT 'UGX',
     "exchangeRateToBase" DOUBLE PRECISION,
     "paidAt" TIMESTAMP(3),
+    "dueAt" TIMESTAMP(3),
     "method" "PaymentMethod",
     "supplierId" TEXT,
     "branchId" TEXT,
@@ -1718,6 +1719,28 @@ CREATE TABLE "RecurringInvoiceItem" (
     "lineTotal" DOUBLE PRECISION NOT NULL,
 
     CONSTRAINT "RecurringInvoiceItem_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RecurringExpense" (
+    "id" TEXT NOT NULL,
+    "orgId" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "category" "ExpenseCategory" NOT NULL DEFAULT 'OTHER',
+    "amount" DOUBLE PRECISION NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "supplierId" TEXT,
+    "frequency" TEXT NOT NULL,
+    "nextDueAt" TIMESTAMP(3) NOT NULL,
+    "lastIssuedAt" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "autoIssue" BOOLEAN NOT NULL DEFAULT true,
+    "notes" TEXT,
+    "createdById" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "RecurringExpense_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -2993,6 +3016,9 @@ CREATE UNIQUE INDEX "Expense_expenseNumber_key" ON "Expense"("expenseNumber");
 CREATE INDEX "Expense_orgId_paidAt_idx" ON "Expense"("orgId", "paidAt");
 
 -- CreateIndex
+CREATE INDEX "Expense_orgId_dueAt_idx" ON "Expense"("orgId", "dueAt");
+
+-- CreateIndex
 CREATE INDEX "Expense_orgId_category_idx" ON "Expense"("orgId", "category");
 
 -- CreateIndex
@@ -3009,6 +3035,12 @@ CREATE INDEX "RecurringInvoice_clientId_idx" ON "RecurringInvoice"("clientId");
 
 -- CreateIndex
 CREATE INDEX "RecurringInvoiceItem_recurringInvoiceId_idx" ON "RecurringInvoiceItem"("recurringInvoiceId");
+
+-- CreateIndex
+CREATE INDEX "RecurringExpense_orgId_isActive_nextDueAt_idx" ON "RecurringExpense"("orgId", "isActive", "nextDueAt");
+
+-- CreateIndex
+CREATE INDEX "RecurringExpense_supplierId_idx" ON "RecurringExpense"("supplierId");
 
 -- CreateIndex
 CREATE INDEX "DocumentTaxLine_orgId_documentType_documentId_idx" ON "DocumentTaxLine"("orgId", "documentType", "documentId");
@@ -3738,6 +3770,15 @@ ALTER TABLE "RecurringInvoice" ADD CONSTRAINT "RecurringInvoice_createdById_fkey
 
 -- AddForeignKey
 ALTER TABLE "RecurringInvoiceItem" ADD CONSTRAINT "RecurringInvoiceItem_recurringInvoiceId_fkey" FOREIGN KEY ("recurringInvoiceId") REFERENCES "RecurringInvoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RecurringExpense" ADD CONSTRAINT "RecurringExpense_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RecurringExpense" ADD CONSTRAINT "RecurringExpense_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "Supplier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RecurringExpense" ADD CONSTRAINT "RecurringExpense_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Receipt" ADD CONSTRAINT "Receipt_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "Payment"("id") ON DELETE SET NULL ON UPDATE CASCADE;

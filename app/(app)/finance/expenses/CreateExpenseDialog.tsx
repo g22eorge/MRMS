@@ -109,11 +109,19 @@ export function CreateExpenseDialog({ action, categories, methods, suppliers, cu
               More details <span className="font-normal text-[var(--ink-muted)]">— optional</span>
             </summary>
             <div className="space-y-3 px-3 pb-3">
-              <div>
-                <span className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                  Date paid <span className="font-normal">(defaults to today)</span>
-                </span>
-                <input name="paidAt" type="date" className={field} />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
+                    Date paid <span className="font-normal">(empty = owed)</span>
+                  </span>
+                  <input name="paidAt" type="date" className={field} />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
+                    Due date <span className="font-normal">(optional)</span>
+                  </span>
+                  <input name="dueAt" type="date" className={field} />
+                </div>
               </div>
               {suppliers.length > 0 && (
                 <div>
