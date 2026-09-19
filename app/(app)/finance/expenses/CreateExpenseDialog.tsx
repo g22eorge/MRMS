@@ -60,6 +60,11 @@ export function CreateExpenseDialog({ action, categories, methods, suppliers, cu
             <input name="description" required placeholder="e.g. Office rent — April" className={`mt-1 ${field}`} />
           </label>
 
+          <label className="block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
+            Expense number <span className="font-normal">(blank = auto, e.g. Exp/EIS/26/09/042)</span>
+            <input name="expenseNumber" placeholder="Auto" className={`mt-1 ${field}`} />
+          </label>
+
           <div className="grid grid-cols-2 gap-2">
             <label className="block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
               Amount <span className="text-red-500">*</span>

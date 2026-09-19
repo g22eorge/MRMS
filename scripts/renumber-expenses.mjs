@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Renumber expenses to the compact TAG/MM/NNN scheme (e.g. EIS/09/042).
+ * Renumber expenses to the compact Exp/TAG/YY/MM/NNN scheme
+ * (e.g. Exp/EIS/26/09/042).
  *
  * Legacy rows carry EXP-<year>-… numbers (or other shapes). This rewrites
  * every expense number in an org in first-recorded order, so the sequence is
@@ -81,10 +82,11 @@ for (const org of orgs) {
   const seen = new Set();
   const plan = rows.map((row, i) => {
     const created = new Date(row.createdAt);
+    const yy = Number.isNaN(created.getTime()) ? "00" : String(created.getFullYear()).slice(2);
     const mm = Number.isNaN(created.getTime())
       ? "00"
       : String(created.getMonth() + 1).padStart(2, "0");
-    const next = `${tag}/${mm}/${String(i + 1).padStart(3, "0")}`;
+    const next = `Exp/${tag}/${yy}/${mm}/${String(i + 1).padStart(3, "0")}`;
     return { id: row.id, from: row.expenseNumber, to: next };
   });
   for (const p of plan) {

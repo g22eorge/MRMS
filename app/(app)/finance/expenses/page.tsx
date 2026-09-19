@@ -249,6 +249,13 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const reference = String(formData.get("reference") ?? "").trim() || null;
     const notes = String(formData.get("notes") ?? "").trim() || null;
     const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
+    const manualNumber = String(formData.get("expenseNumber") ?? "").trim() || null;
+    if (manualNumber) {
+      const taken = await db.expense.findFirst({ where: { orgId, expenseNumber: manualNumber }, select: { id: true } });
+      if (taken) {
+        return { error: `Expense number ${manualNumber} already exists — update it and try again.` };
+      }
+    }
 
     // Was a bare `return`, so a description of only spaces — which passes the
     // HTML `required` attribute and is then trimmed to "" here — made Save
@@ -283,12 +290,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
       return { error: "That expense was just recorded — not saving it twice." };
     }
 
-    // Compact number TAG/MM/NNN (e.g. EIS/09/042); sequence never resets so
-    // concurrent creates retry on collision instead of failing.
+    // Compact number Exp/TAG/YY/MM/NNN (e.g. Exp/EIS/26/09/042), auto-allocated
+    // unless the user typed their own (checked for existence above).
     let expense: { id: string } | null = null;
-    let expenseNumber = "";
+    let expenseNumber = manualNumber ?? "";
     for (let attempt = 0; attempt < 3 && !expense; attempt += 1) {
-      expenseNumber = await nextExpenseNumber(orgId, new Date(), db);
+      if (!manualNumber) expenseNumber = await nextExpenseNumber(orgId, new Date(), db);
       try {
         expense = await db.expense.create({
           data: {
@@ -309,7 +316,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
           select: { id: true },
         });
       } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002" && attempt < 2) continue;
+        const collision = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+        if (collision && manualNumber) {
+          return { error: `Expense number ${manualNumber} already exists — update it and try again.` };
+        }
+        if (collision && attempt < 2) continue;
         throw error;
       }
     }

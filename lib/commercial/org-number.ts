@@ -213,10 +213,12 @@ export function composeDocumentNumber(prefix: string, type: string, year: number
   return `${prefix}/${type}/${year}/${String(seq).padStart(pad, "0")}`;
 }
 
-/** Compose a compact expense number, e.g. "EIS/09/042": tag, month, sequence. */
+/** Compose a compact expense number, e.g. "Exp/EIS/26/09/042": kind, company
+ * acronym, 2-digit year, month, sequence. */
 export function composeExpenseNumber(tag: string, month: Date, seq: number, pad = 3) {
+  const yy = String(month.getFullYear()).slice(2);
   const mm = String(month.getMonth() + 1).padStart(2, "0");
-  return `${tag}/${mm}/${String(seq).padStart(pad, "0")}`;
+  return `Exp/${tag}/${yy}/${mm}/${String(seq).padStart(pad, "0")}`;
 }
 
 type ExpenseNumberDb = {
