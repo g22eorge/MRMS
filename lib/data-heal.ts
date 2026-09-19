@@ -115,6 +115,73 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
     // Legacy deployments whose Prisma client predates the column: skip silently.
   }
 
+  // Paid-in-full invoices stranded as ISSUED (balance 0, still listed as
+  // collectable). Rewrites used to persist totals without recomputing paid
+  // state; re-syncing flips them PAID and mirrors the job to paid.
+  // Detection reads payment ROWS, not the stored paidAmount (which is exactly
+  // what drifted) — then sync recomputes authoritatively.
+  const stuckCandidates = await prisma.invoice.findMany({
+    where: { status: "ISSUED" },
+    select: { id: true, orgId: true, invoiceNumber: true, totalAmount: true, currency: true, exchangeRateToBase: true },
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+  });
+  const { toBaseAmount } = await import("@/lib/currency");
+  const orgBase = new Map<string, string>();
+  async function baseCurrencyOf(orgId: string | null) {
+    if (!orgId) return "UGX";
+    const hit = orgBase.get(orgId);
+    if (hit) return hit;
+    const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { baseCurrency: true } }).catch(() => null);
+    const base = org?.baseCurrency ?? "UGX";
+    orgBase.set(orgId, base);
+    return base;
+  }
+  const stuckPayments = stuckCandidates.length > 0
+    ? await prisma.payment.findMany({
+        where: { invoiceId: { in: stuckCandidates.map((c) => c.id) } },
+        select: { invoiceId: true, amount: true, currency: true, exchangeRateToBase: true, kind: true },
+      })
+    : [];
+  const paymentsByInvoice = new Map<string, typeof stuckPayments>();
+  for (const p of stuckPayments) {
+    const key = p.invoiceId ?? "";
+    const list = paymentsByInvoice.get(key) ?? [];
+    list.push(p);
+    paymentsByInvoice.set(key, list);
+  }
+  let invoicesResynced = 0;
+  const resyncedNumbers: string[] = [];
+  for (const inv of stuckCandidates) {
+    const base = await baseCurrencyOf(inv.orgId);
+    const totalBase = toBaseAmount({
+      amount: inv.totalAmount, currency: inv.currency, baseCurrency: base, exchangeRateToBase: inv.exchangeRateToBase,
+    });
+    const paidBase = (paymentsByInvoice.get(inv.id) ?? []).reduce((sum, p) => {
+      const signed = (p.kind === "REFUND" ? -1 : 1) * toBaseAmount({
+        amount: p.amount, currency: p.currency, baseCurrency: base, exchangeRateToBase: p.exchangeRateToBase,
+      });
+      return sum + signed;
+    }, 0);
+    if (!(totalBase > 0 && paidBase >= totalBase)) continue;
+    resyncedNumbers.push(inv.invoiceNumber);
+    if (dryRun) continue;
+    try {
+      const { syncInvoicePaymentState } = await import("@/lib/commercial/payment-sync");
+      await prisma.$transaction(async (tx) => {
+        await syncInvoicePaymentState(tx, {
+          orgId: inv.orgId,
+          invoiceId: inv.id,
+          baseCurrency: base,
+        });
+      });
+      invoicesResynced += 1;
+    } catch (error) {
+      console.error(`[data-heal] resync invoice ${inv.invoiceNumber} failed:`, error);
+    }
+  }
+
+
   if (candidates.length === 0) {
     return {
       ok: true,
@@ -126,6 +193,8 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
       jobsMissingAuditLogs: dryRun ? jobsWithoutAudit.length : 0,
       stockTxnMissingOrgId,
       stockTxnOrgIdFixed,
+      invoicesResynced,
+      resyncedInvoiceNumbers: resyncedNumbers.slice(0, 50),
       changes: [],
     };
   }
@@ -226,6 +295,8 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
     jobsMissingAuditLogs: dryRun ? jobsWithoutAudit.length : 0,
     stockTxnMissingOrgId,
     stockTxnOrgIdFixed,
+    invoicesResynced,
+    resyncedInvoiceNumbers: resyncedNumbers.slice(0, 50),
     changes: changes.slice(0, 50),
   };
 }

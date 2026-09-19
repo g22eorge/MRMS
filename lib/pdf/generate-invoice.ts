@@ -13,6 +13,7 @@ import type { PdfLineItem } from "@/lib/pdf/pdf-line-items";
 import { InvoiceTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
 import { prisma } from "@/lib/prisma";
 import { syncJobInvoiceLines } from "@/lib/commercial/job-invoice-lines";
+import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 
 export type GenerateInvoiceResult =
   | { ok: true; buffer: Buffer; filename: string; invoiceNumber: string; clientPhone: string }
@@ -193,6 +194,14 @@ export async function generateInvoiceBuffer(
             job,
             clientBill: invoiceTotal,
             currency,
+          });
+          // Rewriting the total must not strand a paid invoice as ISSUED:
+          // recompute paid state from the payments so a covered invoice
+          // leaves the collectables list (and the job mirrors paid).
+          await syncInvoicePaymentState(tx, {
+            orgId,
+            invoiceId: persisted.id,
+            baseCurrency: org?.baseCurrency ?? currency,
           });
         }
 
