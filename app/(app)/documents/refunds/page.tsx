@@ -291,6 +291,7 @@ export default async function RefundsPage({
         orgId,
         userId: user.id,
         amount: baseRefund,
+        method,
         reference: `refund:${created.id}`,
         description: `Refund against ${sourceType} ${sourceId}`,
       });

@@ -31,6 +31,7 @@ const CATEGORIES: ExpenseCategory[] = [
 const FREQ_LABELS: Record<RecurringFrequency, string> = {
   WEEKLY: "Weekly",
   MONTHLY: "Monthly",
+  MONTH_END: "Month end",
   QUARTERLY: "Quarterly",
   ANNUAL: "Annual",
 };

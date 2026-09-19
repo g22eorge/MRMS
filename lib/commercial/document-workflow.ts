@@ -311,7 +311,7 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
   return invoice;
 }
 
-export async function createReceiptForPayment(tx: Tx, params: { orgId: string; paymentId: string; invoiceId?: string | null; saleId?: string | null; clientId?: string | null; amount: number; currency: string; issuedById?: string | null }) {
+export async function createReceiptForPayment(tx: Tx, params: { orgId: string; paymentId: string; invoiceId?: string | null; saleId?: string | null; clientId?: string | null; amount: number; currency: string; issuedById?: string | null; method?: string | null }) {
   const receipt = await (async () => {
     const existing = await tx.receipt.findFirst({ where: { orgId: params.orgId, paymentId: params.paymentId } });
     if (existing) return existing;
@@ -351,14 +351,20 @@ export async function createReceiptForPayment(tx: Tx, params: { orgId: string; p
     let baseAmount = params.amount;
     const org = await tx.organization.findUnique({ where: { id: params.orgId }, select: { baseCurrency: true } });
     const baseCurrency = org?.baseCurrency ?? params.currency;
+    let method = params.method ?? null;
     if (params.currency !== baseCurrency) {
-      const pay = await tx.payment.findUnique({ where: { id: params.paymentId }, select: { exchangeRateToBase: true } });
+      const pay = await tx.payment.findUnique({ where: { id: params.paymentId }, select: { exchangeRateToBase: true, method: true } });
       baseAmount = toBaseAmount({ amount: params.amount, currency: params.currency, baseCurrency, exchangeRateToBase: pay?.exchangeRateToBase ?? null });
+      method ??= pay?.method ?? null;
+    } else if (!method) {
+      const pay = await tx.payment.findUnique({ where: { id: params.paymentId }, select: { method: true } });
+      method = pay?.method ?? null;
     }
     await postSalePayment(tx, {
       orgId: params.orgId,
       userId: params.issuedById,
       amount: baseAmount,
+      method,
       reference: `pay:${params.paymentId}`,
       description: `Payment received (receipt ${receipt.receiptNumber})`,
     });

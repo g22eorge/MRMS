@@ -1675,6 +1675,7 @@ CREATE TABLE "Expense" (
     "exchangeRateToBase" DOUBLE PRECISION,
     "paidAt" TIMESTAMP(3),
     "dueAt" TIMESTAMP(3),
+    "paidAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "method" "PaymentMethod",
     "supplierId" TEXT,
     "branchId" TEXT,
@@ -1741,6 +1742,23 @@ CREATE TABLE "RecurringExpense" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "RecurringExpense_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ExpensePayment" (
+    "id" TEXT NOT NULL,
+    "orgId" TEXT NOT NULL,
+    "expenseId" TEXT NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'UGX',
+    "amount" DOUBLE PRECISION NOT NULL,
+    "method" "PaymentMethod" NOT NULL DEFAULT 'CASH',
+    "reference" TEXT,
+    "paidAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "note" TEXT,
+    "createdById" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ExpensePayment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -2135,6 +2153,7 @@ CREATE TABLE "BankAccount" (
     "currency" TEXT NOT NULL DEFAULT 'UGX',
     "openingBalance" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "currentBalance" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "ledgerCode" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -3043,6 +3062,12 @@ CREATE INDEX "RecurringExpense_orgId_isActive_nextDueAt_idx" ON "RecurringExpens
 CREATE INDEX "RecurringExpense_supplierId_idx" ON "RecurringExpense"("supplierId");
 
 -- CreateIndex
+CREATE INDEX "ExpensePayment_orgId_paidAt_idx" ON "ExpensePayment"("orgId", "paidAt");
+
+-- CreateIndex
+CREATE INDEX "ExpensePayment_expenseId_idx" ON "ExpensePayment"("expenseId");
+
+-- CreateIndex
 CREATE INDEX "DocumentTaxLine_orgId_documentType_documentId_idx" ON "DocumentTaxLine"("orgId", "documentType", "documentId");
 
 -- CreateIndex
@@ -3230,6 +3255,9 @@ CREATE INDEX "JournalLine_accountId_idx" ON "JournalLine"("accountId");
 
 -- CreateIndex
 CREATE INDEX "BankAccount_orgId_idx" ON "BankAccount"("orgId");
+
+-- CreateIndex
+CREATE INDEX "BankAccount_orgId_ledgerCode_idx" ON "BankAccount"("orgId", "ledgerCode");
 
 -- CreateIndex
 CREATE INDEX "BankTransaction_bankAccountId_date_idx" ON "BankTransaction"("bankAccountId", "date");
@@ -3779,6 +3807,15 @@ ALTER TABLE "RecurringExpense" ADD CONSTRAINT "RecurringExpense_supplierId_fkey"
 
 -- AddForeignKey
 ALTER TABLE "RecurringExpense" ADD CONSTRAINT "RecurringExpense_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ExpensePayment" ADD CONSTRAINT "ExpensePayment_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ExpensePayment" ADD CONSTRAINT "ExpensePayment_expenseId_fkey" FOREIGN KEY ("expenseId") REFERENCES "Expense"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ExpensePayment" ADD CONSTRAINT "ExpensePayment_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Receipt" ADD CONSTRAINT "Receipt_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "Payment"("id") ON DELETE SET NULL ON UPDATE CASCADE;

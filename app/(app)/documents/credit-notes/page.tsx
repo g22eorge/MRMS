@@ -230,6 +230,7 @@ export default async function CreditNotesPage({
         orgId,
         userId: user.id,
         amount: baseRefund,
+        method,
         reference: `refund:${created.id}`,
         description: `Refund from credit note ${cn.creditNoteNumber}`,
       });
@@ -592,6 +593,7 @@ export default async function CreditNotesPage({
         orgId,
         userId: user.id,
         amount: baseRefund,
+        method,
         reference: `refund:${refund.id}`,
         description: `Refund from credit note ${creditNoteNumber}`,
       });

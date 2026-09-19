@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: "asc" },
         take: MAX_ROWS,
-        select: { expenseNumber: true, description: true, amount: true, currency: true, createdAt: true, dueAt: true, supplier: { select: { name: true } } },
+        select: { expenseNumber: true, description: true, amount: true, paidAmount: true, currency: true, createdAt: true, dueAt: true, supplier: { select: { name: true } } },
       }) : Promise.resolve([]),
       canSeeRepairs ? prisma.job.findMany({
         where: {
@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
       ...expenses.map((e): Row => {
         const overdue = overdueOf(e.dueAt);
         const age = overdue ?? ageOf(e.createdAt);
-        return ["Expense", e.supplier?.name ?? "Unlinked payee", e.expenseNumber, e.description, e.amount, e.currency, overdue != null ? `${overdue}d overdue` : `${age}d owed`, date(e.dueAt)];
+        return ["Expense", e.supplier?.name ?? "Unlinked payee", e.expenseNumber, e.paidAmount > 0 ? `${e.description} (part paid)` : e.description, Math.max(0, e.amount - e.paidAmount), e.currency, overdue != null ? `${overdue}d overdue` : `${age}d owed`, date(e.dueAt)];
       }),
       ...jobs.map((j): Row => {
         const due = resolveTechCost(j.externalTechFee, j.externalTechBill);

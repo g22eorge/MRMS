@@ -14,6 +14,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { postExpensePayment, reverseJournalEntry } from "@/lib/accounting/post";
+import { recordExpensePayment } from "@/lib/commercial/expense-payments";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -310,6 +311,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
             notes,
             paidAt,
             dueAt,
+            // Paid on record: balance starts settled so part-pay math holds.
+            ...(paidAt ? { paidAmount: amountRaw } : {}),
             createdById: user.id,
             orgId,
           },
@@ -338,6 +341,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
           orgId,
           userId: user.id,
           amount: amountRaw,
+          method,
           date: paidAt ?? undefined,
           reference: `expense:${expense.id}`,
           description: `Expense ${expenseNumber} — ${description}`,
@@ -361,7 +365,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
-    const db = orgDb(orgId);
     if (!can.viewFinancials(user)) redirect("/dashboard");
 
     const fail = (message: string): never =>
@@ -370,59 +373,31 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const expenseId = String(formData.get("expenseId") ?? "").trim();
     if (!expenseId) return;
     const methodRaw = String(formData.get("method") ?? "").trim();
-    const method =
-      methodRaw && METHODS.includes(methodRaw as PaymentMethod)
-        ? (methodRaw as PaymentMethod)
-        : null;
+    const amountRaw = Number(String(formData.get("amount") ?? "").trim());
     const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
     const paidAt = paidAtRaw ? new Date(`${paidAtRaw}T12:00:00.000Z`) : new Date();
     if (Number.isNaN(paidAt.getTime())) fail("Enter a valid payment date.");
 
-    const expense = await db.expense.findFirst({
-      where: { id: expenseId },
-      select: { id: true, expenseNumber: true, description: true, amount: true, paidAt: true },
-    });
-    if (!expense) return;
-    if (expense.paidAt) fail(`${expense.expenseNumber} is already paid.`);
-
-    // A double-tap serializes on the in-txn paidAt recheck; the loser is told
-    // the expense is already paid.
-
+    // Double taps serialize inside the shared recorder (balance rechecked
+    // beside the write); the loser gets the balance message, not a double pay.
     await ensureMoneySchema();
     await prisma.$transaction(async (tx) => {
-      const live = await tx.expense.findFirst({ where: { id: expenseId, orgId }, select: { id: true, paidAt: true } });
-      if (!live) throw new Error("Expense not found.");
-      if (live.paidAt) throw new Error(`${expense.expenseNumber} is already paid.`);
-      await tx.expense.updateMany({
-        where: { id: expenseId, orgId, paidAt: null },
-        data: { paidAt, ...(method ? { method } : {}) },
-      });
-      // Idempotent on `expense:<id>`: rows posted while unpaid (legacy bug)
-      // are skipped, genuinely new pays post exactly once.
-      await postExpensePayment(tx, {
+      await recordExpensePayment(tx, {
         orgId,
         userId: user.id,
-        amount: expense.amount,
-        date: paidAt,
-        reference: `expense:${expenseId}`,
-        description: `Expense ${expense.expenseNumber} — ${expense.description}`,
+        expenseId,
+        amount: amountRaw,
+        method: methodRaw || null,
+        paidAt,
       });
     }).catch((error: unknown) => {
-      // Prisma P2025 / our thrown Errors surface as the banner, not a 500.
       // NEXT_REDIRECT (from fail()) must propagate.
       if (error instanceof Error && "digest" in error) throw error;
-      fail(error instanceof Error ? error.message : "Could not mark the expense paid.");
-    });
-
-    await writeSystemAuditEvent({
-      entityType: "Expense",
-      entityId: expenseId,
-      action: "EXPENSE_PAID",
-      summary: `${expense.expenseNumber} — ${expense.description} marked paid`,
-      actorUserId: user.id,
+      fail(error instanceof Error ? error.message : "Could not record the payment.");
     });
 
     revalidatePath("/finance/expenses");
+    revalidatePath("/payables");
   }
 
   async function updateExpenseAction(formData: FormData) {
@@ -513,10 +488,23 @@ export default async function ExpensesPage({ searchParams }: Props) {
     });
     if (!expense) return;
 
-    // Deleting a paid expense reverses its ledger post with it, or the P&L
-    // keeps money that no longer exists. No-op when nothing was posted.
+    // Deleting reverses every ledger post tied to the expense — each part
+    // payment posted under its own key, plus the legacy single post — or the
+    // P&L keeps money that no longer exists. Missing posts no-op.
     await ensureMoneySchema();
     await prisma.$transaction(async (tx) => {
+      const payments = await tx.expensePayment.findMany({
+        where: { orgId, expenseId },
+        select: { id: true },
+      });
+      for (const p of payments) {
+        await reverseJournalEntry(tx, {
+          orgId,
+          userId: user.id,
+          originalReference: `expensepay:${p.id}`,
+          description: `Reversal — deleted ${expense.expenseNumber}`,
+        });
+      }
       await reverseJournalEntry(tx, {
         orgId,
         userId: user.id,
@@ -646,8 +634,22 @@ export default async function ExpensesPage({ searchParams }: Props) {
               <form action={markExpensePaidAction} className="space-y-2 border-b border-[var(--line)] px-3 py-2.5">
                 <input type="hidden" name="expenseId" value={expense.id} />
                 <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-                  Mark paid · {expense.currency} {expense.amount.toLocaleString()}
+                  Record payment · {expense.currency} {(expense.amount - expense.paidAmount).toLocaleString()} due
+                  {expense.paidAmount > 0 ? ` (paid ${expense.paidAmount.toLocaleString()} so far)` : ""}
                 </p>
+                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                  Amount
+                  <input
+                    name="amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    max={expense.amount - expense.paidAmount}
+                    required
+                    defaultValue={expense.amount - expense.paidAmount}
+                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                  />
+                </label>
                 <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
                   Date paid
                   <input
@@ -675,7 +677,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
                   type="submit"
                   className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black"
                 >
-                  Mark paid
+                  Record payment
                 </button>
               </form>
             ) : null}
@@ -951,6 +953,16 @@ export default async function ExpensesPage({ searchParams }: Props) {
               cell: (expense) =>
                 expense.paidAt ? (
                   <span className="text-[var(--ink-muted)]">{fmt(expense.paidAt)}</span>
+                ) : expense.paidAmount > 0 ? (
+                  <span>
+                    <StatusBadge tone="warning">Part paid</StatusBadge>
+                    <span className="mt-0.5 block text-[var(--ink-muted)]">
+                      {expense.currency} {expense.paidAmount.toLocaleString()} of {expense.amount.toLocaleString()}
+                    </span>
+                    {expense.dueAt ? (
+                      <span className="mt-0.5 block text-[var(--ink-muted)]">Due {fmt(expense.dueAt)}</span>
+                    ) : null}
+                  </span>
                 ) : (
                   <span>
                     <StatusBadge tone="warning">Unpaid</StatusBadge>
@@ -987,10 +999,15 @@ export default async function ExpensesPage({ searchParams }: Props) {
                 <p className="mt-0.5 truncate text-[var(--ink)]">{expense.description}</p>
                 <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {expense.paidAt ? fmt(expense.paidAt) : `Outstanding${expense.dueAt ? ` · due ${fmt(expense.dueAt)}` : ""}`}</p>
                 <p className="mt-1 font-semibold tabular-nums text-[var(--ink)]">{expense.currency} {expense.amount.toLocaleString()}</p>
+                {!expense.paidAt && expense.paidAmount > 0 ? (
+                  <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Paid {expense.paidAmount.toLocaleString()} · {(expense.amount - expense.paidAmount).toLocaleString()} left</p>
+                ) : null}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <StatusBadge tone={toneFor(CATEGORY_TONES, expense.category)}>{CATEGORY_LABELS[expense.category]}</StatusBadge>
-                {!expense.paidAt ? <StatusBadge tone="warning">Unpaid</StatusBadge> : null}
+                {!expense.paidAt ? (
+                  <StatusBadge tone="warning">{expense.paidAmount > 0 ? "Part paid" : "Unpaid"}</StatusBadge>
+                ) : null}
                 {renderExpenseActions ? renderExpenseActions(expense) : null}
               </div>
             </div>

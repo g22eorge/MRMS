@@ -11,9 +11,16 @@ describe("advanceRecurringDate", () => {
     expect(advanceRecurringDate(from, "ANNUAL").toISOString()).toBe("2027-01-15T12:00:00.000Z");
   });
 
+  it("anchors month-end without drifting", () => {
+    expect(advanceRecurringDate(new Date("2026-01-31T12:00:00.000Z"), "MONTH_END").toISOString()).toBe("2026-02-28T12:00:00.000Z");
+    expect(advanceRecurringDate(new Date("2028-01-31T12:00:00.000Z"), "MONTH_END").toISOString()).toBe("2028-02-29T12:00:00.000Z");
+    expect(advanceRecurringDate(new Date("2026-02-28T12:00:00.000Z"), "MONTH_END").toISOString()).toBe("2026-03-31T12:00:00.000Z");
+    expect(advanceRecurringDate(new Date("2026-12-31T12:00:00.000Z"), "MONTH_END").toISOString()).toBe("2027-01-31T12:00:00.000Z");
+  });
+
   it("always moves forward in time", () => {
     const from = new Date("2026-03-10T12:00:00.000Z");
-    for (const f of ["WEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL"] as const) {
+    for (const f of ["WEEKLY", "MONTHLY", "MONTH_END", "QUARTERLY", "ANNUAL"] as const) {
       expect(advanceRecurringDate(from, f).getTime()).toBeGreaterThan(from.getTime());
     }
   });

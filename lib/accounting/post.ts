@@ -21,6 +21,13 @@ type Tx = Prisma.TransactionClient;
 // Standard cash-basis chart of accounts. Seeded per-org on first post.
 const CORE_ACCOUNTS = [
   { code: "1000", name: "Cash & Bank", type: "ASSET" },
+  // Cash sub-accounts: postings hit the channel the money actually moved on,
+  // so till, mobile-money and bank balances read straight out of the ledger.
+  // 1000 stays as the pooled parent — history booked before channels keeps
+  // living there, untouched.
+  { code: "1010", name: "Cash on Hand (Till)", type: "ASSET" },
+  { code: "1020", name: "Mobile Money", type: "ASSET" },
+  { code: "1030", name: "Bank Account", type: "ASSET" },
   { code: "2100", name: "VAT Payable", type: "LIABILITY" },
   { code: "3000", name: "Owner's Equity", type: "EQUITY" },
   { code: "4000", name: "Sales Revenue", type: "REVENUE" },
@@ -33,6 +40,25 @@ const CORE_ACCOUNTS = [
 ] as const;
 
 export type CoreAccountCode = (typeof CORE_ACCOUNTS)[number]["code"];
+
+/**
+ * Which cash sub-account a payment method moves money on. Unknown/empty
+ * methods fall back to the pooled 1000 parent, which is also where all
+ * pre-channel history lives.
+ */
+export function cashAccountFor(method?: string | null): CoreAccountCode {
+  switch ((method ?? "").trim().toUpperCase()) {
+    case "CASH":
+      return "1010";
+    case "MOBILE_MONEY":
+      return "1020";
+    case "BANK_TRANSFER":
+    case "CARD":
+      return "1030";
+    default:
+      return "1000";
+  }
+}
 
 /** Ensure the org has the core system accounts; returns a code -> accountId map. */
 export async function ensureCoreAccounts(tx: Tx, orgId: string): Promise<Record<string, string>> {
@@ -223,6 +249,82 @@ export async function reverseJournalEntry(
 // Event helpers (cash basis)
 // ---------------------------------------------------------------------------
 
+const CHANNEL_ACCOUNT_NAMES: Record<string, string> = {
+  "1010": "Cash on Hand (Till)",
+  "1020": "Mobile Money",
+  "1030": "Bank Account",
+};
+
+/**
+ * Mirror a cash-channel posting into the org's tracked bank account for that
+ * channel, creating it (opening zero) on first movement. Manual accounts
+ * (no ledgerCode) are never touched. Idempotent on `bank:<reference>`, so a
+ * retried posting moves the balance once. Amounts are base-currency, signed:
+ * positive in, negative out. Only call after the journal post succeeds — a
+ * skipped (duplicate) post must not move money twice.
+ */
+export async function recordCashAccountMovement(
+  tx: Tx,
+  params: {
+    orgId: string;
+    code: string;
+    amount: number;
+    date?: Date;
+    description?: string;
+    reference?: string;
+  },
+): Promise<void> {
+  if (!params.amount || !CHANNEL_ACCOUNT_NAMES[params.code]) return;
+  const bankRef = params.reference ? `bank:${params.reference}` : null;
+  if (bankRef) {
+    const dup = await tx.bankTransaction.findFirst({
+      where: { orgId: params.orgId, reference: bankRef },
+      select: { id: true },
+    });
+    if (dup) return;
+  }
+  let account = await tx.bankAccount.findFirst({
+    where: { orgId: params.orgId, ledgerCode: params.code },
+    select: { id: true, currency: true },
+  });
+  if (!account) {
+    const org = await tx.organization.findUnique({
+      where: { id: params.orgId },
+      select: { baseCurrency: true },
+    }).catch(() => null);
+    const label = CHANNEL_ACCOUNT_NAMES[params.code] ?? params.code;
+    account = await tx.bankAccount.create({
+      data: {
+        orgId: params.orgId,
+        name: label,
+        bankName: label,
+        currency: org?.baseCurrency ?? "UGX",
+        openingBalance: 0,
+        currentBalance: 0,
+        ledgerCode: params.code,
+      },
+      select: { id: true, currency: true },
+    });
+  }
+  const inward = params.amount > 0;
+  await tx.bankTransaction.create({
+    data: {
+      orgId: params.orgId,
+      bankAccountId: account.id,
+      date: params.date ?? new Date(),
+      description: params.description ?? "Till movement",
+      amount: Math.abs(params.amount),
+      currency: account.currency,
+      type: inward ? "CREDIT" : "DEBIT",
+      reference: bankRef,
+    },
+  });
+  await tx.bankAccount.update({
+    where: { id: account.id },
+    data: { currentBalance: { increment: params.amount } },
+  });
+}
+
 type MoneyEvent = {
   orgId: string;
   userId: string;
@@ -230,28 +332,38 @@ type MoneyEvent = {
   date?: Date;
   reference?: string;
   description?: string;
+  /** Payment channel (CASH, MOBILE_MONEY, …) — selects the cash sub-account. */
+  method?: string | null;
 };
 
-/** Customer payment received (POS sale or invoice): Dr Cash, Cr Sales Revenue. */
+/** Customer payment received (POS sale or invoice): Dr cash channel, Cr Sales Revenue. */
 export async function postSalePayment(tx: Tx, p: MoneyEvent): Promise<void> {
   if (!(p.amount > 0)) return;
-  await postJournalEntry(tx, {
+  const cash = cashAccountFor(p.method);
+  const posted = await postJournalEntry(tx, {
     orgId: p.orgId,
     userId: p.userId,
     date: p.date,
     description: p.description ?? "Payment received",
     reference: p.reference,
     lines: [
-      { code: "1000", debit: p.amount, memo: "Cash received" },
+      { code: cash, debit: p.amount, memo: "Cash received" },
       { code: "4000", credit: p.amount, memo: "Sales revenue" },
     ],
   });
+  if (posted) {
+    await recordCashAccountMovement(tx, {
+      orgId: p.orgId, code: cash, amount: p.amount, date: p.date,
+      description: p.description ?? "Payment received", reference: p.reference,
+    });
+  }
 }
 
-/** Customer refund paid out: Dr Sales Revenue (contra), Cr Cash. */
+/** Customer refund paid out: Dr Sales Revenue (contra), Cr cash channel. */
 export async function postRefund(tx: Tx, p: MoneyEvent): Promise<void> {
   if (!(p.amount > 0)) return;
-  await postJournalEntry(tx, {
+  const cash = cashAccountFor(p.method);
+  const posted = await postJournalEntry(tx, {
     orgId: p.orgId,
     userId: p.userId,
     date: p.date,
@@ -259,15 +371,22 @@ export async function postRefund(tx: Tx, p: MoneyEvent): Promise<void> {
     reference: p.reference,
     lines: [
       { code: "4000", debit: p.amount, memo: "Refund of sales revenue" },
-      { code: "1000", credit: p.amount, memo: "Cash refunded" },
+      { code: cash, credit: p.amount, memo: "Cash refunded" },
     ],
   });
+  if (posted) {
+    await recordCashAccountMovement(tx, {
+      orgId: p.orgId, code: cash, amount: -p.amount, date: p.date,
+      description: p.description ?? "Refund issued", reference: p.reference,
+    });
+  }
 }
 
-/** Operating expense paid: Dr Operating Expenses, Cr Cash. */
+/** Operating expense paid: Dr Operating Expenses, Cr cash channel. */
 export async function postExpensePayment(tx: Tx, p: MoneyEvent): Promise<void> {
   if (!(p.amount > 0)) return;
-  await postJournalEntry(tx, {
+  const cash = cashAccountFor(p.method);
+  const posted = await postJournalEntry(tx, {
     orgId: p.orgId,
     userId: p.userId,
     date: p.date,
@@ -275,15 +394,22 @@ export async function postExpensePayment(tx: Tx, p: MoneyEvent): Promise<void> {
     reference: p.reference,
     lines: [
       { code: "6000", debit: p.amount, memo: "Operating expense" },
-      { code: "1000", credit: p.amount, memo: "Cash paid" },
+      { code: cash, credit: p.amount, memo: "Cash paid" },
     ],
   });
+  if (posted) {
+    await recordCashAccountMovement(tx, {
+      orgId: p.orgId, code: cash, amount: -p.amount, date: p.date,
+      description: p.description ?? "Expense paid", reference: p.reference,
+    });
+  }
 }
 
-/** External technician payout (repair labour paid out, cash basis): Dr Operating Expenses, Cr Cash. */
+/** External technician payout (repair labour paid out, cash basis): Dr Operating Expenses, Cr cash channel. */
 export async function postTechnicianPayout(tx: Tx, p: MoneyEvent): Promise<void> {
   if (!(p.amount > 0)) return;
-  await postJournalEntry(tx, {
+  const cash = cashAccountFor(p.method);
+  const posted = await postJournalEntry(tx, {
     orgId: p.orgId,
     userId: p.userId,
     date: p.date,
@@ -291,9 +417,15 @@ export async function postTechnicianPayout(tx: Tx, p: MoneyEvent): Promise<void>
     reference: p.reference,
     lines: [
       { code: "6000", debit: p.amount, memo: "Technician labour" },
-      { code: "1000", credit: p.amount, memo: "Cash paid to technician" },
+      { code: cash, credit: p.amount, memo: "Cash paid to technician" },
     ],
   });
+  if (posted) {
+    await recordCashAccountMovement(tx, {
+      orgId: p.orgId, code: cash, amount: -p.amount, date: p.date,
+      description: p.description ?? "Technician payout", reference: p.reference,
+    });
+  }
 }
 
 /** Supplier/inventory payment (cash basis = cost recognised when paid): Dr Cost of Sales, Cr Cash. */
@@ -308,7 +440,8 @@ export async function postTechnicianPayout(tx: Tx, p: MoneyEvent): Promise<void>
  */
 export async function postSupplierTransferFee(tx: Tx, p: MoneyEvent): Promise<void> {
   if (!(p.amount > 0)) return;
-  await postJournalEntry(tx, {
+  const cash = cashAccountFor(p.method);
+  const posted = await postJournalEntry(tx, {
     orgId: p.orgId,
     userId: p.userId,
     date: p.date,
@@ -316,14 +449,21 @@ export async function postSupplierTransferFee(tx: Tx, p: MoneyEvent): Promise<vo
     reference: p.reference,
     lines: [
       { code: "6100", debit: p.amount, memo: "Bank & transfer charges" },
-      { code: "1000", credit: p.amount, memo: "Charge deducted on transfer" },
+      { code: cash, credit: p.amount, memo: "Charge deducted on transfer" },
     ],
   });
+  if (posted) {
+    await recordCashAccountMovement(tx, {
+      orgId: p.orgId, code: cash, amount: -p.amount, date: p.date,
+      description: p.description ?? "Supplier transfer charge", reference: p.reference,
+    });
+  }
 }
 
 export async function postSupplierPayment(tx: Tx, p: MoneyEvent): Promise<void> {
   if (!(p.amount > 0)) return;
-  await postJournalEntry(tx, {
+  const cash = cashAccountFor(p.method);
+  const posted = await postJournalEntry(tx, {
     orgId: p.orgId,
     userId: p.userId,
     date: p.date,
@@ -331,7 +471,13 @@ export async function postSupplierPayment(tx: Tx, p: MoneyEvent): Promise<void> 
     reference: p.reference,
     lines: [
       { code: "5000", debit: p.amount, memo: "Cost of sales" },
-      { code: "1000", credit: p.amount, memo: "Cash paid to supplier" },
+      { code: cash, credit: p.amount, memo: "Cash paid to supplier" },
     ],
   });
+  if (posted) {
+    await recordCashAccountMovement(tx, {
+      orgId: p.orgId, code: cash, amount: -p.amount, date: p.date,
+      description: p.description ?? "Supplier payment", reference: p.reference,
+    });
+  }
 }

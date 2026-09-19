@@ -700,6 +700,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         amount: roundedAmount,
         currency: saleCurrency,
         issuedById: session.user.id,
+        method: safeMethod,
       });
 
       await syncSalePaymentState(tx, { orgId, saleId });
@@ -1048,6 +1049,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         orgId,
         userId: session.user.id,
         amount: baseRefund,
+        method,
         reference: `refund:${created.id}`,
         description: `Refund on sale ${saleId} (credit note ${creditNote.id})`,
       });

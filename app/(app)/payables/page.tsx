@@ -95,6 +95,7 @@ function PayablesRowPay({ r }: { r: CreditorRow }) {
     return (
       <form action={payExpenseAction} className="flex items-center gap-1.5">
         <input type="hidden" name="expenseId" value={r.id} />
+        <input name="amount" required type="number" min="0.01" step="0.01" max={r.balance} defaultValue={String(r.balance)} placeholder="Amt" className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-emerald-500/50" />
         <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none" />
         <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none">
           {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
@@ -269,7 +270,7 @@ export default async function PayablesPage({
       where: { ...expenseWhereBase, ...expenseSearch },
       orderBy: { createdAt: "asc" },
       take: 200,
-      select: { id: true, expenseNumber: true, description: true, amount: true, currency: true, exchangeRateToBase: true, category: true, createdAt: true, dueAt: true, method: true, supplier: { select: { name: true } } },
+      select: { id: true, expenseNumber: true, description: true, amount: true, paidAmount: true, currency: true, exchangeRateToBase: true, category: true, createdAt: true, dueAt: true, method: true, supplier: { select: { name: true } } },
     }) : Promise.resolve([]),
     canSeeRepairs ? prisma.job.findMany({
       where: { ...techWhere },
@@ -322,10 +323,12 @@ export default async function PayablesPage({
       // Maturity follows the due date when set, otherwise the time owed.
       const overdue = daysOverdue(e.dueAt);
       const until = daysUntil(e.dueAt);
+      const balance = Math.max(0, e.amount - e.paidAmount);
       const age = overdue ?? ageOf(e.createdAt);
       return {
         kind: "EXPENSE", id: e.id, creditor: e.supplier?.name ?? "Unlinked payee", ref: e.expenseNumber,
-        detail: e.description, balance: e.amount, currency: e.currency || baseCurrency,
+        detail: e.paidAmount > 0 ? `${e.description} (part paid)` : e.description,
+        balance, currency: e.currency || baseCurrency,
         ageDays: age,
         ageLabel: overdue != null ? `${overdue}d overdue` : until != null && until > 0 ? `Due in ${until}d` : age === 0 ? "Recorded today" : `${age}d owed`,
         createdAt: e.createdAt, category: e.category, method: e.method,

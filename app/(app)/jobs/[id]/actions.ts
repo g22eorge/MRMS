@@ -1054,6 +1054,7 @@ export async function recordClientPaymentAction(formData: FormData) {
           userId: session.user.id,
           // Ledger posts in base currency — convert a foreign refund (no-op in base).
           amount: toBaseAmount({ amount: payload.amount, currency, baseCurrency, exchangeRateToBase }),
+          method: safeMethod,
           reference: `pay:${payment.id}`,
           description: `Refund on job invoice ${safeInvoiceNumber}`,
         });
@@ -1066,6 +1067,7 @@ export async function recordClientPaymentAction(formData: FormData) {
           amount: payload.amount,
           currency,
           issuedById: session.user.id,
+          method: safeMethod,
         });
       }
 
@@ -1196,6 +1198,7 @@ export async function recordTechnicianPayoutAction(formData: FormData) {
         orgId,
         userId: session.user.id,
         amount: payload.amount,
+        method: safeMethod,
         reference: `techpay:${payout.id}`,
         description: `Technician payout · ${job.jobNumber}`,
       });

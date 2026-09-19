@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import { postTechnicianPayout, postSupplierPayment, postExpensePayment } from "@/lib/accounting/post";
+import { postTechnicianPayout, postSupplierPayment } from "@/lib/accounting/post";
 import { resolveTechCost } from "@/lib/billing";
 import { formatMoney, getAppCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
@@ -13,6 +13,7 @@ import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { parsePaymentMethod } from "@/lib/constants/payment-methods";
+import { recordExpensePayment } from "@/lib/commercial/expense-payments";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { flash } from "@/lib/flash";
 
@@ -64,6 +65,7 @@ export async function markExternalTechPaid(formData: FormData) {
           orgId,
           userId: user.id,
           amount: remaining,
+          method: "CASH",
           reference: `techpay:${payout.id}`,
           description: "Technician payout (finance follow-up)",
         });
@@ -144,7 +146,7 @@ export async function receiveInvoicePaymentAction(formData: FormData) {
     const payment = await tx.payment.create({
       data: { invoiceId: invoice.id, currency, amount: amountRaw, method, reference: reference || null, createdById: user.id, orgId },
     });
-    await createReceiptForPayment(tx, { orgId, paymentId: payment.id, invoiceId: invoice.id, clientId: invoice.clientId, amount: amountRaw, currency, issuedById: user.id });
+    await createReceiptForPayment(tx, { orgId, paymentId: payment.id, invoiceId: invoice.id, clientId: invoice.clientId, amount: amountRaw, currency, issuedById: user.id, method });
     await syncInvoicePaymentState(tx, {
       orgId,
       invoiceId: invoice.id,
@@ -213,6 +215,7 @@ export async function paySupplierBillAction(formData: FormData) {
       orgId,
       userId: user.id,
       amount: toBaseAmount({ amount: amountRaw, currency: bill.currency || org.baseCurrency, baseCurrency: org.baseCurrency, exchangeRateToBase: bill.exchangeRateToBase ?? null }),
+      method,
       date: payment.paidAt ?? undefined,
       reference: `supplier-pay:${payment.id}`,
       description: `Supplier payment on bill ${billId} (payables)`,
@@ -255,46 +258,24 @@ export async function payExpenseAction(formData: FormData) {
   const expenseId = String(formData.get("expenseId") ?? "").trim();
   if (!expenseId) return;
   const methodRaw = String(formData.get("method") ?? "").trim();
+  const amountRaw = Number(String(formData.get("amount") ?? "").trim());
   const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
   const paidAt = paidAtRaw ? new Date(`${paidAtRaw}T12:00:00.000Z`) : new Date();
   if (Number.isNaN(paidAt.getTime())) fail("Enter a valid payment date.");
 
-  const expense = await prisma.expense.findFirst({
-    where: { id: expenseId, orgId },
-    select: { id: true, expenseNumber: true, description: true, amount: true, paidAt: true },
-  });
-  if (!expense) return;
-  if (expense.paidAt) fail(`${expense.expenseNumber} is already paid.`);
-
   await ensureMoneySchema();
   await prisma.$transaction(async (tx) => {
-    const live = await tx.expense.findFirst({ where: { id: expenseId, orgId }, select: { id: true, paidAt: true } });
-    if (!live) throw new Error("Expense not found.");
-    if (live.paidAt) throw new Error(`${expense.expenseNumber} is already paid.`);
-    await tx.expense.updateMany({
-      where: { id: expenseId, orgId, paidAt: null },
-      data: { paidAt, ...(methodRaw ? { method: parsePaymentMethod(methodRaw, "OTHER") } : {}) },
-    });
-    await postExpensePayment(tx, {
+    await recordExpensePayment(tx, {
       orgId,
       userId: user.id,
-      amount: expense.amount,
-      date: paidAt,
-      reference: `expense:${expenseId}`,
-      description: `Expense ${expense.expenseNumber} — ${expense.description} (payables)`,
+      expenseId,
+      amount: amountRaw,
+      method: methodRaw || null,
+      paidAt,
     });
   }).catch((error: unknown) => {
     if (error instanceof Error && "digest" in error) throw error;
-    fail(error instanceof Error ? error.message : "Could not mark the expense paid.");
-  });
-
-  await writeSystemAuditEvent({
-    orgId,
-    actorUserId: user.id,
-    entityType: "Expense",
-    entityId: expenseId,
-    action: "EXPENSE_PAID",
-    summary: `${expense.expenseNumber} — ${expense.description} marked paid (payables)`,
+    fail(error instanceof Error ? error.message : "Could not record the payment.");
   });
 
   revalidatePath("/payables");
