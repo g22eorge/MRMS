@@ -39,8 +39,11 @@ const expenseCols = await columns("Expense");
 const jobCols = await columns("Job");
 const invoiceCols = await columns("Invoice");
 for (const [table, cols, want] of [
+  // Logical Prisma names that map to legacy physical columns must be checked
+  // by their physical name (clientBill lives in finalCost) — otherwise a
+  // healthy database false-positives as drifted.
   ["Expense", expenseCols, ["paidAmount", "dueAt"]],
-  ["Job", jobCols, ["clientBill", "clientPaid"]],
+  ["Job", jobCols, ["finalCost", "clientPaid"]],
   ["Invoice", invoiceCols, ["paidAmount"]],
   ["ExpensePayment", await columns("ExpensePayment"), ["amount"]],
   ["RecurringExpense", await columns("RecurringExpense"), ["nextDueAt"]],
