@@ -20,7 +20,7 @@ const FINANCE_ROLES: Role[] = ["ADMIN", "MANAGER", "FINANCE", "OPS", "OPERATIONS
 /**
  * Daily payables run for one org: issue due recurring-expense templates as
  * UNPAID rows, then nudge finance staff once if anything is overdue or due
- * within 7 days. Safe to re-run: issuing is idempotent per (template,
+ * within 7 days. Re-runs are safe: issuing is idempotent per (template,
  * period) and the digest is one unread note per user per day.
  */
 export async function runPayablesForOrg(orgId: string, now = new Date()): Promise<PayablesCronOutcome> {
@@ -96,7 +96,7 @@ export async function runPayablesForOrg(orgId: string, now = new Date()): Promis
   const title = overdueBills > 0
     ? `${overdueBills} overdue payable${overdueBills !== 1 ? "s" : ""} need money`
     : "Payables due in the next 7 days";
-  const message = `${parts.join(" · ")} ≈ ${baseCurrency} ${Math.round(total).toLocaleString()} open. See Payout Follow-ups → Creditors.`;
+  const message = `${parts.join(" · ")} ≈ ${baseCurrency} ${Math.round(total).toLocaleString()} open. See Payables.`;
 
   const recipients = await prisma.user.findMany({
     where: { orgId, isActive: true, role: { in: FINANCE_ROLES } },

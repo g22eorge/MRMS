@@ -143,11 +143,10 @@ export default async function PosPage({
     // org has opted in (Settings -> Branding -> VAT). Cashiers can still flip it
     // per-sale on the sale page.
     const branding = await getDocumentBrandingSettings(_orgId2);
-    // Currency must be the org base currency from birth: the till rejects
-    // payments on non-base sales, so the schema default would strand every
-    // sale for non-UGX orgs as unpayable.
-    // Sale-number allocation is read-max-then-create against a globally-unique
-    // column: retry on collision instead of 500ing on concurrent New Sale taps.
+    // Currency is set from the org: the till rejects non-base sales, so the
+    // schema default would strand non-UGX orgs as unpayable.
+    // Sale numbers allocate read-max-then-create: retry on collision instead
+    // of 500ing on concurrent taps.
     let sale: { id: string } | null = null;
     for (let attempt = 0; attempt < 3 && !sale; attempt += 1) {
       const numbered = attempt === 0 ? saleNumber : await nextSaleNumber(db, _orgId2);

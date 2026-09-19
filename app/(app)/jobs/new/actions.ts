@@ -167,10 +167,8 @@ export async function createJobAction(
       select: { id: true },
     });
 
-    // Writes stay org-scoped (updateMany with orgId), not just the reads: a
-    // bare-id update would be one reused id away from a cross-tenant write.
-    // Blank incoming contact fields must not erase stored ones — only carry
-    // over values the user actually typed.
+    // Writes stay org-scoped, and blank contact fields never erase stored
+    // ones — only values the user actually typed carry over.
     const incomingEmail = sanitizeOptionalText(parsed.data.email);
     const incomingOrg = sanitizeOptionalText(parsed.data.organization);
     let clientId: string;
@@ -222,9 +220,8 @@ export async function createJobAction(
 
     const createdJobs: Array<{ id: string; jobNumber: string }> = [];
 
-    // Pre-validate every serial BEFORE creating anything: the loop below used
-    // to return a dup-serial error on device N after devices 0..N-1 (plus
-    // their audit rows) were already committed — a half-created intake.
+    // Validate every serial before creating anything: a dup-serial error
+    // mid-loop used to leave the earlier devices committed.
     for (let i = 0; i < devices.length; i += 1) {
       const preSerial = sanitizeOptionalText(devices[i]?.serialOrImei);
       if (!preSerial) continue;

@@ -426,10 +426,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       if (item.partId && delta !== 0) {
         const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
         if (!part) return;
-        // Move stock by the line's snapshot factor so it stays consistent with
-        // the original decrement even if the product's factor changed since.
-        // Guarded atomic write: the row only moves when enough stock is really
-        // there, so two concurrent edits cannot both pass and oversell.
+        // Guarded atomic move: only applies when enough stock is really
+        // there, so concurrent edits cannot oversell.
         const baseDelta = delta * (item.saleUomFactor ?? 1);
         if (baseDelta > 0) {
           const moved = await tx.part.updateMany({
@@ -527,8 +525,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     if (!saleId) return;
     if (!partId && !description) posReject(saleId, "Choose a product or enter an item description.");
     if (!Number.isFinite(qty) || qty <= 0) posReject(saleId, "Enter a valid quantity.");
-    // SaleItem.quantity is an Int — a fractional qty would die as a Prisma
-    // validation 500 after stock was already decremented. Reject cleanly.
+    // SaleItem.quantity is an Int — reject fractions cleanly instead of a
+    // Prisma validation 500 after stock already moved.
     if (!Number.isInteger(qty)) posReject(saleId, "Quantity must be a whole number.");
     if (priceProvided && (!Number.isFinite(unitPrice) || unitPrice < 0)) posReject(saleId, "Enter a valid unit price.");
     if (!priceProvided && !partId) posReject(saleId, "Enter a unit price for a custom item.");
@@ -552,8 +550,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         saleFactor = part.saleUomFactor && part.saleUomFactor > 0 ? part.saleUomFactor : 1;
         costAtSale = part.unitCost ?? null;
         const baseQty = Math.abs(qty) * saleFactor;
-        // Atomic guarded decrement: only moves when the stock is really there,
-        // so two concurrent tills cannot both pass the check and oversell.
+        // Atomic guarded decrement: concurrent tills cannot both pass and oversell.
         const moved = await tx.part.updateMany({
           where: { id: part.id, orgId, qtyOnHand: { gte: baseQty } },
           data: { qtyOnHand: { decrement: baseQty } },
@@ -662,8 +659,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       const balanceDue = Math.max(0, liveSale.totalAmount - liveSale.paidAmount);
       const roundedAmount = roundMoney(amount, saleCurrency);
       if (roundedAmount <= 0) posReject(saleId, "Enter a valid payment amount.");
-      // No change handling exists at the till: anything over the balance would
-      // sit as unaccounted credit, so refuse it like the receipts flow does.
+      // No change handling exists at the till: refuse anything over the
+      // balance, like the receipts flow does.
       if (roundedAmount > balanceDue) {
         posReject(saleId, `That is more than the ${formatMoney(balanceDue, saleCurrency)} balance due.`);
       }
@@ -776,8 +773,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       const dupCn = await findRecentDuplicate(tx.creditNote, { orgId, saleId, totalAmount });
       if (dupCn) return { id: dupCn.id, creditNoteNumber: dupCn.creditNoteNumber, deduped: true };
 
-      // Re-check the cumulative cap inside the txn: two concurrent returns
-      // both passed the outside read and both would insert → over-credit.
+      // Re-check the cumulative cap inside the txn: concurrent returns could
+      // otherwise both pass and over-credit.
       const priorInTx = await tx.creditNote.aggregate({
         where: { orgId, saleId },
         _sum: { totalAmount: true },
@@ -999,9 +996,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     // ensure the ledger/FX schema exists before opening the txn.
     await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
-      // In-txn rechecks: the ceiling and dedupe above read outside, so two
-      // concurrent refunds (even for differing amounts) both passed and both
-      // paid out. Recheck against the rows we write beside.
+      // Ceiling and dedupe rechecked inside the txn, against the rows written
+      // beside — the outside reads race.
       const dupInTx = await findRecentDuplicate(tx.refund, {
         orgId,
         saleId,

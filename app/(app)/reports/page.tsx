@@ -1277,11 +1277,11 @@ export default async function ReportsPage({
           <section className="dc-card overflow-hidden">
             <div className="border-b border-[var(--line)] px-4 py-3">
               <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Balance Position</p>
-              <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">What clients owe you vs what you owe suppliers</p>
+              <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Client receivables vs supplier and expense payables</p>
             </div>
             <div className="grid grid-cols-2 divide-x divide-[var(--line)]">
               <div className="px-4 py-4">
-                <p className="text-[0.75rem] font-bold uppercase tracking-wide text-emerald-600">Receivables — Owed to You</p>
+                <p className="text-[0.75rem] font-bold uppercase tracking-wide text-emerald-600">Accounts Receivable</p>
                 <p className="mt-1 text-2xl font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(receivables.total, currency)}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">{receivables.invoiceCount + receivables.saleCount} open invoices &amp; sales</p>
                 {receivables.total > 0 && (
@@ -1291,7 +1291,7 @@ export default async function ReportsPage({
                 )}
               </div>
               <div className="px-4 py-4">
-                <p className="text-[0.75rem] font-bold uppercase tracking-wide text-amber-600">Payables — You Owe</p>
+                <p className="text-[0.75rem] font-bold uppercase tracking-wide text-amber-600">Accounts Payable</p>
                 <p className={`mt-1 text-2xl font-black tabular-nums ${payablesOutstanding > 0 ? "text-amber-500" : "text-[var(--ink)]"}`}>{formatMoneyCompact(payablesOutstanding, currency)}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">outstanding supplier bills</p>
                 {payablesOutstanding > 0 && (

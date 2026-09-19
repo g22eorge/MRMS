@@ -220,7 +220,7 @@ export default async function PayoutFollowupsPage({
             title="Collections"
             description={
               totalReceivable > 0
-                ? `${formatMoneyCompact(totalReceivable, currency)} owed to you`
+                ? `${formatMoneyCompact(totalReceivable, currency)} accounts receivable`
                 : "Nothing outstanding — all settled"
             }
           />

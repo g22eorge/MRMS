@@ -585,9 +585,7 @@ export async function updateJobAction(formData: FormData) {
       payload.nextStatus === JobStatus.CLOSED && payload.workflowReason === "UNREPAIRABLE";
 
     if (isUnresolvedNoChargeClose) {
-      // No-charge close: settle the job, but never destroy a bill already on
-      // record. An existing bill is pricing history — keep it and mark it
-      // settled instead of overwriting it with 0.
+      // Settle the job without destroying a bill already on record.
       const priorBill =
         typeof (existing as { clientBill?: number | null }).clientBill === "number"
           ? (existing as { clientBill?: number | null }).clientBill
@@ -615,9 +613,7 @@ export async function updateJobAction(formData: FormData) {
         data.clientPaidById = session.user.id;
       }
     }
-    // Delivery fields are captured at handover: DELIVERED and the terminal
-    // COMPLETED/CLOSED moves. DELIVERED is still a live transition from
-    // READY_FOR_PICKUP, so excluding it silently dropped handover details.
+    // Delivery fields are captured at handover: DELIVERED, COMPLETED, CLOSED.
     data.deliveredAt = payload.nextStatus === JobStatus.DELIVERED ? new Date() : undefined;
     const isHandoverTransition =
       payload.nextStatus === JobStatus.DELIVERED ||
@@ -724,13 +720,9 @@ export async function updateJobAction(formData: FormData) {
       console.error("[jobs] repair parts consumption failed", error);
     });
 
-    // Auto-issue the client invoice on completion, so a finished repair lands
-    // straight in Invoice Collections instead of the un-invoiced Client Payments
-    // list. Idempotent (generateInvoiceBuffer upserts the Invoice by jobId) and
-    // best-effort — an invoicing hiccup must never block the job from completing.
-    // Zero-bill completions get a PAID 0 invoice too: without one they vanish
-    // from collections and the delivery note (which requires an invoice) can
-    // never be raised.
+    // Auto-invoice on completion (idempotent upsert, best-effort). Zero-bill
+    // completions get a PAID 0 invoice so collections and delivery notes
+    // still cover them.
     await generateInvoiceBuffer(payload.jobId, user.name ?? "System", user.role, session.user.id, orgId, {
       persistInvoiceRecord: true,
     }).catch((error) => {
@@ -773,9 +765,8 @@ export async function updateJobAction(formData: FormData) {
   const statusChangedTo =
     payload.nextStatus && payload.nextStatus !== existing.status ? payload.nextStatus : undefined;
 
-  // Fresh timestamp for the client's concurrency token: side-effects above
-  // (auto-invoice, parts) bump updatedAt after the check passed, so echo the
-  // post-write value — otherwise the next tab save always stale-rejects.
+  // Echo the post-write timestamp: side-effects below bump updatedAt after
+  // the check passed, so the client refreshes its token from this.
   const freshRow = await prisma.job
     .findUnique({ where: { id: payload.jobId, orgId }, select: { updatedAt: true } })
     .catch(() => null);
@@ -1054,9 +1045,7 @@ export async function recordClientPaymentAction(formData: FormData) {
       // Generate a receipt for real payments (not refunds), like the invoice and
       // POS flows. The job payment path previously created none, so most repair
       // payments had no receipt document.
-      // ADJUSTMENT is a books-only correction, not cash in: its row still counts
-      // toward paid, but it must not mint a receipt nor post revenue — both
-      // would overstate takings and hand the client paper for money received.
+      // ADJUSTMENT is books-only: counted toward paid, no receipt or revenue.
       if (payload.kind === "REFUND") {
         // C5: a repair-tab refund pays cash out — post the ledger reversal so the
         // P&L/cash reports stay complete. Keyed on the payment id (posts once).
@@ -1165,10 +1154,9 @@ export async function recordTechnicianPayoutAction(formData: FormData) {
     await ensureMoneySchema();
 
     await prisma.$transaction(async (tx) => {
-      // Ceiling is evaluated INSIDE the transaction against the rows we will
-      // write beside: two concurrent payouts previously both read the old
-      // total outside and both passed. With no cost on record there is no
-      // basis at all, so an explicit confirm is required.
+      // Ceiling, cost basis and double-submit guard are evaluated inside the
+      // transaction, against the rows written beside. No cost on record
+      // requires explicit confirm.
       const existingPayouts = await tx.technicianPayout
         .findMany({ where: { orgId, jobId: job.id }, select: { amount: true } })
         .catch(() => []);
@@ -1179,9 +1167,7 @@ export async function recordTechnicianPayoutAction(formData: FormData) {
       if (!(technicianCost > 0) && payload.confirmOverpayment !== "true") {
         throw new Error("No technician cost is set for this job. Set the cost first, or tick confirm overpayment if this payout is intentional.");
       }
-      // Double-submit guard: same shape as the client-payment path — an
-      // identical payout seconds ago (impatient click on a slow server) must
-      // not record the money twice.
+      // Double-submit guard, same shape as the client-payment path.
       const dupPayout = await findRecentDuplicate(tx.technicianPayout, {
         orgId,
         jobId: job.id,

@@ -686,11 +686,8 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const [billInput, setBillInput] = useState<string>(job.clientBill != null ? String(job.clientBill) : "");
   const [vatInput, setVatInput] = useState<boolean>(job.vatApplicable ?? false);
   const [showOneTimeForm, setShowOneTimeForm] = useState(false);
-  // Live value of the Assign-technician select inside the diagnosis form.
-  // Null means "untouched — derive from the saved job". Tracking it lets the
-  // notes box follow the dropdown: pick an internal tech and the internal box
-  // shows, pick an external tech and the external box shows — then one Save
-  // writes the assignment, the right notes column, and parts together.
+  // Live value of the Assign-technician select. Null means "untouched —
+  // derive from the saved job". Reset after each save.
   const [assignedSelect, setAssignedSelect] = useState<string | null>(null);
   const [isDiagnosisPending, startDiagnosisTransition] = useTransition();
   const [isOneTimeExternalPending, startOneTimeExternalTransition] = useTransition();
@@ -704,11 +701,8 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const [completionFlowOpen, setCompletionFlowOpen] = useState(false);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
   const [showPayoutForm, setShowPayoutForm] = useState(false);
-  // Fresh concurrency token echoed back by saves. Every job write bumps
-  // updatedAt, so a second save reusing the page-load token always
-  // stale-rejects ("changed since you opened it"). Each success refreshes the
-  // token here; a fresh server render resets it (render-phase adjust, the
-  // React-endorsed alternative to syncing state inside an effect).
+  // Concurrency token echoed back by saves; refreshed on each success, reset
+  // on fresh server render (render-phase adjust, not an effect).
   const jobUpdatedAtKey = job.updatedAt ? new Date(job.updatedAt).getTime() : null;
   const [timestampToken, setTimestampToken] = useState<{ key: number | null; value: string | null }>({
     key: jobUpdatedAtKey,
@@ -806,10 +800,8 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   // the WAITING_FOR_PARTS side branch that leads the raw list), so repeated
   // presses walk the job to completion. Alternates still list everything.
   const primaryStatusAction = primaryNextStatus(job.status, statusActions);
-  // The diagnosis card's advance button only makes sense while the job is
-  // still in the diagnosis phase. Later (repair/pickup/…), the primary step
-  // is something like Completed — offering that from a diagnosis save is
-  // nonsense, so the card drops back to Save-only there.
+  // The diagnosis card advances only during the diagnosis phase; later the
+  // card is Save-only and moves happen from the progress bar.
   const diagnosisAdvanceTo = ["RECEIVED", "DIAGNOSING", "REFERRED"].includes(job.status)
     ? primaryStatusAction
     : null;
@@ -917,18 +909,15 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           : job.repairPath === "EXTERNAL"
             ? "external"
             : "internal";
-  // Technicians get a filtered view (internal sees internal, external sees
-  // external). Everyone else (ADMIN/OPS/managers) sees BOTH fields: hiding one
-  // by assignment meant the hidden value could never be edited, which read as
-  // "diagnostic notes not saving" whenever the job sat on the other path.
+  // Technicians see only their own flow's box; everyone else sees the box
+  // matching the assigned technician (both submit, the hidden one untouched).
   const canSeeBothDiagnoses =
     role !== "TECHNICIAN_INTERNAL" &&
     role !== "TECHNICIAN_EXTERNAL" &&
     role !== "TECH_FIELD";
-  // Dropdown-driven notes mode for staff with the assign control: the visible
-  // notes box follows the technician picked in the select above, so the notes
-  // always land in the column matching the assignment. Falls back to the saved
-  // job when the select is untouched or absent.
+  // The notes box follows the technician picked above, so notes land in the
+  // column matching the assignment. Falls back to the saved job when the
+  // select is untouched or absent.
   const liveDiagnosisMode: "internal" | "external" = (() => {
     if (!canAssignJobs || assignedSelect === null) return diagnosisMode;
     if (assignedSelect === "__one_time__" || assignedSelect === "__one_time_current__") return "external";
@@ -940,17 +929,14 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const showInternalDiagnosis =
     canSeeBothDiagnoses || (role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external");
   const showExternalDiagnosis = canSeeBothDiagnoses || diagnosisMode !== "internal";
-  // What the staff editor actually displays: single box following the dropdown.
-  // Technicians keep their filtered view.
+  // What the staff editor displays: single box following the dropdown.
   const displayInternalDiagnosis = !canSeeBothDiagnoses
     ? showInternalDiagnosis
     : liveDiagnosisMode !== "external";
   const displayExternalDiagnosis = !canSeeBothDiagnoses
     ? showExternalDiagnosis
     : liveDiagnosisMode !== "internal";
-  // Server allows ADMIN/OPS to persist diagnosis (no editDiagnosis gate there);
-  // the button used to require can.editDiagnosis, which OPS lacks, so OPS saw a
-  // dead Save and read it as notes not saving. Align with the server.
+  // Server persists diagnosis for ADMIN/OPS, so the button matches it.
   const canSaveDiagnosis = can.editDiagnosis(permissionUser) || role === "OPS" || role === "ADMIN";
   const derivedRepairPath = assignedRole
     ? diagnosisMode === "external"

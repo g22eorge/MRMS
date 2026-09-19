@@ -71,10 +71,9 @@ import type { Role } from "@prisma/client";
 import { can } from "./permissions";
 
 /**
- * Happy-path next step per status: what the primary CTA should do. The raw
- * transition lists lead with side branches (IN_REPAIR leads with
- * WAITING_FOR_PARTS), so pressing the big button diverted away from
- * completion instead of toward it. Alternates still list every option.
+ * Happy-path next step per status: what the primary CTA does. The raw
+ * transition lists lead with side branches, so this map keeps repeated
+ * presses walking toward completion. Alternates still list every option.
  */
 export const PRIMARY_NEXT_STATUS: Partial<Record<JobStatus, JobStatus>> = {
   RECEIVED: "DIAGNOSING",
@@ -109,9 +108,8 @@ export function primaryNextStatus(
  * the two cannot drift: every offered button succeeds, every hidden one
  * would have been rejected.
  *
- * Internal techs can submit for approval and record handover (external
- * techs already could submit estimates) — both were offered by the UI and
- * rejected by the server.
+ * Internal techs can submit for approval and record handover, matching what
+ * the UI offers; OPS runs the full chain below.
  */
 export function canTransitionJobStatus(
   user: { role: Role; permissions?: string[] },
@@ -141,8 +139,7 @@ export function canTransitionJobStatus(
     ).includes(nextStatus);
   }
   // OPS runs the shop floor: the full chain, so pressing a status always
-  // opens the next options until the job completes. (Previously the UI
-  // offered steps the server then rejected; now offer and permission match.)
+  // offers the next options until the job completes.
   if (user.role === "OPS" || user.role === "OPERATIONS_MANAGER") {
     return true;
   }
@@ -184,11 +181,8 @@ export function isCompletedJobStatus(status: JobStatus | string) {
  * Progress-rail stage for a job status: 0 Intake, 1 Diagnosis, 2 Approval,
  * 3 Repair, 4 Complete/Closed.
  *
- * Every status is mapped explicitly. The rail previously listed only six
- * statuses and defaulted everything else to 4, so jobs in the external
- * chain (REFERRED→…→RETURNED_FROM_EXTERNAL) or WAITING_FOR_PARTS showed a
- * full "Complete" bar while the status buttons below correctly offered
- * repair steps — the exact mismatch reported on EIS/2026/0060.
+ * Every status is mapped explicitly; unknown future statuses fail safe to
+ * Repair — a wrong "ongoing" understates, a wrong "complete" misleads.
  */
 export function jobStageIndex(status: JobStatus | string): number {
   switch (status) {

@@ -135,9 +135,9 @@ export const FINANCE_PROCEDURES: Procedure[] = [
     question: "How do I see what the business owes?",
     asks: ["payables", "supplier bills", "what we owe", "outstanding bills", "money going out"],
     roles: ["ADMIN", "FINANCE", "MANAGER"],
-    route: "/finance",
+    route: "/payables",
     steps: [
-      "Supplier bills and payables are reached from the Finance area.",
+      "Open Payables: supplier bills, open expenses and technician payouts in one maturity-ordered list.",
       "Overdue supplier bills are also surfaced on the AI Insights page.",
       "Compare payables against receivables before promising anyone money.",
     ],

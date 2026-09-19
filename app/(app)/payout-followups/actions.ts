@@ -160,10 +160,8 @@ export async function receiveInvoicePaymentAction(formData: FormData) {
 }
 
 // ── Pay a supplier bill (bills tab + payables union) ────────────────────────
-// Same in-txn shape as the bill page's own pay action (balance cap, dedupe,
-// status, ledger, audit) but gated for finance viewers rather than inventory
-// managers. A hidden `section` field routes error banners back to the tab the
-// cashier paid from.
+// Balance cap, dedupe, status, ledger and audit in one transaction. A hidden
+// `section` field routes error banners back to the originating tab.
 
 export async function paySupplierBillAction(formData: FormData) {
   const { user, orgId, org } = await requireOrgSession();
@@ -242,8 +240,7 @@ export async function paySupplierBillAction(formData: FormData) {
 }
 
 // ── Mark an expense paid (payables union) ────────────────────────────────────
-// Mirrors the expenses page's own mark-paid (paidAt guard in-txn, idempotent
-// ledger post) but lands back on the payables tab.
+// PaidAt guard in-txn, idempotent ledger post; lands back on Payables.
 
 export async function payExpenseAction(formData: FormData) {
   const { user, orgId, org } = await requireOrgSession();

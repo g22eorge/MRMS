@@ -188,9 +188,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
     rowToBase(e, currency);
 
   const totalAmount = statsRows.reduce((sum, e) => sum + toBase(e), 0);
-  // What the business still owes: recorded but never paid. Previously these
-  // rows were invisible as debt (no filter, no total) while the ledger had
-  // already booked them as paid.
+  // Still owed: recorded but never paid. The ledger posts on payment, so
+  // these rows are debt, not spend.
   const unpaidRows = statsRows.filter((e) => !e.paidAt);
   const unpaidTotal = unpaidRows.reduce((sum, e) => sum + toBase(e), 0);
 
@@ -310,11 +309,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
       },
     });
 
-    // C5: cash-basis ledger post — Dr Operating Expenses, Cr Cash — but ONLY
-    // when money actually left: an unpaid expense is owed, not spent. Posting
-    // on create booked phantom cash-outs and hid the debt. The mark-paid
-    // action below posts with the same idempotency key, so legacy rows that
-    // were posted while unpaid are never double-posted when paid for real.
+    // Cash-basis post on payment only: an unpaid expense is owed, not spent.
+    // Mark-paid posts with the same key, so rows posted while unpaid are
+    // never double-posted when paid for real.
     if (paidAt) {
       await ensureMoneySchema();
       await prisma.$transaction((tx) =>
@@ -369,8 +366,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
     if (!expense) return;
     if (expense.paidAt) fail(`${expense.expenseNumber} is already paid.`);
 
-    // Double-pay guard lives inside the txn below (re-reads paidAt beside
-    // the write); concurrent taps serialize and the loser sees PAID.
+    // A double-tap serializes on the in-txn paidAt recheck; the loser is told
+    // the expense is already paid.
 
     await ensureMoneySchema();
     await prisma.$transaction(async (tx) => {
@@ -425,9 +422,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
     });
     if (!expense) return;
 
-    // Deleting a paid expense must take its ledger post with it, or the P&L
-    // keeps money that no longer exists anywhere. Same reversal helper the
-    // receipt/refund deletes use; no-ops when nothing was posted (unpaid).
+    // Deleting a paid expense reverses its ledger post with it, or the P&L
+    // keeps money that no longer exists. No-op when nothing was posted.
     await ensureMoneySchema();
     await prisma.$transaction(async (tx) => {
       await reverseJournalEntry(tx, {
@@ -607,9 +603,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
                 : undefined,
           },
           {
-            label: "Owes (unpaid)",
+            label: "Outstanding",
             value: unpaidRows.length > 0 ? formatMoneyCompact(unpaidTotal, currency) : "—",
-            sub: unpaidRows.length > 0 ? `${unpaidRows.length} open` : "Nothing owed",
+            sub: unpaidRows.length > 0 ? `${unpaidRows.length} unpaid` : "Nothing outstanding",
           },
           {
             label: "Avg / Month",
@@ -803,7 +799,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
               <div className="min-w-0">
                 <p className="mono truncate font-bold text-[var(--ink)]">{expense.expenseNumber}</p>
                 <p className="mt-0.5 truncate text-[var(--ink)]">{expense.description}</p>
-                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {expense.paidAt ? fmt(expense.paidAt) : `Owes${expense.dueAt ? ` · due ${fmt(expense.dueAt)}` : ""}`}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {expense.paidAt ? fmt(expense.paidAt) : `Outstanding${expense.dueAt ? ` · due ${fmt(expense.dueAt)}` : ""}`}</p>
                 <p className="mt-1 font-semibold tabular-nums text-[var(--ink)]">{expense.currency} {expense.amount.toLocaleString()}</p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">

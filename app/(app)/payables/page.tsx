@@ -76,8 +76,7 @@ type CreditorRow =
   | { kind: "EXPENSE"; id: string; creditor: string; ref: string; detail: string; balance: number; currency: string; ageDays: number; ageLabel: string; createdAt: Date; category: string; method: string | null }
   | { kind: "TECH"; id: string; creditor: string; ref: string; detail: string; balance: number; currency: string; ageDays: number; ageLabel: string; jobNumber: string };
 
-// Inline pay forms for a creditors row. One click clears (or part-pays, for
-// bills) the debt from the hub instead of drilling into each source page.
+// Inline pay forms for a payables row: clear (or part-pay, for bills) without leaving the page.
 function PayablesRowPay({ r }: { r: CreditorRow }) {
   if (r.kind === "BILL") {
     return (
@@ -239,10 +238,9 @@ export default async function PayablesPage({
     return Math.max(0, resolveTechCost(job.externalTechFee, job.externalTechBill) - paidToTechnician(job.id));
   }
 
-  // ── Creditors union (Payables tab): every open debt in one list ──────────
-  // Bills + unpaid expenses + tech dues, each capped at the oldest 200 rows
-  // for the pay table; header totals and creditor rollups below use FULL-set
-  // aggregates so they stay exact.
+  // ── Payables union: every open debt in one list ──────────────────────────
+  // Bills + unpaid expenses + tech dues, oldest 200 rows for the table;
+  // header totals and creditor rollups use full-set aggregates.
   const baseCurrency = org.baseCurrency;
   const toBase = (amount: number, curr: string | null | undefined, rate: number | null | undefined) =>
     rowToBase({ amount, currency: curr ?? baseCurrency, exchangeRateToBase: rate ?? null }, baseCurrency);
@@ -434,7 +432,7 @@ export default async function PayablesPage({
   const nextPage = Math.min(totalPages, page + 1);
 
   const totalPayable    = billPayable + _techPayoutDue + expenseUnpaidBase;
-  // Creditors rows honor the shared pager like every other tab.
+  // Payables rows honor the shared pager like every other tab.
   const pagedPayablesRows = bucketedRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
@@ -446,7 +444,7 @@ export default async function PayablesPage({
             title="Payables"
             description={
               totalPayable > 0
-                ? `${formatMoneyCompact(totalPayable, currency)} you owe across bills, tech payouts and open expenses`
+                ? `${formatMoneyCompact(totalPayable, currency)} accounts payable across bills, tech payouts and open expenses`
                 : "Nothing owed — all settled"
             }
           />
@@ -459,7 +457,7 @@ export default async function PayablesPage({
               sub: `${billSummary._count.id} bill${billSummary._count.id !== 1 ? "s" : ""} payable`,
             }] : []),
             ...(canSeePayables ? [{
-              label: "You Owe (all)",
+              label: "Accounts Payable",
               value: formatMoneyCompact(billPayable + _techPayoutDue + expenseUnpaidBase, currency),
               valueClass: "text-rose-500",
               sub: "Bills + tech + open expenses",
@@ -541,7 +539,7 @@ export default async function PayablesPage({
         </form>
       </section>
 
-      {/* ── Section 3: Supplier Bills Payable ──────────────────────────────── */}
+      {/* ── Section 2: Supplier Bills Payable ──────────────────────────────── */}
       {activeTab === "bills" && canSeeBills && (
         <section id="bills" className="space-y-2">
           <div className="flex items-center gap-2">
@@ -651,7 +649,7 @@ export default async function PayablesPage({
         </section>
       )}
 
-      {/* ── Section 4: External Tech Payouts ───────────────────────────────── */}
+      {/* ── Section 3: External Tech Payouts ───────────────────────────────── */}
       {activeTab === "tech" && canSeeRepairs && (
         <section id="tech" className="space-y-2">
           <div className="flex items-center gap-2">
@@ -759,12 +757,12 @@ export default async function PayablesPage({
         </section>
       )}
 
-      {/* ── Section 5: Creditors — everyone the business owes ──────────────── */}
+      {/* ── Section 1: Payables ────────────────────────────────────────────── */}
       {activeTab === "payables" && canSeePayables && (
         <section id="payables" className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-rose-400" />
-            <p className="text-sm font-semibold text-[var(--ink)]">Payables — You Owe</p>
+            <p className="text-sm font-semibold text-[var(--ink)]">Payables</p>
             <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[0.75rem] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
               {bucketedRows.length}
             </span>
@@ -773,7 +771,7 @@ export default async function PayablesPage({
             </span>
           </div>
 
-          {/* Who we owe, biggest first — sets the search to that creditor. */}
+          {/* Largest balances first — sets the search to that creditor. */}
           {topCreditors.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {topCreditors.map((c) => (

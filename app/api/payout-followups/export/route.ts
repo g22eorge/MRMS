@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
       ? aged.filter(({ age }) => bucketOf(age) === wanted).map(({ row }) => row)
       : aged.sort((a, b) => b.age - a.age).map(({ row }) => row);
     return download(
-      `creditors-payable-${today}.csv`,
+      `payables-${today}.csv`,
       csv(
         ["type", "creditor", "ref", "detail", "balance", "currency", "maturity", "dueDate"],
         kept,
