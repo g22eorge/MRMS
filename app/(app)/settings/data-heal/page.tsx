@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 import { runDataHeal } from "@/lib/data-heal";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
-import { checkIsPlatformAdmin } from "@/lib/platform-admin";
+import { checkCanRunOpsTools } from "@/lib/platform-admin";
 import { DataTable } from "@/components/ui/DataTable";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -19,9 +19,9 @@ export default async function DataHealPage({
   searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string; at?: string; stockMissing?: string; stockFixed?: string; resynced?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
-  // runDataHeal operates ACROSS ALL orgs (it's a system maintenance job, also run
-  // by cron) — so restrict it to the platform operator, not every tenant admin.
-  if (!checkIsPlatformAdmin(user.email)) {
+  // Platform operators everywhere; org ADMINs additionally on the
+  // single-tenant care deployment (no second tenant exists to leak into).
+  if (!(await checkCanRunOpsTools(user))) {
     redirect("/dashboard");
   }
 
@@ -42,7 +42,7 @@ export default async function DataHealPage({
   async function runDry() {
     "use server";
     const { user: actor } = await getCurrentUserRole();
-    if (!checkIsPlatformAdmin(actor.email)) return;
+    if (!(await checkCanRunOpsTools(actor))) return;
     const result = await runDataHeal(prisma, { dryRun: true, actorUserId: actor.id });
     redirect(
       `/settings/data-heal?mode=dry&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&stockMissing=${result.stockTxnMissingOrgId ?? 0}&stockFixed=${result.stockTxnOrgIdFixed ?? 0}&resynced=${result.invoicesResynced ?? 0}&at=${Date.now()}`,
@@ -52,7 +52,7 @@ export default async function DataHealPage({
   async function runApply() {
     "use server";
     const { user: actor } = await getCurrentUserRole();
-    if (!checkIsPlatformAdmin(actor.email)) return;
+    if (!(await checkCanRunOpsTools(actor))) return;
     const result = await runDataHeal(prisma, { dryRun: false, actorUserId: actor.id });
     redirect(
       `/settings/data-heal?mode=apply&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&stockMissing=${result.stockTxnMissingOrgId ?? 0}&stockFixed=${result.stockTxnOrgIdFixed ?? 0}&resynced=${result.invoicesResynced ?? 0}&at=${Date.now()}`,

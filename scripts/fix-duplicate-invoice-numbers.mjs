@@ -30,11 +30,6 @@ const url = process.env.TURSO_DATABASE_URL ?? process.env.DATABASE_URL ?? "file:
 const authToken = process.env.TURSO_AUTH_TOKEN;
 const client = createClient(authToken ? { url, authToken } : { url });
 
-function fail(message) {
-  console.error(message);
-  process.exitCode = 1;
-}
-
 const orgFilter = ALL_ORGS || !orgArg ? "" : "AND j.\"orgId\" = ?";
 const orgArgs = ALL_ORGS || !orgArg ? [] : [orgArg];
 
