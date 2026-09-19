@@ -444,7 +444,7 @@ export default async function ReportsPage({
     .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>);
 
   const [collectionsByChannel, billedByChannel] = await Promise.all([
-    loadCashCollectionsByChannel({ orgId, baseCurrency: org.baseCurrency, range: selectedRange }).catch(() => ({ repairs: 0, products: 0, corporate: 0, unallocated: 0, total: 0 })),
+    loadCashCollectionsByChannel({ orgId, baseCurrency: org.baseCurrency, range: selectedRange }).catch(() => ({ repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 })),
     loadBilledTotals({ orgId, range: selectedRange }).catch(() => ({ repairs: 0, products: 0, corporate: 0, total: 0 })),
   ]);
 
@@ -470,7 +470,7 @@ export default async function ReportsPage({
     periodJobClientRows,
   ] = await Promise.all([
     loadCashCollectionsByChannel({ orgId, baseCurrency: org.baseCurrency, range: { start: ytdStart } })
-      .catch(() => ({ repairs: 0, products: 0, corporate: 0, unallocated: 0, total: 0 })),
+      .catch(() => ({ repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 })),
     prisma.expense.findMany({ where: { orgId, paidAt: { gte: ytdStart } }, select: { amount: true } })
       .catch(() => [] as Array<{ amount: number }>),
     prisma.refund.findMany({ where: { orgId, refundedAt: { gte: ytdStart } }, select: { amount: true, currency: true, exchangeRateToBase: true } })
@@ -621,7 +621,7 @@ export default async function ReportsPage({
   // Revenue channels
   const repairCollectionsTotal = collectionsByChannel.repairs;
   const posSalesTotal = collectionsByChannel.products;
-  const invoicesPaidTotal = collectionsByChannel.corporate + collectionsByChannel.unallocated;
+  const invoicesPaidTotal = collectionsByChannel.corporate + collectionsByChannel.merchandise + collectionsByChannel.service + collectionsByChannel.unallocated;
   const totalAllChannels = collectionsByChannel.total;
   const totalBilledAllChannels = billedByChannel.total;
   const expensesTotal = expensesMtd.reduce((s, e) => s + e.amount, 0);

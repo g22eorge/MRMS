@@ -190,7 +190,7 @@ export async function loadAdminDashboardData(orgId: string | null) {
     // Cash collections — single wide MTD fetch, sliced into today/yesterday/MTD in memory (2 queries not 6)
     orgId
       ? loadCashCollectionsByChannelWide({ orgId, baseCurrency: currency, mtdStart, todayStart, yesterdayStart, yesterdayEnd })
-      : Promise.resolve({ mtd: { repairs: 0, products: 0, corporate: 0, unallocated: 0, total: 0 }, today: { repairs: 0, products: 0, corporate: 0, unallocated: 0, total: 0 }, yesterday: { repairs: 0, products: 0, corporate: 0, unallocated: 0, total: 0 } }),
+      : Promise.resolve({ mtd: { repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 }, today: { repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 }, yesterday: { repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 } }),
     orgId
       ? loadReceivablesTotal(orgId)
       : Promise.resolve({ invoiceBalance: 0, saleBalance: 0, total: 0, invoiceCount: 0, saleCount: 0 }),
@@ -227,7 +227,7 @@ export async function loadAdminDashboardData(orgId: string | null) {
   // Revenue stream totals
   const repairsMtd   = collectionsMtd.repairs;
   const productsMtd  = collectionsMtd.products;
-  const corporateMtd = collectionsMtd.corporate + collectionsMtd.unallocated;
+  const corporateMtd = collectionsMtd.corporate + collectionsMtd.merchandise + collectionsMtd.service + collectionsMtd.unallocated;
   const totalMtd     = collectionsMtd.total;
   const conversionRate = receivedMtdCount > 0 ? Math.round(completedMtdJobs / receivedMtdCount * 100) : 0;
 

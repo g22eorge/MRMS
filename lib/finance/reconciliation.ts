@@ -61,6 +61,8 @@ export async function loadCashCollectionsByChannel(params: {
   const channels = {
     repairs: 0,
     products: 0,
+    merchandise: 0,
+    service: 0,
     corporate: 0,
     unallocated: 0,
   };
@@ -71,6 +73,10 @@ export async function loadCashCollectionsByChannel(params: {
       channels.products += amount;
     } else if (payment.invoice?.invoiceType === InvoiceType.REPAIR) {
       channels.repairs += amount;
+    } else if (payment.invoice?.invoiceType === InvoiceType.MERCHANDISE) {
+      channels.merchandise += amount;
+    } else if (payment.invoice?.invoiceType === InvoiceType.SERVICE) {
+      channels.service += amount;
     } else if (payment.invoice) {
       channels.corporate += amount;
     } else {
@@ -83,14 +89,14 @@ export async function loadCashCollectionsByChannel(params: {
     channels.repairs += job.clientBill ?? 0;
   }
 
-  const total = channels.repairs + channels.products + channels.corporate + channels.unallocated;
+  const total = channels.repairs + channels.products + channels.merchandise + channels.service + channels.corporate + channels.unallocated;
   return { ...channels, total };
 }
 
-type ChannelTotals = { repairs: number; products: number; corporate: number; unallocated: number; total: number };
+type ChannelTotals = { repairs: number; products: number; merchandise: number; service: number; corporate: number; unallocated: number; total: number };
 
 function zeroChannels(): ChannelTotals {
-  return { repairs: 0, products: 0, corporate: 0, unallocated: 0, total: 0 };
+  return { repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 };
 }
 
 function bucketchannels(
@@ -99,13 +105,15 @@ function bucketchannels(
   baseCurrency: string,
   range: { start: Date; end?: Date },
 ): ChannelTotals {
-  const channels = { repairs: 0, products: 0, corporate: 0, unallocated: 0 };
+  const channels = { repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0 };
   const end = range.end ?? new Date(8640000000000000);
   for (const p of payments) {
     if (!p.receivedAt || p.receivedAt < range.start || p.receivedAt > end) continue;
     const amount = toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase });
     if (p.saleId) channels.products += amount;
     else if (p.invoice?.invoiceType === InvoiceType.REPAIR) channels.repairs += amount;
+    else if (p.invoice?.invoiceType === InvoiceType.MERCHANDISE) channels.merchandise += amount;
+    else if (p.invoice?.invoiceType === InvoiceType.SERVICE) channels.service += amount;
     else if (p.invoice) channels.corporate += amount;
     else channels.unallocated += amount;
   }
@@ -113,7 +121,7 @@ function bucketchannels(
     if (j.invoice || !j.clientPaidAt || j.clientPaidAt < range.start || j.clientPaidAt > end) continue;
     channels.repairs += j.clientBill ?? 0;
   }
-  const total = channels.repairs + channels.products + channels.corporate + channels.unallocated;
+  const total = channels.repairs + channels.products + channels.merchandise + channels.service + channels.corporate + channels.unallocated;
   return { ...channels, total };
 }
 

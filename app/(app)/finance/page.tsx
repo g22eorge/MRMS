@@ -52,7 +52,7 @@ export default async function FinancePage({
     techDueJobs,
   ] = await Promise.all([
     loadExpensesTotal({ orgId, range: { start: monthStart } }).catch(() => 0),
-    loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: monthStart } }).catch(() => ({ total: 0, repairs: 0, products: 0, corporate: 0, unallocated: 0 })),
+    loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: monthStart } }).catch(() => ({ total: 0, repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0 })),
     loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: lastMonthStart, end: lastMonthEnd } }).catch(() => ({ total: 0 })),
     loadReceivablesTotal(orgId).catch(() => ({ total: 0, invoiceBalance: 0, saleBalance: 0, invoiceCount: 0, saleCount: 0 })),
 
@@ -199,6 +199,8 @@ export default async function FinancePage({
   const channels = [
     { label: "Repairs",     value: collectionsMtd.repairs,     color: "bg-sky-500"    },
     { label: "Products",    value: collectionsMtd.products,    color: "bg-[var(--accent)]" },
+    { label: "Merchandise", value: collectionsMtd.merchandise, color: "bg-violet-500" },
+    { label: "Services",    value: collectionsMtd.service,     color: "bg-teal-500"   },
     { label: "Corporate",   value: collectionsMtd.corporate,   color: "bg-amber-500"  },
     { label: "Unallocated", value: collectionsMtd.unallocated, color: "bg-slate-400"  },
   ].filter(c => c.value > 0);
