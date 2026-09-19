@@ -14,6 +14,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { parsePaymentMethod } from "@/lib/constants/payment-methods";
 import { recordExpensePayment } from "@/lib/commercial/expense-payments";
+import { getTechnicianPayoutTotalsByJobIds } from "@/lib/payouts";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { flash } from "@/lib/flash";
 
@@ -281,4 +282,183 @@ export async function payExpenseAction(formData: FormData) {
   revalidatePath("/payables");
   revalidatePath("/payout-followups");
   revalidatePath("/finance/expenses");
+}
+
+// ── Pay a whole maturity bucket at once (Payables tab) ───────────────────────
+// Recomputes the same union the tab shows (open bills, open expenses, tech
+// dues), filters to the requested bucket, and settles every row: bills
+// capped at balance, expenses and tech dues in full. Each row commits in its
+// own transaction so one failure can't block the rest; the summary names
+// what cleared and what needs a look. Capped per run for safety.
+const BULK_BUCKETS = ["current", "d30", "d60", "d61"] as const;
+const BULK_MAX_ROWS = 50;
+
+export async function payBucketAction(formData: FormData) {
+  const { user, orgId, org } = await requireOrgSession();
+  if (!(can.approveInvoices(user) || can.runFinancialReports(user))) redirect("/dashboard");
+
+  const { assertOrgCanMutate } = await import("@/lib/org-write");
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
+
+  const bucketRaw = String(formData.get("bucket") ?? "").trim();
+  const bucket = (BULK_BUCKETS as readonly string[]).includes(bucketRaw) ? bucketRaw : null;
+  if (!bucket) redirect("/payables?error=" + encodeURIComponent("Pick a maturity bucket first."));
+  const methodRaw = String(formData.get("method") ?? "CASH").trim();
+  const method = parsePaymentMethod(methodRaw, "OTHER");
+  const back = `/payables?section=payables&bucket=${bucket}`;
+  const fail = (message: string): never => redirect(`${back}&error=${encodeURIComponent(message)}`);
+
+  const DAY = 86_400_000;
+  const now = Date.now();
+  const ageOf = (d: Date | null | undefined) => (d ? Math.max(0, Math.floor((now - new Date(d).getTime()) / DAY)) : 0);
+  const overdueOf = (d: Date | null | undefined) => {
+    if (!d) return null;
+    const diff = Math.floor((now - new Date(d).getTime()) / DAY);
+    return diff > 0 ? diff : null;
+  };
+  const bucketOf = (age: number) => (age <= 0 ? "current" : age <= 30 ? "d30" : age <= 60 ? "d60" : "d61");
+
+  await ensureMoneySchema();
+  const [bills, expenses, techJobs] = await Promise.all([
+    prisma.supplierBill.findMany({
+      where: { orgId, status: { in: ["POSTED", "PART_PAID"] } },
+      orderBy: { dueAt: "asc" },
+      take: BULK_MAX_ROWS,
+      select: { id: true, totalAmount: true, paidAmount: true, currency: true, dueAt: true },
+    }),
+    prisma.expense.findMany({
+      where: { orgId, paidAt: null },
+      orderBy: { createdAt: "asc" },
+      take: BULK_MAX_ROWS,
+      select: { id: true, amount: true, paidAmount: true, dueAt: true, createdAt: true },
+    }),
+    prisma.job.findMany({
+      where: { orgId, repairPath: "EXTERNAL", externalPaid: false, status: { in: ["READY_FOR_PICKUP", "COMPLETED", "DELIVERED"] } },
+      orderBy: { updatedAt: "asc" },
+      take: BULK_MAX_ROWS,
+      select: { id: true, jobNumber: true, externalTechFee: true, externalTechBill: true, completedAt: true, deliveredAt: true, updatedAt: true },
+    }),
+  ]);
+  const techTotals = await getTechnicianPayoutTotalsByJobIds(techJobs.map((j) => j.id));
+
+  type DueRow =
+    | { kind: "BILL"; id: string; amount: number; age: number }
+    | { kind: "EXPENSE"; id: string; amount: number; age: number }
+    | { kind: "TECH"; id: string; amount: number; age: number };
+  const due: DueRow[] = [
+    ...bills.map((b): DueRow => {
+      const overdue = overdueOf(b.dueAt);
+      return {
+        kind: "BILL", id: b.id,
+        amount: Math.max(0, b.totalAmount - b.paidAmount),
+        // Bills without a due date count as current, like the tab.
+        age: overdue ?? 0,
+      };
+    }),
+  ];
+  for (const e of expenses) {
+    const overdue = overdueOf(e.dueAt);
+    due.push({
+      kind: "EXPENSE", id: e.id,
+      amount: Math.max(0, e.amount - e.paidAmount),
+      age: overdue ?? ageOf(e.createdAt),
+    });
+  }
+  for (const j of techJobs) {
+    const paid = techTotals.get(j.id)?.paidAmount ?? 0;
+    due.push({
+      kind: "TECH", id: j.id,
+      amount: Math.max(0, resolveTechCost(j.externalTechFee, j.externalTechBill) - paid),
+      age: ageOf(j.deliveredAt ?? j.completedAt ?? j.updatedAt),
+    });
+  }
+  const targets = due.filter((r) => r.amount > 0 && bucketOf(r.age) === bucket).slice(0, BULK_MAX_ROWS);
+  if (targets.length === 0) fail("Nothing payable in that bucket right now.");
+
+  let cleared = 0;
+  const skipped: string[] = [];
+  const today = new Date();
+  for (const t of targets) {
+    try {
+      if (t.kind === "BILL") {
+        await prisma.$transaction(async (tx) => {
+          const bill = await tx.supplierBill.findFirst({
+            where: { id: t.id, orgId, status: { not: "CANCELLED" } },
+            select: { id: true, totalAmount: true, paidAmount: true, currency: true, exchangeRateToBase: true },
+          });
+          if (!bill) throw new Error("Bill gone.");
+          const balance = bill.totalAmount - bill.paidAmount;
+          if (!(balance > 0)) return;
+          const pay = Math.min(balance, t.amount);
+          const { postSupplierPayment } = await import("@/lib/accounting/post");
+          const payment = await tx.supplierPayment.create({
+            data: { orgId, billId: bill.id, currency: bill.currency || org.baseCurrency, amount: pay, method, createdById: user.id },
+            select: { id: true, paidAt: true },
+          });
+          const nextPaid = bill.paidAmount + pay;
+          await tx.supplierBill.update({
+            where: { id: bill.id },
+            data: { paidAmount: nextPaid, status: nextPaid >= bill.totalAmount ? "PAID" : "PART_PAID" },
+          });
+          await postSupplierPayment(tx, {
+            orgId, userId: user.id, amount: pay, method,
+            date: payment.paidAt ?? undefined,
+            reference: `supplier-pay:${payment.id}`,
+            description: `Supplier payment on bill ${bill.id} (bulk)`,
+          });
+        });
+      } else if (t.kind === "EXPENSE") {
+        await prisma.$transaction(async (tx) => {
+          const { recordExpensePayment } = await import("@/lib/commercial/expense-payments");
+          await recordExpensePayment(tx, {
+            orgId, userId: user.id, expenseId: t.id, amount: t.amount, method, paidAt: today,
+          });
+        });
+      } else {
+        const job = await prisma.job.findFirst({
+          where: { id: t.id, orgId },
+          select: { id: true, jobNumber: true, externalTechFee: true, externalTechBill: true },
+        });
+        if (!job) throw new Error("Job gone.");
+        const due = resolveTechCost(job.externalTechFee, job.externalTechBill);
+        const paid = (await getTechnicianPayoutTotalsByJobIds([job.id])).get(job.id)?.paidAmount ?? 0;
+        const remaining = Math.max(0, due - paid);
+        if (!(remaining > 0)) continue;
+        await prisma.$transaction(async (tx) => {
+          const { postTechnicianPayout } = await import("@/lib/accounting/post");
+          const payout = await tx.technicianPayout.create({
+            data: { orgId, jobId: job.id, amount: remaining, method: "CASH", note: "Bulk pay from Payables", recordedById: user.id },
+            select: { id: true },
+          });
+          await postTechnicianPayout(tx, {
+            orgId, userId: user.id, amount: remaining, method: "CASH",
+            reference: `techpay:${payout.id}`,
+            description: `Technician payout ${job.jobNumber} (bulk)`,
+          });
+          await tx.job.updateMany({
+            where: { id: job.id, orgId },
+            data: { externalPaid: true, externalPaidAt: new Date(), externalPaidById: user.id },
+          });
+        });
+      }
+      cleared += 1;
+    } catch (error) {
+      if (error instanceof Error && "digest" in error) throw error;
+      skipped.push(t.id);
+    }
+  }
+
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: user.id,
+    entityType: "BulkPay",
+    entityId: `${bucket}:${Date.now()}`,
+    action: "BULK_PAY_BUCKET",
+    summary: `Bulk-paid ${cleared} item(s) in ${bucket} bucket; skipped ${skipped.length}`,
+  }).catch(() => {});
+
+  revalidatePath("/payables");
+  redirect(flash(back, cleared > 0
+    ? `Paid ${cleared} item${cleared !== 1 ? "s" : ""}${skipped.length > 0 ? `, ${skipped.length} skipped` : ""}`
+    : "Nothing cleared — rows changed while paying."));
 }

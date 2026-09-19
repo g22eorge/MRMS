@@ -134,6 +134,33 @@ const updateSchema = z.object({
   deliveredTo: z.string().optional(),
 });
 
+// Compose a repair-log draft from recorded facts (diagnosis + fitted parts)
+// for completions saved with an empty log. Best-effort: returns null when
+// there is nothing to say.
+async function buildCompletionWorkDraft(
+  orgId: string,
+  jobId: string,
+  diagnosis: { diagnosisNotes: string | null; externalDiagnosis: string | null },
+): Promise<string | null> {
+  const fitted = await prisma.partReservation
+    .findMany({
+      where: { jobId, status: "CONSUMED" },
+      select: { quantity: true, part: { select: { name: true } } },
+    })
+    .catch(() => []);
+  const parts = fitted
+    .map((l) => `${l.part?.name ?? "Part"}${l.quantity > 1 ? ` (x${l.quantity})` : ""}`)
+    .filter(Boolean);
+  const fault = sanitizeOptionalText(diagnosis.externalDiagnosis) ?? sanitizeOptionalText(diagnosis.diagnosisNotes);
+  const sentences: string[] = [];
+  if (fault) sentences.push(`Fault found: ${fault}.`);
+  sentences.push(
+    parts.length > 0 ? `Parts fitted: ${parts.join(", ")}.` : "No parts recorded as fitted.",
+  );
+  const draft = sentences.join(" ").trim();
+  return draft.length > 0 ? draft.slice(0, 1000) : null;
+}
+
 // Strip commas and currency prefixes so "50,000" or "UGX 50,000" parses correctly
 function parseAmount(value: unknown): number {
   const raw = typeof value === "string"
@@ -629,6 +656,22 @@ export async function updateJobAction(formData: FormData) {
       payload.nextStatus === JobStatus.CLOSED
         ? new Date()
         : undefined;
+
+    // Auto-draft the repair log on first completion when the tech left it
+    // empty: diagnosis + fitted parts, still editable afterwards. Never
+    // overwrites a typed log.
+    if (
+      payload.nextStatus === JobStatus.COMPLETED &&
+      existing.status !== JobStatus.COMPLETED &&
+      !sanitizeOptionalText(payload.workDone) &&
+      !sanitizeOptionalText((existing as { workDone?: string | null }).workDone)
+    ) {
+      const draft = await buildCompletionWorkDraft(orgId, payload.jobId, {
+        diagnosisNotes: (existing as { diagnosisNotes?: string | null }).diagnosisNotes ?? null,
+        externalDiagnosis: (existing as { externalDiagnosis?: string | null }).externalDiagnosis ?? null,
+      }).catch(() => null);
+      if (draft) data.workDone = draft;
+    }
   }
 
   let updated;

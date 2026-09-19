@@ -30,6 +30,7 @@ import {
   markExternalTechPaid,
   paySupplierBillAction,
   payExpenseAction,
+  payBucketAction,
 } from "../payout-followups/actions";
 type SearchParams = {
   q?: string;
@@ -38,6 +39,7 @@ type SearchParams = {
   section?: string;
   bucket?: string;
   error?: string;
+  saved?: string;
 };
 
 const PAGE_SIZE = 20;
@@ -443,6 +445,11 @@ export default async function PayablesPage({
       headerNode={
         <>
           <FormErrorBanner message={filters.error} />
+          {filters.saved ? (
+            <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+              {filters.saved}
+            </p>
+          ) : null}
           <PageHeader
             title="Payables"
             description={
@@ -792,7 +799,7 @@ export default async function PayablesPage({
           ) : null}
 
           {/* Maturity buckets mirror the invoice collections. */}
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {([
               { label: "All", value: "all" },
               { label: "Current", value: "current" },
@@ -816,6 +823,21 @@ export default async function PayablesPage({
                 </Link>
               );
             })}
+            {bucketFilter !== "all" && bucketedRows.length > 0 ? (
+              <form action={payBucketAction} className="ml-auto flex items-center gap-1.5">
+                <input type="hidden" name="bucket" value={bucketFilter} />
+                <select name="method" defaultValue="CASH" aria-label="Payment method" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none">
+                  {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
+                </select>
+                <ConfirmSubmitButton
+                  message={`Pay all ${bucketedRows.length} item${bucketedRows.length !== 1 ? "s" : ""} in this bucket? This moves real money and can't be undone.`}
+                  confirmLabel={`Pay ${bucketedRows.length}`}
+                  className="inline-flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 text-[0.75rem] font-bold text-white transition hover:bg-emerald-700"
+                >
+                  Pay bucket
+                </ConfirmSubmitButton>
+              </form>
+            ) : null}
           </div>
 
           <DataTable
