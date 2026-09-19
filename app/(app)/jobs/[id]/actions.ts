@@ -827,39 +827,45 @@ export async function updateJobAction(formData: FormData) {
 
   // Notifications must compare against the pre-update snapshot.
   // `job` is fetched after the update, so compare to `existing`.
-  if (existing.status !== job.status) {
-    const clientName =
-      user.role === "TECHNICIAN_EXTERNAL"
-        ? "Client"
-        : clientDisplayName((await prisma.job.findUnique({
-            where: { id: job.id, orgId },
-            select: { client: { select: { fullName: true, organization: true } } },
-          }))?.client ?? null, "Client");
-    await notifyStatusChange(orgId, job.id, existing.status, job.status, job.jobNumber, clientName);
-    // Record the transition so the client portal (and staff) can show a real
-    // repair timeline. Additive + best-effort — never blocks the status change.
-    await writeJobStatusHistory({
-      orgId,
-      jobId: job.id,
-      fromStatus: existing.status,
-      toStatus: job.status,
-      changedById: user.id,
-    });
-  }
-
-  if (existing.assignedToId !== job.assignedToId && job.assignedToId) {
-    await notifyJobAssigned(orgId, job.id, job.jobNumber, `${job.brand} ${job.model}`, job.assignedToId);
-  }
-
-  if (existing.repairTimeline !== job.repairTimeline && job.repairTimeline) {
-    await notifyTimelineUpdate(orgId, job.id, job.jobNumber, `${job.brand} ${job.model}`, job.repairTimeline);
-  }
-
-  if (existing.timelineNote !== (job as typeof job & { timelineNote?: string | null }).timelineNote) {
-    const nextNote = (job as typeof job & { timelineNote?: string | null }).timelineNote;
-    if (nextNote) {
-      await notifyDelayNote(orgId, job.id, job.jobNumber, `${job.brand} ${job.model}`, nextNote);
+  // Best-effort: a notify throw (provider, template, prefs) must never turn
+  // a committed write into an error response, nor skip the history row.
+  try {
+    if (existing.status !== job.status) {
+      const clientName =
+        user.role === "TECHNICIAN_EXTERNAL"
+          ? "Client"
+          : clientDisplayName((await prisma.job.findUnique({
+              where: { id: job.id, orgId },
+              select: { client: { select: { fullName: true, organization: true } } },
+            }))?.client ?? null, "Client");
+      await notifyStatusChange(orgId, job.id, existing.status, job.status, job.jobNumber, clientName);
+      // Record the transition so the client portal (and staff) can show a real
+      // repair timeline. Additive + best-effort — never blocks the status change.
+      await writeJobStatusHistory({
+        orgId,
+        jobId: job.id,
+        fromStatus: existing.status,
+        toStatus: job.status,
+        changedById: user.id,
+      });
     }
+
+    if (existing.assignedToId !== job.assignedToId && job.assignedToId) {
+      await notifyJobAssigned(orgId, job.id, job.jobNumber, `${job.brand} ${job.model}`, job.assignedToId);
+    }
+
+    if (existing.repairTimeline !== job.repairTimeline && job.repairTimeline) {
+      await notifyTimelineUpdate(orgId, job.id, job.jobNumber, `${job.brand} ${job.model}`, job.repairTimeline);
+    }
+
+    if (existing.timelineNote !== (job as typeof job & { timelineNote?: string | null }).timelineNote) {
+      const nextNote = (job as typeof job & { timelineNote?: string | null }).timelineNote;
+      if (nextNote) {
+        await notifyDelayNote(orgId, job.id, job.jobNumber, `${job.brand} ${job.model}`, nextNote);
+      }
+    }
+  } catch (notifyError) {
+    console.error("[updateJobAction] post-update notifications failed (write already committed)", { jobId: job.id, error: notifyError instanceof Error ? notifyError.message : notifyError });
   }
 
   revalidatePath(`/jobs/${payload.jobId}`);

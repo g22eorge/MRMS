@@ -227,7 +227,7 @@ export async function GET(req: NextRequest) {
       include: { assignedTo: true },
       orderBy: { receivedAt: "asc" },
     });
-    const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id));
+    const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id), orgId);
 
     const rows = jobs.map((job) => {
       const payout = payouts.get(job.id);

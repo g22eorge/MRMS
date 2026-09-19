@@ -16,7 +16,7 @@ import { formatMoneyCompact, toBaseAmount } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
 import { monthLabel, monthRange, monthSequence, yearRange } from "@/lib/date-ranges";
 import { loadBilledTotals, loadCashCollectionsByChannel, loadReceivablesTotal } from "@/lib/finance/reconciliation";
-import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { ACTIVE_JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -59,20 +59,15 @@ function yearOptions(startYear: number, endYear: number) {
 }
 
 /**
- * The six statuses that make a job "open", matching the openJobs query below.
+ * Which jobs count as "open" pipeline / aging. Uses the canonical active list
+ * so external-repair and waiting-parts jobs are not silently dropped (the old
+ * six-status copy disagreed with the dashboard's own "open work" figure).
  *
  * Shared with the scorecard's link so the destination shows the same jobs the
  * figure counted. When the two drift the tile becomes a lie that is very hard
  * to notice, because both halves look right on their own.
  */
-const OPEN_JOB_STATUSES = [
-  "RECEIVED",
-  "DIAGNOSING",
-  "REFERRED",
-  "AWAITING_APPROVAL",
-  "IN_REPAIR",
-  "READY_FOR_PICKUP",
-] as const;
+const OPEN_JOB_STATUSES = ACTIVE_JOB_STATUSES;
 
 /**
  * One cell of the executive scorecard.
@@ -407,9 +402,9 @@ export default async function ReportsPage({
     prisma.expense
       .findMany({
         where: { orgId, paidAt: { gte: selectedRange.start, lte: selectedRange.end } },
-        select: { amount: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
       })
-      .catch(() => [] as Array<{ amount: number }>),
+      .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>),
     prisma.job.findMany({
       where: { orgId, receivedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end } },
       select: { deviceType: true, receivedAt: true },
@@ -471,8 +466,8 @@ export default async function ReportsPage({
   ] = await Promise.all([
     loadCashCollectionsByChannel({ orgId, baseCurrency: org.baseCurrency, range: { start: ytdStart } })
       .catch(() => ({ repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 })),
-    prisma.expense.findMany({ where: { orgId, paidAt: { gte: ytdStart } }, select: { amount: true } })
-      .catch(() => [] as Array<{ amount: number }>),
+    prisma.expense.findMany({ where: { orgId, paidAt: { gte: ytdStart } }, select: { amount: true, currency: true, exchangeRateToBase: true } })
+      .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>),
     prisma.refund.findMany({ where: { orgId, refundedAt: { gte: ytdStart } }, select: { amount: true, currency: true, exchangeRateToBase: true } })
       .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>),
     prisma.job.findMany({ where: { orgId, externalPaid: true, externalPaidAt: { gte: ytdStart } }, select: { externalTechFee: true, externalTechBill: true } })
@@ -624,7 +619,7 @@ export default async function ReportsPage({
   const invoicesPaidTotal = collectionsByChannel.corporate + collectionsByChannel.merchandise + collectionsByChannel.service + collectionsByChannel.unallocated;
   const totalAllChannels = collectionsByChannel.total;
   const totalBilledAllChannels = billedByChannel.total;
-  const expensesTotal = expensesMtd.reduce((s, e) => s + e.amount, 0);
+  const expensesTotal = expensesMtd.reduce((s, e) => s + toBaseAmount({ amount: e.amount, currency: e.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: e.exchangeRateToBase }), 0);
 
   // Inventory cost of goods sold for product sales paid in each window (report
   // layer only — the ledger recognises inventory cost via supplier payments).
@@ -640,7 +635,7 @@ export default async function ReportsPage({
 
   // YTD P&L
   const ytdRevenue = ytdCollections.total;
-  const ytdExpensesTotal = ytdExpensesRaw.reduce((s, e) => s + e.amount, 0);
+  const ytdExpensesTotal = ytdExpensesRaw.reduce((s, e) => s + toBaseAmount({ amount: e.amount, currency: e.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: e.exchangeRateToBase }), 0);
   const ytdCashOutExternal = ytdExternalPaidJobs.reduce((s, j) => s + resolveTechCost(j.externalTechFee, j.externalTechBill), 0);
   const ytdCashOutRefunds = ytdRefundsRaw.reduce((s, r) => s + toBaseAmount({ amount: r.amount, currency: r.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: r.exchangeRateToBase }), 0);
   const ytdGrossProfit = ytdRevenue - ytdCashOutExternal - ytdCogsTotal;

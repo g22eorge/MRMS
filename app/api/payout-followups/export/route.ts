@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       take: MAX_ROWS,
       select: { id: true, jobNumber: true, status: true, externalTechFee: true, externalTechBill: true, completedAt: true, deliveredAt: true, assignedTo: { select: { name: true } } },
     });
-    const totals = await getTechnicianPayoutTotalsByJobIds(rows.map((j) => j.id));
+    const totals = await getTechnicianPayoutTotalsByJobIds(rows.map((j) => j.id), orgId);
     return download(
       `tech-payouts-pending-${today}.csv`,
       csv(
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
         select: { id: true, jobNumber: true, externalTechFee: true, externalTechBill: true, completedAt: true, deliveredAt: true, updatedAt: true, assignedTo: { select: { name: true } } },
       }) : Promise.resolve([]),
     ]);
-    const techTotals = await getTechnicianPayoutTotalsByJobIds(jobs.map((j) => j.id));
+    const techTotals = await getTechnicianPayoutTotalsByJobIds(jobs.map((j) => j.id), orgId);
     const DAY = 86_400_000;
     const ageOf = (d: Date | null | undefined) => (d ? Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / DAY)) : 0);
     const overdueOf = (d: Date | null | undefined) => {

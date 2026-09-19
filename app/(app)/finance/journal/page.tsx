@@ -181,9 +181,86 @@ export default async function JournalPage({
     assertOrgCanMutate({ access: org.access, userRole: _u.role, userAccessMode: _u.accessMode, kind: "GENERAL" });
     const _db = orgDb(_u.orgId);
     const id = fd.get("id") as string;
-    const entry = await _db.journalEntry.findFirst({ where: { id, status: "POSTED" } });
-    if (!entry) return;
-    await _db.journalEntry.update({ where: { id }, data: { status: "VOID" } });
+    // Voiding a POSTED entry must post a reversing entry, or the voided amount
+    // silently vanishes from every POSTED-filtered aggregate (P&L, balance
+    // sheet, trial balance) while the cash reality is unchanged. Every other
+    // money-delete path does this; the journal void did not.
+    // Reversal numbers allocate read-max: retry the whole void on collision.
+    let voidedNumber: string | null = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        voidedNumber = await _db.$transaction(async (tx) => {
+          const entry = await tx.journalEntry.findFirst({
+            where: { id, orgId: _u.orgId as string, status: "POSTED" },
+            select: {
+              id: true, entryNumber: true, description: true, totalAmount: true,
+              lines: { select: { accountId: true, debit: true, credit: true, description: true } },
+            },
+          });
+          if (!entry) return null;
+          const reversalRef = `journal-void:${entry.id}`;
+          const already = await tx.journalEntry.findFirst({
+            where: { orgId: _u.orgId as string, reference: reversalRef },
+            select: { id: true },
+          });
+          await tx.journalEntry.updateMany({
+            where: { id: entry.id, orgId: _u.orgId as string, status: "POSTED" },
+            data: { status: "VOID" },
+          }).then((r) => {
+            // A concurrent void won the race: it posts the reversal, not us.
+            if (!r.count) throw new Error("__void_raced__");
+          });
+          if (!already && entry.lines.length > 0) {
+            const reversalYear = new Date().getFullYear();
+            const inner = `JE-${reversalYear}-`;
+            const existingNumbers = await tx.journalEntry.findMany({
+              where: { orgId: _u.orgId as string, entryNumber: { contains: inner } },
+              select: { entryNumber: true },
+            });
+            const reversalNumber = `${inner}${String(maxNumberSequence(inner, existingNumbers.map((e) => e.entryNumber)) + 1).padStart(4, "0")}`;
+            await tx.journalEntry.create({
+              data: {
+                orgId: _u.orgId as string,
+                entryNumber: reversalNumber,
+                date: new Date(),
+                description: `Reversal — void of ${entry.entryNumber} (${entry.description})`.slice(0, 500),
+                reference: reversalRef,
+                status: "POSTED",
+                postedAt: new Date(),
+                totalAmount: entry.totalAmount,
+                createdById: _u.id,
+                lines: {
+                  create: entry.lines.map((l) => ({
+                    accountId: l.accountId,
+                    debit: l.credit,
+                    credit: l.debit,
+                    description: l.description,
+                  })),
+                },
+              },
+            });
+          }
+          return entry.entryNumber;
+        });
+        break;
+      } catch (error) {
+        // Benign race: the concurrent void committed first and owns the
+        // reversal + audit. Surface success, not an error page.
+        if (error instanceof Error && error.message === "__void_raced__") break;
+        const dupe = error instanceof Error && "code" in error && (error as { code?: string }).code === "P2002";
+        if (!dupe || attempt >= 2) throw error;
+      }
+    }
+    if (voidedNumber) {
+      await writeSystemAuditEvent({
+        orgId: _u.orgId,
+        actorUserId: _u.id,
+        entityType: "JournalEntry",
+        entityId: id,
+        action: "JOURNAL_ENTRY_VOIDED",
+        summary: `${voidedNumber} voided with reversing entry`,
+      }).catch(() => {});
+    }
     revalidatePath("/finance/journal");
   }
 

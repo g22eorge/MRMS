@@ -50,8 +50,8 @@ export async function ExternalTechDashboard({
     },
   });
 
-  const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id)).catch(() => new Map());
-  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(jobs.map((job) => job.id)).catch(() => new Map());
+  const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id), orgId ?? undefined).catch(() => new Map());
+  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(jobs.map((job) => job.id), orgId ?? undefined).catch(() => new Map());
 
   const currency = getAppCurrency();
   const openCount = jobs.filter((job) => isOpenJobStatus(job.status)).length;

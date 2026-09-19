@@ -225,13 +225,13 @@ export default async function PayablesPage({
     where: { orgId, repairPath: "EXTERNAL", externalPaid: false, status: { in: TERMINAL } },
     select: { id: true, externalTechFee: true, externalTechBill: true, completedAt: true, deliveredAt: true, assignedTo: { select: { name: true } } },
   }) : [];
-  const techSummaryPayoutTotals = await getTechnicianPayoutTotalsByJobIds(techSummaryRows.map((job) => job.id));
+  const techSummaryPayoutTotals = await getTechnicianPayoutTotalsByJobIds(techSummaryRows.map((job) => job.id), orgId);
   const _techPayoutDue = techSummaryRows.reduce((sum, job) => {
     const paid = techSummaryPayoutTotals.get(job.id)?.paidAmount ?? 0;
     return sum + Math.max(0, resolveTechCost(job.externalTechFee, job.externalTechBill) - paid);
   }, 0);
   const billPayable = (billSummary._sum.totalAmount ?? 0) - (billSummary._sum.paidAmount ?? 0);
-  const techPayoutTotals = await getTechnicianPayoutTotalsByJobIds(techRows.map((job) => job.id));
+  const techPayoutTotals = await getTechnicianPayoutTotalsByJobIds(techRows.map((job) => job.id), orgId);
 
   function paidToTechnician(jobId: string) {
     return techPayoutTotals.get(jobId)?.paidAmount ?? 0;
@@ -301,7 +301,7 @@ export default async function PayablesPage({
     canSeeBills ? prisma.supplier.findMany({ where: { orgId }, select: { id: true, name: true } }) : Promise.resolve([]),
     canSeeExpenses ? prisma.supplier.findMany({ where: { orgId }, select: { id: true, name: true } }) : Promise.resolve([]),
   ]);
-  const payTechTotals = await getTechnicianPayoutTotalsByJobIds(payTechRows.map((j) => j.id));
+  const payTechTotals = await getTechnicianPayoutTotalsByJobIds(payTechRows.map((j) => j.id), orgId);
 
   const DAY = 86_400_000;
   const ageOf = (d: Date | null | undefined) => (d ? Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / DAY)) : 0);

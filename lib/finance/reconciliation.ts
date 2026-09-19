@@ -174,14 +174,15 @@ export async function loadRefundsTotal(params: {
 
 export async function loadExpensesTotal(params: {
   orgId: string;
+  baseCurrency: string;
   range: DateRange;
 }) {
   const expenses = await prisma.expense.findMany({
     where: { orgId: params.orgId, paidAt: dateWhere(params.range) },
-    select: { amount: true },
+    select: { amount: true, currency: true, exchangeRateToBase: true },
   });
 
-  return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  return expenses.reduce((sum, expense) => sum + baseAmount(expense, params.baseCurrency), 0);
 }
 
 export async function loadReceivablesTotal(orgId: string) {

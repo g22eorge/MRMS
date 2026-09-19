@@ -2,8 +2,9 @@ import Link from "next/link";
 
 import { StatCards } from "@/components/ui/StatCards";
 
-import { formatMoneyCompact, getAppCurrency } from "@/lib/currency";
+import { formatMoneyCompact, getAppCurrency, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { monthLabel } from "@/lib/date-ranges";
+import { INCOMING_PAYMENT } from "@/lib/finance/payment-kinds";
 import { routeLabel } from "@/lib/nav/registry";
 import { prisma } from "@/lib/prisma";
 
@@ -11,50 +12,62 @@ import { DashboardHero } from "./shared";
 
 import { clientDisplayName } from "@/lib/client-name";
 export async function FinanceDashboard({ orgId }: { orgId: string }) {
-  const currency = getAppCurrency();
+  // The org's own currency, not the process-wide default — every figure here
+  // is converted into it below.
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { baseCurrency: true } }).catch(() => null);
+  const currency = normalizeCurrency(org?.baseCurrency, getAppCurrency());
+  const toBase = (amount: number, curr?: string | null, rate?: number | null) =>
+    toBaseAmount({ amount, currency: curr ?? null, baseCurrency: currency, exchangeRateToBase: rate ?? null });
   const today = new Date();
   const mtdStart = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
   const mtdLabel = monthLabel(today.getFullYear(), today.getMonth() + 1);
   const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000);
   const sixtyDaysAgo  = new Date(today.getTime() - 60 * 86400000);
 
-  const [invoices, recentPayments, salesRevenue] = await Promise.all([
+  // Whole-ledger figures, not a display slice: the old take:50/take:20 rows
+  // fed every total on this card, so anything past fifty invoices read low.
+  // VOID invoices are excluded everywhere — a cancelled document is not
+  // revenue, collected or outstanding.
+  const [invoices, mtdPayments] = await Promise.all([
     prisma.invoice.findMany({
-      where: { orgId },
-      select: { id: true, invoiceNumber: true, status: true, totalAmount: true, paidAmount: true, issuedAt: true, job: { select: { jobNumber: true, client: { select: { fullName: true, organization: true } } } } },
+      where: { orgId, status: { not: "VOID" } },
+      select: { id: true, invoiceNumber: true, status: true, totalAmount: true, paidAmount: true, issuedAt: true, currency: true, exchangeRateToBase: true, job: { select: { jobNumber: true, client: { select: { fullName: true, organization: true } } } } },
       orderBy: { issuedAt: "desc" },
-      take: 50,
     }),
+    // Money in only: REFUND-kind rows are cash back out (positive amount,
+    // negated at read time) and must not inflate collections.
     prisma.payment.findMany({
-      where: { orgId, createdAt: { gte: mtdStart } },
-      select: { amount: true, method: true, receivedAt: true, currency: true },
-      orderBy: { receivedAt: "desc" },
-      take: 20,
-    }),
-    prisma.sale.findMany({
-      where: { orgId, status: "PAID", paidAt: { gte: mtdStart } },
-      select: { totalAmount: true },
+      where: { orgId, ...INCOMING_PAYMENT, createdAt: { gte: mtdStart } },
+      select: { amount: true, method: true, currency: true, exchangeRateToBase: true, invoiceId: true, saleId: true },
     }),
   ]);
 
-  const totalInvoiced = invoices.reduce((s, i) => s + i.totalAmount, 0);
-  const totalCollected = invoices.reduce((s, i) => s + i.paidAmount, 0);
-  const totalOutstanding = totalInvoiced - totalCollected;
+  const balanceOf = (i: { totalAmount: number; paidAmount: number; currency: string | null; exchangeRateToBase: number | null }) =>
+    Math.max(0, toBase(i.totalAmount - i.paidAmount, i.currency, i.exchangeRateToBase));
+  const totalInvoiced = invoices.reduce((s, i) => s + toBase(i.totalAmount, i.currency, i.exchangeRateToBase), 0);
+  const totalCollected = invoices.reduce((s, i) => s + toBase(i.paidAmount, i.currency, i.exchangeRateToBase), 0);
+  const totalOutstanding = invoices.reduce((s, i) => s + balanceOf(i), 0);
   const overdueCount = invoices.filter(i => i.status !== "PAID" && i.issuedAt < thirtyDaysAgo).length;
-  const ageingCurrent  = invoices.filter(i => i.status !== "PAID" && i.issuedAt >= thirtyDaysAgo).reduce((s, i) => s + (i.totalAmount - i.paidAmount), 0);
-  const ageing30to60   = invoices.filter(i => i.status !== "PAID" && i.issuedAt >= sixtyDaysAgo && i.issuedAt < thirtyDaysAgo).reduce((s, i) => s + (i.totalAmount - i.paidAmount), 0);
-  const ageing60plus   = invoices.filter(i => i.status !== "PAID" && i.issuedAt < sixtyDaysAgo).reduce((s, i) => s + (i.totalAmount - i.paidAmount), 0);
-  const posRevenueMtd  = salesRevenue.reduce((s, r) => s + r.totalAmount, 0);
-  const invoiceRevenueMtd = invoices.filter(i => i.status === "PAID" && i.issuedAt >= mtdStart).reduce((s, i) => s + i.totalAmount, 0);
-  const mtdPayments = recentPayments.reduce((s, p) => s + p.amount, 0);
-  const methodTotals = recentPayments.reduce((acc, p) => { acc[p.method] = (acc[p.method] ?? 0) + p.amount; return acc; }, {} as Record<string, number>);
-  const unpaidInvoices = invoices.filter(i => i.status !== "PAID" && i.status !== "VOID");
+  const ageingCurrent  = invoices.filter(i => i.status !== "PAID" && i.issuedAt >= thirtyDaysAgo).reduce((s, i) => s + balanceOf(i), 0);
+  const ageing30to60   = invoices.filter(i => i.status !== "PAID" && i.issuedAt >= sixtyDaysAgo && i.issuedAt < thirtyDaysAgo).reduce((s, i) => s + balanceOf(i), 0);
+  const ageing60plus   = invoices.filter(i => i.status !== "PAID" && i.issuedAt < sixtyDaysAgo).reduce((s, i) => s + balanceOf(i), 0);
+  // Single-source cash-in: every MTD payment counted once. The old total added
+  // POS sale *billings* on top of the payments table that already contained
+  // the POS *collections*, double-counting every till sale; and the "invoice
+  // payments" row showed billed totals of paid invoices rather than cash.
+  const payIn = (p: { amount: number; currency: string | null; exchangeRateToBase: number | null }) =>
+    toBase(p.amount, p.currency, p.exchangeRateToBase);
+  const invoiceRevenueMtd = mtdPayments.filter(p => p.invoiceId).reduce((s, p) => s + payIn(p), 0);
+  const posRevenueMtd  = mtdPayments.filter(p => p.saleId).reduce((s, p) => s + payIn(p), 0);
+  const mtdPaymentsTotal = mtdPayments.reduce((s, p) => s + payIn(p), 0);
+  const methodTotals = mtdPayments.reduce((acc, p) => { acc[p.method] = (acc[p.method] ?? 0) + payIn(p); return acc; }, {} as Record<string, number>);
+  const unpaidInvoices = invoices.filter(i => i.status !== "PAID");
 
   return (
     <div className="space-y-4">
       <DashboardHero
         title="Finance & Accounts"
-        summary={`${formatMoneyCompact(totalOutstanding, currency)} outstanding · ${overdueCount} overdue invoices · ${formatMoneyCompact(mtdPayments, currency)} collected MTD`}
+        summary={`${formatMoneyCompact(totalOutstanding, currency)} outstanding · ${overdueCount} overdue invoices · ${formatMoneyCompact(mtdPaymentsTotal, currency)} collected MTD`}
         primaryHref="/documents/invoices"
         primaryLabel={routeLabel("/documents/invoices")}
         secondaryHref="/reports"
@@ -134,7 +147,7 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
             ))}
             <div className="mt-1 flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
               <p className="text-xs font-bold text-emerald-600">Total in MTD</p>
-              <p className="text-sm font-black text-emerald-600">{formatMoneyCompact(mtdPayments + posRevenueMtd, currency)}</p>
+              <p className="text-sm font-black text-emerald-600">{formatMoneyCompact(mtdPaymentsTotal, currency)}</p>
             </div>
           </div>
         </section>
@@ -152,7 +165,7 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
         ) : (
           <div className="space-y-1.5">
             {unpaidInvoices.slice(0, 8).map(inv => {
-              const balance = inv.totalAmount - inv.paidAmount;
+              const balance = toBase(inv.totalAmount - inv.paidAmount, inv.currency, inv.exchangeRateToBase);
               const ageDays = Math.floor((today.getTime() - inv.issuedAt.getTime()) / 86400000);
               return (
                 <div key={inv.id} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">

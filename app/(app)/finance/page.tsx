@@ -51,7 +51,7 @@ export default async function FinancePage({
     overdueInvoices,
     techDueJobs,
   ] = await Promise.all([
-    loadExpensesTotal({ orgId, range: { start: monthStart } }).catch(() => 0),
+    loadExpensesTotal({ orgId, baseCurrency: currency, range: { start: monthStart } }).catch(() => 0),
     loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: monthStart } }).catch(() => ({ total: 0, repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0 })),
     loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: lastMonthStart, end: lastMonthEnd } }).catch(() => ({ total: 0 })),
     loadReceivablesTotal(orgId).catch(() => ({ total: 0, invoiceBalance: 0, saleBalance: 0, invoiceCount: 0, saleCount: 0 })),
@@ -75,7 +75,7 @@ export default async function FinancePage({
     // Overdue invoices needing chase
     db.invoice.findMany({
       where: { orgId, status: "ISSUED", dueDate: { lt: now } },
-      select: { totalAmount: true, paidAmount: true },
+      select: { totalAmount: true, paidAmount: true, currency: true, exchangeRateToBase: true },
     }).catch(() => []),
     // Outstanding tech dues
     db.job.findMany({
@@ -109,7 +109,7 @@ export default async function FinancePage({
     cashFlowMonths.map(async (m) => {
       const [collections, outgo] = await Promise.all([
         loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: m.start, end: m.end } }).catch(() => ({ total: 0 })),
-        loadExpensesTotal({ orgId, range: { start: m.start, end: m.end } }).catch(() => 0),
+        loadExpensesTotal({ orgId, baseCurrency: currency, range: { start: m.start, end: m.end } }).catch(() => 0),
       ]);
       m.inflow = collections.total;
       m.outflow = outgo;
@@ -153,8 +153,8 @@ export default async function FinancePage({
   const overdueBillsBase = overdueBills.reduce((s, b) => s + toBase(b.totalAmount - b.paidAmount, b.currency, b.exchangeRateToBase), 0);
   const dueWeekBills = billStats.filter((b) => b.dueAt && b.dueAt.getTime() >= now.getTime() && b.dueAt.getTime() <= weekOut.getTime()).length;
   const expensesBase = expenseStats.reduce((s, e) => s + toBase(e.amount, e.currency, e.exchangeRateToBase), 0);
-  const overdueInvoicesBase = overdueInvoices.reduce((s, i) => s + Math.max(0, i.totalAmount - i.paidAmount), 0);
-  const techPaidTotals = await getTechnicianPayoutTotalsByJobIds(techDueJobs.map((j) => j.id)).catch(() => new Map<string, { paidAmount: number }>());
+  const overdueInvoicesBase = overdueInvoices.reduce((s, i) => s + toBase(Math.max(0, i.totalAmount - i.paidAmount), i.currency, i.exchangeRateToBase), 0);
+  const techPaidTotals = await getTechnicianPayoutTotalsByJobIds(techDueJobs.map((j) => j.id), orgId).catch(() => new Map<string, { paidAmount: number }>());
   const techDueBase = techDueJobs.reduce((s, j) => {
     const paid = techPaidTotals.get(j.id)?.paidAmount ?? 0;
     return s + Math.max(0, resolveTechCost(j.externalTechFee, j.externalTechBill) - paid);

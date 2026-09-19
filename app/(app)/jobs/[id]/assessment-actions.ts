@@ -11,6 +11,10 @@ import { generateAssessmentDraft } from "@/lib/ai/assessment";
 
 async function requireStaff() {
   const ctx = await requireOrgSession();
+  // External contractors submit diagnosis through the status flow
+  // (AWAITING_APPROVAL / RETURNED_FROM_EXTERNAL); drafting, editing,
+  // publishing or deleting client-visible assessment reports is staff-only.
+  if (ctx.user.role === "TECHNICIAN_EXTERNAL") redirect("/jobs?error=External+technicians+cannot+manage+assessment+reports");
   assertOrgCanMutate({ access: ctx.org.access, userRole: ctx.user.role, userAccessMode: ctx.user.accessMode, kind: "GENERAL" });
   return ctx;
 }

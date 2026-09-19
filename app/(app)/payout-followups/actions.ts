@@ -339,7 +339,7 @@ export async function payBucketAction(formData: FormData) {
       select: { id: true, jobNumber: true, externalTechFee: true, externalTechBill: true, completedAt: true, deliveredAt: true, updatedAt: true },
     }),
   ]);
-  const techTotals = await getTechnicianPayoutTotalsByJobIds(techJobs.map((j) => j.id));
+  const techTotals = await getTechnicianPayoutTotalsByJobIds(techJobs.map((j) => j.id), orgId);
 
   type DueRow =
     | { kind: "BILL"; id: string; amount: number; age: number }
@@ -421,7 +421,7 @@ export async function payBucketAction(formData: FormData) {
         });
         if (!job) throw new Error("Job gone.");
         const due = resolveTechCost(job.externalTechFee, job.externalTechBill);
-        const paid = (await getTechnicianPayoutTotalsByJobIds([job.id])).get(job.id)?.paidAmount ?? 0;
+        const paid = (await getTechnicianPayoutTotalsByJobIds([job.id], orgId)).get(job.id)?.paidAmount ?? 0;
         const remaining = Math.max(0, due - paid);
         if (!(remaining > 0)) continue;
         await prisma.$transaction(async (tx) => {

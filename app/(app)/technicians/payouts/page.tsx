@@ -91,8 +91,8 @@ export default async function TechnicianPayoutsPage({
   });
 
   const payoutColumnsReady = await hasJobPayoutColumns();
-  const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id));
-  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(jobs.map((job) => job.id));
+  const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id), orgId);
+  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(jobs.map((job) => job.id), orgId);
 
   const currency = getAppCurrency();
 

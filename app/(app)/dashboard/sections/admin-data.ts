@@ -36,7 +36,10 @@ export async function loadAdminDashboardData(orgId: string | null) {
   const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
   const yesterdayEnd = new Date(todayStart.getTime() - 1);
   const mtdStart = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
-  const orgFilter = orgId ? { orgId } : {};
+  // Fail closed: without an org every groupBy/count below would aggregate
+  // across all tenants (and list cross-org jobs). An impossible filter yields
+  // zeros instead of someone else's figures.
+  const orgFilter = orgId ? { orgId } : { orgId: "__no_org__" };
   // Compute trend months upfront so we can include trend query in the main batch
   const trendMonths = trendMonthsSinceStartOfYear(today);
 
@@ -241,7 +244,7 @@ export async function loadAdminDashboardData(orgId: string | null) {
   const revenueTodayValue = collectionsToday.total;
   const expensesTodayValue = expensesToday._sum.amount ?? 0;
   const payablesValue     = (payablesAgg._sum.totalAmount ?? 0) - (payablesAgg._sum.paidAmount ?? 0);
-  const payoutDueTotals = await getTechnicianPayoutTotalsByJobIds(payoutDueJobs.map((job) => job.id));
+  const payoutDueTotals = await getTechnicianPayoutTotalsByJobIds(payoutDueJobs.map((job) => job.id), orgId ?? undefined);
   const technicianPayoutsDue = payoutDueJobs.reduce((sum, job) => {
     const paid = payoutDueTotals.get(job.id)?.paidAmount ?? 0;
     return sum + Math.max(0, resolveTechCost(job.externalTechFee, job.externalTechBill) - paid);
@@ -252,7 +255,7 @@ export async function loadAdminDashboardData(orgId: string | null) {
   const expensesYesterdayValue = expensesYesterdayRaw._sum.amount ?? 0;
 
   // Per-tech payout due map
-  const techPayoutByTechTotals = await getTechnicianPayoutTotalsByJobIds(techPayoutByTech.map((job) => job.id));
+  const techPayoutByTechTotals = await getTechnicianPayoutTotalsByJobIds(techPayoutByTech.map((job) => job.id), orgId ?? undefined);
   const techPayoutDueMap = new Map<string, number>();
   for (const j of techPayoutByTech) {
     if (!j.assignedToId) continue;

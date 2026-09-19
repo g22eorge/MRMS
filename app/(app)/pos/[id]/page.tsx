@@ -132,6 +132,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     redirect("/dashboard");
   }
   const canDiscount = can.applyPosDiscount(user);
+  const canRefund = can.processRefunds(user);
+  const canToggleVat = can.overrideDiscount(user);
 
   const { id } = await params;
   const errorMessage = (await searchParams)?.error?.trim() || null;
@@ -377,9 +379,12 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       }
 
       for (const [partId, restored] of restoreByPart) {
-        await tx.part.update({
-          where: { id: partId },
-          data: { qtyOnHand: partById.get(partId)!.qtyOnHand + restored },
+        // Atomic increment, org-scoped: the read-modify-write above lost
+        // concurrent updates (two deletes/returns interleaved) and the bare
+        // id write crossed tenants.
+        await tx.part.updateMany({
+          where: { id: partId, orgId },
+          data: { qtyOnHand: { increment: restored } },
         });
       }
       await tx.sale.deleteMany({ where: { id: sale.id, orgId } });
@@ -595,7 +600,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   async function toggleSaleVatAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+    // Switching VAT off undercharges and under-reports tax: same bar as till
+    // price overrides, not every cashier.
+    if (!can.overrideDiscount(user)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     const saleId = String(formData.get("saleId") ?? "").trim();
@@ -714,7 +721,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   async function createCreditNoteAction(formData: FormData) {
     "use server";
     const { user, orgId, org, session } = await requireOrgSession();
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
+    // Issuing a credit note writes off till value: refunds grant only, not
+    // every role that can view financials.
+    if (!can.processRefunds(user)) redirect("/dashboard");
     // Expired workspaces are read-only except for payment entry.
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
@@ -918,7 +927,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   async function createRefundAction(formData: FormData) {
     "use server";
     const { user, orgId, org, session } = await requireOrgSession();
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
+    // Paying cash out of the till: refunds grant only.
+    if (!can.processRefunds(user)) redirect("/dashboard");
     // Expired workspaces are read-only except for payment entry.
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
@@ -1360,6 +1370,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
               <SubmitButton variant="secondary" size="sm" pendingLabel="Applying…">Apply</SubmitButton>
             </form>
             ) : null}
+            {canToggleVat ? (
             <form
               action={toggleSaleVatAction}
               className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-3 py-2.5"
@@ -1374,6 +1385,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                 {sale.taxApplicable ? "Charged on this sale" : "Not charged on this sale"}
               </span>
             </form>
+            ) : null}
           </details>
         ) : null}
       </section>
@@ -1420,7 +1432,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       </section>
 
       {/* -- Return / Refund: only surfaced once the sale is paid -- */}
-      {["PAID", "PARTIALLY_RETURNED"].includes(sale.status) ? (
+      {canRefund && ["PAID", "PARTIALLY_RETURNED"].includes(sale.status) ? (
       <details
         open={creditNotes.length > 0 || refunds.length > 0}
         className="dc-card overflow-hidden"

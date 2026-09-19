@@ -220,7 +220,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
   for (const e of trendExpenses) {
     const d = e.paidAt ?? e.createdAt;
     const bucket = trendMonths.find((m) => m.yr === d.getFullYear() && m.mo === d.getMonth());
-    if (bucket) bucket.amount += e.amount;
+    if (bucket) bucket.amount += toBase(e);
   }
   const trendData = trendMonths.map(({ key, amount }) => ({ key, amount }));
 
@@ -229,7 +229,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const items = statsRows.filter((e) => e.category === cat);
     return {
       cat,
-      total: items.reduce((s, e) => s + e.amount, 0),
+      total: items.reduce((s, e) => s + toBase(e), 0),
       count: items.length,
     };
   }).filter((x) => x.count > 0);

@@ -37,7 +37,7 @@ export async function hasJobPayoutColumns() {
   return payoutColumnsPresentCache;
 }
 
-export async function getJobPayoutsByIds(jobIds: string[]) {
+export async function getJobPayoutsByIds(jobIds: string[], orgId?: string) {
   if (jobIds.length === 0 || !(await hasJobPayoutColumns())) {
     return new Map<string, JobPayoutSnapshot>();
   }
@@ -59,6 +59,7 @@ export async function getJobPayoutsByIds(jobIds: string[]) {
         externalPaymentRef
       FROM "Job"
       WHERE id IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}`))})
+      ${orgId ? Prisma.sql`AND "orgId" = ${orgId}` : Prisma.sql``}
     `,
   );
 
@@ -76,7 +77,7 @@ export async function getJobPayoutsByIds(jobIds: string[]) {
   return map;
 }
 
-export async function getTechnicianPayoutTotalsByJobIds(jobIds: string[]) {
+export async function getTechnicianPayoutTotalsByJobIds(jobIds: string[], orgId?: string) {
   if (jobIds.length === 0) {
     return new Map<string, TechnicianPayoutTotal>();
   }
@@ -85,7 +86,7 @@ export async function getTechnicianPayoutTotalsByJobIds(jobIds: string[]) {
   const rows = await prisma.technicianPayout
     .groupBy({
       by: ["jobId"],
-      where: { jobId: { in: ids } },
+      where: { jobId: { in: ids }, ...(orgId ? { orgId } : {}) },
       _sum: { amount: true },
     })
     .catch(() => []);

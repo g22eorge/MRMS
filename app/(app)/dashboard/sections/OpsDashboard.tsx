@@ -59,8 +59,8 @@ export async function OpsDashboard({
 
   const monthRevenue = completedThisMonth._sum.clientBill ?? 0;
 
-  const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id)).catch(() => new Map());
-  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(externalCompleted.map((job) => job.id)).catch(() => new Map());
+  const payoutMap = await getJobPayoutsByIds(externalCompleted.map((job) => job.id), orgId).catch(() => new Map());
+  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(externalCompleted.map((job) => job.id), orgId).catch(() => new Map());
   // externalCompleted already pre-filtered to externalPaid=false in the DB query
   const payoutOutstanding = externalCompleted
     .reduce((sum, job) => {

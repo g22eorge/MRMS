@@ -81,7 +81,7 @@ export async function runPayablesForOrg(orgId: string, now = new Date()): Promis
     rowToBase({ amount, currency: curr ?? baseCurrency, exchangeRateToBase: rate ?? null }, baseCurrency);
   const billsBase = dueBills.reduce((s, b) => s + toBase(b.totalAmount - b.paidAmount, b.currency, b.exchangeRateToBase), 0);
   const expensesBase = openExpenses.reduce((s, e) => s + toBase(e.amount, e.currency, e.exchangeRateToBase), 0);
-  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(techJobs.map((j) => j.id)).catch(() => new Map());
+  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(techJobs.map((j) => j.id), orgId).catch(() => new Map());
   const techBase = techJobs.reduce((s, j) => {
     const paid = (payoutTotals as Map<string, { paidAmount: number }>).get(j.id)?.paidAmount ?? 0;
     return s + Math.max(0, resolveTechCost(j.externalTechFee, j.externalTechBill) - paid);
