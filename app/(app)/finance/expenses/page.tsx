@@ -9,7 +9,7 @@ import { getCurrentUserRole } from "@/lib/session";
 
 import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextExpenseNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
@@ -283,31 +283,39 @@ export default async function ExpensesPage({ searchParams }: Props) {
       return { error: "That expense was just recorded — not saving it twice." };
     }
 
-    const inner = `EXP-${new Date().getFullYear()}-`;
-    const [tag, existingNumbers] = await Promise.all([
-      orgTagFor(orgId),
-      db.expense.findMany({ where: { expenseNumber: { contains: inner } }, select: { expenseNumber: true } }),
-    ]);
-    const expenseSeq = maxNumberSequence(inner, existingNumbers.map((e) => e.expenseNumber)) + 1;
-    const expenseNumber = composeOrgNumber(tag, inner, expenseSeq);
-
-    const expense = await db.expense.create({
-      data: {
-        expenseNumber,
-        description,
-        amount: amountRaw,
-        currency,
-        category,
-        method: method ?? undefined,
-        supplierId,
-        reference,
-        notes,
-        paidAt,
-        dueAt,
-        createdById: user.id,
-        orgId,
-      },
-    });
+    // Compact number TAG/MM/NNN (e.g. EIS/09/042); sequence never resets so
+    // concurrent creates retry on collision instead of failing.
+    let expense: { id: string } | null = null;
+    let expenseNumber = "";
+    for (let attempt = 0; attempt < 3 && !expense; attempt += 1) {
+      expenseNumber = await nextExpenseNumber(orgId, new Date(), db);
+      try {
+        expense = await db.expense.create({
+          data: {
+            expenseNumber,
+            description,
+            amount: amountRaw,
+            currency,
+            category,
+            method: method ?? undefined,
+            supplierId,
+            reference,
+            notes,
+            paidAt,
+            dueAt,
+            createdById: user.id,
+            orgId,
+          },
+          select: { id: true },
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002" && attempt < 2) continue;
+        throw error;
+      }
+    }
+    if (!expense) {
+      return { error: "Could not number the expense. Please try again." };
+    }
 
     // Cash-basis post on payment only: an unpaid expense is owed, not spent.
     // Mark-paid posts with the same key, so rows posted while unpaid are
@@ -406,6 +414,78 @@ export default async function ExpensesPage({ searchParams }: Props) {
     revalidatePath("/finance/expenses");
   }
 
+  async function updateExpenseAction(formData: FormData) {
+    "use server";
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+    const db = orgDb(orgId);
+    if (!can.viewFinancials(user)) redirect("/dashboard");
+
+    const fail = (message: string): never =>
+      redirect(`/finance/expenses?error=${encodeURIComponent(message)}`);
+
+    const expenseId = String(formData.get("expenseId") ?? "").trim();
+    if (!expenseId) return;
+    const description = String(formData.get("description") ?? "").trim();
+    const amountRaw = Number(String(formData.get("amount") ?? "").trim());
+    const categoryRaw = String(formData.get("category") ?? "").trim();
+    const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
+    const reference = String(formData.get("reference") ?? "").trim() || null;
+    const notes = String(formData.get("notes") ?? "").trim() || null;
+    const dueAtRaw = String(formData.get("dueAt") ?? "").trim();
+
+    if (!description) fail("Enter a description for this expense.");
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) fail("Enter an amount greater than zero.");
+    const category = (CATEGORIES as readonly string[]).includes(categoryRaw)
+      ? (categoryRaw as ExpenseCategory)
+      : fail("Pick a valid category.");
+    const dueAt = dueAtRaw ? new Date(`${dueAtRaw}T12:00:00.000Z`) : null;
+    if (dueAt && Number.isNaN(dueAt.getTime())) fail("Enter a valid due date.");
+    if (supplierId) {
+      const supplier = await db.supplier.findFirst({ where: { id: supplierId }, select: { id: true } });
+      if (!supplier) fail("That supplier was not found.");
+    }
+
+    const existing = await db.expense.findFirst({
+      where: { id: expenseId },
+      select: { id: true, expenseNumber: true, paidAt: true },
+    });
+    if (!existing) return;
+    // Money already booked stays booked: amount is editable only while
+    // unpaid (the input renders read-only once paid). Everything else —
+    // category, supplier, dates, notes — is always editable.
+    const data: Record<string, unknown> = {
+      description,
+      category,
+      supplierId,
+      reference,
+      notes,
+      dueAt,
+    };
+    if (!existing.paidAt) {
+      data.amount = amountRaw;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.expense.updateMany({ where: { id: expenseId, orgId }, data });
+      if (!updated.count) throw new Error("Expense not found.");
+    }).catch((error: unknown) => {
+      if (error instanceof Error && "digest" in error) throw error;
+      fail(error instanceof Error ? error.message : "Could not save the expense.");
+    });
+
+    await writeSystemAuditEvent({
+      entityType: "Expense",
+      entityId: expenseId,
+      action: "EXPENSE_UPDATED",
+      summary: `${existing.expenseNumber} — ${description} updated`,
+      actorUserId: user.id,
+    }).catch(() => {});
+
+    revalidatePath("/finance/expenses");
+    revalidatePath("/payout-followups");
+  }
+
   async function deleteExpenseAction(formData: FormData) {
     "use server";
     const { user, org, orgId } = await requireOrgSession();
@@ -456,6 +536,101 @@ export default async function ExpensesPage({ searchParams }: Props) {
     canDelete || canWrite
       ? (expense: (typeof expenses)[number]) => (
           <RowActionsMenu label="Expense actions">
+            {canWrite ? (
+              <form action={updateExpenseAction} className="space-y-2 border-b border-[var(--line)] px-3 py-2.5">
+                <input type="hidden" name="expenseId" value={expense.id} />
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                  Edit · {expense.expenseNumber}
+                </p>
+                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                  Description
+                  <input
+                    name="description"
+                    required
+                    defaultValue={expense.description}
+                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                    Category
+                    <select
+                      name="category"
+                      defaultValue={expense.category}
+                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                    Amount{expense.paidAt ? " (locked — paid)" : ""}
+                    <input
+                      name="amount"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      required
+                      defaultValue={expense.amount}
+                      readOnly={Boolean(expense.paidAt)}
+                      title={expense.paidAt ? "Paid expenses keep their booked amount — delete and re-record to correct it." : undefined}
+                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem] read-only:opacity-60"
+                    />
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                    Due date
+                    <input
+                      name="dueAt"
+                      type="date"
+                      defaultValue={expense.dueAt ? new Date(expense.dueAt).toISOString().slice(0, 10) : ""}
+                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                    />
+                  </label>
+                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                    Reference
+                    <input
+                      name="reference"
+                      defaultValue={expense.reference ?? ""}
+                      placeholder="Optional"
+                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                    />
+                  </label>
+                </div>
+                {suppliers.length > 0 ? (
+                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                    Supplier
+                    <select
+                      name="supplierId"
+                      defaultValue={expense.supplier?.id ?? ""}
+                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                    >
+                      <option value="">— none —</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                  Notes
+                  <input
+                    name="notes"
+                    defaultValue={expense.notes ?? ""}
+                    placeholder="Optional"
+                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black"
+                >
+                  Save changes
+                </button>
+              </form>
+            ) : null}
             {!expense.paidAt && canWrite ? (
               <form action={markExpensePaidAction} className="space-y-2 border-b border-[var(--line)] px-3 py-2.5">
                 <input type="hidden" name="expenseId" value={expense.id} />

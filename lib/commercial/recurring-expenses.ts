@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextExpenseNumber } from "@/lib/commercial/org-number";
 import {
   advanceRecurringDate,
   isRecurringFrequency,
@@ -55,38 +55,45 @@ export async function issueRecurringExpense(
     return { issued: false, reason: "already-issued" };
   }
 
-  const inner = `EXP-${now.getFullYear()}-`;
-  const [tag, existingNumbers] = await Promise.all([
-    orgTagFor(orgId),
-    prisma.expense.findMany({ where: { orgId, expenseNumber: { contains: inner } }, select: { expenseNumber: true } }),
-  ]);
-  const expenseNumber = composeOrgNumber(tag, inner, maxNumberSequence(inner, existingNumbers.map((e) => e.expenseNumber)) + 1);
   const nextDueAt = advanceRecurringDate(template.nextDueAt, frequency);
 
-  const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const expense = await tx.expense.create({
-      data: {
-        orgId,
-        expenseNumber,
-        description: template.description,
-        category: template.category,
-        amount: template.amount,
-        currency: template.currency,
-        supplierId: template.supplierId,
-        reference,
-        notes: template.notes,
-        paidAt: null, // Issued as owed — the ledger posts when it is marked paid.
-        dueAt: template.nextDueAt,
-        createdById: actorUserId,
-      },
-      select: { id: true },
-    });
-    await tx.recurringExpense.updateMany({
-      where: { id: template.id, orgId },
-      data: { nextDueAt, lastIssuedAt: now },
-    });
-    return expense;
-  });
+  // Number inside the retry: a P2002 means a concurrent issuer won the same
+  // sequence — recompute and try again rather than failing the month's rent.
+  let created: { id: string } | null = null;
+  let expenseNumber = "";
+  for (let attempt = 0; attempt < 3 && !created; attempt += 1) {
+    expenseNumber = await nextExpenseNumber(orgId, now);
+    try {
+      created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const expense = await tx.expense.create({
+          data: {
+            orgId,
+            expenseNumber,
+            description: template.description,
+            category: template.category,
+            amount: template.amount,
+            currency: template.currency,
+            supplierId: template.supplierId,
+            reference,
+            notes: template.notes,
+            paidAt: null, // Issued as owed — the ledger posts when it is marked paid.
+            dueAt: template.nextDueAt,
+            createdById: actorUserId,
+          },
+          select: { id: true },
+        });
+        await tx.recurringExpense.updateMany({
+          where: { id: template.id, orgId },
+          data: { nextDueAt, lastIssuedAt: now },
+        });
+        return expense;
+      });
+    } catch (error) {
+      const dupe = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+      if (!dupe || attempt >= 2) throw error;
+    }
+  }
+  if (!created) throw new Error("Could not number the scheduled expense.");
 
   await writeSystemAuditEvent({
     orgId,

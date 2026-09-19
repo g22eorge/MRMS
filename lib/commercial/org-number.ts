@@ -212,3 +212,34 @@ export function composeJobNumber(prefix: string, year: number, seq: number, pad 
 export function composeDocumentNumber(prefix: string, type: string, year: number, seq: number, pad = 4) {
   return `${prefix}/${type}/${year}/${String(seq).padStart(pad, "0")}`;
 }
+
+/** Compose a compact expense number, e.g. "EIS/09/042": tag, month, sequence. */
+export function composeExpenseNumber(tag: string, month: Date, seq: number, pad = 3) {
+  const mm = String(month.getMonth() + 1).padStart(2, "0");
+  return `${tag}/${mm}/${String(seq).padStart(pad, "0")}`;
+}
+
+type ExpenseNumberDb = {
+  expense: { findMany(args: { where: { orgId: string }; select: { expenseNumber: true } }): Promise<Array<{ expenseNumber: string }>> };
+};
+
+/**
+ * Next expense number for an org. The sequence is the max trailing run of
+ * digits across the org's existing numbers (any shape, so legacy EXP-…
+ * numbers count) plus one — it never resets, which keeps the month-only
+ * format unique across years.
+ */
+export async function nextExpenseNumber(orgId: string, now = new Date(), db: ExpenseNumberDb = prisma) {
+  const [tag, rows] = await Promise.all([
+    orgTagFor(orgId),
+    db.expense.findMany({ where: { orgId }, select: { expenseNumber: true } }),
+  ]);
+  let max = 0;
+  for (const row of rows) {
+    const match = row.expenseNumber.match(/(\d+)\s*$/);
+    if (!match) continue;
+    const n = Number(match[1]);
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return composeExpenseNumber(tag, now, max + 1);
+}
