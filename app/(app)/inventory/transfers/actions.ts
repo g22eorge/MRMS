@@ -97,11 +97,11 @@ export async function approveStockTransferAction(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
   const transfer = await prisma.stockTransfer.findFirst({ where: { id, orgId }, select: { transferNumber: true } });
-  await prisma.stockTransfer.updateMany({
+  const approved = await prisma.stockTransfer.updateMany({
     where: { id, orgId, status: "REQUESTED" },
     data: { status: "APPROVED", approvedAt: new Date(), approvedById: user.id },
   });
-  if (transfer) {
+  if (transfer && approved.count) {
     notifyStockTransferUpdated({ orgId, transferNumber: transfer.transferNumber, status: "APPROVED", actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
   }
   revalidatePath("/inventory/transfers");
@@ -123,9 +123,9 @@ export async function dispatchStockTransferAction(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
-  await prisma.$transaction(async (tx) => {
+  const dispatchedTransition = await prisma.$transaction(async (tx) => {
     const transfer = await loadTransfer(tx, id, orgId);
-    if (!transfer || transfer.status !== "APPROVED") return;
+    if (!transfer || transfer.status !== "APPROVED") return false;
 
     for (const item of transfer.items) {
       const row = await tx.partLocationStock.findUnique({
@@ -139,6 +139,11 @@ export async function dispatchStockTransferAction(formData: FormData) {
         where: { partId_locationId: { partId: item.partId, locationId: transfer.fromLocationId } },
         data: { qtyOnHand: { decrement: item.quantity } },
       });
+      // Locations-only move: Part.qtyOnHand tracks total physical stock
+      // (including in-transit), so dispatch leaves it untouched and receipt
+      // only credits the destination location. Touching the global here
+      // without a matching credit on receipt bled one transfer quantity
+      // out of the global on every completed move.
       await tx.stockTransferItem.update({ where: { id: item.id }, data: { qtyDispatched: item.quantity } });
       await tx.partStockTransaction.create({
         data: {
@@ -155,13 +160,20 @@ export async function dispatchStockTransferAction(formData: FormData) {
       });
     }
 
-    await tx.stockTransfer.update({
-      where: { id: transfer.id },
+    await tx.stockTransfer.updateMany({
+      where: { id: transfer.id, status: "APPROVED" },
       data: { status: "DISPATCHED", dispatchedAt: new Date(), dispatchedById: user.id },
+    }).then((r) => {
+      if (!r.count) throw new Error("Transfer was already processed.");
     });
-  }).catch(() => redirect("/inventory/transfers?error=Insufficient+stock+or+dispatch+failed"));
+    return true;
+  }).catch(() => redirect("/inventory/transfers?error=Insufficient+stock+or+dispatch+failed") as never);
 
-  const dispatched = await prisma.stockTransfer.findFirst({ where: { id, orgId }, select: { transferNumber: true } });
+  if (!dispatchedTransition) {
+    revalidatePath("/inventory/transfers");
+    return;
+  }
+  const dispatched = await prisma.stockTransfer.findFirst({ where: { id, orgId, status: "DISPATCHED" }, select: { transferNumber: true } });
   if (dispatched) {
     notifyStockTransferUpdated({ orgId, transferNumber: dispatched.transferNumber, status: "DISPATCHED", actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "StockTransfer", entityId: id, action: "STOCK_TRANSFER_DISPATCHED", summary: `${dispatched.transferNumber} dispatched` });
@@ -174,9 +186,9 @@ export async function receiveStockTransferAction(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
-  await prisma.$transaction(async (tx) => {
+  const receivedTransition = await prisma.$transaction(async (tx) => {
     const transfer = await loadTransfer(tx, id, orgId);
-    if (!transfer || transfer.status !== "DISPATCHED") return;
+    if (!transfer || transfer.status !== "DISPATCHED") return false;
 
     for (const item of transfer.items) {
       const receiveQty = item.qtyDispatched || item.quantity;
@@ -201,13 +213,20 @@ export async function receiveStockTransferAction(formData: FormData) {
       });
     }
 
-    await tx.stockTransfer.update({
-      where: { id: transfer.id },
+    await tx.stockTransfer.updateMany({
+      where: { id: transfer.id, status: "DISPATCHED" },
       data: { status: "RECEIVED", receivedAt: new Date(), receivedById: user.id },
+    }).then((r) => {
+      if (!r.count) throw new Error("Transfer was already processed.");
     });
-  });
+    return true;
+  }).catch(() => redirect("/inventory/transfers?error=Receive+failed+or+already+processed") as never);
 
-  const received = await prisma.stockTransfer.findFirst({ where: { id, orgId }, select: { transferNumber: true } });
+  if (!receivedTransition) {
+    revalidatePath("/inventory/transfers");
+    return;
+  }
+  const received = await prisma.stockTransfer.findFirst({ where: { id, orgId, status: "RECEIVED" }, select: { transferNumber: true } });
   if (received) await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "StockTransfer", entityId: id, action: "STOCK_TRANSFER_RECEIVED", summary: `${received.transferNumber} received` });
   if (received) {
     notifyStockTransferUpdated({ orgId, transferNumber: received.transferNumber, status: "RECEIVED", actorName: user.name ?? user.email ?? "Unknown" }).catch(() => {});

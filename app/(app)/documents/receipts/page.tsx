@@ -46,6 +46,7 @@ export default async function ReceiptsPage({
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
   }
+  const canVoid = can.voidInvoices(user);
 
   const params = await searchParams;
   const q = (params.q ?? "").trim();
@@ -139,7 +140,8 @@ export default async function ReceiptsPage({
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const db = orgDb(orgId);
     const baseCurrency = org.baseCurrency;
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
+    // Rewriting a recorded amount is void-class: same grant as deletion.
+    if (!can.voidInvoices(user)) redirect("/dashboard");
     await ensureMoneySchema();
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
@@ -233,7 +235,8 @@ export default async function ReceiptsPage({
     const { user, orgId, org } = await requireOrgSession();
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const baseCurrency = org.baseCurrency;
-    if (!("ADMIN" === user.role || can.approveInvoices(user))) return;
+    // Deleting a cash record destroys money history: voidInvoices grant only.
+    if (!can.voidInvoices(user)) return;
     await ensureMoneySchema();
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
@@ -589,7 +592,8 @@ export default async function ReceiptsPage({
                       emailLabel="Email receipt"
                       waLinkHref={receiptWaPhone ? `https://wa.me/${receiptWaPhone}?text=${receiptShareText}` : null}
                     />
-                    <MenuSection label="Edit Receipt" />
+                    {canVoid ? <MenuSection label="Edit Receipt" /> : null}
+                    {canVoid ? (
                     <form action={updateReceiptAction} className="space-y-2 p-3">
                       <input type="hidden" name="paymentId" value={p.id} />
                       <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
@@ -603,12 +607,15 @@ export default async function ReceiptsPage({
                       <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
                       <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Receipt</MenuActionButton>
                     </form>
+                    ) : null}
+                    {canVoid ? (
                     <MenuDestructiveRow>
                       <form action={deleteReceiptAction}>
                         <input type="hidden" name="paymentId" value={p.id} />
                         <ConfirmSubmitButton message="Delete this receipt/payment? Totals will be recalculated." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Receipt</ConfirmSubmitButton>
                       </form>
                     </MenuDestructiveRow>
+                    ) : null}
                   </RowActionsMenu>
                 </div>
               </div>
@@ -714,7 +721,8 @@ export default async function ReceiptsPage({
                     emailLabel="Email receipt"
                     waLinkHref={receiptWaPhone ? `https://wa.me/${receiptWaPhone}?text=${receiptShareText}` : null}
                   />
-                  <MenuSection label="Edit Receipt" />
+                  {canVoid ? <MenuSection label="Edit Receipt" /> : null}
+                  {canVoid ? (
                   <form action={updateReceiptAction} className="space-y-2 p-3">
                     <input type="hidden" name="paymentId" value={p.id} />
                     <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
@@ -728,12 +736,15 @@ export default async function ReceiptsPage({
                     <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                     <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Receipt</MenuActionButton>
                   </form>
+                  ) : null}
+                  {canVoid ? (
                   <MenuDestructiveRow>
                     <form action={deleteReceiptAction}>
                       <input type="hidden" name="paymentId" value={p.id} />
                       <ConfirmSubmitButton message="Delete this receipt/payment? Totals will be recalculated." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Receipt</ConfirmSubmitButton>
                     </form>
                   </MenuDestructiveRow>
+                  ) : null}
                 </RowActionsMenu>
               </>
             );

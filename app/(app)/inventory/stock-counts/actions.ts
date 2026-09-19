@@ -143,10 +143,13 @@ export async function approveStockCountAction(formData: FormData): Promise<void>
       // Part.qtyOnHand is authoritative: apply the counted variance as a delta
       // rather than recomputing from SUM(location), which would wipe unlocated
       // stock recorded via manual adjustments or POS (C2 corruption fix).
-      await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { increment: item.varianceQty } } });
+      await tx.part.updateMany({ where: { id: item.partId, orgId }, data: { qtyOnHand: { increment: item.varianceQty } } });
     }
 
-    await tx.stockCount.update({ where: { id }, data: { status: "APPROVED", approvedAt: new Date(), approvedById: session.user.id } });
+    // Guarded close: a concurrent approval that committed first flips the
+    // status, so this one must not apply the same variances twice.
+    const closed = await tx.stockCount.updateMany({ where: { id, status: "SUBMITTED" }, data: { status: "APPROVED", approvedAt: new Date(), approvedById: session.user.id } });
+    if (!closed.count) throw new Error("Stock count was already processed.");
     return { countNumber: count.countNumber, variances: count.items.filter((i) => i.varianceQty !== 0).length };
   });
 

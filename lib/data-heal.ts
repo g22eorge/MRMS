@@ -182,6 +182,41 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
   }
 
 
+  // Link legacy complaints to their client: rows predating the client link
+  // match by phone, which leaks across shared/company lines. Link only when
+  // exactly one client in the org holds the number — ambiguity keeps the
+  // legacy phone match rather than misattributing.
+  let complaintsLinked = 0;
+  let complaintsAmbiguous = 0;
+  try {
+    const unlinked = await prisma.complaint.findMany({
+      where: { clientId: null, clientPhone: { not: "" } },
+      select: { id: true, orgId: true, clientPhone: true },
+      take: limit,
+    });
+    const owners = new Map<string, string | null>();
+    for (const row of unlinked) {
+      const key = `${row.orgId}::${row.clientPhone}`;
+      if (!owners.has(key)) {
+        const matches = await prisma.client.findMany({
+          where: { orgId: row.orgId, phone: row.clientPhone },
+          select: { id: true },
+          take: 2,
+        });
+        owners.set(key, matches.length === 1 ? matches[0].id : null);
+        if (matches.length !== 1) complaintsAmbiguous += 1;
+      }
+      const ownerId = owners.get(key);
+      if (!ownerId) continue;
+      complaintsLinked += 1;
+      if (dryRun) continue;
+      await prisma.complaint.update({ where: { id: row.id }, data: { clientId: ownerId } });
+    }
+  } catch {
+    // DB behind schema (no clientId column yet) — skip silently.
+  }
+
+
   if (candidates.length === 0) {
     return {
       ok: true,
@@ -195,6 +230,8 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
       stockTxnOrgIdFixed,
       invoicesResynced,
       resyncedInvoiceNumbers: resyncedNumbers.slice(0, 50),
+      complaintsLinked: 0,
+      complaintsAmbiguous: 0,
       changes: [],
     };
   }
@@ -297,6 +334,8 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
     stockTxnOrgIdFixed,
     invoicesResynced,
     resyncedInvoiceNumbers: resyncedNumbers.slice(0, 50),
+    complaintsLinked,
+    complaintsAmbiguous,
     changes: changes.slice(0, 50),
   };
 }

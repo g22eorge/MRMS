@@ -8,27 +8,33 @@ type Tx = Prisma.TransactionClient;
 type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote" | "complaint";
 
 /** Highest existing sequence for `inner` (e.g. "INV-2026-") within one org,
- * tolerating both tagged (EGL-INV-2026-0007) and legacy untagged numbers so the
- * sequence continues smoothly through the org-tag transition. */
+ * tolerating tagged, legacy untagged AND slash-era ("EIS/INV/2026/0044")
+ * numbers. The dash-only scan missed every slash number, reseeding low and
+ * burning counter values (or exhausting the skip loop) on every new org year.
+ **/
 async function currentMaxDocumentSequence(tx: Tx, countModel: CountModel, inner: string, orgId: string) {
+  // Slash-era numbers use "/" where the dash era used "-": match both.
+  const slashInner = inner.replaceAll("-", "/");
+  const whereAny = (field: string) => ({ OR: [{ [field]: { contains: inner } }, { [field]: { contains: slashInner } }] });
   // Quotation numbers live in two places — Quotation rows and, for job
   // quotations, Job.quotationNumber — and both draw on this one counter. Seed
   // from the higher of the two or a reseed could reissue a number already sent.
   const numbers: string[] = countModel === "quotation"
     ? [
-        ...(await tx.quotation.findMany({ where: { orgId, quoteNumber: { contains: inner } }, select: { quoteNumber: true } })).map((r) => r.quoteNumber),
-        ...(await tx.job.findMany({ where: { orgId, quotationNumber: { contains: inner } }, select: { quotationNumber: true } })).map((r) => r.quotationNumber ?? ""),
+        ...(await tx.quotation.findMany({ where: { orgId, ...whereAny("quoteNumber") }, select: { quoteNumber: true } })).map((r) => r.quoteNumber),
+        ...(await tx.job.findMany({ where: { orgId, ...whereAny("quotationNumber") }, select: { quotationNumber: true } })).map((r) => r.quotationNumber ?? ""),
       ]
     : countModel === "invoice"
-      ? (await tx.invoice.findMany({ where: { orgId, invoiceNumber: { contains: inner } }, select: { invoiceNumber: true } })).map((r) => r.invoiceNumber)
+      ? (await tx.invoice.findMany({ where: { orgId, ...whereAny("invoiceNumber") }, select: { invoiceNumber: true } })).map((r) => r.invoiceNumber)
       : countModel === "deliveryNote"
-        ? (await tx.deliveryNote.findMany({ where: { orgId, deliveryNoteNumber: { contains: inner } }, select: { deliveryNoteNumber: true } })).map((r) => r.deliveryNoteNumber)
+        ? (await tx.deliveryNote.findMany({ where: { orgId, ...whereAny("deliveryNoteNumber") }, select: { deliveryNoteNumber: true } })).map((r) => r.deliveryNoteNumber)
         : countModel === "creditNote"
-          ? (await tx.creditNote.findMany({ where: { orgId, creditNoteNumber: { contains: inner } }, select: { creditNoteNumber: true } })).map((r) => r.creditNoteNumber)
+          ? (await tx.creditNote.findMany({ where: { orgId, ...whereAny("creditNoteNumber") }, select: { creditNoteNumber: true } })).map((r) => r.creditNoteNumber)
           : countModel === "complaint"
-            ? (await tx.complaint.findMany({ where: { orgId, complaintNumber: { contains: inner } }, select: { complaintNumber: true } })).map((r) => r.complaintNumber)
-            : (await tx.receipt.findMany({ where: { orgId, receiptNumber: { contains: inner } }, select: { receiptNumber: true } })).map((r) => r.receiptNumber);
-  return maxNumberSequence(inner, numbers.filter(Boolean));
+            ? (await tx.complaint.findMany({ where: { orgId, ...whereAny("complaintNumber") }, select: { complaintNumber: true } })).map((r) => r.complaintNumber)
+            : (await tx.receipt.findMany({ where: { orgId, ...whereAny("receiptNumber") }, select: { receiptNumber: true } })).map((r) => r.receiptNumber);
+  const clean = numbers.filter(Boolean);
+  return Math.max(maxNumberSequence(inner, clean), maxNumberSequence(slashInner, clean));
 }
 
 /**
@@ -209,6 +215,10 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
     include: { items: true, job: { select: { id: true, jobNumber: true } } },
   });
   if (!quotation) return null;
+
+  // Only client-facing quotes convert: drafts, rejections and expired offers
+  // must not become invoices behind the UI's back.
+  if (!["SENT", "ACCEPTED"].includes(quotation.status)) return null;
 
   if (quotation.convertedToInvoiceId) {
     const existing = await tx.invoice.findFirst({ where: { id: quotation.convertedToInvoiceId, orgId: params.orgId } });

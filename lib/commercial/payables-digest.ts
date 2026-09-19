@@ -64,14 +64,17 @@ export async function runPayablesForOrg(orgId: string, now = new Date()): Promis
     prisma.supplierBill.findMany({
       where: { orgId, status: { in: ["POSTED", "PART_PAID"] }, OR: [{ dueAt: null }, { dueAt: { lte: weekOut } }] },
       select: { totalAmount: true, paidAmount: true, currency: true, exchangeRateToBase: true, dueAt: true },
+      take: 500,
     }).catch(() => []),
     prisma.expense.findMany({
       where: { orgId, paidAt: null, OR: [{ dueAt: null }, { dueAt: { lte: weekOut } }] },
       select: { amount: true, currency: true, exchangeRateToBase: true, dueAt: true, createdAt: true },
+      take: 500,
     }).catch(() => []),
     prisma.job.findMany({
       where: { orgId, repairPath: "EXTERNAL", externalPaid: false, status: { in: ["READY_FOR_PICKUP", "COMPLETED", "DELIVERED"] } },
       select: { id: true, externalTechFee: true, externalTechBill: true },
+      take: 500,
     }).catch(() => []),
   ]);
   const toBase = (amount: number, curr?: string | null, rate?: number | null) =>

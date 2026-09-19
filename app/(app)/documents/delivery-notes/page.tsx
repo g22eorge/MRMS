@@ -47,6 +47,7 @@ export default async function DeliveryNotesPage({
   searchParams: Promise<{ q?: string; period?: string; method?: string; page?: string; size?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
+  const canVoid = can.voidInvoices(user);
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const periodFilter = sp.period ?? "all";
@@ -180,7 +181,8 @@ export default async function DeliveryNotesPage({
   async function deleteDeliveryNoteAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
-    if (!("ADMIN" === user.role || can.approveInvoices(user))) return;
+    // Numbered delivery records are append-only history: voidInvoices grant only.
+    if (!can.voidInvoices(user)) return;
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     const deliveryNoteId = String(formData.get("deliveryNoteId") ?? "").trim();
@@ -603,12 +605,14 @@ export default async function DeliveryNotesPage({
                   <textarea name="note" defaultValue={n.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                   <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Delivery Note</MenuActionButton>
                 </form>
-                <MenuDestructiveRow>
-                  <form action={deleteDeliveryNoteAction}>
-                    <input type="hidden" name="deliveryNoteId" value={n.id} />
-                    <ConfirmSubmitButton message="Delete this delivery note? This cannot be undone." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Delivery Note</ConfirmSubmitButton>
-                  </form>
-                </MenuDestructiveRow>
+                {canVoid ? (
+                  <MenuDestructiveRow>
+                    <form action={deleteDeliveryNoteAction}>
+                      <input type="hidden" name="deliveryNoteId" value={n.id} />
+                      <ConfirmSubmitButton message="Delete this delivery note? This cannot be undone." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Delivery Note</ConfirmSubmitButton>
+                    </form>
+                  </MenuDestructiveRow>
+                ) : null}
               </RowActionsMenu>
             </>
           );

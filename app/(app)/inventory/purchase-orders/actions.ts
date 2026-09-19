@@ -49,10 +49,16 @@ async function performReceipt(
   locationId: string,
   updates: ReceiptUpdate[],
 ): Promise<void> {
-  const grnNumber = await generateGrnNumber(orgId);
+  // GRN numbers allocate read-max: retry the whole receipt on collision.
+  // Replay-safe — everything mutating lives inside the transaction.
   let grnId = "";
-
-  await prisma.$transaction(async (tx) => {
+  let grnNumber = "";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    grnNumber = await generateGrnNumber(orgId);
+    try {
+      await prisma.$transaction(async (tx) => {
+    // GRN shell first; item rows are written per applied delta below, so a
+    // clamped concurrent receive records what moved, not the stale request.
     const grn = await tx.goodsReceived.create({
       data: {
         orgId,
@@ -61,25 +67,37 @@ async function performReceipt(
         poId: po.id,
         locationId,
         createdById: userId,
-        items: {
-          create: updates.map((u) => ({
-            poItemId: u.id,
-            partId: u.partId,
-            description: u.description,
-            quantity: u.delta,
-            unitCost: u.unitCost,
-          })),
-        },
       },
       select: { id: true },
     });
     grnId = grn.id;
 
     for (const u of updates) {
-      await tx.purchaseOrderItem.update({ where: { id: u.id }, data: { qtyReceived: u.qtyReceived } });
-      if (u.partId && u.delta > 0) {
+      // Re-read inside the txn: a concurrent receive may have moved
+      // qtyReceived since the form was rendered. Clamp to what is still
+      // open instead of overwriting with a stale absolute.
+      const live = await tx.purchaseOrderItem.findFirst({
+        where: { id: u.id, po: { id: po.id, orgId } },
+        select: { qtyReceived: true, qtyOrdered: true },
+      });
+      if (!live) continue;
+      const want = Math.min(u.qtyReceived, live.qtyOrdered);
+      const delta = want - live.qtyReceived;
+      if (delta <= 0) continue;
+      await tx.purchaseOrderItem.update({ where: { id: u.id }, data: { qtyReceived: want } });
+      await tx.goodsReceivedItem.create({
+        data: {
+          grnId,
+          poItemId: u.id,
+          partId: u.partId,
+          description: u.description,
+          quantity: delta,
+          unitCost: u.unitCost,
+        },
+      });
+      if (u.partId && delta > 0) {
         // Convert purchase units → base stock units; cost is per base unit.
-        const baseDelta = u.delta * u.purchaseFactor;
+        const baseDelta = delta * u.purchaseFactor;
         const baseUnitCost = u.purchaseFactor !== 1 ? u.unitCost / u.purchaseFactor : u.unitCost;
         await tx.partLocationStock.upsert({
           where: { partId_locationId: { partId: u.partId, locationId } },
@@ -89,7 +107,7 @@ async function performReceipt(
         await tx.partStockTransaction.create({
           data: { partId: u.partId, orgId, locationId, unitCost: baseUnitCost, sourceType: "GRN", sourceId: grnId, type: "IN", quantity: baseDelta, reason: `Received via ${grnNumber}`, createdById: userId },
         });
-        const partBefore = await tx.part.findUnique({ where: { id: u.partId }, select: { qtyOnHand: true, unitCost: true } });
+        const partBefore = await tx.part.findFirst({ where: { id: u.partId, orgId }, select: { qtyOnHand: true, unitCost: true } });
         const oldQty = partBefore?.qtyOnHand ?? 0;
         // Part.qtyOnHand is authoritative; weighted-average cost, never overwritten
         // with a zero/negative receipt price.
@@ -98,7 +116,7 @@ async function performReceipt(
           const denom = oldQty + baseDelta;
           nextCost = denom > 0 ? (oldQty * nextCost + baseDelta * baseUnitCost) / denom : baseUnitCost;
         }
-        await tx.part.update({ where: { id: u.partId }, data: { qtyOnHand: { increment: baseDelta }, unitCost: nextCost } });
+        await tx.part.updateMany({ where: { id: u.partId, orgId }, data: { qtyOnHand: { increment: baseDelta }, unitCost: nextCost } });
       }
     }
 
@@ -107,7 +125,16 @@ async function performReceipt(
     const anyReceived = allItems.some((i) => i.qtyReceived > 0);
     const newStatus = allReceived ? "RECEIVED" : anyReceived ? "PARTIAL" : "ORDERED";
     await tx.purchaseOrder.update({ where: { id: po.id }, data: { status: newStatus as never, receivedAt: allReceived ? new Date() : po.receivedAt } });
-  });
+      });
+      break;
+    } catch (error) {
+      const dupe = error instanceof Error && "code" in error && (error as { code?: string }).code === "P2002";
+      if (!dupe) throw error;
+      if (attempt >= 2) throw new Error("Could not number the goods receipt. Please try again.");
+      // Collision: loop regenerates the number and replays the receipt.
+    }
+  }
+  if (!grnId) throw new Error("Could not number the goods receipt. Please try again.");
 
   await writeSystemAuditEvent({
     orgId,
@@ -474,6 +501,9 @@ export async function reverseGoodsReceivedAction(formData: FormData): Promise<{ 
   if (billed) return { error: `Cannot reverse — this GRN is billed on ${billed.billNumber}. Cancel the bill first.` };
 
   const result = await prisma.$transaction(async (tx) => {
+    // Re-check inside: a concurrent reversal may have cancelled it already.
+    const live = await tx.goodsReceived.findFirst({ where: { id: grn.id, orgId, status: "POSTED" }, select: { id: true } });
+    if (!live) return { error: "Goods-received note is no longer reversible." };
     for (const item of grn.items) {
       if (!item.partId || item.quantity <= 0) continue;
 
@@ -486,21 +516,28 @@ export async function reverseGoodsReceivedAction(formData: FormData): Promise<{ 
         return { error: "Cannot reverse — some received stock has already been sold or moved out." };
       }
 
-      await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { decrement: baseQty } } });
+      await tx.part.updateMany({ where: { id: item.partId, orgId }, data: { qtyOnHand: { decrement: baseQty } } });
       const loc = await tx.partLocationStock.findUnique({
         where: { partId_locationId: { partId: item.partId, locationId: grn.locationId } },
         select: { qtyOnHand: true },
       });
       if (loc) {
+        // No clamping: taking less than received here while Part takes the
+        // full amount silently diverges the two. If the location is short,
+        // the stock moved elsewhere — say so instead of corrupting.
+        if (loc.qtyOnHand < baseQty) {
+          return { error: "Cannot reverse — stock moved out of the receiving location. Adjust it back first." };
+        }
         await tx.partLocationStock.update({
           where: { partId_locationId: { partId: item.partId, locationId: grn.locationId } },
-          data: { qtyOnHand: { decrement: Math.min(loc.qtyOnHand, baseQty) } },
+          data: { qtyOnHand: { decrement: baseQty } },
         });
       }
       if (item.poItemId) {
+        const poItem = await tx.purchaseOrderItem.findFirst({ where: { id: item.poItemId, po: { orgId } }, select: { qtyReceived: true } });
         await tx.purchaseOrderItem.update({
           where: { id: item.poItemId },
-          data: { qtyReceived: { decrement: item.quantity } },
+          data: { qtyReceived: Math.max(0, (poItem?.qtyReceived ?? 0) - item.quantity) },
         });
       }
       await tx.partStockTransaction.create({
@@ -518,15 +555,15 @@ export async function reverseGoodsReceivedAction(formData: FormData): Promise<{ 
       });
     }
 
-    await tx.goodsReceived.update({ where: { id: grn.id }, data: { status: "CANCELLED" } });
+    await tx.goodsReceived.updateMany({ where: { id: grn.id, orgId }, data: { status: "CANCELLED" } });
 
     // Roll the PO status back to match the reduced received quantities.
     if (grn.poId) {
-      const allItems = await tx.purchaseOrderItem.findMany({ where: { poId: grn.poId }, select: { qtyOrdered: true, qtyReceived: true } });
+      const allItems = await tx.purchaseOrderItem.findMany({ where: { poId: grn.poId, po: { orgId } }, select: { qtyOrdered: true, qtyReceived: true } });
       const allReceived = allItems.length > 0 && allItems.every((i) => i.qtyReceived >= i.qtyOrdered);
       const anyReceived = allItems.some((i) => i.qtyReceived > 0);
-      await tx.purchaseOrder.update({
-        where: { id: grn.poId },
+      await tx.purchaseOrder.updateMany({
+        where: { id: grn.poId, orgId },
         data: { status: (allReceived ? "RECEIVED" : anyReceived ? "PARTIAL" : "ORDERED") as never },
       });
     }

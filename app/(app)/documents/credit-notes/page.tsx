@@ -66,7 +66,9 @@ export default async function CreditNotesPage({
   async function markItemsReceivedAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
-    if (!can.viewFinancials(user) && !["ADMIN", "OPS"].includes(user.role)) return;
+    // Restoring stock moves inventory: inventory grant required, not just
+    // financial visibility.
+    if (!can.manageInventory(user)) return;
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
 
     const creditNoteId = String(formData.get("creditNoteId") ?? "").trim();
@@ -807,7 +809,7 @@ export default async function CreditNotesPage({
             Open WhatsApp Link
           </MenuActionLink>
         ) : null}
-        {!cn.itemsReceivedBackAt ? (
+        {!cn.itemsReceivedBackAt && can.manageInventory(user) ? (
           <>
             <MenuSection label="Inventory Return" />
             <form action={markItemsReceivedAction} className="p-3">

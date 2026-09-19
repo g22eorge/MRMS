@@ -566,6 +566,7 @@ model Client {
   portalUsers       PortalUser[]       @relation("ClientPortalUsers")
   linkedPortalUsers PortalUserClient[] @relation("ClientLinkedPortalUsers")
   outboundMessages  OutboundMessage[]
+  complaints        Complaint[]
 
   @@unique([phone, orgId])
   @@index([orgId])
@@ -2830,6 +2831,8 @@ model Complaint {
   saleId String?
 
   // Complainant info
+  clientId    String?
+  client      Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
   clientName  String
   clientPhone String
   clientEmail String?

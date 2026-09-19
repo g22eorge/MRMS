@@ -6,7 +6,6 @@ import { EIS_ORG_ID } from "@/lib/org";
 import { normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
 import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { deliverOutboundMessage, enqueueEmailMessage, enqueueWhatsAppMessage } from "@/lib/notifications/whatsapp-outbox";
-import { sendCustomWhatsAppMessage } from "@/lib/notifications/whatsapp";
 
 interface CreateNotificationParams {
   orgId: string;
@@ -753,10 +752,15 @@ export async function notifyApprovalNeeded(
   });
 
   if (client?.phone && prefs.some((p) => p.whatsappEnabled)) {
-    await sendCustomWhatsAppMessage(
-      client.phone,
-      `Hi ${client.fullName}, your repair for job ${jobNumber} is ready. Estimated cost: ${formatMoney(costEstimate)}. Please confirm to proceed. - Your Repair Team`
-    );
+    // Routed through the outbox (not a direct send) so the attempt is
+    // linked to the job and visible in its Messages tab either way.
+    await enqueueWhatsAppMessage({
+      orgId,
+      to: client.phone,
+      body: `Hi ${client.fullName}, your repair for job ${jobNumber} is ready. Estimated cost: ${formatMoney(costEstimate)}. Please confirm to proceed. - Your Repair Team`,
+      type: "JOB_STATUS_UPDATE",
+      jobId,
+    }).catch(() => null);
   }
 }
 

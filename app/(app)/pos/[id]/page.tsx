@@ -131,6 +131,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
   }
+  const canDiscount = can.applyPosDiscount(user);
 
   const { id } = await params;
   const errorMessage = (await searchParams)?.error?.trim() || null;
@@ -1316,11 +1317,14 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                 VAT {formatMoney(sale.vatAmount, saleCurrency)} &middot; Total {formatMoney(sale.totalAmount, saleCurrency)}
               </span>
             </summary>
+            {canDiscount ? (
             <form
               action={async (formData: FormData) => {
                 "use server";
                 const { user, orgId, org } = await requireOrgSession();
-                if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+                // Till discounts move real money: canonical discount grant
+                // only (grantable per-user via extra permissions).
+                if (!can.applyPosDiscount(user)) redirect("/dashboard");
                 assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
                 const saleId = String(formData.get("saleId") ?? "").trim();
                 const raw = String(formData.get("discountAmount") ?? "").trim();
@@ -1355,6 +1359,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
               />
               <SubmitButton variant="secondary" size="sm" pendingLabel="Applying…">Apply</SubmitButton>
             </form>
+            ) : null}
             <form
               action={toggleSaleVatAction}
               className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-3 py-2.5"

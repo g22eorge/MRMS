@@ -246,26 +246,40 @@ export function NotificationBell() {
     setIsOpen((v) => !v);
   }
 
-  async function markRead(id: string) {
-    setNotifications((prev) => (
-      showAll
-        ? prev.map((n) => n.id === id ? { ...n, isRead: true } : n)
-        : prev.filter((n) => n.id !== id)
-    ));
-    setUnreadCount((c) => Math.max(0, c - 1));
-    await fetch(`/api/notifications/${id}`, { method: "POST" }).catch(() => {});
+  async function markRead(n: Notification) {
+    // Only previously-unread rows move the badge: re-clicking a read row in
+    // "show all" mode used to decrement into a desync until the next poll.
+    setNotifications((prev) => {
+      const target = prev.find((x) => x.id === n.id);
+      if (!target || target.isRead) return prev;
+      return showAll
+        ? prev.map((x) => x.id === n.id ? { ...x, isRead: true } : x)
+        : prev.filter((x) => x.id !== n.id);
+    });
+    setUnreadCount((c) => {
+      const target = notifications.find((x) => x.id === n.id);
+      return target && !target.isRead ? Math.max(0, c - 1) : c;
+    });
+    await fetch(`/api/notifications/${n.id}`, { method: "POST" }).catch(() => {});
   }
 
-  // Mark all read → clear the entire list
+  // Mark all read → clear the entire list. Rolls back on failure so a dropped
+  // request doesn't silently eat the badge and the list.
   async function markAllRead() {
-    setNotifications((prev) => showAll ? prev.map((n) => ({ ...n, isRead: true })) : []);
+    const snapshot = notifications;
+    const snapshotCount = unreadCount;
+    setNotifications((prev) => showAll ? prev.map((x) => ({ ...x, isRead: true })) : []);
     setUnreadCount(0);
-    await fetch("/api/notifications/read-all", { method: "POST" }).catch(() => {});
+    const res = await fetch("/api/notifications/read-all", { method: "POST" }).catch(() => null);
+    if (!res || !res.ok) {
+      setNotifications(snapshot);
+      setUnreadCount(snapshotCount);
+    }
   }
 
   // Click a notification → mark it read, close panel, navigate if linked
   async function handleClick(n: Notification) {
-    await markRead(n.id);
+    await markRead(n);
     setIsOpen(false);
     if (n.job?.id) {
       router.push(`/jobs/${n.job.id}`);
