@@ -224,14 +224,16 @@ type ExpenseNumberDb = {
 };
 
 /**
- * Next expense number for an org. The sequence is the max trailing run of
- * digits across the org's existing numbers (any shape, so legacy EXP-…
- * numbers count) plus one — it never resets, which keeps the month-only
- * format unique across years.
+ * Next expense number for an org: TAG/MM/NNN (e.g. EIS/09/042). The tag is
+ * the branding prefix shared with every other document, the month is when
+ * the expense is raised, and the sequence is the max trailing run of digits
+ * across the org's existing numbers (any shape, so legacy EXP-… numbers
+ * count) plus one — it never resets, which keeps the month-only format
+ * unique across years.
  */
 export async function nextExpenseNumber(orgId: string, now = new Date(), db: ExpenseNumberDb = prisma) {
-  const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
+  const [{ prefix }, rows] = await Promise.all([
+    getOrgNumberConfig(orgId),
     db.expense.findMany({ where: { orgId }, select: { expenseNumber: true } }),
   ]);
   let max = 0;
@@ -241,5 +243,5 @@ export async function nextExpenseNumber(orgId: string, now = new Date(), db: Exp
     const n = Number(match[1]);
     if (Number.isFinite(n) && n > max) max = n;
   }
-  return composeExpenseNumber(tag, now, max + 1);
+  return composeExpenseNumber(prefix, now, max + 1);
 }
