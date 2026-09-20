@@ -125,7 +125,66 @@ function bucketchannels(
   return { ...channels, total };
 }
 
-/** Single wide fetch covering mtdStart→today, bucketed into mtd/today/yesterday — 2 queries not 6 */
+/** Single wide fetch covering chartStart→today, bucketed per period in JS — 2 queries, not 2×N */
+export type CashCollectionRows = {
+  payments: Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null; saleId: string | null; receivedAt: Date | null; invoice: { invoiceType: string } | null }>;
+  legacyJobs: Array<{ clientBill: number | null; clientPaidAt: Date | null; invoice: { id: string } | null }>;
+};
+
+export async function loadCashCollectionRows(params: {
+  orgId: string;
+  start: Date;
+}): Promise<CashCollectionRows> {
+  const [payments, legacyJobs] = await Promise.all([
+    prisma.payment.findMany({
+      where: { orgId: params.orgId, ...INCOMING_PAYMENT, receivedAt: { gte: params.start } },
+      select: { amount: true, currency: true, exchangeRateToBase: true, saleId: true, receivedAt: true, invoice: { select: { invoiceType: true } } },
+    }),
+    prisma.job.findMany({
+      where: { orgId: params.orgId, clientPaid: true, clientPaidAt: { gte: params.start } },
+      select: { clientBill: true, clientPaidAt: true, invoice: { select: { id: true } } },
+    }),
+  ]);
+  return {
+    payments: payments.map((p) => ({ ...p, invoice: p.invoice ? { invoiceType: p.invoice.invoiceType as string } : null })),
+    legacyJobs: legacyJobs.map((j) => ({ ...j, invoice: j.invoice })),
+  };
+}
+
+export function bucketCashCollections(
+  rows: CashCollectionRows,
+  baseCurrency: string,
+  range: { start: Date; end?: Date },
+): ChannelTotals {
+  return bucketchannels(rows.payments, rows.legacyJobs, baseCurrency, range);
+}
+
+export type ExpenseRow = { amount: number; currency: string | null; exchangeRateToBase: number | null; paidAt: Date | null };
+
+/** Single wide fetch for the cash-flow chart — bucketed per period in JS. */
+export async function loadExpenseRows(params: {
+  orgId: string;
+  start: Date;
+}): Promise<ExpenseRow[]> {
+  return prisma.expense.findMany({
+    where: { orgId: params.orgId, paidAt: { gte: params.start } },
+    select: { amount: true, currency: true, exchangeRateToBase: true, paidAt: true },
+  });
+}
+
+export function bucketExpenses(
+  rows: ExpenseRow[],
+  baseCurrency: string,
+  range: { start: Date; end?: Date },
+): number {
+  const end = range.end ?? new Date(8640000000000000);
+  let total = 0;
+  for (const e of rows) {
+    if (!e.paidAt || e.paidAt < range.start || e.paidAt > end) continue;
+    total += baseAmount(e, baseCurrency);
+  }
+  return total;
+}
 export async function loadCashCollectionsByChannelWide(params: {
   orgId: string;
   baseCurrency: string;

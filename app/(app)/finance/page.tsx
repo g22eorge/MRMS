@@ -10,8 +10,10 @@ import { resolveTechCost } from "@/lib/billing";
 import { getTechnicianPayoutTotalsByJobIds } from "@/lib/payouts";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import {
-  loadCashCollectionsByChannel,
-  loadExpensesTotal,
+  loadCashCollectionRows,
+  bucketCashCollections,
+  loadExpenseRows,
+  bucketExpenses,
   loadReceivablesTotal,
 } from "@/lib/finance/reconciliation";
 import { Button } from "@/components/ui/Button";
@@ -39,12 +41,26 @@ export default async function FinancePage({
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  /* ── cash-flow chart (collections vs paid expenses per period) ──────────── */
+  const periodCount = rangeKey === "6m" ? 6 : 12;
+  const periodMonths = rangeKey === "3y" ? 3 : 1;
+  const cashFlowMonths = Array.from({ length: periodCount }, (_, i) => {
+    const start = new Date(now.getFullYear(), now.getMonth() - (periodCount - 1 - i) * periodMonths, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() - (periodCount - 1 - i) * periodMonths + periodMonths, 1);
+    const label = periodMonths === 1
+      ? start.toLocaleDateString("en-UG", { month: "short" })
+      : `Q${Math.floor(start.getMonth() / 3) + 1} '${String(start.getFullYear()).slice(2)}`;
+    return { key: `${label}-${start.getFullYear()}-${start.getMonth()}`, label, start, end, inflow: 0, outflow: 0 };
+  });
+  // One wide fetch per stream covers MTD, last month AND every chart period —
+  // bucketed in JS instead of 2 queries per period (up to 24 round-trips).
+  const wideStart = new Date(Math.min(cashFlowMonths[0].start.getTime(), lastMonthStart.getTime()));
+
   /* ── parallel data fetch ──────────────────────────────────────────────── */
   const weekOut = new Date(now.getTime() + 7 * 86_400_000);
   const [
-    expensesTotal,
-    collectionsMtd,
-    collectionsLastMonth,
+    collectionRows,
+    expenseRows,
     receivables,
     payoutsTotalMtd,
     billStats,
@@ -52,9 +68,8 @@ export default async function FinancePage({
     overdueInvoices,
     techDueJobs,
   ] = await Promise.all([
-    loadExpensesTotal({ orgId, baseCurrency: currency, range: { start: monthStart } }).catch(() => 0),
-    loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: monthStart } }).catch(() => ({ total: 0, repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0 })),
-    loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: lastMonthStart, end: lastMonthEnd } }).catch(() => ({ total: 0 })),
+    loadCashCollectionRows({ orgId, start: wideStart }).catch(() => ({ payments: [], legacyJobs: [] })),
+    loadExpenseRows({ orgId, start: wideStart }).catch(() => []),
     loadReceivablesTotal(orgId).catch(() => ({ total: 0, invoiceBalance: 0, saleBalance: 0, invoiceCount: 0, saleCount: 0 })),
 
     // Tech payouts this month
@@ -86,36 +101,22 @@ export default async function FinancePage({
   ]);
 
   /* ── derived values ───────────────────────────────────────────────────── */
+  const collectionsMtd = bucketCashCollections(collectionRows, currency, { start: monthStart });
+  const collectionsLastMonth = bucketCashCollections(collectionRows, currency, { start: lastMonthStart, end: lastMonthEnd }).total;
+  const expensesTotal = bucketExpenses(expenseRows, currency, { start: monthStart });
   const revTotal  = collectionsMtd.total;
   const expTotal  = expensesTotal;
   const netMtd    = revTotal - expTotal;
-  const revPct    = collectionsLastMonth.total > 0
-    ? Math.round(((revTotal - collectionsLastMonth.total) / collectionsLastMonth.total) * 100)
+  const revPct    = collectionsLastMonth > 0
+    ? Math.round(((revTotal - collectionsLastMonth) / collectionsLastMonth) * 100)
     : null;
 
   const payoutsThisMonth = payoutsTotalMtd._sum.amount ?? 0;
 
-  /* ── cash-flow chart (collections vs paid expenses per period) ──────────── */
-  const periodCount = rangeKey === "6m" ? 6 : 12;
-  const periodMonths = rangeKey === "3y" ? 3 : 1;
-  const cashFlowMonths = Array.from({ length: periodCount }, (_, i) => {
-    const start = new Date(now.getFullYear(), now.getMonth() - (periodCount - 1 - i) * periodMonths, 1);
-    const end = new Date(now.getFullYear(), now.getMonth() - (periodCount - 1 - i) * periodMonths + periodMonths, 1);
-    const label = periodMonths === 1
-      ? start.toLocaleDateString("en-UG", { month: "short" })
-      : `Q${Math.floor(start.getMonth() / 3) + 1} '${String(start.getFullYear()).slice(2)}`;
-    return { key: `${label}-${start.getFullYear()}-${start.getMonth()}`, label, start, end, inflow: 0, outflow: 0 };
-  });
-  await Promise.all(
-    cashFlowMonths.map(async (m) => {
-      const [collections, outgo] = await Promise.all([
-        loadCashCollectionsByChannel({ orgId, baseCurrency: currency, range: { start: m.start, end: m.end } }).catch(() => ({ total: 0 })),
-        loadExpensesTotal({ orgId, baseCurrency: currency, range: { start: m.start, end: m.end } }).catch(() => 0),
-      ]);
-      m.inflow = collections.total;
-      m.outflow = outgo;
-    }),
-  );
+  for (const m of cashFlowMonths) {
+    m.inflow = bucketCashCollections(collectionRows, currency, { start: m.start, end: m.end }).total;
+    m.outflow = bucketExpenses(expenseRows, currency, { start: m.start, end: m.end });
+  }
   const cashFlowTotalIn = cashFlowMonths.reduce((s, m) => s + m.inflow, 0);
   const cashFlowTotalOut = cashFlowMonths.reduce((s, m) => s + m.outflow, 0);
   const cashFlowData = cashFlowMonths.map((m) => {

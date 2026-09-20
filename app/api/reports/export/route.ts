@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
             in: JOB_STATUSES.filter(isOpenJobStatus),
           },
         },
-      include: { assignedTo: true },
+      select: { jobNumber: true, status: true, repairPath: true, repairTimeline: true, receivedAt: true, assignedTo: { select: { name: true } } },
       orderBy: { receivedAt: "asc" },
     });
 
@@ -184,7 +184,7 @@ export async function GET(req: NextRequest) {
         status: "COMPLETED",
         completedAt: { gte: month.start, lte: month.end },
       },
-      include: { client: true },
+      select: { jobNumber: true, completedAt: true, clientBill: true, externalTechBill: true, client: { select: { fullName: true, organization: true } } },
       orderBy: { completedAt: "asc" },
     });
 
@@ -224,7 +224,7 @@ export async function GET(req: NextRequest) {
         repairPath: "EXTERNAL",
         assignedTo: { is: { role: "TECHNICIAN_EXTERNAL" } },
       },
-      include: { assignedTo: true },
+      select: { id: true, jobNumber: true, status: true, completedAt: true, assignedTo: { select: { name: true } } },
       orderBy: { receivedAt: "asc" },
     });
     const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id), orgId);
@@ -596,7 +596,7 @@ export async function GET(req: NextRequest) {
   // ── Technician Performance (fallback) ──────────────────────────────────────
   const jobs = await prisma.job.findMany({
     where: { orgId, assignedToId: { not: null } },
-    include: { assignedTo: true },
+    select: { status: true, completedAt: true, receivedAt: true, assignedTo: { select: { id: true, name: true, role: true } } },
     orderBy: { receivedAt: "asc" },
   });
 

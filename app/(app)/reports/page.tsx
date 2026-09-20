@@ -14,7 +14,7 @@ import { MobileActivityFeed } from "@/components/reports/MobileActivityFeed";
 import { getClientBill, getExternalTechBill, resolveTechCost } from "@/lib/billing";
 import { formatMoneyCompact, toBaseAmount } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
-import { monthLabel, monthRange, monthSequence, yearRange } from "@/lib/date-ranges";
+import { monthLabel, monthRange, yearRange } from "@/lib/date-ranges";
 import { loadBilledTotals, loadCashCollectionsByChannel, loadReceivablesTotal } from "@/lib/finance/reconciliation";
 import { ACTIVE_JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
@@ -236,7 +236,6 @@ export default async function ReportsPage({
   const selectedMonthString =
     period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
   const trendNow = new Date();
-  const trendMonths = monthSequence(trendNow.getFullYear(), trendNow.getMonth() + 1, trendNow.getMonth() + 1);
 
   // Rolling window for the all-jobs analyses (avg turnaround, common faults) so
   // they don't scan every completed job the org has ever had — the query grew
@@ -251,22 +250,17 @@ export default async function ReportsPage({
     openJobs,
     externalCount,
     inHouseCount,
-    _externalPayoutOutstandingJobs,
     paidExternalJobs,
     earliestJob,
     latestJob,
-    techPerfJobsRaw,
+    periodJobs,
     approvalDelayJobs,
     salesByPeriod,
-    _invoicesByPeriod,
     salesTargetsForPeriod,
-    staffJobRevenue,
     leadFunnel,
     lowStockParts,
     supplierBillsAgg,
     expensesMtd,
-    _trendJobs,
-    jobsInSelectedPeriod,
   ] = await Promise.all([
     prisma.job.groupBy({ by: ["status"], where: { orgId }, _count: { status: true } }),
     prisma.job.findMany({
@@ -277,9 +271,13 @@ export default async function ReportsPage({
     }),
     prisma.job.findMany({
       where: { orgId, status: "COMPLETED", completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+      // One scan serves revenue, margin AND staff-revenue below (same filter
+      // as the old staffJobRevenue query, which this replaces).
+      select: { clientBill: true, externalTechBill: true, createdById: true, createdBy: { select: { id: true, name: true } } },
     }),
     prisma.job.findMany({
       where: { orgId, status: "COMPLETED", completedAt: { gte: prevRange.start, lte: prevRange.end } },
+      select: { clientBill: true },
     }),
     prisma.job.findMany({
       where: {
@@ -305,31 +303,26 @@ export default async function ReportsPage({
       },
     }),
     prisma.job.findMany({
-      where: {
-        orgId,
-        repairPath: "EXTERNAL",
-        status: { in: ["READY_FOR_PICKUP", "COMPLETED", "DELIVERED"] as JobStatus[] },
-      },
-      select: { id: true, externalTechBill: true },
-    }),
-    prisma.job.findMany({
       where: { orgId, externalPaid: true, externalPaidAt: { gte: selectedRange.start, lte: selectedRange.end } },
       select: { externalTechFee: true, externalTechBill: true },
     }),
     prisma.job.findFirst({ where: { orgId }, orderBy: { receivedAt: "asc" }, select: { receivedAt: true } }),
     prisma.job.findFirst({ where: { orgId }, orderBy: { receivedAt: "desc" }, select: { receivedAt: true } }),
+    // One scan of the received-in-window set serves tech performance, device
+    // insights AND the repeat-client rate below (replaces techPerfJobsRaw,
+    // jobsInSelectedPeriod and periodJobClientRows).
     prisma.job.findMany({
       where: {
         orgId,
         receivedAt: { gte: selectedRange.start, lte: selectedRange.end },
-        assignedToId: { not: null },
       },
       select: {
+        deviceType: true,
         status: true,
+        clientBill: true,
         completedAt: true,
         receivedAt: true,
-        clientBill: true,
-        externalTechBill: true,
+        clientId: true,
         assignedTo: { select: { id: true, name: true, role: true } },
       },
     }),
@@ -353,37 +346,7 @@ export default async function ReportsPage({
         select: { totalAmount: true, createdById: true, createdBy: { select: { id: true, name: true } } },
       })
       .catch(() => [] as Array<{ totalAmount: number; createdById: string | null; createdBy: { id: string; name: string } | null }>),
-    prisma.invoice
-      .findMany({
-        where: { orgId, status: "PAID", paidAt: { gte: selectedRange.start, lte: selectedRange.end } },
-        select: {
-          totalAmount: true,
-          job: { select: { createdById: true, createdBy: { select: { id: true, name: true } } } },
-        },
-      })
-      .catch(
-        () =>
-          [] as Array<{
-            totalAmount: number;
-            job: { createdById: string | null; createdBy: { id: string; name: string } | null } | null;
-          }>,
-      ),
     prisma.salesTarget.findMany({ where: { orgId, period: selectedMonthString } }).catch(() => [] as Array<{ userId: string | null; targetRevenue: number; period: string }>),
-    prisma.job
-      .findMany({
-        where: {
-          orgId,
-          status: "COMPLETED",
-          completedAt: { gte: selectedRange.start, lte: selectedRange.end },
-        },
-        select: {
-          clientBill: true,
-          externalTechBill: true,
-          createdById: true,
-          createdBy: { select: { id: true, name: true } },
-        },
-      })
-      .catch(() => [] as Array<{ clientBill: number | null; externalTechBill: number | null; createdById: string | null; createdBy: { id: string; name: string } | null }>),
     prisma.lead
       .groupBy({ by: ["status"], where: { orgId }, _count: { status: true } })
       .catch(() => [] as Array<{ status: string; _count: { status: number } }>),
@@ -405,23 +368,6 @@ export default async function ReportsPage({
         select: { amount: true, currency: true, exchangeRateToBase: true },
       })
       .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>),
-    prisma.job.findMany({
-      where: { orgId, receivedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end } },
-      select: { deviceType: true, receivedAt: true },
-    }),
-    prisma.job.findMany({
-      where: { orgId, receivedAt: { gte: selectedRange.start, lte: selectedRange.end } },
-      select: {
-        deviceType: true,
-        status: true,
-        receivedAt: true,
-        completedAt: true,
-        repairPath: true,
-        assignedTo: { select: { name: true } },
-        clientBill: true,
-        externalTechBill: true,
-      },
-    }),
   ]);
 
   const payments = await prisma.payment
@@ -462,7 +408,6 @@ export default async function ReportsPage({
     ytdRefundsRaw,
     ytdExternalPaidJobs,
     sparklinePaymentsRaw,
-    periodJobClientRows,
   ] = await Promise.all([
     loadCashCollectionsByChannel({ orgId, baseCurrency: org.baseCurrency, range: { start: ytdStart } })
       .catch(() => ({ repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 })),
@@ -474,12 +419,10 @@ export default async function ReportsPage({
       .catch(() => [] as Array<{ externalTechFee: number | null; externalTechBill: number | null }>),
     prisma.payment.findMany({ where: { orgId, ...INCOMING_PAYMENT, receivedAt: { gte: sparklineStart } }, select: { amount: true, currency: true, exchangeRateToBase: true, receivedAt: true } })
       .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null; receivedAt: Date | null }>),
-    prisma.job.findMany({ where: { orgId, receivedAt: { gte: selectedRange.start, lte: selectedRange.end }, clientId: { not: undefined } }, select: { clientId: true } })
-      .catch(() => [] as Array<{ clientId: string | null }>),
   ]);
 
   // Repeat client rate — needs unique client IDs from period first (sequential)
-  const uniquePeriodClientIds = [...new Set(periodJobClientRows.map((j) => j.clientId).filter(Boolean))] as string[];
+  const uniquePeriodClientIds = [...new Set(periodJobs.map((j) => j.clientId).filter(Boolean))] as string[];
   const returningClientRows = uniquePeriodClientIds.length > 0
     ? await prisma.job.groupBy({
         by: ["clientId"],
@@ -495,14 +438,11 @@ export default async function ReportsPage({
   const maxYear = Math.max(currentYear, latestJob?.receivedAt?.getFullYear() ?? currentYear);
   const selectableMonths = period === "year" ? yearOptions(minYear, maxYear) : monthOptions(18);
 
-  const revenueFor = (jobs: typeof completedSelected) =>
+  const revenueFor = (jobs: Array<{ clientBill: number | null }>) =>
     jobs.filter((j) => getClientBill(j) !== null).reduce((s, j) => s + (getClientBill(j) ?? 0), 0);
   const revenueSelected = revenueFor(completedSelected);
   const revenuePrev = revenueFor(completedPrev);
   const revenueDelta = revenueSelected - revenuePrev;
-  const marginSelected = completedSelected
-    .filter((j) => getClientBill(j) !== null)
-    .reduce((s, j) => s + ((getClientBill(j) ?? 0) - (getExternalTechBill(j) ?? 0)), 0);
 
   const cashIn = payments.reduce(
     (s, p) =>
@@ -582,7 +522,7 @@ export default async function ReportsPage({
       revenue: number;
     }
   >();
-  for (const job of techPerfJobsRaw) {
+  for (const job of periodJobs) {
     if (!job.assignedTo) continue;
     const e = techPerfMap.get(job.assignedTo.id) ?? {
       name: job.assignedTo.name,
@@ -614,7 +554,6 @@ export default async function ReportsPage({
     .sort((a, b) => b.total - a.total);
 
   // Revenue channels
-  const repairCollectionsTotal = collectionsByChannel.repairs;
   const posSalesTotal = collectionsByChannel.products;
   const invoicesPaidTotal = collectionsByChannel.corporate + collectionsByChannel.merchandise + collectionsByChannel.service + collectionsByChannel.unallocated;
   const totalAllChannels = collectionsByChannel.total;
@@ -677,7 +616,7 @@ export default async function ReportsPage({
     string,
     { name: string; repairRev: number; posRev: number; invoiceRev: number; total: number; target: number }
   >();
-  for (const j of staffJobRevenue) {
+  for (const j of completedSelected) {
     if (!j.createdById || !j.createdBy) continue;
     const e = staffRevenueMap.get(j.createdById) ?? {
       name: j.createdBy.name,
@@ -721,7 +660,7 @@ export default async function ReportsPage({
 
   // Device insights
   const deviceMap = new Map<string, { total: number; completed: number; revenue: number }>();
-  for (const job of jobsInSelectedPeriod) {
+  for (const job of periodJobs) {
     const d = deviceLabel[job.deviceType] ?? job.deviceType;
     const e = deviceMap.get(d) ?? { total: 0, completed: 0, revenue: 0 };
     e.total += 1;
