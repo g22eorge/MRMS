@@ -168,16 +168,16 @@ export async function FinanceDashboard({ orgId }: { orgId: string }) {
               const balance = toBase(inv.totalAmount - inv.paidAmount, inv.currency, inv.exchangeRateToBase);
               const ageDays = Math.floor((today.getTime() - inv.issuedAt.getTime()) / 86400000);
               return (
-                <div key={inv.id} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+                <Link key={inv.id} href={`/documents/invoices/${inv.id}`} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 transition hover:border-[var(--accent)]/35">
                   <div className="min-w-0">
-                    <p className="mono truncate text-xs font-bold text-[var(--ink)]">{inv.invoiceNumber}</p>
+                    <p className="mono truncate text-xs font-bold text-[var(--accent)]">{inv.invoiceNumber}</p>
                     <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{clientDisplayName(inv.job?.client)} · {inv.job?.jobNumber ?? "—"}</p>
                   </div>
                   <div className="ml-3 shrink-0 text-right">
                     <p className="text-xs font-semibold text-[var(--accent)]">{formatMoneyCompact(balance, currency)}</p>
                     <span className={`text-[0.75rem] font-medium ${ageDays > 60 ? "text-red-400" : ageDays > 30 ? "text-amber-600" : "text-[var(--ink-muted)]"}`}>{ageDays}d</span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
