@@ -84,6 +84,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const q = sp.q?.trim() ?? "";
   const periodFilter = (sp.period ?? "all") as "all" | "this_month" | "last_month" | "ytd";
   const statusFilter = (sp.status ?? "all") as "all" | "paid" | "unpaid";
+  const sort = sp.sort === "oldest" ? "oldest" : sp.sort === "due" ? "due" : "newest";
   const page = parsePage(sp.page);
   const pageSize = parsePageSize(sp.size);
 
@@ -139,7 +140,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
           supplier: { select: { id: true, name: true } },
           createdBy: { select: { name: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: sort === "oldest" ? { createdAt: "asc" } : sort === "due" ? { dueAt: "asc" } : { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -708,10 +709,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
       params.period !== undefined ? params.period : periodFilter !== "all" ? periodFilter : "";
     const nextStatus =
       params.status !== undefined ? params.status : statusFilter !== "all" ? statusFilter : "";
+    const nextSort = params.sort !== undefined ? params.sort : sort !== "newest" ? sort : "";
     if (nextCat) base.set("category", nextCat);
     if (nextQ) base.set("q", nextQ);
     if (nextPeriod) base.set("period", nextPeriod);
     if (nextStatus) base.set("status", nextStatus);
+    if (nextSort) base.set("sort", nextSort);
     const s = base.toString();
     return `/finance/expenses${s ? `?${s}` : ""}`;
   };
@@ -724,6 +727,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     q,
     period: periodFilter !== "all" ? periodFilter : "",
     status: statusFilter !== "all" ? statusFilter : "",
+    sort: sort !== "newest" ? sort : "",
     size: pageSize !== PAGE_SIZE ? pageSize : "",
   };
   const expensesHref = pageHrefBuilder("/finance/expenses", expensesHrefFilters);
@@ -848,12 +852,18 @@ export default async function ExpensesPage({ searchParams }: Props) {
         <form method="GET" action="/finance/expenses" className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {catFilter && <input type="hidden" name="category" value={catFilter} />}
           {periodFilter !== "all" && <input type="hidden" name="period" value={periodFilter} />}
+          {statusFilter !== "all" && <input type="hidden" name="status" value={statusFilter} />}
           <input
             name="q"
             defaultValue={q}
             placeholder="Search description, reference…"
             className="input-base h-8 min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] sm:min-w-[180px]"
           />
+          <select name="sort" defaultValue={sort} className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="due">Due first</option>
+          </select>
           <SubmitButton bare className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">
             Search
           </SubmitButton>

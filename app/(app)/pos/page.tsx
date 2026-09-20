@@ -62,7 +62,7 @@ type Segment = (typeof SEGMENTS)[number];
 export default async function PosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; q?: string; page?: string; size?: string; error?: string }>;
+  searchParams: Promise<{ period?: string; q?: string; page?: string; size?: string; sort?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
@@ -70,12 +70,13 @@ export default async function PosPage({
     redirect("/dashboard");
   }
 
-  const { period, q: rawQ, page: pageParam, size: sizeParam, error: posListError } = await searchParams;
+  const { period, q: rawQ, page: pageParam, size: sizeParam, sort: sortParam, error: posListError } = await searchParams;
   const page = parsePage(pageParam);
   const pageSize = parsePageSize(sizeParam);
   const currency = org.baseCurrency;
   const segment: Segment = SEGMENTS.includes(period as Segment) ? (period as Segment) : "all";
   const q = (rawQ ?? "").trim();
+  const sort = sortParam === "oldest" ? "oldest" : sortParam === "highest" ? "highest" : "newest";
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -247,7 +248,7 @@ export default async function PosPage({
     salesTotal = await db.sale.count({ where: salesWhere });
     sales = await db.sale.findMany({
       where: salesWhere,
-      orderBy: { createdAt: "desc" },
+      orderBy: sort === "oldest" ? { createdAt: "asc" } : sort === "highest" ? { totalAmount: "desc" } : { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
@@ -272,15 +273,16 @@ export default async function PosPage({
   }
 
   const salesPage = paginationView(page, salesTotal, pageSize);
-  const salesHrefFilters = { ...{ period: segment !== "all" ? segment : "", q }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const salesHrefFilters = { ...{ period: segment !== "all" ? segment : "", q, sort: sort !== "newest" ? sort : "" }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const salesHref = pageHrefBuilder("/pos", salesHrefFilters);
   const salesHrefSize = sizeHrefBuilder("/pos", salesHrefFilters);
-  const hasSaleFilters = Boolean(q) || segment !== "all";
+  const hasSaleFilters = Boolean(q) || segment !== "all" || sort !== "newest";
 
   function filterHref(next: Segment, search = q) {
     const params = new URLSearchParams();
     if (next !== "all") params.set("period", next);
     if (search) params.set("q", search);
+    if (sort !== "newest") params.set("sort", sort);
     const query = params.toString();
     return query ? `/pos?${query}` : "/pos";
   }
@@ -398,6 +400,7 @@ export default async function PosPage({
             {/* Search — full width, no redundant button */}
             <form method="GET">
               {segment !== "all" ? <input type="hidden" name="period" value={segment} /> : null}
+              {sort !== "newest" ? <input type="hidden" name="sort" value={sort} /> : null}
               <div className="relative">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50" aria-hidden>
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -501,6 +504,11 @@ export default async function PosPage({
             placeholder="Search by sale number, name, client or note..."
             className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
           />
+          <select name="sort" defaultValue={sort} aria-label="Sort sales" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="highest">Highest first</option>
+          </select>
           <SubmitButton variant="secondary" size="sm">Search</SubmitButton>
           {hasSaleFilters ? (
             <Link href="/pos" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>

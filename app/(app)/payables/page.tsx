@@ -38,6 +38,7 @@ type SearchParams = {
   page?: string;
   section?: string;
   bucket?: string;
+  sort?: string;
   error?: string;
   saved?: string;
 };
@@ -358,8 +359,16 @@ export default async function PayablesPage({
   const bucketOf = (age: number) => (age <= 0 ? "current" : age <= 30 ? "d30" : age <= 60 ? "d60" : "d61");
   const bucketFilter = (["current", "d30", "d60", "d61"] as const).includes(filters.bucket as never) ? (filters.bucket as string) : "all";
   const bucketedRows = bucketFilter === "all" ? creditorRows : creditorRows.filter((r) => bucketOf(r.ageDays) === bucketFilter);
-  // Oldest debts first — maturity order.
-  bucketedRows.sort((a, b) => b.ageDays - a.ageDays);
+  // Oldest debts first — maturity order. Due-first floats dated bills up;
+  // highest-first is a raw-balance queue (rows carry their own currency).
+  const rowSort = filters.sort === "due" ? "due" : filters.sort === "highest" ? "highest" : "oldest";
+  bucketedRows.sort((a, b) =>
+    rowSort === "highest"
+      ? b.balance - a.balance
+      : rowSort === "due"
+        ? (("dueAt" in a && a.dueAt?.getTime()) || Number.MAX_SAFE_INTEGER) - ((("dueAt" in b && b.dueAt?.getTime())) || Number.MAX_SAFE_INTEGER) || b.ageDays - a.ageDays
+        : b.ageDays - a.ageDays,
+  );
 
   // Creditor rollup over the FULL open sets (exact, not page-bound).
   const supplierNameById = new Map([...billSuppliers, ...expenseSuppliers].map((s) => [s.id, s.name] as const));
@@ -417,6 +426,7 @@ export default async function PayablesPage({
     if (filters.q) p.set("q", filters.q);
     if (filters.tech) p.set("tech", filters.tech);
     if (filters.bucket) p.set("bucket", filters.bucket);
+    if (filters.sort) p.set("sort", filters.sort);
     p.set("section", key);
     return `?${p.toString()}`;
   }
@@ -430,6 +440,7 @@ export default async function PayablesPage({
     if (filters.q) p.set("q", filters.q);
     if (filters.tech) p.set("tech", filters.tech);
     if (filters.bucket) p.set("bucket", filters.bucket);
+    if (filters.sort) p.set("sort", filters.sort);
     return `/api/payout-followups/export?${p.toString()}`;
   })();
   const totalPages = Math.max(Math.ceil(activeSectionCount / PAGE_SIZE), 1);
@@ -543,8 +554,13 @@ export default async function PayablesPage({
               ))}
             </select>
           )}
+          <select name="sort" defaultValue={rowSort} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm text-[var(--ink-muted)]">
+            <option value="oldest">Oldest first</option>
+            <option value="due">Due first</option>
+            <option value="highest">Highest first</option>
+          </select>
           <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</SubmitButton>
-          <Link href={`/payout-followups?section=${activeTab}`} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
+          <Link href={`/payables?section=${activeTab}`} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
           <a href={exportHref} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]" title="Download the current list as CSV">↓ CSV</a>
         </form>
       </section>

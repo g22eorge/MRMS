@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { DataTable } from "@/components/ui/DataTable";
@@ -37,7 +38,7 @@ export default async function StockCountDetailPage({ params }: { params: Promise
   const varianceLines = count.items.filter((item) => item.varianceQty !== 0).length;
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="space-y-4">
       <RecordActionBar
         backHref="/inventory/stock-counts"
         eyebrow="Inventory · Stock Count"
@@ -71,28 +72,13 @@ export default async function StockCountDetailPage({ params }: { params: Promise
       />
       <p className="text-sm text-[var(--ink-muted)]">
         {count.location.name}{count.location.code ? ` (${count.location.code})` : ""}
+        {" · "}counted {fmt(count.countedAt)}
+        {" · "}{count.items.length} item{count.items.length === 1 ? "" : "s"}
+        {" · "}<span className={varianceLines > 0 ? "font-semibold text-amber-600" : undefined}>{varianceLines} variance{varianceLines === 1 ? "" : "s"}</span>
       </p>
 
-      {/* KPI tiles */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Counted</p>
-          <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{fmt(count.countedAt)}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Items</p>
-          <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{count.items.length}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Variances</p>
-          <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{varianceLines}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-          <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Approved</p>
-          <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{fmt(count.approvedAt)}</p>
-        </div>
-      </div>
-
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
       {/* Items table */}
       <DataTable
         rows={count.items}
@@ -106,7 +92,7 @@ export default async function StockCountDetailPage({ params }: { params: Promise
             cell: (item) => (
               <>
                 <p className="font-semibold text-[var(--ink)]">{item.part.name}</p>
-                <p className="text-[0.75rem] text-[var(--ink-muted)]">{item.part.name}</p>
+                <p className="text-[0.75rem] text-[var(--ink-muted)]">{item.part.sku}</p>
               </>
             ),
           },
@@ -129,10 +115,28 @@ export default async function StockCountDetailPage({ params }: { params: Promise
           {count.note}
         </div>
       ) : null}
+        </div>
 
-      {/* Footer */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--ink-muted)]">
-        <p>Created by {count.createdBy.name || count.createdBy.email}.</p>
+        <aside className="min-w-0 space-y-4">
+          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <p className="border-b border-[var(--line)] px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Related</p>
+            <div className="divide-y divide-[var(--line)]">
+              <div className="px-4 py-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Location</p>
+                <Link href="/inventory/locations" className="mt-0.5 block truncate text-sm font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
+                  {count.location.name}{count.location.code ? ` (${count.location.code})` : ""}
+                </Link>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Counted by</p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{count.createdBy.name || count.createdBy.email}</p>
+                {count.approvedBy ? (
+                  <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">Approved by {count.approvedBy.name || count.approvedBy.email}{count.approvedAt ? ` · ${fmt(count.approvedAt)}` : ""}</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

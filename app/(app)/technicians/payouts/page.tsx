@@ -20,6 +20,7 @@ type SearchParams = {
   q?: string;
   paid?: string;
   month?: string;
+  sort?: string;
 };
 
 const statusOptionLabel = {
@@ -58,23 +59,26 @@ export default async function TechnicianPayoutsPage({
 
   const filters = await searchParams;
   const month = parseMonth(filters.month);
+  const paidFilter = filters.paid === "paid" ? "paid" : filters.paid === "unpaid" ? "unpaid" : "all";
+  const sort = filters.sort === "oldest" ? "oldest" : filters.sort === "highest" ? "highest" : "newest";
+  const q = (filters.q ?? "").trim();
 
   const jobs = await prisma.job.findMany({
     where: {
       orgId,
       assignedToId: session.user.id,
       repairPath: "EXTERNAL",
-      ...(filters.q
+      ...(q
         ? {
             OR: [
-              { jobNumber: icontains(filters.q) },
-              { brand: icontains(filters.q) },
-              { model: icontains(filters.q) },
+              { jobNumber: icontains(q) },
+              { brand: icontains(q) },
+              { model: icontains(q) },
             ],
           }
         : {}),
-      ...(filters.paid === "paid" ? { externalPaid: true } : {}),
-      ...(filters.paid === "unpaid" ? { externalPaid: false } : {}),
+      ...(paidFilter === "paid" ? { externalPaid: true } : {}),
+      ...(paidFilter === "unpaid" ? { externalPaid: false } : {}),
       ...(month ? { completedAt: { gte: month.start, lte: month.end } } : {}),
     },
     select: {
@@ -87,7 +91,7 @@ export default async function TechnicianPayoutsPage({
       receivedAt: true,
       externalTechBill: true,
     },
-    orderBy: { receivedAt: "desc" },
+    orderBy: sort === "oldest" ? { receivedAt: "asc" } : { receivedAt: "desc" },
   });
 
   const payoutColumnsReady = await hasJobPayoutColumns();
@@ -102,6 +106,9 @@ export default async function TechnicianPayoutsPage({
     if (typeof job.externalTechBill === "number" && job.externalTechBill > 0) return job.externalTechBill;
     return 0;
   }
+  // Highest-fee needs the JS-side fee resolution above, so it sorts in memory;
+  // newest/oldest already come ordered from the database.
+  if (sort === "highest") jobs.sort((a, b) => resolveJobFee(b) - resolveJobFee(a));
 
   function paidForJob(jobId: string) {
     return payoutTotals.get(jobId)?.paidAmount ?? 0;
@@ -156,19 +163,41 @@ export default async function TechnicianPayoutsPage({
               Payout columns are not migrated yet in this environment. Run latest Prisma migrations.
             </div>
           ) : null}
-          <form className="dc-card grid gap-2 p-3 lg:grid-cols-4">
-            <input name="q" defaultValue={filters.q} placeholder="Search job # / device" className={controlClass} />
-            <select name="paid" defaultValue={filters.paid} className={controlClass}>
-              <option value="">All statuses</option>
-              <option value="paid">Paid only</option>
-              <option value="unpaid">Unpaid only</option>
-            </select>
+          <div className="dc-card space-y-2.5 p-3">
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { key: "all", label: "All" },
+              { key: "paid", label: "Paid" },
+              { key: "unpaid", label: "Unpaid" },
+            ].map((s) => (
+              <Link
+                key={s.key}
+                href={`/technicians/payouts?paid=${s.key}${q ? `&q=${encodeURIComponent(q)}` : ""}${filters.month ? `&month=${filters.month}` : ""}${sort !== "newest" ? `&sort=${sort}` : ""}`}
+                className={`rounded-full px-3 py-1 text-[0.75rem] font-semibold transition ${
+                  paidFilter === s.key
+                    ? "border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
+                    : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+                }`}
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+          <form className="grid gap-2 lg:grid-cols-4">
+            <input name="q" defaultValue={q} placeholder="Search job # / device" className={controlClass} />
+            <input type="hidden" name="paid" value={paidFilter} />
             <input type="month" name="month" defaultValue={filters.month} className={controlClass} />
+            <select name="sort" defaultValue={sort} className={controlClass}>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="highest">Highest fee</option>
+            </select>
             <div className="flex gap-2">
               <button type="submit" className="btn-premium-secondary rounded-lg px-3 py-2">Apply</button>
               <Link href="/technicians/payouts" className="btn-premium-secondary rounded-lg px-3 py-2 text-sm">Reset</Link>
             </div>
           </form>
+          </div>
         </>
       }
     >

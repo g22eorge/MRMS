@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -11,6 +12,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
+import { icontains } from "@/lib/db/search";
 import { createStockLocationAction, toggleStockLocationAction, updateStockLocationAction } from "./actions";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -31,15 +33,31 @@ export default async function StockLocationsPage({
   const error = typeof params.error === "string" ? params.error : "";
   const page = parsePage(params.page);
   const pageSize = parsePageSize(params.size);
+  const q = String(params.q ?? "").trim();
+  const statusFilter = String(params.status ?? "all").trim().toLowerCase();
+  const sort = params.sort === "newest" ? "newest" : "name";
+
+  const where = {
+    orgId,
+    ...(statusFilter === "active" ? { isActive: true } : statusFilter === "inactive" ? { isActive: false } : {}),
+    ...(q
+      ? {
+          OR: [
+            { name: icontains(q) },
+            { code: icontains(q) },
+          ],
+        }
+      : {}),
+  };
 
   const [locations, locationsTotal, branches, stockRows] = await Promise.all([
     prisma.stockLocation.findMany({
-      where: { orgId },
-      orderBy: [{ isActive: "desc" }, { name: "asc" }],
+      where,
+      orderBy: sort === "newest" ? { createdAt: "desc" as const } : [{ isActive: "desc" as const }, { name: "asc" as const }],
       skip: (page - 1) * pageSize,
       take: pageSize,
     }).catch(() => []),
-    prisma.stockLocation.count({ where: { orgId } }).catch(() => 0),
+    prisma.stockLocation.count({ where }).catch(() => 0),
     prisma.branch.findMany({
       where: { orgId, isActive: true },
       orderBy: { name: "asc" },
@@ -58,7 +76,7 @@ export default async function StockLocationsPage({
   const totalOnHand = stockRows.reduce((sum, row) => sum + (row._sum.qtyOnHand ?? 0), 0);
   const branchName = new Map(branches.map((branch) => [branch.id, branch.name]));
   const pageView = paginationView(page, locationsTotal, pageSize);
-  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPageFilters = { q: q || "", status: statusFilter !== "all" ? statusFilter : "", sort: sort !== "name" ? sort : "", size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const hrefForPage = pageHrefBuilder("/inventory/locations", hrefForPageFilters);
   const hrefForPageSize = sizeHrefBuilder("/inventory/locations", hrefForPageFilters);
 
@@ -107,6 +125,47 @@ export default async function StockLocationsPage({
           {saved ? <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600">Location updated.</div> : null}
           {error ? <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</div> : null}
 
+          <form method="GET" action="/inventory/locations" className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { key: "all", label: "All" },
+                { key: "active", label: "Active" },
+                { key: "inactive", label: "Inactive" },
+              ].map((s) => (
+                <Link
+                  key={s.key}
+                  href={`/inventory/locations?status=${s.key}${q ? `&q=${encodeURIComponent(q)}` : ""}${sort !== "name" ? `&sort=${sort}` : ""}`}
+                  className={`rounded-full px-3 py-1 text-[0.75rem] font-semibold transition ${
+                    statusFilter === s.key
+                      ? "border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
+                      : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+                  }`}
+                >
+                  {s.label}
+                </Link>
+              ))}
+            </div>
+            <input type="hidden" name="status" value={statusFilter} />
+            <label className="sr-only" htmlFor="location-search">Search locations</label>
+            <input
+              id="location-search"
+              name="q"
+              defaultValue={q}
+              placeholder="Name, code…"
+              className="ml-auto h-8 w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+            />
+            <select name="sort" defaultValue={sort} className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem] text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+              <option value="name">Name A–Z</option>
+              <option value="newest">Newest</option>
+            </select>
+            <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+              Filter
+            </button>
+            {q || statusFilter !== "all" || sort !== "name" ? (
+              <Link href="/inventory/locations" className="h-8 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Reset</Link>
+            ) : null}
+          </form>
+
           <div className="dc-card px-3 py-2.5">
             <p className="mb-2.5 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Location</p>
             <form action={createStockLocationAction} className="grid gap-2 md:grid-cols-[1.4fr_0.7fr_1fr_auto]">
@@ -126,7 +185,13 @@ export default async function StockLocationsPage({
         rows={locations}
         getRowKey={(location) => location.id}
         pagination={{ page: pageView.page, pageSize, total: locationsTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "locations" }}
-        empty="No stock locations yet. Create Main Stock, Store, Van, or Technician locations here."
+        empty={
+          q || statusFilter !== "all" ? (
+            <>No locations match these filters. <Link href="/inventory/locations" className="text-[var(--accent)] hover:underline">Clear filters</Link></>
+          ) : (
+            "No stock locations yet. Create Main Stock, Store, Van, or Technician locations here."
+          )
+        }
         columns={[
           {
             key: "location",

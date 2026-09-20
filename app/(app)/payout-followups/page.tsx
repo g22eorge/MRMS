@@ -31,6 +31,7 @@ type SearchParams = {
   page?: string;
   section?: string;
   bucket?: string;
+  sort?: string;
   error?: string;
 };
 
@@ -88,6 +89,19 @@ export default async function PayoutFollowupsPage({
   const jobSearch = buildJobSearch(filters.q);
   const invSearch = buildInvoiceSearch(filters.q);
   const techFilter = filters.tech ? { assignedToId: filters.tech } : {};
+  const sort = filters.sort === "newest" ? "newest" : filters.sort === "highest" ? "highest" : "due";
+  const repairOrderBy =
+    sort === "newest"
+      ? [{ createdAt: "desc" } as const, { updatedAt: "desc" } as const]
+      : sort === "highest"
+        ? [{ clientBill: "desc" } as const, { updatedAt: "desc" } as const]
+        : [{ deliveredAt: "desc" } as const, { completedAt: "desc" } as const, { updatedAt: "desc" } as const];
+  const invoiceOrderBy =
+    sort === "newest"
+      ? [{ issuedAt: "desc" } as const]
+      : sort === "highest"
+        ? [{ totalAmount: "desc" } as const, { issuedAt: "desc" } as const]
+        : [{ dueDate: "asc" } as const, { issuedAt: "desc" } as const];
 
   // ── Repair collections ────────────────────────────────────────────────────
   const clientWhere: Prisma.JobWhereInput = {
@@ -120,7 +134,7 @@ export default async function PayoutFollowupsPage({
     // Repair client rows
     canSeeRepairs ? prisma.job.findMany({
       where: clientWhere,
-      orderBy: [{ deliveredAt: "desc" }, { completedAt: "desc" }, { updatedAt: "desc" }],
+      orderBy: repairOrderBy,
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       select: {
@@ -136,7 +150,7 @@ export default async function PayoutFollowupsPage({
     // Invoice rows
     canSeeInvoices ? prisma.invoice.findMany({
       where: invoiceWhere,
-      orderBy: [{ dueDate: "asc" }, { issuedAt: "desc" }],
+      orderBy: invoiceOrderBy,
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       select: {
@@ -191,6 +205,7 @@ export default async function PayoutFollowupsPage({
     const p = new URLSearchParams();
     if (filters.q) p.set("q", filters.q);
     if (filters.tech) p.set("tech", filters.tech);
+    if (filters.sort) p.set("sort", filters.sort);
     p.set("section", key);
     return `?${p.toString()}`;
   }
@@ -203,6 +218,7 @@ export default async function PayoutFollowupsPage({
     p.set("section", activeTab);
     if (filters.q) p.set("q", filters.q);
     if (filters.tech) p.set("tech", filters.tech);
+    if (filters.sort) p.set("sort", filters.sort);
     return `/api/payout-followups/export?${p.toString()}`;
   })();
   const totalPages = Math.max(Math.ceil(activeSectionCount / PAGE_SIZE), 1);
@@ -305,6 +321,11 @@ export default async function PayoutFollowupsPage({
               ))}
             </select>
           )}
+          <select name="sort" defaultValue={sort} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm text-[var(--ink-muted)]">
+            <option value="due">Due first</option>
+            <option value="newest">Newest</option>
+            <option value="highest">Highest first</option>
+          </select>
           <SubmitButton bare className="btn-premium-secondary rounded-lg px-3 py-1.5 text-sm">Apply</SubmitButton>
           <Link href={`/payout-followups?section=${activeTab}`} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">Reset</Link>
           <a href={exportHref} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]" title="Download the current list as CSV">↓ CSV</a>
