@@ -1091,6 +1091,9 @@ model Part {
   sellingPrice      Float?
   category          String?
   description       String?
+  // User-picked one-liner for table views; falls back to the description's
+  // first line when empty, so no backfill is ever needed.
+  shortDescription  String?
   taxable           Boolean      @default(true)
   taxRate           Float?
   baseUom           String?
