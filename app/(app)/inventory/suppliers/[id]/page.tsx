@@ -8,7 +8,8 @@ import { formatMoney } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
-import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
+import { RowActionsMenu, MenuActionLink, MenuSection } from "@/components/shared/RowActionsMenu";
+import { EditDialog } from "@/components/ui/EditDialog";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { SupplierEditForm } from "./SupplierEditForm";
 import { SupplierActivityFeed, type SupplierActivityItem } from "./SupplierActivityFeed";
@@ -57,6 +58,7 @@ export default async function SupplierDetailPage({
 }) {
   const { id } = await params;
   const qs = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
+  const priceId = typeof qs.price === "string" ? qs.price.trim() : "";
   const { user, orgId } = await requireOrgSession();
   if (!can.manageInventory(user)) redirect("/inventory");
 
@@ -145,6 +147,13 @@ export default async function SupplierDetailPage({
   ]);
 
   const partLabel = new Map(parts.map((part) => [part.id, part.name]));
+
+  // Price-edit dialog target: loaded only when ?price= is set.
+  const editPrice = priceId
+    ? await prisma.supplierPrice.findFirst({
+        where: { id: priceId, orgId, supplierId: supplier.id },
+      }).catch(() => null)
+    : null;
   // Balances are per-currency — never sum UGX and USD bills into one figure.
   const balancesByCurrency = billTotals
     .map((row) => ({
@@ -345,25 +354,10 @@ export default async function SupplierDetailPage({
               ]}
               actions={(price) => (
                 <RowActionsMenu label={`Supplier price actions for ${price.description}`}>
+                  <MenuActionLink href={`/inventory/suppliers/${supplier.id}?price=${price.id}`} icon="open">Edit price</MenuActionLink>
+                  <MenuSection label="Danger zone" />
                   <div className="w-72 p-3">
-                    <form action={updateSupplierPriceAction} className="grid gap-2 text-left">
-                      <input type="hidden" name="id" value={price.id} />
-                      <input type="hidden" name="supplierId" value={supplier.id} />
-                      <select name="partId" defaultValue={price.partId ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60">
-                        <option value="">No linked item</option>
-                        {parts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
-                      </select>
-                      <input name="description" defaultValue={price.description} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
-                      <input name="sku" defaultValue={price.sku ?? ""} placeholder="SKU" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
-                      <input name="unitCost" defaultValue={price.unitCost} required inputMode="decimal" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
-                      <div className="grid grid-cols-2 gap-2">
-                        <input name="minQuantity" defaultValue={price.minQuantity ?? ""} placeholder="MOQ" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
-                        <input name="leadTimeDays" defaultValue={price.leadTimeDays ?? ""} placeholder="Lead days" inputMode="numeric" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
-                      </div>
-                      <input name="currency" defaultValue={price.currency} placeholder="Currency" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 uppercase outline-none focus:border-[var(--accent)]/60" />
-                      <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Price</SubmitButton>
-                    </form>
-                    <form action={deleteSupplierPriceAction} className="mt-2 border-t border-[var(--line)] pt-2">
+                    <form action={deleteSupplierPriceAction}>
                       <input type="hidden" name="id" value={price.id} />
                       <input type="hidden" name="supplierId" value={supplier.id} />
                       <SubmitButton bare className="font-semibold text-red-600 hover:text-red-700">Delete</SubmitButton>
@@ -381,6 +375,44 @@ export default async function SupplierDetailPage({
           />
         </div>
       </div>
+
+      {editPrice ? (
+        <EditDialog title="Edit price" closeHref={`/inventory/suppliers/${supplier.id}`}>
+          <form action={updateSupplierPriceAction} className="space-y-3">
+            <input type="hidden" name="id" value={editPrice.id} />
+            <input type="hidden" name="supplierId" value={supplier.id} />
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Linked item
+              <select name="partId" defaultValue={editPrice.partId ?? ""} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50">
+                <option value="">No linked item</option>
+                {parts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
+              </select>
+            </label>
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Description
+              <input name="description" defaultValue={editPrice.description} required className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">SKU
+                <input name="sku" defaultValue={editPrice.sku ?? ""} placeholder="Optional" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+              </label>
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Unit cost
+                <input name="unitCost" defaultValue={editPrice.unitCost} required inputMode="decimal" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+              </label>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">MOQ
+                <input name="minQuantity" defaultValue={editPrice.minQuantity ?? ""} placeholder="Optional" inputMode="numeric" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+              </label>
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Lead days
+                <input name="leadTimeDays" defaultValue={editPrice.leadTimeDays ?? ""} placeholder="Optional" inputMode="numeric" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+              </label>
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Currency
+                <input name="currency" defaultValue={editPrice.currency} placeholder="UGX" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm uppercase outline-none focus:border-[var(--accent)]/50" />
+              </label>
+            </div>
+            <SubmitButton bare className="btn-premium w-full rounded-lg px-3 py-2 text-sm font-bold">Save price</SubmitButton>
+          </form>
+        </EditDialog>
+      ) : null}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
 import { can } from "@/lib/permissions";
-import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
+import { RowActionsMenu, MenuActionLink } from "@/components/shared/RowActionsMenu";
 import { HubTabs } from "@/components/shared/HubTabs";
 import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { DataTable } from "@/components/ui/DataTable";
@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
 import { icontains } from "@/lib/db/search";
 import { createStockLocationAction, toggleStockLocationAction, updateStockLocationAction } from "./actions";
+import { EditDialog } from "@/components/ui/EditDialog";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default async function StockLocationsPage({
   const created = String(params.created ?? "") === "1";
   const saved = String(params.saved ?? "") === "1";
   const error = typeof params.error === "string" ? params.error : "";
+  const editId = typeof params.edit === "string" ? params.edit.trim() : "";
   const page = parsePage(params.page);
   const pageSize = parsePageSize(params.size);
   const q = String(params.q ?? "").trim();
@@ -75,29 +77,25 @@ export default async function StockLocationsPage({
   const stats = new Map(stockRows.map((row) => [row.locationId, row]));
   const totalOnHand = stockRows.reduce((sum, row) => sum + (row._sum.qtyOnHand ?? 0), 0);
   const branchName = new Map(branches.map((branch) => [branch.id, branch.name]));
+
+  // Edit-dialog target: loaded only when ?edit= is set.
+  const editLocation = editId
+    ? await prisma.stockLocation.findFirst({
+        where: { id: editId, orgId },
+        select: { id: true, name: true, code: true, branchId: true, isActive: true },
+      }).catch(() => null)
+    : null;
   const pageView = paginationView(page, locationsTotal, pageSize);
   const hrefForPageFilters = { q: q || "", status: statusFilter !== "all" ? statusFilter : "", sort: sort !== "name" ? sort : "", size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const hrefForPage = pageHrefBuilder("/inventory/locations", hrefForPageFilters);
   const hrefForPageSize = sizeHrefBuilder("/inventory/locations", hrefForPageFilters);
 
-  // Named so the same actions menu renders in the desktop table AND mobile card.
+  // Text editing lives in the ?edit= dialog below, not in this menu.
   const renderLocationActions = (location: (typeof locations)[number]) => (
     <RowActionsMenu label={`Location actions for ${location.name}`}>
+      <MenuActionLink href={`/inventory/locations?edit=${location.id}`} icon="open">Edit details</MenuActionLink>
       <div className="w-72 p-3">
-        <form action={updateStockLocationAction} className="grid gap-2 text-left">
-          <input type="hidden" name="id" value={location.id} />
-          <input name="name" defaultValue={location.name} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60" />
-          <input name="code" defaultValue={location.code ?? ""} placeholder="Code" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 uppercase outline-none focus:border-[var(--accent)]/60" />
-          <select name="branchId" defaultValue={location.branchId ?? ""} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 outline-none focus:border-[var(--accent)]/60">
-            <option value="">No branch</option>
-            {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-          </select>
-          <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink-muted)]">
-            <input type="checkbox" name="isActive" value="1" defaultChecked={location.isActive} /> Active
-          </label>
-          <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 font-semibold">Save Location</SubmitButton>
-        </form>
-        <form action={toggleStockLocationAction} className="mt-2 border-t border-[var(--line)] pt-2">
+        <form action={toggleStockLocationAction} className="grid gap-2 text-left">
           <input type="hidden" name="id" value={location.id} />
           <input type="hidden" name="isActive" value={location.isActive ? "0" : "1"} />
           <SubmitButton bare className="text-[0.75rem] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]">
@@ -258,6 +256,30 @@ export default async function StockLocationsPage({
           </div>
         )}
       />
+
+      {editLocation ? (
+        <EditDialog title={`Edit · ${editLocation.name}`} closeHref="/inventory/locations">
+          <form action={updateStockLocationAction} className="space-y-3">
+            <input type="hidden" name="id" value={editLocation.id} />
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Name
+              <input name="name" defaultValue={editLocation.name} required className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+            </label>
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Code
+              <input name="code" defaultValue={editLocation.code ?? ""} placeholder="Optional" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm uppercase outline-none focus:border-[var(--accent)]/50" />
+            </label>
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Branch
+              <select name="branchId" defaultValue={editLocation.branchId ?? ""} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50">
+                <option value="">No branch</option>
+                {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-[0.8125rem] text-[var(--ink)]">
+              <input type="checkbox" name="isActive" value="1" defaultChecked={editLocation.isActive} className="h-4 w-4 rounded border-[var(--line)] accent-[var(--accent)]" /> Active
+            </label>
+            <SubmitButton bare className="btn-premium w-full rounded-lg px-3 py-2 text-sm font-bold">Save changes</SubmitButton>
+          </form>
+        </EditDialog>
+      ) : null}
     </ListPageLayout>
   );
 }

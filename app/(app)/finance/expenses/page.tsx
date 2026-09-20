@@ -18,7 +18,7 @@ import { recordExpensePayment } from "@/lib/commercial/expense-payments";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { RowActionsMenu, MenuDestructiveRow, MenuActionLink } from "@/components/shared/RowActionsMenu";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
@@ -28,6 +28,7 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { icontains } from "@/lib/db/search";
 import { CreateExpenseDialog, type ExpenseFormState } from "./CreateExpenseDialog";
+import { EditDialog } from "@/components/ui/EditDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     ? (sp.category as ExpenseCategory)
     : undefined;
   const q = sp.q?.trim() ?? "";
+  const editId = sp.edit?.trim() || null;
   const periodFilter = (sp.period ?? "all") as "all" | "this_month" | "last_month" | "ytd";
   const statusFilter = (sp.status ?? "all") as "all" | "paid" | "unpaid";
   const sort = sp.sort === "oldest" ? "oldest" : sp.sort === "due" ? "due" : "newest";
@@ -461,6 +463,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
     revalidatePath("/finance/expenses");
     revalidatePath("/payout-followups");
+    // Close the edit dialog: a plain revalidate would leave ?edit= set.
+    redirect("/finance/expenses");
   }
 
   async function deleteExpenseAction(formData: FormData) {
@@ -522,104 +526,13 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   // Named so the same actions menu renders in the desktop table AND mobile card.
   // Mark-paid is a finance action (anyone who can write), Delete stays ADMIN.
+  // Text editing lives in the ?edit= dialog below, not in this menu.
   const renderExpenseActions =
     canDelete || canWrite
       ? (expense: (typeof expenses)[number]) => (
           <RowActionsMenu label="Expense actions">
             {canWrite ? (
-              <form action={updateExpenseAction} className="space-y-2 border-b border-[var(--line)] px-3 py-2.5">
-                <input type="hidden" name="expenseId" value={expense.id} />
-                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-                  Edit · {expense.expenseNumber}
-                </p>
-                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
-                  Description
-                  <input
-                    name="description"
-                    required
-                    defaultValue={expense.description}
-                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
-                  />
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
-                    Category
-                    <select
-                      name="category"
-                      defaultValue={expense.category}
-                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
-                    Amount{expense.paidAt ? " (locked — paid)" : ""}
-                    <input
-                      name="amount"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      required
-                      defaultValue={expense.amount}
-                      readOnly={Boolean(expense.paidAt)}
-                      title={expense.paidAt ? "Paid expenses keep their booked amount — delete and re-record to correct it." : undefined}
-                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem] read-only:opacity-60"
-                    />
-                  </label>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
-                    Due date
-                    <input
-                      name="dueAt"
-                      type="date"
-                      defaultValue={expense.dueAt ? new Date(expense.dueAt).toISOString().slice(0, 10) : ""}
-                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
-                    />
-                  </label>
-                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
-                    Reference
-                    <input
-                      name="reference"
-                      defaultValue={expense.reference ?? ""}
-                      placeholder="Optional"
-                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
-                    />
-                  </label>
-                </div>
-                {suppliers.length > 0 ? (
-                  <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
-                    Supplier
-                    <select
-                      name="supplierId"
-                      defaultValue={expense.supplier?.id ?? ""}
-                      className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
-                    >
-                      <option value="">— none —</option>
-                      {suppliers.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
-                  Notes
-                  <input
-                    name="notes"
-                    defaultValue={expense.notes ?? ""}
-                    placeholder="Optional"
-                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black"
-                >
-                  Save changes
-                </button>
-              </form>
+              <MenuActionLink href={filterUrl({ edit: expense.id })} icon="open">Edit details</MenuActionLink>
             ) : null}
             {!expense.paidAt && canWrite ? (
               <form action={markExpensePaidAction} className="space-y-2 border-b border-[var(--line)] px-3 py-2.5">
@@ -700,11 +613,13 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const nextStatus =
       params.status !== undefined ? params.status : statusFilter !== "all" ? statusFilter : "";
     const nextSort = params.sort !== undefined ? params.sort : sort !== "newest" ? sort : "";
+    const nextEdit = params.edit !== undefined ? params.edit : editId ?? "";
     if (nextCat) base.set("category", nextCat);
     if (nextQ) base.set("q", nextQ);
     if (nextPeriod) base.set("period", nextPeriod);
     if (nextStatus) base.set("status", nextStatus);
     if (nextSort) base.set("sort", nextSort);
+    if (nextEdit) base.set("edit", nextEdit);
     const s = base.toString();
     return `/finance/expenses${s ? `?${s}` : ""}`;
   };
@@ -722,6 +637,18 @@ export default async function ExpensesPage({ searchParams }: Props) {
   };
   const expensesHref = pageHrefBuilder("/finance/expenses", expensesHrefFilters);
   const expensesHrefSize = sizeHrefBuilder("/finance/expenses", expensesHrefFilters);
+
+  // Edit-dialog target: loaded only when ?edit= is set, org-scoped.
+  const editExpense = editId && canWrite
+    ? await db.expense.findFirst({
+        where: { id: editId, orgId: user.orgId ?? "" },
+        select: {
+          id: true, expenseNumber: true, description: true, category: true,
+          amount: true, paidAt: true, dueAt: true, reference: true,
+          notes: true, supplierId: true,
+        },
+      }).catch(() => null)
+    : null;
 
   return (
     <div className="space-y-4">
@@ -1037,6 +964,98 @@ export default async function ExpensesPage({ searchParams }: Props) {
           pageSize={pageSize}
           hrefForSize={expensesHrefSize}
       />
+
+      {editExpense ? (
+        <EditDialog title={`Edit · ${editExpense.expenseNumber}`} closeHref="/finance/expenses">
+          <form action={updateExpenseAction} className="space-y-3">
+            <input type="hidden" name="expenseId" value={editExpense.id} />
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+              Description
+              <input
+                name="description"
+                required
+                defaultValue={editExpense.description}
+                className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Category
+                <select
+                  name="category"
+                  defaultValue={editExpense.category}
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Amount{editExpense.paidAt ? " (locked — paid)" : ""}
+                <input
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  defaultValue={editExpense.amount}
+                  readOnly={Boolean(editExpense.paidAt)}
+                  title={editExpense.paidAt ? "Paid expenses keep their booked amount — delete and re-record to correct it." : undefined}
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 read-only:opacity-60"
+                />
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Due date
+                <input
+                  name="dueAt"
+                  type="date"
+                  defaultValue={editExpense.dueAt ? new Date(editExpense.dueAt).toISOString().slice(0, 10) : ""}
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+                />
+              </label>
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Reference
+                <input
+                  name="reference"
+                  defaultValue={editExpense.reference ?? ""}
+                  placeholder="Optional"
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+                />
+              </label>
+            </div>
+            {suppliers.length > 0 ? (
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Supplier
+                <select
+                  name="supplierId"
+                  defaultValue={editExpense.supplierId ?? ""}
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+                >
+                  <option value="">— none —</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+              Notes
+              <input
+                name="notes"
+                defaultValue={editExpense.notes ?? ""}
+                placeholder="Optional"
+                className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+              />
+            </label>
+            <SubmitButton bare className="btn-premium w-full rounded-lg px-3 py-2 text-sm font-bold">
+              Save changes
+            </SubmitButton>
+          </form>
+        </EditDialog>
+      ) : null}
     </div>
   );
 }
