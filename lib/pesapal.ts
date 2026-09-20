@@ -223,7 +223,7 @@ const PLAN_FROM_CODE: Record<string, string> = { S: "STANDARD", P: "GROWTH", M: 
 /** Build a unique merchant reference encoding orgId and plan. Max ~35 chars. */
 export function buildMerchantRef(orgId: string, plan: "STANDARD" | "GROWTH" | "PREMIUM" | "ENTERPRISE"): string {
   const rand = Math.floor(10000 + Math.random() * 90000);
-  return `${orgId}-${rand}-${PLAN_CODE[plan]}`;
+  return `${orgId}-${Date.now().toString(36)}${rand}-${PLAN_CODE[plan]}`;
 }
 
 /** Parse orgId and plan from a merchant reference built with buildMerchantRef. */

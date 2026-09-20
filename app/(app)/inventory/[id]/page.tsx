@@ -61,7 +61,7 @@ export default async function PartDetailPage({
         id: true, sku: true, name: true, manufacturer: true,
         unitCost: true, qtyOnHand: true, qtyReserved: true,
         reorderLevel: true, isActive: true, createdAt: true,
-        sellingPrice: true, category: true, description: true,
+        sellingPrice: true, category: true, description: true, shortDescription: true,
         taxable: true, taxRate: true,
         reservations: {
           where: { status: "RESERVED" },
@@ -311,6 +311,7 @@ export default async function PartDetailPage({
 
                 <FieldGroup label="Stock &amp; notes">
                   <FormField label="Reorder point" name="reorderLevel" defaultValue={String(part.reorderLevel)} placeholder="0" inputMode="numeric" />
+                  <FormField label="Short line (table view)" name="shortDescription" defaultValue={part.shortDescription ?? ""} placeholder="One line for tables" />
                   <FormTextarea label="Description" name="description" defaultValue={part.description ?? ""} placeholder="Optional" rows={2} />
                 </FieldGroup>
 
@@ -336,6 +337,12 @@ export default async function PartDetailPage({
                     </div>
                   ))}
                 </dl>
+                {part.shortDescription ? (
+                  <div className="border-t border-[var(--line)] px-5 py-3">
+                    <p className="mb-1 text-[0.75rem] text-[var(--ink-muted)]">Short line</p>
+                    <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">{part.shortDescription}</p>
+                  </div>
+                ) : null}
                 {part.description ? (
                   <div className="border-t border-[var(--line)] px-5 py-3">
                     <p className="mb-1 text-[0.75rem] text-[var(--ink-muted)]">Description</p>

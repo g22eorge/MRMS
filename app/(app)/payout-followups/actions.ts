@@ -452,7 +452,7 @@ export async function payBucketAction(formData: FormData) {
     orgId,
     actorUserId: user.id,
     entityType: "BulkPay",
-    entityId: `${bucket}:${Date.now()}`,
+    entityId: `${bucket}:${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     action: "BULK_PAY_BUCKET",
     summary: `Bulk-paid ${cleared} item(s) in ${bucket} bucket; skipped ${skipped.length}`,
   }).catch(() => {});

@@ -55,6 +55,7 @@ export async function createPartAction(formData: FormData) {
   const qtyRaw = String(formData.get("qtyOnHand") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const shortDescription = String(formData.get("shortDescription") ?? "").trim();
   const taxable = String(formData.get("taxable") ?? "true") !== "false";
   const active = String(formData.get("active") ?? "true") !== "false";
 
@@ -76,6 +77,7 @@ export async function createPartAction(formData: FormData) {
     sellingPrice: sellingPrice !== null && Number.isFinite(sellingPrice) ? sellingPrice : null,
     category: category || null,
     description: description || null,
+    shortDescription: shortDescription || null,
     taxable,
     taxRate: taxRate !== null && Number.isFinite(taxRate) ? taxRate : null,
     reorderLevel,
@@ -283,6 +285,7 @@ export async function updatePartAction(formData: FormData) {
   const taxRateRaw = String(formData.get("taxRate") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const shortDescription = String(formData.get("shortDescription") ?? "").trim();
   const taxable = String(formData.get("taxable") ?? "true") !== "false";
   if (!partId || !name) redirect(`/inventory/${partId}?error=Item+name+is+required`);
 
@@ -311,6 +314,7 @@ export async function updatePartAction(formData: FormData) {
         sellingPrice: sellingPrice !== null && Number.isFinite(sellingPrice) ? sellingPrice : null,
         category: category || null,
         description: description || null,
+        shortDescription: shortDescription || null,
         taxable,
         taxRate: taxRate !== null && Number.isFinite(taxRate) ? taxRate : null,
         reorderLevel,
