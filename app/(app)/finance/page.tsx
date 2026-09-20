@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
+import { CashFlowChart } from "@/components/finance/CashFlowChart";
 
 export default async function FinancePage({
   searchParams,
@@ -115,35 +116,25 @@ export default async function FinancePage({
       m.outflow = outgo;
     }),
   );
-  const cashFlowMax = Math.max(1, ...cashFlowMonths.flatMap((m) => [m.inflow, m.outflow]));
   const cashFlowTotalIn = cashFlowMonths.reduce((s, m) => s + m.inflow, 0);
   const cashFlowTotalOut = cashFlowMonths.reduce((s, m) => s + m.outflow, 0);
-
-  /* ── chart geometry (pure SVG, no client JS) ────────────────────────────── */
-  const CH = { L: 44, R: 592, T: 10, B: 188 };
-  const chStep = (CH.R - CH.L) / Math.max(1, cashFlowMonths.length);
-  const chX = (i: number) => CH.L + i * chStep + chStep / 2;
-  const chY = (v: number) => CH.B - Math.max(0, Math.round((v / cashFlowMax) * (CH.B - CH.T)));
-  // Smooth curve through points (Catmull-Rom → Bézier).
-  function chSmooth(pts: Array<readonly [number, number]>) {
-    if (pts.length === 1) return `M ${pts[0][0]} ${pts[0][1]}`;
-    let d = `M ${pts[0][0]} ${pts[0][1]}`;
-    for (let i = 0; i < pts.length - 1; i += 1) {
-      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
-      const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-      const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-      d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
-    }
-    return d;
-  }
-  const chInLine = chSmooth(cashFlowMonths.map((m, i) => [chX(i), chY(m.inflow)] as const));
-  const chNet = cashFlowMonths.map((m) =>
-    Math.min(CH.B, Math.max(CH.T, CH.B - Math.round(((m.inflow - m.outflow) / cashFlowMax) * (CH.B - CH.T)))),
-  );
-  const chTicks = [0.25, 0.5, 0.75, 1].map((f) => ({
-    y: CH.B - Math.round(f * (CH.B - CH.T)),
-    v: formatMoneyCompact(Math.round(f * cashFlowMax), currency).replace(`${currency} `, ""),
-  }));
+  const cashFlowData = cashFlowMonths.map((m) => {
+    const endInclusive = new Date(m.end.getTime() - 1);
+    const isQuarter = periodMonths !== 1;
+    const title = isQuarter
+      ? `Q${Math.floor(m.start.getMonth() / 3) + 1} ${m.start.getFullYear()}`
+      : m.start.toLocaleDateString("en-UG", { month: "long", year: "numeric" });
+    const range = `${m.start.toLocaleDateString("en-UG", { day: "numeric", month: "short" })} – ${endInclusive.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" })}`;
+    return {
+      key: m.key,
+      label: m.label,
+      title,
+      range,
+      inflow: m.inflow,
+      outflow: m.outflow,
+      net: m.inflow - m.outflow,
+    };
+  });
 
   /* ── payables + attention (base currency) ───────────────────────────────── */
   const toBase = (amount: number, curr?: string | null, rate?: number | null) =>
@@ -390,46 +381,7 @@ export default async function FinancePage({
             </span>
           </div>
           <div className="px-4 py-3">
-            <svg viewBox="0 0 600 232" className="w-full" role="img" aria-label="Cash flow chart">
-              <defs>
-                <linearGradient id="cashInArea" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.38" />
-                  <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.03" />
-                </linearGradient>
-              </defs>
-              {chTicks.map((t) => (
-                <g key={t.y}>
-                  <line x1={CH.L} y1={t.y} x2={CH.R} y2={t.y} stroke="var(--line)" strokeWidth="1" opacity="0.55" strokeDasharray="3 4" />
-                  <text x={CH.L - 6} y={t.y + 3.5} textAnchor="end" fontSize="10" fill="var(--ink-muted)">
-                    {t.v}
-                  </text>
-                </g>
-              ))}
-              <line x1={CH.L} y1={CH.B} x2={CH.R} y2={CH.B} stroke="var(--line)" strokeWidth="1" />
-              <path d={`${chInLine} L ${chX(cashFlowMonths.length - 1)} ${CH.B} L ${chX(0)} ${CH.B} Z`} fill="url(#cashInArea)" />
-              <path d={chInLine} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" />
-              <polyline
-                points={chNet.map((y, i) => `${chX(i).toFixed(1)},${y.toFixed(1)}`).join(" ")}
-                fill="none" stroke="var(--ink)" strokeWidth="1.25" opacity="0.45"
-              />
-              {cashFlowMonths.map((m, i) => {
-                const barW = Math.min(22, chStep * 0.2);
-                const outH = CH.B - chY(m.outflow);
-                const isNow = i === cashFlowMonths.length - 1;
-                return (
-                  <g key={m.key}>
-                    <title>{`${m.label}: in ${formatMoney(m.inflow, currency)} · out ${formatMoney(m.outflow, currency)}`}</title>
-                    <rect x={chX(i) + chStep * 0.08} y={chY(m.outflow)} width={barW} height={outH} rx="3" fill="#f87171" opacity={isNow ? 0.95 : 0.6} />
-                    <circle cx={chX(i)} cy={chY(m.inflow)} r={isNow ? 4 : 2.5} fill="var(--accent)" stroke="var(--panel)" strokeWidth="1.5" />
-                    <circle cx={chX(i)} cy={chNet[i]} r="2.5" fill="var(--ink)" opacity={isNow ? 0.9 : 0.45} />
-                    <text x={chX(i)} y={206} textAnchor="middle" fontSize="11" fontWeight={isNow ? "bold" : "normal"} fill={isNow ? "var(--ink)" : "var(--ink-muted)"}>
-                      {m.label}
-                    </text>
-                  </g>
-                );
-              })}
-              <text x={CH.R} y={222} textAnchor="end" fontSize="10" fill="var(--ink-muted)">● net · hover a period for exact figures</text>
-            </svg>
+            <CashFlowChart data={cashFlowData} currency={currency} />
           </div>
         </div>
       ) : null}
