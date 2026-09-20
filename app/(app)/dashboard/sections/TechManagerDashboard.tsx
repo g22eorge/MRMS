@@ -62,7 +62,7 @@ export async function TechManagerDashboard({ orgId }: { orgId: string | null }) 
     prisma.job.count({ where: { ...orgFilter, completedAt: { gte: todayStart } } }),
     prisma.job.count({ where: { ...orgFilter, status: "DIAGNOSING" } }),
     prisma.partStockTransaction.findMany({
-      where: { createdAt: { gte: mtdStart } },
+      where: { ...orgFilter, createdAt: { gte: mtdStart } },
       select: { type: true, quantity: true },
     }).catch(() => [] as Array<{ type: string; quantity: number }>),
   ]);

@@ -99,9 +99,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const prevMonthEnd = new Date(thisYear, thisMonth, 0, 23, 59, 59);
   const _thisMonthStart = new Date(thisYear, thisMonth, 1);
 
-  // 6-month trend window
-  const trendStart = new Date(thisYear, thisMonth - 5, 1);
-
   // The period chips have never narrowed anything: `periodFilter` was read from
   // the URL and used only to highlight the active chip, and `where` referenced
   // no date at all. Clicking "This month" reloaded the identical list, so the
@@ -132,7 +129,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
       : {}),
   };
 
-  const [expenses, statsRows, total, suppliers, trendExpenses, prevMonthExpenses, ytdExpenses, prevYtdExpenses] =
+  const [expenses, statsRows, total, suppliers, historyExpenses] =
     await Promise.all([
       db.expense.findMany({
         where,
@@ -155,24 +152,17 @@ export default async function ExpensesPage({ searchParams }: Props) {
       db.supplier
         .findMany({ where: {}, select: { id: true, name: true }, orderBy: { name: "asc" } })
         .catch(() => [] as { id: string; name: string }[]),
-      // For 6-month trend chart (all categories, no filters)
+      // One wide slim fetch for the trend chart + MoM/YTD comparisons below,
+      // bucketed in JS — replaces four overlapping full scans.
       db.expense.findMany({
-        where: { paidAt: { gte: trendStart } },
+        where: { paidAt: { gte: prevYtdStart } },
         select: { amount: true, currency: true, exchangeRateToBase: true, paidAt: true, createdAt: true },
       }),
-      db.expense.findMany({
-        where: { paidAt: { gte: prevMonthStart, lte: prevMonthEnd } },
-        select: { amount: true, currency: true, exchangeRateToBase: true },
-      }),
-      db.expense.findMany({
-        where: { paidAt: { gte: ytdStart } },
-        select: { amount: true, currency: true, exchangeRateToBase: true },
-      }),
-      db.expense.findMany({
-        where: { paidAt: { gte: prevYtdStart, lte: prevYtdEnd } },
-        select: { amount: true, currency: true, exchangeRateToBase: true },
-      }),
     ]);
+  const trendExpenses = historyExpenses;
+  const prevMonthExpenses = historyExpenses.filter((e) => e.paidAt && e.paidAt >= prevMonthStart && e.paidAt <= prevMonthEnd);
+  const ytdExpenses = historyExpenses.filter((e) => e.paidAt && e.paidAt >= ytdStart);
+  const prevYtdExpenses = historyExpenses.filter((e) => e.paidAt && e.paidAt >= prevYtdStart && e.paidAt <= prevYtdEnd);
 
   // The organisation's own currency, not a literal. A tenant whose books are
   // kept in KES was shown every figure on this page labelled UGX.

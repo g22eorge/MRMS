@@ -82,9 +82,16 @@ export default async function CreditNotesPage({
       // Restore returned stock — the POS "received back" path did this but the
       // Documents path only stamped a timestamp, silently losing inventory (H5).
       const items = await tx.creditNoteItem.findMany({ where: { creditNoteId }, select: { partId: true, quantity: true, description: true, saleUomFactor: true } });
+      // One lookup for all line parts up front instead of a findFirst per
+      // line while the transaction stays open.
+      const partIds = [...new Set(items.map((it) => it.partId).filter((id): id is string => Boolean(id)))];
+      const parts = partIds.length > 0
+        ? await tx.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, sku: true, name: true } })
+        : [];
+      const partById = new Map(parts.map((p) => [p.id, p]));
       for (const it of items) {
         if (!it.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, sku: true, name: true } });
+        const part = partById.get(it.partId);
         if (!part) continue;
         const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: baseQty } } });
@@ -551,10 +558,16 @@ export default async function CreditNotesPage({
 
       // Restock the returned units (mirror markItemsReceivedAction). Only lines
       // that came from stock carry a partId, so labour on a repair invoice
-      // credits money without touching inventory.
+      // credits money without touching inventory. One lookup for all line
+      // parts up front instead of a findFirst per line.
+      const restockPartIds = [...new Set(items.map((it) => it.partId).filter((id): id is string => Boolean(id)))];
+      const restockParts = restockPartIds.length > 0
+        ? await tx.part.findMany({ where: { id: { in: restockPartIds }, orgId, isActive: true }, select: { id: true, name: true } })
+        : [];
+      const restockPartById = new Map(restockParts.map((p) => [p.id, p]));
       for (const it of items) {
         if (!it.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, name: true } });
+        const part = restockPartById.get(it.partId);
         if (!part) continue;
         const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: baseQty } } });

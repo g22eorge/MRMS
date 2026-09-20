@@ -42,6 +42,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: `This campaign is ${campaign.status.toLowerCase()}` }, { status: 400 });
   }
 
+  // Bounded batch: a campaign can hold thousands of contacts, so each send
+  // works the next slice and reports how many are left. Delivery within the
+  // slice runs in small parallel chunks instead of one serial chain.
+  const BATCH_SIZE = 200;
+  const CHUNK_SIZE = 10;
+
   const contacts = await prisma.campaignContact.findMany({
     where: { campaignId: campaign.id, orgId, status: "PENDING" },
     select: {
@@ -49,15 +55,24 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       lead: { select: { fullName: true, phone: true, email: true } },
       client: { select: { fullName: true, phone: true, email: true } },
     },
+    orderBy: { createdAt: "asc" },
+    take: BATCH_SIZE + 1,
   });
   if (contacts.length === 0) {
     return NextResponse.json({ sent: 0, skipped: 0, failed: 0, errors: ["Nothing pending"] });
   }
+  const batch = contacts.slice(0, BATCH_SIZE);
+  const remaining = contacts.length > BATCH_SIZE;
+
+  // Captured for the sendOne closure (narrowing doesn't cross it).
+  const campaignBody = campaign.body;
+  const campaignType = campaign.type;
+  const campaignSubject = campaign.subject || campaign.name;
 
   if (campaign.type === "SMS" || campaign.type === "CALL") {
     return NextResponse.json({
       sent: 0,
-      skipped: contacts.length,
+      skipped: batch.length,
       failed: 0,
       errors: [`${campaign.type} campaigns are not dispatched by the system — work this list by hand.`],
     });
@@ -67,24 +82,22 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const errors: string[] = [];
   const note = (msg: string) => { if (errors.length < 5) errors.push(msg); };
 
-  for (const contact of contacts) {
+  async function sendOne(contact: (typeof batch)[number]) {
     const person = contact.client ?? contact.lead;
     const name = person?.fullName ?? "there";
     // {name} is the one substitution the composer documents; leaving the raw
     // token in a customer's message is worse than sending it unpersonalised.
-    const body = campaign.body.replaceAll("{name}", name);
+    const body = campaignBody.replaceAll("{name}", name);
 
-    const to = campaign.type === "EMAIL" ? person?.email : person?.phone;
+    const to = campaignType === "EMAIL" ? person?.email : person?.phone;
     if (!to) {
-      skipped += 1;
-      note(`${name}: no ${campaign.type === "EMAIL" ? "email address" : "phone number"} on record`);
-      continue;
+      return { outcome: "skipped" as const, note: `${name}: no ${campaignType === "EMAIL" ? "email address" : "phone number"} on record` };
     }
 
     try {
-      const row = campaign.type === "EMAIL"
+      const row = campaignType === "EMAIL"
         ? await enqueueEmailMessage({
-            orgId, to, subject: campaign.subject || campaign.name, body, type: "CAMPAIGN_MESSAGE",
+            orgId, to, subject: campaignSubject, body, type: "CAMPAIGN_MESSAGE",
           })
         : await enqueueWhatsAppMessage({ orgId, to, body, type: "CAMPAIGN_MESSAGE" });
 
@@ -96,11 +109,24 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         where: { id: contact.id },
         data: { status: "SENT", sentAt: new Date() },
       });
-      sent += 1;
+      return { outcome: "sent" as const };
     } catch (err) {
       // One unreachable contact must not abandon the rest of the list.
-      failed += 1;
-      note(`${name}: ${err instanceof Error ? err.message : String(err)}`);
+      return { outcome: "failed" as const, note: `${name}: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  }
+
+  for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
+    const results = await Promise.allSettled(batch.slice(i, i + CHUNK_SIZE).map(sendOne));
+    for (const r of results) {
+      if (r.status === "fulfilled") {
+        if (r.value.outcome === "sent") sent += 1;
+        else if (r.value.outcome === "skipped") { skipped += 1; if (r.value.note) note(r.value.note); }
+        else { failed += 1; if (r.value.note) note(r.value.note); }
+      } else {
+        failed += 1;
+        note(r.reason instanceof Error ? r.reason.message : String(r.reason));
+      }
     }
   }
 
@@ -111,5 +137,5 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     });
   }
 
-  return NextResponse.json({ sent, skipped, failed, errors });
+  return NextResponse.json({ sent, skipped, failed, remaining, errors });
 }
