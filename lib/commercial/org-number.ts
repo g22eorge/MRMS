@@ -21,22 +21,6 @@ export function orgNumberTag(slug: string | null | undefined) {
 }
 
 /**
- * Resolve the numbering tag for an org id via its slug.
- *
- * Accepts an optional client so callers INSIDE an interactive `$transaction` can
- * pass `tx` — issuing this read on the global `prisma` client while a tx holds
- * the connection deadlocks on Turso/libSQL (same class as getOrgNumberConfig).
- * Out-of-transaction callers keep the default global client.
- */
-export async function orgTagFor(orgId: string, db: Pick<typeof prisma, "organization"> = prisma) {
-  const org = await db.organization.findUnique({
-    where: { id: orgId },
-    select: { slug: true },
-  });
-  return orgNumberTag(org?.slug);
-}
-
-/**
  * Is this document code already claimed by a different org?
  *
  * The document-number columns are globally `@unique` while the counters are
@@ -98,11 +82,6 @@ export function maxNumberSequence(inner: string, numbers: string[]) {
     if (Number.isFinite(n) && n > max) max = n;
   }
   return max;
-}
-
-/** Compose a globally-unique, org-tagged document number. */
-export function composeOrgNumber(tag: string, inner: string, seq: number, pad = 4) {
-  return `${tag}-${inner}${String(seq).padStart(pad, "0")}`;
 }
 
 /**
@@ -185,65 +164,82 @@ export function invalidateOrgNumberConfig(orgId?: string) {
 }
 
 /**
- * Highest trailing sequence for a given year across mixed number formats —
- * tolerates the new slash form ("EIS/2026/0041", "EIS/INV/2026/0044") and every
- * legacy form ("EAGLE-INFO-SOLUTIONS-EI-2026-0040", "EI-2026-0040"). Used so a
- * format switch continues the sequence instead of restarting at 0001.
+ * Universal document number: TAG/TYPE/YYYY/MM/NNN (e.g. "EIS/INV/2026/09/001").
+ *
+ * TAG is the org's branding code (varies per company), TYPE is the document
+ * kind (JOB, EST, INV, RCT, DN, CN, CMP, EXP, PR, PO, GRN, BILL, STC, XFR,
+ * SAL), and NNN restarts at 001 every month per org+type. The sequence pad
+ * honours the org's branding padding with a floor of 3.
  */
-export function maxSequenceForYear(numbers: string[], year: number) {
-  const re = new RegExp(`${year}[-/](\\d+)(?!.*\\d)`);
-  let max = 0;
-  for (const value of numbers) {
-    if (!value) continue;
-    const match = value.match(re);
-    if (!match) continue;
-    const n = Number(match[1]);
-    if (Number.isFinite(n) && n > max) max = n;
-  }
-  return max;
+export const UNIVERSAL_NUMBER_PAD = 3;
+
+export function composeUniversalNumber(tag: string, type: string, at: Date, seq: number, pad = UNIVERSAL_NUMBER_PAD) {
+  const yyyy = at.getFullYear();
+  const mm = String(at.getMonth() + 1).padStart(2, "0");
+  return `${tag}/${type}/${yyyy}/${mm}/${String(seq).padStart(Math.max(UNIVERSAL_NUMBER_PAD, pad), "0")}`;
 }
 
-/** Compose a slash-style repair number, e.g. "EIS/2026/0041". */
-export function composeJobNumber(prefix: string, year: number, seq: number, pad = 4) {
-  return `${prefix}/${year}/${String(seq).padStart(pad, "0")}`;
+function isUniqueViolation(error: unknown) {
+  return error instanceof Error && "code" in error && (error as { code?: string }).code === "P2002";
 }
-
-/** Compose a slash-style document number, e.g. "EIS/INV/2026/0044". */
-export function composeDocumentNumber(prefix: string, type: string, year: number, seq: number, pad = 4) {
-  return `${prefix}/${type}/${year}/${String(seq).padStart(pad, "0")}`;
-}
-
-/** Compose a compact expense number, e.g. "Exp/EIS/26/09/042": kind, company
- * acronym, 2-digit year, month, sequence. */
-export function composeExpenseNumber(tag: string, month: Date, seq: number, pad = 3) {
-  const yy = String(month.getFullYear()).slice(2);
-  const mm = String(month.getMonth() + 1).padStart(2, "0");
-  return `Exp/${tag}/${yy}/${mm}/${String(seq).padStart(pad, "0")}`;
-}
-
-type ExpenseNumberDb = {
-  expense: { findMany(args: { where: { orgId: string }; select: { expenseNumber: true } }): Promise<Array<{ expenseNumber: string }>> };
-};
 
 /**
- * Next expense number for an org: TAG/MM/NNN (e.g. EIS/09/042). The tag is
- * the branding prefix shared with every other document, the month is when
- * the expense is raised, and the sequence is the max trailing run of digits
- * across the org's existing numbers (any shape, so legacy EXP-… numbers
- * count) plus one — it never resets, which keeps the month-only format
- * unique across years.
+ * Next universal number for an org+type+month, e.g. "EIS/INV/2026/09/001".
+ *
+ * The sequence lives on DocumentSequence(orgId, type, year, month) and is
+ * advanced inside its own short transaction, so concurrent creators can never
+ * compute the same value — this replaces every read-max generator. Monthly
+ * counters start at zero: new-format strings carry a /MM/ segment (and new
+ * codes like EST), so they can never equal a legacy number and need no
+ * seeding from history. Old numbers are grandfathered untouched.
+ *
+ * `taken` is an exact-match check against the model's globally-@unique
+ * column. It only ever fires when two orgs share a branding tag; the loop
+ * then skips past the taken value so the second tenant keeps transacting.
  */
-export async function nextExpenseNumber(orgId: string, now = new Date(), db: ExpenseNumberDb = prisma) {
-  const [{ prefix }, rows] = await Promise.all([
-    getOrgNumberConfig(orgId),
-    db.expense.findMany({ where: { orgId }, select: { expenseNumber: true } }),
-  ]);
-  let max = 0;
-  for (const row of rows) {
-    const match = row.expenseNumber.match(/(\d+)\s*$/);
-    if (!match) continue;
-    const n = Number(match[1]);
-    if (Number.isFinite(n) && n > max) max = n;
+export async function nextUniversalNumber(
+  orgId: string,
+  type: string,
+  opts?: { at?: Date; taken?: (candidate: string) => Promise<boolean> },
+): Promise<string> {
+  const at = opts?.at ?? new Date();
+  const year = at.getFullYear();
+  const month = at.getMonth() + 1;
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    let candidate: string;
+    try {
+      candidate = await prisma.$transaction(async (tx) => {
+        // On the tx client: the interactive tx holds Turso's single
+        // connection, so the branding read must not use the global client.
+        const { prefix, pad } = await getOrgNumberConfig(orgId, tx);
+        const seq = await tx.documentSequence.upsert({
+          where: { orgId_type_year_month: { orgId, type, year, month } },
+          create: { orgId, type, year, month, value: 1 },
+          update: { value: { increment: 1 } },
+          select: { value: true },
+        });
+        return composeUniversalNumber(prefix, type, at, seq.value, pad);
+      });
+    } catch (error) {
+      // Lost a concurrent upsert race on a fresh month row — the winner's
+      // row exists now, so retrying lands on the update path.
+      if (isUniqueViolation(error) && attempt < 24) continue;
+      throw error;
+    }
+    if (!opts?.taken || !(await opts.taken(candidate))) return candidate;
   }
-  return composeExpenseNumber(prefix, now, max + 1);
+  throw new Error(`Could not allocate a unique ${type} number for this organisation.`);
+}
+
+/**
+ * Next expense number for an org: TAG/EXP/YYYY/MM/NNN (e.g. EIS/EXP/2026/09/001).
+ * Monthly atomic counter — the sequence restarts at 001 every month.
+ * Legacy Exp/… numbers stay grandfathered; manual overrides bypass this.
+ */
+export async function nextExpenseNumber(orgId: string, now = new Date()) {
+  return nextUniversalNumber(orgId, "EXP", {
+    at: now,
+    taken: async (candidate) =>
+      Boolean(await prisma.expense.findFirst({ where: { expenseNumber: candidate }, select: { id: true } })),
+  });
 }

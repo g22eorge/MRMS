@@ -6,7 +6,7 @@ import { effectiveRateFromSettlement, readCurrencyAndRate, rowToBase, toBaseAmou
 import { redirect } from "next/navigation";
 
 import { prisma, ensureMoneySchema } from "@/lib/prisma";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { postSupplierPayment, postSupplierTransferFee } from "@/lib/accounting/post";
 import { requireOrgSession } from "@/lib/org-context";
@@ -22,13 +22,10 @@ async function requireInventoryManager() {
 }
 
 async function generateBillNumber(orgId: string): Promise<string> {
-  const inner = `SB-${new Date().getFullYear()}-`;
-  const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
-    prisma.supplierBill.findMany({ where: { orgId, billNumber: { contains: inner } }, select: { billNumber: true } }),
-  ]);
-  const next = maxNumberSequence(inner, rows.map((r) => r.billNumber)) + 1;
-  return composeOrgNumber(tag, inner, next);
+  return nextUniversalNumber(orgId, "BILL", {
+    taken: async (candidate) =>
+      Boolean(await prisma.supplierBill.findFirst({ where: { billNumber: candidate }, select: { id: true } })),
+  });
 }
 
 type BillLine = { description: string; quantity: number; unitCost: number };

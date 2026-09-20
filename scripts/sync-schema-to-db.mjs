@@ -179,6 +179,8 @@ async function run() {
     }
     // DocumentSequence became org-scoped: drop the legacy global unique so per-org
     // counter rows can coexist (the new (orgId,type,year) unique is created below).
+    // Universal numbering then added month: drop the yearly unique so monthly
+    // rows (orgId,type,year,month) can coexist.
     if (tablesNow.has("DocumentSequence")) {
       const idx = await client.execute({
         sql: "SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?",
@@ -187,6 +189,14 @@ async function run() {
       if (idx.rows.length) {
         await client.execute('DROP INDEX "DocumentSequence_type_year_key"');
         remediations.push("Dropped legacy DocumentSequence_type_year_key (now org-scoped)");
+      }
+      const yearly = await client.execute({
+        sql: "SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?",
+        args: ["DocumentSequence_orgId_type_year_key"],
+      });
+      if (yearly.rows.length) {
+        await client.execute('DROP INDEX "DocumentSequence_orgId_type_year_key"');
+        remediations.push("Dropped yearly DocumentSequence_orgId_type_year_key (now monthly)");
       }
     }
   }

@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { Prisma } from "@prisma/client";
 import { orgDb } from "@/lib/db";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -39,21 +39,11 @@ function saleStatusTone(status: string): BadgeTone {
   return "warning";
 }
 
-function monthKey(d: Date) {
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 async function nextSaleNumber(db: ReturnType<typeof orgDb>, orgId: string) {
-  const inner = `S-${monthKey(new Date())}-`;
-  const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
-    db.sale.findMany({
-      where: { saleNumber: { contains: inner } },
-      select: { saleNumber: true },
-    }),
-  ]);
-  const next = maxNumberSequence(inner, rows.map((r) => r.saleNumber)) + 1;
-  return composeOrgNumber(tag, inner, next);
+  return nextUniversalNumber(orgId, "SAL", {
+    taken: async (candidate) =>
+      Boolean(await db.sale.findFirst({ where: { saleNumber: candidate }, select: { id: true } })),
+  });
 }
 
 const SEGMENTS = ["all", "today", "month", "open"] as const;

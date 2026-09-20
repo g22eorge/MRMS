@@ -1,92 +1,48 @@
 import type { Prisma } from "@prisma/client";
 
 import { postSalePayment } from "@/lib/accounting/post";
-import { getOrgNumberConfig, composeDocumentNumber, maxNumberSequence } from "@/lib/commercial/org-number";
+import { getOrgNumberConfig, composeUniversalNumber } from "@/lib/commercial/org-number";
 import { roundMoney, toBaseAmount } from "@/lib/currency";
 
 type Tx = Prisma.TransactionClient;
 type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote" | "complaint";
 
-/** Highest existing sequence for `inner` (e.g. "INV-2026-") within one org,
- * tolerating tagged, legacy untagged AND slash-era ("EIS/INV/2026/0044")
- * numbers. The dash-only scan missed every slash number, reseeding low and
- * burning counter values (or exhausting the skip loop) on every new org year.
- **/
-async function currentMaxDocumentSequence(tx: Tx, countModel: CountModel, inner: string, orgId: string) {
-  // Slash-era numbers use "/" where the dash era used "-": match both.
-  const slashInner = inner.replaceAll("-", "/");
-  const whereAny = (field: string) => ({ OR: [{ [field]: { contains: inner } }, { [field]: { contains: slashInner } }] });
-  // Quotation numbers live in two places — Quotation rows and, for job
-  // quotations, Job.quotationNumber — and both draw on this one counter. Seed
-  // from the higher of the two or a reseed could reissue a number already sent.
-  const numbers: string[] = countModel === "quotation"
-    ? [
-        ...(await tx.quotation.findMany({ where: { orgId, ...whereAny("quoteNumber") }, select: { quoteNumber: true } })).map((r) => r.quoteNumber),
-        ...(await tx.job.findMany({ where: { orgId, ...whereAny("quotationNumber") }, select: { quotationNumber: true } })).map((r) => r.quotationNumber ?? ""),
-      ]
-    : countModel === "invoice"
-      ? (await tx.invoice.findMany({ where: { orgId, ...whereAny("invoiceNumber") }, select: { invoiceNumber: true } })).map((r) => r.invoiceNumber)
-      : countModel === "deliveryNote"
-        ? (await tx.deliveryNote.findMany({ where: { orgId, ...whereAny("deliveryNoteNumber") }, select: { deliveryNoteNumber: true } })).map((r) => r.deliveryNoteNumber)
-        : countModel === "creditNote"
-          ? (await tx.creditNote.findMany({ where: { orgId, ...whereAny("creditNoteNumber") }, select: { creditNoteNumber: true } })).map((r) => r.creditNoteNumber)
-          : countModel === "complaint"
-            ? (await tx.complaint.findMany({ where: { orgId, ...whereAny("complaintNumber") }, select: { complaintNumber: true } })).map((r) => r.complaintNumber)
-            : (await tx.receipt.findMany({ where: { orgId, ...whereAny("receiptNumber") }, select: { receiptNumber: true } })).map((r) => r.receiptNumber);
-  const clean = numbers.filter(Boolean);
-  return Math.max(maxNumberSequence(inner, clean), maxNumberSequence(slashInner, clean));
-}
-
 /**
- * Allocate the next org-scoped, org-tagged document number (INV/QT/RCT/CN/DN),
- * e.g. "EGL-INV-2026-0044" — consistent with the rest of the system's numbering.
+ * Allocate the next org-scoped, org-tagged document number in the universal
+ * format TAG/TYPE/YYYY/MM/NNN (e.g. "EIS/INV/2026/09/001").
  *
- * Uses an atomic per-(orgId,type,year) counter (DocumentSequence) so concurrent
- * creation can't compute the same number. The org tag (uppercased slug) keeps
- * the full number globally unique, so the existing @unique columns keep working.
- * The counter seeds from the org's current max (tagged or legacy) so sequences
- * continue rather than restarting.
+ * Uses an atomic per-(orgId,type,year,month) counter (DocumentSequence) so
+ * concurrent creation can't compute the same number, and the sequence resets
+ * every month. The org tag (branding code) keeps the full number globally
+ * unique, so the existing @unique columns keep working. Monthly counters
+ * start at zero — new-format strings can never equal a legacy number, so no
+ * history seeding is needed and old numbers stay grandfathered.
  */
-export async function nextDocumentNumber(tx: Tx, type: string, countModel: CountModel, orgId: string) {
-  const year = new Date().getFullYear();
-  const inner = `${type}-${year}-`;
+export async function nextDocumentNumber(tx: Tx, type: string, countModel: CountModel, orgId: string, at = new Date()) {
+  const year = at.getFullYear();
+  const month = at.getMonth() + 1;
   // Pass `tx` so the branding read runs on the transaction's own connection.
   // Using the global client here deadlocks the interactive tx on Turso/libSQL
   // (see getOrgNumberConfig) — the bug that silently hung repair/POS payments
   // for fresh orgs and cold serverless instances.
   const { prefix, pad } = await getOrgNumberConfig(orgId, tx);
 
-  const existing = await tx.documentSequence.findUnique({ where: { orgId_type_year: { orgId, type, year } } });
-  if (!existing) {
-    // Seed the counter from the org's current max for this type/year — the scan
-    // matches legacy tagged/untagged numbers ("…-INV-2026-0044"), so switching to
-    // the slash form continues the sequence rather than restarting at 0001.
-    const seed = await currentMaxDocumentSequence(tx, countModel, inner, orgId);
-    try {
-      await tx.documentSequence.create({ data: { orgId, type, year, value: seed } });
-    } catch (err) {
-      // A concurrent call seeded it first — fine, we'll increment below.
-      if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002")) throw err;
-    }
-  }
-
-  // The number columns (invoiceNumber, receiptNumber, …) are declared GLOBALLY
-  // unique, but every org currently carries the same branding quotePrefix, so
-  // the org tag does not separate tenants. Two orgs' independent counters then
-  // compose the same string and the second tenant's write dies with P2002 —
-  // it simply cannot issue that document. Invoices already worked around this
-  // in nextAvailableInvoiceNumber; every other type had no protection.
-  //
-  // Advancing past a taken number keeps the tenant transacting. It is a
-  // stopgap, not the cure: giving each org its own prefix is the real fix, and
-  // that is a numbering-format decision for the business to make.
   for (let attempt = 0; attempt < 25; attempt += 1) {
-    const updated = await tx.documentSequence.update({
-      where: { orgId_type_year: { orgId, type, year } },
-      data: { value: { increment: 1 } },
-      select: { value: true },
-    });
-    const candidate = composeDocumentNumber(prefix, type, year, updated.value, pad);
+    let candidate: string;
+    try {
+      const seq = await tx.documentSequence.upsert({
+        where: { orgId_type_year_month: { orgId, type, year, month } },
+        create: { orgId, type, year, month, value: 1 },
+        update: { value: { increment: 1 } },
+        select: { value: true },
+      });
+      candidate = composeUniversalNumber(prefix, type, at, seq.value, pad);
+    } catch (error) {
+      // Lost a concurrent upsert race on a fresh month row — the winner's
+      // row exists now, so retrying lands on the update path.
+      if (error instanceof Error && "code" in error && (error as { code?: string }).code === "P2002" && attempt < 24) continue;
+      throw error;
+    }
     if (!(await documentNumberTaken(tx, countModel, candidate))) return candidate;
   }
   throw new Error(`Could not allocate a unique ${type} number for this organisation.`);
@@ -182,7 +138,7 @@ export async function ensureQuotationFromJob(tx: Tx, params: { orgId: string; jo
   if (!job) return null;
 
   const totalAmount = job.clientBill ?? 0;
-  const quoteNumber = await nextDocumentNumber(tx, "QT", "quotation", params.orgId);
+  const quoteNumber = await nextDocumentNumber(tx, "EST", "quotation", params.orgId);
   return tx.quotation.create({
     data: {
       orgId: params.orgId,

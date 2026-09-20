@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { getOrgNumberConfig, maxSequenceForYear, composeJobNumber } from "@/lib/commercial/org-number";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { normalizePhoneForStorage } from "@/lib/phone";
@@ -90,37 +90,13 @@ function parseDevices(devicesJson: string) {
 }
 
 export async function generateJobNumber(orgId?: string) {
-  const year = new Date().getFullYear();
-  const { prefix, pad } = await getOrgNumberConfig(orgId);
-
-  // Two scans, run together:
-  //  - global scan of this prefix/year keeps the globally-@unique jobNumber
-  //    collision-free across tenants sharing a prefix;
-  //  - per-org scan of any this-year number (new slash form or legacy hyphen
-  //    form) continues the org's sequence instead of restarting at 0001.
-  const [globalRows, orgRows] = await Promise.all([
-    prisma.job.findMany({
-      where: { jobNumber: { startsWith: `${prefix}/${year}/` } },
-      select: { jobNumber: true },
-    }),
-    orgId
-      ? prisma.job.findMany({
-          where: {
-            orgId,
-            OR: [
-              { jobNumber: { contains: `/${year}/` } },
-              { jobNumber: { contains: `-${year}-` } },
-            ],
-          },
-          select: { jobNumber: true },
-        })
-      : Promise.resolve([] as { jobNumber: string }[]),
-  ]);
-
-  const globalMax = maxSequenceForYear(globalRows.map((r) => r.jobNumber), year);
-  const orgMax = maxSequenceForYear(orgRows.map((r) => r.jobNumber), year);
-  const next = Math.max(globalMax, orgMax) + 1;
-  return composeJobNumber(prefix, year, next, pad);
+  // Universal numbering: TAG/JOB/YYYY/MM/NNN, monthly atomic counter.
+  // Legacy numbers stay grandfathered; the taken check only guards the
+  // shared-tag edge where two orgs could compose the same string.
+  return nextUniversalNumber(orgId ?? "", "JOB", {
+    taken: async (candidate) =>
+      Boolean(await prisma.job.findFirst({ where: { jobNumber: candidate }, select: { id: true } })),
+  });
 }
 
 export async function createJobAction(

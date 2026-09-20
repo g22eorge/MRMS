@@ -203,7 +203,7 @@ export async function createQuotationRecord(data: CreateQuotationInput) {
       });
       clientId = createdClient.id;
     }
-    const quoteNumber = await nextDocumentNumber(tx, "QT", "quotation", orgId);
+    const quoteNumber = await nextDocumentNumber(tx, "EST", "quotation", orgId);
     return tx.quotation.create({
       data: {
         quoteNumber,

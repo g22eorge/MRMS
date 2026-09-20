@@ -1647,19 +1647,20 @@ model RepairRequestSequence {
   @@unique([orgId, year])
 }
 
-// Atomic per-(type,year) counter for shared document numbers (INV/QT/RCT/CN/DN).
-// Numbers stay globally sequential (matching the existing @unique columns); the
-// counter just removes the read-max-then-write race that could 500 under
-// concurrent creation. Lazy-initialised from the current max for continuity.
+// Atomic per-(org,type,year,month) counter for universal document numbers
+// (TAG/TYPE/YYYY/MM/NNN). The sequence resets every month; pre-reset yearly
+// rows (month 0) stay untouched as history. New-format strings can never
+// collide with legacy shapes, so monthly counters start at zero.
 model DocumentSequence {
   id        String   @id @default(cuid())
   orgId     String?
   type      String
   year      Int
+  month     Int      @default(0)
   value     Int      @default(0)
   updatedAt DateTime @updatedAt
 
-  @@unique([orgId, type, year])
+  @@unique([orgId, type, year, month])
 }
 
 enum RepairRequestStatus {

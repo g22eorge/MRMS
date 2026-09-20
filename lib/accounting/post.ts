@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { currencyDecimals, normalizeCurrency, roundMoney } from "@/lib/currency";
+import { composeUniversalNumber, getOrgNumberConfig } from "@/lib/commercial/org-number";
 
 /**
  * Cash-basis double-entry posting service (C5).
@@ -78,38 +79,35 @@ export async function ensureCoreAccounts(tx: Tx, orgId: string): Promise<Record<
 }
 
 /**
- * Next JE-YYYY-#### number, shared across manual and auto entries for the
- * org/year. Uses the atomic per-(orgId,type,year) DocumentSequence counter so
- * two money-events posting concurrently in the same org can't compute the same
- * number (which previously collided on the @@unique and rolled back the whole
- * payment). Seeds from the current max existing entry so numbering continues.
+ * Next universal journal number TAG/JE/YYYY/MM/NNN, shared across manual and
+ * auto entries. Uses the atomic per-(orgId,type,year,month) DocumentSequence
+ * counter so two money-events posting concurrently in the same org can't
+ * compute the same number. Legacy JE-YYYY-#### numbers stay grandfathered.
  */
-async function nextEntryNumber(tx: Tx, orgId: string, year: number): Promise<string> {
+async function nextEntryNumber(tx: Tx, orgId: string, at: Date): Promise<string> {
   const type = "JE";
-  const prefix = `JE-${year}-`;
-  const existing = await tx.documentSequence.findUnique({ where: { orgId_type_year: { orgId, type, year } } });
-  if (!existing) {
-    const rows = await tx.journalEntry.findMany({
-      where: { orgId, entryNumber: { startsWith: prefix } },
-      select: { entryNumber: true },
-    });
-    const seed = rows.reduce((m, r) => {
-      const n = Number(r.entryNumber.slice(prefix.length));
-      return Number.isFinite(n) ? Math.max(m, n) : m;
-    }, 0);
+  const year = at.getFullYear();
+  const month = at.getMonth() + 1;
+  // Branding read on the caller's tx (see getOrgNumberConfig deadlock note).
+  const { prefix, pad } = await getOrgNumberConfig(orgId, tx);
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    let candidate: string;
     try {
-      await tx.documentSequence.create({ data: { orgId, type, year, value: seed } });
-    } catch (err) {
-      // A concurrent post seeded it first — fine, we increment below.
-      if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2002")) throw err;
+      const seq = await tx.documentSequence.upsert({
+        where: { orgId_type_year_month: { orgId, type, year, month } },
+        create: { orgId, type, year, month, value: 1 },
+        update: { value: { increment: 1 } },
+        select: { value: true },
+      });
+      candidate = composeUniversalNumber(prefix, type, at, seq.value, pad);
+    } catch (error) {
+      if (error instanceof Error && "code" in error && (error as { code?: string }).code === "P2002" && attempt < 24) continue;
+      throw error;
     }
+    const taken = await tx.journalEntry.findFirst({ where: { entryNumber: candidate }, select: { id: true } });
+    if (!taken) return candidate;
   }
-  const updated = await tx.documentSequence.update({
-    where: { orgId_type_year: { orgId, type, year } },
-    data: { value: { increment: 1 } },
-    select: { value: true },
-  });
-  return `${prefix}${String(updated.value).padStart(4, "0")}`;
+  throw new Error("Could not allocate a unique journal entry number for this organisation.");
 }
 
 /**
@@ -186,7 +184,7 @@ export async function postJournalEntry(tx: Tx, params: PostJournalParams): Promi
   }
 
   const date = params.date ?? new Date();
-  const entryNumber = await nextEntryNumber(tx, params.orgId, date.getFullYear());
+  const entryNumber = await nextEntryNumber(tx, params.orgId, date);
 
   return tx.journalEntry.create({
     data: {
@@ -227,7 +225,7 @@ export async function reverseJournalEntry(
   if (!original || original.lines.length === 0) return null;
 
   const date = params.date ?? new Date();
-  const entryNumber = await nextEntryNumber(tx, params.orgId, date.getFullYear());
+  const entryNumber = await nextEntryNumber(tx, params.orgId, date);
   return tx.journalEntry.create({
     data: {
       orgId: params.orgId,

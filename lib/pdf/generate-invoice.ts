@@ -127,9 +127,9 @@ export async function generateInvoiceBuffer(
   // derived from the job number must never reach the allocator: job numbering
   // has changed shape four times, and deriving from it is what put four
   // different formats into the invoice book. Jobs still open from the dash era
-  // would keep minting fresh INV-EI-2026-NNNN invoices today. Without a stored
-  // number the invoice takes the next EIS/INV/YYYY/NNNN from DocumentSequence,
-  // which is what standalone invoices have always done.
+  // would keep minting fresh legacy invoices today. Without a stored
+  // number the invoice takes the next TAG/INV/YYYY/MM/NNN from the monthly
+  // DocumentSequence counter, which is what standalone invoices have always done.
   const storedInvoiceNumber = job.invoiceNumber?.trim() || null;
   // Read-only workspaces render without persisting, so there is no allocation
   // to show; the derived number stands in on a PDF that is never issued.

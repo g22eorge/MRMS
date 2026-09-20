@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
@@ -19,13 +19,10 @@ async function requireAdmin() {
 }
 
 async function generateGrnNumber(orgId: string): Promise<string> {
-  const inner = `GRN-${new Date().getFullYear()}-`;
-  const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
-    prisma.goodsReceived.findMany({ where: { orgId, grnNumber: { contains: inner } }, select: { grnNumber: true } }),
-  ]);
-  const next = maxNumberSequence(inner, rows.map((r) => r.grnNumber)) + 1;
-  return composeOrgNumber(tag, inner, next);
+  return nextUniversalNumber(orgId, "GRN", {
+    taken: async (candidate) =>
+      Boolean(await prisma.goodsReceived.findFirst({ where: { grnNumber: candidate }, select: { id: true } })),
+  });
 }
 
 function parseOptionalDate(raw: FormDataEntryValue | null, label: string): { date: Date | null; error?: string } {
@@ -214,12 +211,14 @@ export async function createPurchaseOrderAction(
   }
 
   try {
+    // Universal PO numbering; a typed reference still wins when given.
+    const poReference = reference ?? (await nextUniversalNumber(orgId, "PO"));
     const po = await prisma.purchaseOrder.create({
       data: {
         orgId,
         supplierId,
         status: issueNow ? "ORDERED" : "DRAFT",
-        reference,
+        reference: poReference,
         orderedAt: orderedAt ?? (issueNow ? new Date() : null),
         expectedAt,
         notes,
@@ -233,7 +232,7 @@ export async function createPurchaseOrderAction(
         },
       },
     });
-    await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: po.id, action: "PURCHASE_ORDER_CREATED", summary: `PO ${reference ?? po.id} created${issueNow ? " (issued)" : ""}` });
+    await writeSystemAuditEvent({ orgId, actorUserId: session.user.id, entityType: "PurchaseOrder", entityId: po.id, action: "PURCHASE_ORDER_CREATED", summary: `PO ${poReference} created${issueNow ? " (issued)" : ""}` });
     revalidatePath("/inventory/purchase-orders");
     return { id: po.id };
   } catch {

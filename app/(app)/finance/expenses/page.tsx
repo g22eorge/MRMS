@@ -297,7 +297,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     let expense: { id: string } | null = null;
     let expenseNumber = manualNumber ?? "";
     for (let attempt = 0; attempt < 3 && !expense; attempt += 1) {
-      if (!manualNumber) expenseNumber = await nextExpenseNumber(orgId, new Date(), db);
+      if (!manualNumber) expenseNumber = await nextExpenseNumber(orgId, new Date());
       try {
         expense = await db.expense.create({
           data: {

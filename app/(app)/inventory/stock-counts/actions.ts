@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
@@ -19,13 +19,10 @@ async function requireInventoryManager() {
 }
 
 async function generateCountNumber(orgId: string) {
-  const inner = `SC-${new Date().getFullYear()}-`;
-  const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
-    prisma.stockCount.findMany({ where: { orgId, countNumber: { contains: inner } }, select: { countNumber: true } }),
-  ]);
-  const next = maxNumberSequence(inner, rows.map((r) => r.countNumber)) + 1;
-  return composeOrgNumber(tag, inner, next);
+  return nextUniversalNumber(orgId, "STC", {
+    taken: async (candidate) =>
+      Boolean(await prisma.stockCount.findFirst({ where: { countNumber: candidate }, select: { id: true } })),
+  });
 }
 
 type CountLine = { partId: string; systemQty: number; countedQty: number; note?: string };

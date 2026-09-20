@@ -290,16 +290,19 @@ export async function ensureMoneySchema(): Promise<void> {
       `ALTER TABLE "Payment" ADD COLUMN "saleId" TEXT`,
       `ALTER TABLE "Payment" ADD COLUMN "createdById" TEXT`,
       `ALTER TABLE "Payment" ADD COLUMN "note" TEXT`,
-      // Shared document/journal counter (RCT + JE numbers).
+      // Shared document/journal counter (universal TAG/TYPE/YYYY/MM/NNN numbers).
       `CREATE TABLE IF NOT EXISTS "DocumentSequence" (
         "id" TEXT NOT NULL PRIMARY KEY,
         "orgId" TEXT,
         "type" TEXT NOT NULL,
         "year" INTEGER NOT NULL,
+        "month" INTEGER NOT NULL DEFAULT 0,
         "value" INTEGER NOT NULL DEFAULT 0,
         "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       )`,
-      `CREATE UNIQUE INDEX IF NOT EXISTS "DocumentSequence_orgId_type_year_key" ON "DocumentSequence"("orgId","type","year")`,
+      `ALTER TABLE "DocumentSequence" ADD COLUMN "month" INTEGER NOT NULL DEFAULT 0`,
+      `DROP INDEX IF EXISTS "DocumentSequence_orgId_type_year_key"`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "DocumentSequence_orgId_type_year_month_key" ON "DocumentSequence"("orgId","type","year","month")`,
       // C5 cash-basis ledger tables the payment/refund post depends on.
       `CREATE TABLE IF NOT EXISTS "ChartOfAccount" (
         "id" TEXT NOT NULL PRIMARY KEY,

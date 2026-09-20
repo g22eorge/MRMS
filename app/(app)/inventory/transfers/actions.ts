@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
@@ -20,16 +20,11 @@ async function requireInventoryManager() {
   return ctx;
 }
 
-async function nextTransferNumber(tx: Prisma.TransactionClient, orgId: string) {
-  const inner = `ST-${new Date().getFullYear()}-`;
-  const [tag, rows] = await Promise.all([
-    // Pass `tx` — orgTagFor on the global client would deadlock this interactive
-    // transaction on Turso (same bug that hung payments; see getOrgNumberConfig).
-    orgTagFor(orgId, tx),
-    tx.stockTransfer.findMany({ where: { orgId, transferNumber: { contains: inner } }, select: { transferNumber: true } }),
-  ]);
-  const next = maxNumberSequence(inner, rows.map((r) => r.transferNumber)) + 1;
-  return composeOrgNumber(tag, inner, next);
+async function nextTransferNumber(orgId: string) {
+  return nextUniversalNumber(orgId, "XFR", {
+    taken: async (candidate) =>
+      Boolean(await prisma.stockTransfer.findFirst({ where: { transferNumber: candidate }, select: { id: true } })),
+  });
 }
 
 async function loadTransfer(tx: Prisma.TransactionClient, id: string, orgId: string) {
@@ -51,6 +46,9 @@ export async function createStockTransferAction(formData: FormData): Promise<voi
   if (fromLocationId === toLocationId) redirect("/inventory/transfers?error=Locations+must+be+different");
   if (!Number.isFinite(quantity) || quantity <= 0) redirect("/inventory/transfers?error=Quantity+must+be+positive");
 
+  // Number allocated before the write tx: the counter runs its own short
+  // transaction, and nesting it inside would deadlock Turso's connection.
+  const transferNumber = await nextTransferNumber(orgId);
   await prisma.$transaction(async (tx) => {
     const [from, to, part] = await Promise.all([
       tx.stockLocation.findFirst({ where: { id: fromLocationId, orgId, isActive: true }, select: { id: true } }),
@@ -62,7 +60,7 @@ export async function createStockTransferAction(formData: FormData): Promise<voi
     await tx.stockTransfer.create({
       data: {
         orgId,
-        transferNumber: await nextTransferNumber(tx, orgId),
+        transferNumber,
         fromLocationId,
         toLocationId,
         note,
