@@ -21,18 +21,21 @@ export default function NewSupplierPage() {
   }
 
   return (
-    <div className="space-y-3 max-w-2xl">
+    <div className="space-y-4">
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Inventory · Supplier</p>
             <h1 className="text-base font-bold text-[var(--ink)]">New supplier</h1>
           </div>
-          <p className="text-xs text-[var(--ink-muted)]">Prices and orders come after.</p>
+          <div className="flex items-center gap-2">
+            <p className="hidden text-xs text-[var(--ink-muted)] sm:block">Prices and orders come after.</p>
+            <Link href="/inventory/suppliers" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">All suppliers</Link>
+          </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
           <p className="border-b border-[var(--line)] px-3 py-2 text-sm font-bold text-[var(--ink)]">Supplier</p>
           <div className="grid gap-3 p-3 sm:grid-cols-2">
@@ -43,10 +46,10 @@ export default function NewSupplierPage() {
 
         <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
           <p className="border-b border-[var(--line)] px-3 py-2 text-sm font-bold text-[var(--ink)]">Contact</p>
-          <div className="grid gap-3 p-3 sm:grid-cols-2">
+          <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
             <Field name="email" label="Email" type="email" />
             <Field name="phone" label="Phone" />
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 lg:col-span-1">
               <label className="block text-xs font-semibold text-[var(--ink-muted)] mb-1">Address</label>
               <textarea
                 name="address"
@@ -54,7 +57,7 @@ export default function NewSupplierPage() {
                 className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
               />
             </div>
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 lg:col-span-3">
               <label className="block text-xs font-semibold text-[var(--ink-muted)] mb-1">Notes</label>
               <textarea
                 name="notes"
