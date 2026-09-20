@@ -18,6 +18,7 @@ import { monthLabel, monthRange, yearRange } from "@/lib/date-ranges";
 import { loadBilledTotals, loadCashCollectionsByChannel, loadReceivablesTotal } from "@/lib/finance/reconciliation";
 import { ACTIVE_JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
+import { isPostgresEngine } from "@/lib/db/search";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -244,7 +245,8 @@ export default async function ReportsPage({
 
   const [
     statusGroup,
-    completedAll,
+    avgTurnaroundHours,
+    faultSample,
     completedSelected,
     completedPrev,
     openJobs,
@@ -263,11 +265,26 @@ export default async function ReportsPage({
     expensesMtd,
   ] = await Promise.all([
     prisma.job.groupBy({ by: ["status"], where: { orgId }, _count: { status: true } }),
+    // Turnaround average is a DB-side AVG over the rolling window (exact at
+    // any volume — the old take:5000 silently dropped jobs past the cap).
+    // Fault keywords come from a small recent text sample below.
+    (async () => {
+      if (isPostgresEngine()) {
+        const rows = await prisma.$queryRaw<Array<{ avgH: number | null }>>`
+          SELECT AVG(EXTRACT(EPOCH FROM ("completedAt" - "receivedAt")) / 3600) AS "avgH"
+          FROM "Job" WHERE "orgId" = ${orgId} AND "status" = 'COMPLETED' AND "completedAt" >= ${rollingStart}`;
+        return Number(rows[0]?.avgH ?? 0) || 0;
+      }
+      const rows = await prisma.$queryRaw<Array<{ avgH: number | null }>>`
+        SELECT AVG((julianday("completedAt") - julianday("receivedAt")) * 24) AS "avgH"
+        FROM "Job" WHERE "orgId" = ${orgId} AND "status" = 'COMPLETED' AND "completedAt" >= ${rollingStart}`;
+      return Number(rows[0]?.avgH ?? 0) || 0;
+    })(),
     prisma.job.findMany({
       where: { orgId, status: "COMPLETED", completedAt: { gte: rollingStart } },
-      select: { completedAt: true, receivedAt: true, diagnosisNotes: true, externalDiagnosis: true },
+      select: { diagnosisNotes: true, externalDiagnosis: true },
       orderBy: { completedAt: "desc" },
-      take: 5000,
+      take: 300,
     }),
     prisma.job.findMany({
       where: { orgId, status: "COMPLETED", completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
@@ -481,12 +498,7 @@ export default async function ReportsPage({
     value: statusCount.get(status) ?? 0,
   }));
 
-  const avgTurnaround = (() => {
-    const vals = completedAll
-      .filter((j) => j.completedAt)
-      .map((j) => (j.completedAt!.getTime() - j.receivedAt.getTime()) / 36e5);
-    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-  })();
+  const avgTurnaround = avgTurnaroundHours;
 
   const nowTs = new Date();
   const agingJobs = openJobs
@@ -696,7 +708,7 @@ export default async function ReportsPage({
     "works", "opens", "close", "power", "press", "click", "touch", "boots",
   ]);
   const commonFaults = (() => {
-    const source = completedAll
+    const source = faultSample
       .map((j) => `${j.diagnosisNotes ?? ""} ${j.externalDiagnosis ?? ""}`)
       .join(" ")
       .toLowerCase();

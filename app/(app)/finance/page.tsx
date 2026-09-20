@@ -5,7 +5,7 @@ import Link from "next/link";
 import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
 import { requireOrgSession } from "@/lib/org-context";
-import { formatMoney, formatMoneyCompact, rowToBase } from "@/lib/currency";
+import { formatMoney, formatMoneyCompact } from "@/lib/currency";
 import { resolveTechCost } from "@/lib/billing";
 import { getTechnicianPayoutTotalsByJobIds } from "@/lib/payouts";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
@@ -15,6 +15,9 @@ import {
   loadExpenseRows,
   bucketExpenses,
   loadReceivablesTotal,
+  loadBillBalances,
+  loadOpenExpenseTotals,
+  loadOverdueInvoiceTotals,
 } from "@/lib/finance/reconciliation";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -63,9 +66,9 @@ export default async function FinancePage({
     expenseRows,
     receivables,
     payoutsTotalMtd,
-    billStats,
-    expenseStats,
-    overdueInvoices,
+    billBalances,
+    openExpenses,
+    overdueInvoicesAgg,
     techDueJobs,
   ] = await Promise.all([
     loadCashCollectionRows({ orgId, start: wideStart }).catch(() => ({ payments: [], legacyJobs: [] })),
@@ -78,22 +81,12 @@ export default async function FinancePage({
       _sum: { amount: true },
     }).catch(() => ({ _sum: { amount: null } })),
 
-    // Open supplier bills: balance + overdue + due-week counts
-    db.supplierBill.findMany({
-      where: { orgId, status: { in: ["POSTED", "PART_PAID"] } },
-      select: { totalAmount: true, paidAmount: true, currency: true, exchangeRateToBase: true, dueAt: true },
-    }).catch(() => []),
-    // Open expenses (owed, not spent)
-    db.expense.findMany({
-      where: { orgId, paidAt: null },
-      select: { amount: true, currency: true, exchangeRateToBase: true, dueAt: true, createdAt: true },
-    }).catch(() => []),
-    // Overdue invoices needing chase
-    db.invoice.findMany({
-      where: { orgId, status: "ISSUED", dueDate: { lt: now } },
-      select: { totalAmount: true, paidAmount: true, currency: true, exchangeRateToBase: true },
-    }).catch(() => []),
-    // Outstanding tech dues
+    // Open supplier bills, open expenses and overdue invoices arrive as
+    // GROUP BY (currency, rate) rows — a handful of rows instead of full
+    // tables; FX conversion stays per-group in JS.
+    loadBillBalances({ orgId, baseCurrency: currency, now, weekOut }).catch(() => ({ total: 0, overdue: 0, overdueCount: 0, dueWeekCount: 0, count: 0 })),
+    loadOpenExpenseTotals({ orgId, baseCurrency: currency }).catch(() => ({ total: 0, count: 0 })),
+    loadOverdueInvoiceTotals({ orgId, baseCurrency: currency, now }).catch(() => ({ total: 0, count: 0 })),
     db.job.findMany({
       where: { orgId, repairPath: "EXTERNAL", externalPaid: false, status: { in: filterSupportedJobStatuses(["READY_FOR_PICKUP", "COMPLETED", "DELIVERED"]) } },
       select: { id: true, externalTechFee: true, externalTechBill: true },
@@ -138,14 +131,14 @@ export default async function FinancePage({
   });
 
   /* ── payables + attention (base currency) ───────────────────────────────── */
-  const toBase = (amount: number, curr?: string | null, rate?: number | null) =>
-    rowToBase({ amount, currency: curr ?? currency, exchangeRateToBase: rate ?? null }, currency);
-  const billsBase = billStats.reduce((s, b) => s + toBase(b.totalAmount - b.paidAmount, b.currency, b.exchangeRateToBase), 0);
-  const overdueBills = billStats.filter((b) => b.dueAt && b.dueAt.getTime() < now.getTime());
-  const overdueBillsBase = overdueBills.reduce((s, b) => s + toBase(b.totalAmount - b.paidAmount, b.currency, b.exchangeRateToBase), 0);
-  const dueWeekBills = billStats.filter((b) => b.dueAt && b.dueAt.getTime() >= now.getTime() && b.dueAt.getTime() <= weekOut.getTime()).length;
-  const expensesBase = expenseStats.reduce((s, e) => s + toBase(e.amount, e.currency, e.exchangeRateToBase), 0);
-  const overdueInvoicesBase = overdueInvoices.reduce((s, i) => s + toBase(Math.max(0, i.totalAmount - i.paidAmount), i.currency, i.exchangeRateToBase), 0);
+  const billsBase = billBalances.total;
+  const overdueBillsBase = billBalances.overdue;
+  const overdueBillsCount = billBalances.overdueCount;
+  const dueWeekBills = billBalances.dueWeekCount;
+  const expensesBase = openExpenses.total;
+  const openExpensesCount = openExpenses.count;
+  const overdueInvoicesBase = overdueInvoicesAgg.total;
+  const overdueInvoicesCount = overdueInvoicesAgg.count;
   const techPaidTotals = await getTechnicianPayoutTotalsByJobIds(techDueJobs.map((j) => j.id), orgId).catch(() => new Map<string, { paidAmount: number }>());
   const techDueBase = techDueJobs.reduce((s, j) => {
     const paid = techPaidTotals.get(j.id)?.paidAmount ?? 0;
@@ -155,8 +148,8 @@ export default async function FinancePage({
 
   type AttentionItem = { label: string; detail: string; href: string; tone: "red" | "amber" };
   const attentionItems: AttentionItem[] = [
-    overdueBills.length > 0 ? {
-      label: `${overdueBills.length} overdue bill${overdueBills.length !== 1 ? "s" : ""}`,
+    overdueBillsCount > 0 ? {
+      label: `${overdueBillsCount} overdue bill${overdueBillsCount !== 1 ? "s" : ""}`,
       detail: `${formatMoneyCompact(overdueBillsBase, currency)} past due`,
       href: "/payables?section=bills",
       tone: "red",
@@ -167,14 +160,14 @@ export default async function FinancePage({
       href: "/payables?section=bills",
       tone: "amber",
     } : null,
-    expenseStats.length > 0 ? {
-      label: `${expenseStats.length} open expense${expenseStats.length !== 1 ? "s" : ""}`,
+    openExpensesCount > 0 ? {
+      label: `${openExpensesCount} open expense${openExpensesCount !== 1 ? "s" : ""}`,
       detail: `${formatMoneyCompact(expensesBase, currency)} owed`,
       href: "/finance/expenses?status=unpaid",
       tone: "amber",
     } : null,
-    overdueInvoices.length > 0 ? {
-      label: `${overdueInvoices.length} overdue invoice${overdueInvoices.length !== 1 ? "s" : ""}`,
+    overdueInvoicesCount > 0 ? {
+      label: `${overdueInvoicesCount} overdue invoice${overdueInvoicesCount !== 1 ? "s" : ""}`,
       detail: `${formatMoneyCompact(overdueInvoicesBase, currency)} to chase`,
       href: "/documents/invoices",
       tone: "red",

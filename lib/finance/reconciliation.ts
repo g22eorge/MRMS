@@ -172,6 +172,19 @@ export async function loadExpenseRows(params: {
   });
 }
 
+type MoneyGroupRow = { currency: string | null; rate: number | null; balance: number | null; n: number | bigint | null };
+
+function toBaseGroups(rows: MoneyGroupRow[], baseCurrency: string): number {
+  let total = 0;
+  for (const row of rows) {
+    total += baseAmount(
+      { amount: Number(row.balance ?? 0), currency: row.currency, exchangeRateToBase: row.rate },
+      baseCurrency,
+    );
+  }
+  return total;
+}
+
 export function bucketExpenses(
   rows: ExpenseRow[],
   baseCurrency: string,
@@ -184,6 +197,73 @@ export function bucketExpenses(
     total += baseAmount(e, baseCurrency);
   }
   return total;
+}
+
+/**
+ * Open-bill balances as GROUP BY (currency, rate) rows — a handful of rows
+ * instead of the full open-bill table. FX conversion stays per-group in JS,
+ * so multi-currency books convert exactly as the row loop did.
+ */
+export async function loadBillBalances(params: {
+  orgId: string;
+  baseCurrency: string;
+  now: Date;
+  weekOut: Date;
+}): Promise<{ total: number; overdue: number; overdueCount: number; dueWeekCount: number; count: number }> {
+  const { orgId, baseCurrency, now, weekOut } = params;
+  type BillRow = MoneyGroupRow & { overdue: number | null; overdueN: number | bigint | null; dueWeekN: number | bigint | null };
+  const rows = await prisma.$queryRaw<BillRow[]>`
+    SELECT currency, "exchangeRateToBase" AS rate,
+      SUM("totalAmount" - "paidAmount") AS balance,
+      COUNT(*) AS n,
+      SUM(CASE WHEN "dueAt" < ${now} THEN "totalAmount" - "paidAmount" ELSE 0 END) AS overdue,
+      COUNT(CASE WHEN "dueAt" < ${now} THEN 1 END) AS "overdueN",
+      COUNT(CASE WHEN "dueAt" >= ${now} AND "dueAt" <= ${weekOut} THEN 1 END) AS "dueWeekN"
+    FROM "SupplierBill"
+    WHERE "orgId" = ${orgId} AND "status" IN ('POSTED', 'PART_PAID')
+    GROUP BY currency, "exchangeRateToBase"`;
+  return {
+    total: toBaseGroups(rows, baseCurrency),
+    overdue: toBaseGroups(rows.map((r) => ({ ...r, balance: r.overdue })), baseCurrency),
+    overdueCount: rows.reduce((s, r) => s + Number(r.overdueN ?? 0), 0),
+    dueWeekCount: rows.reduce((s, r) => s + Number(r.dueWeekN ?? 0), 0),
+    count: rows.reduce((s, r) => s + Number(r.n ?? 0), 0),
+  };
+}
+
+/** Open expenses (owed, not spent) as GROUP BY rows. */
+export async function loadOpenExpenseTotals(params: {
+  orgId: string;
+  baseCurrency: string;
+}): Promise<{ total: number; count: number }> {
+  const rows = await prisma.$queryRaw<MoneyGroupRow[]>`
+    SELECT currency, "exchangeRateToBase" AS rate,
+      SUM(amount) AS balance, COUNT(*) AS n
+    FROM "Expense"
+    WHERE "orgId" = ${params.orgId} AND "paidAt" IS NULL
+    GROUP BY currency, "exchangeRateToBase"`;
+  return {
+    total: toBaseGroups(rows, params.baseCurrency),
+    count: rows.reduce((s, r) => s + Number(r.n ?? 0), 0),
+  };
+}
+
+/** Overdue issued invoices as GROUP BY rows. */
+export async function loadOverdueInvoiceTotals(params: {
+  orgId: string;
+  baseCurrency: string;
+  now: Date;
+}): Promise<{ total: number; count: number }> {
+  const rows = await prisma.$queryRaw<MoneyGroupRow[]>`
+    SELECT currency, "exchangeRateToBase" AS rate,
+      SUM(CASE WHEN "totalAmount" > "paidAmount" THEN "totalAmount" - "paidAmount" ELSE 0 END) AS balance, COUNT(*) AS n
+    FROM "Invoice"
+    WHERE "orgId" = ${params.orgId} AND "status" = 'ISSUED' AND "dueAt" < ${params.now}
+    GROUP BY currency, "exchangeRateToBase"`;
+  return {
+    total: toBaseGroups(rows, params.baseCurrency),
+    count: rows.reduce((s, r) => s + Number(r.n ?? 0), 0),
+  };
 }
 export async function loadCashCollectionsByChannelWide(params: {
   orgId: string;
