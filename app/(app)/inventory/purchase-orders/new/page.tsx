@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 export default async function NewPurchaseOrderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ supplierId?: string }>;
+  searchParams: Promise<{ supplierId?: string; fast?: string }>;
 }) {
   const { user, orgId } = await requireOrgSession();
   if (!can.manageInventory(user)) redirect("/inventory");
 
-  const { supplierId } = await searchParams;
+  const { supplierId, fast } = await searchParams;
 
   const [suppliers, parts] = await Promise.all([
     prisma.supplier.findMany({
@@ -44,6 +44,7 @@ export default async function NewPurchaseOrderPage({
         suppliers={suppliers}
         parts={parts}
         defaultSupplierId={supplierId}
+        fastMode={fast === "1"}
       />
     </div>
   );

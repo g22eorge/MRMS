@@ -3,6 +3,7 @@ import { getCurrentUserRole } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
+import { icontains } from "@/lib/db/search";
 import { formatMoney } from "@/lib/currency";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
@@ -34,7 +35,7 @@ function poNumber(po: { reference: string | null; id: string }) {
 export default async function PurchaseOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; size?: string; }>;
+  searchParams: Promise<{ page?: string; size?: string; q?: string; status?: string; sort?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
   const orgId = user.orgId;
@@ -44,16 +45,36 @@ export default async function PurchaseOrdersPage({
   const params = await searchParams;
   const page = parsePage(params.page);
   const pageSize = parsePageSize(params.size);
+  const q = (params.q ?? "").trim();
+  const statusFilter = (params.status ?? "all").trim().toLowerCase();
+  const sort = params.sort === "expected" ? "expected" : "newest";
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const where = { orgId };
+  const where = {
+    orgId,
+    ...(statusFilter === "overdue"
+      ? { status: { in: ["ORDERED", "PARTIAL"] as never }, expectedAt: { lt: now } }
+      : statusFilter !== "all" && ["draft", "ordered", "partial", "received", "cancelled"].includes(statusFilter)
+        ? { status: statusFilter.toUpperCase() as never }
+        : {}),
+    ...(q
+      ? {
+          OR: [
+            { reference: icontains(q) },
+            { supplier: { name: icontains(q) } },
+          ],
+        }
+      : {}),
+  };
+  const orderBy =
+    sort === "expected" ? { expectedAt: "asc" as const } : { createdAt: "desc" as const };
   const [total, orders, pendingItems, openCount, receivingCount, overdueCount, thisMonthCount] = await Promise.all([
     prisma.purchaseOrder.count({ where }),
     prisma.purchaseOrder.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: {
@@ -77,6 +98,9 @@ export default async function PurchaseOrdersPage({
   const pendingValue = pendingItems.reduce((sum, item) => sum + item.qtyOrdered * item.unitCost, 0);
   const pageView = paginationView(page, total, pageSize);
   const poHrefFilters = {
+    q: q || "",
+    status: statusFilter !== "all" ? statusFilter : "",
+    sort: sort !== "newest" ? sort : "",
     size: pageSize !== PAGE_SIZE ? pageSize : "",
   };
   const poHref = pageHrefBuilder("/inventory/purchase-orders", poHrefFilters);
@@ -118,7 +142,8 @@ export default async function PurchaseOrdersPage({
           <>
             <Link href="/inventory" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Inventory</Link>
             <Link href="/api/procurement/export?type=purchase-orders" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Export CSV</Link>
-            <Link href="/inventory/purchase-orders/new" className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">New PO</Link>
+            <Link href="/inventory/purchase-orders/new" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">New PO</Link>
+            <Link href="/inventory/purchase-orders/new?fast=1" className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">Buy & Receive</Link>
           </>
         ),
         // Tones and destinations, where before every figure looked the same and
@@ -129,10 +154,63 @@ export default async function PurchaseOrdersPage({
           { label: "Total", value: total, href: "/inventory/purchase-orders" },
           { label: "Open", value: openCount, muted: openCount === 0 },
           { label: "Receiving", value: receivingCount, muted: receivingCount === 0, href: "/inventory/goods-received" },
-          { label: "Overdue", value: overdueCount, tone: overdueCount > 0 ? "crit" as const : "good" as const, muted: overdueCount === 0 },
+          { label: "Overdue", value: overdueCount, tone: overdueCount > 0 ? "crit" as const : "good" as const, muted: overdueCount === 0, href: "/inventory/purchase-orders?status=overdue" },
           { label: "Pending", value: formatMoney(pendingValue), sub: "awaiting receipt", muted: pendingValue === 0 },
         ],
       }}
+      filters={
+        <>
+          {overdueCount > 0 && statusFilter !== "overdue" ? (
+            <Link href="/inventory/purchase-orders?status=overdue" className="flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-2.5 text-[0.8125rem] text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+              <span><span className="font-semibold text-[var(--ink)]">{overdueCount} overdue order{overdueCount === 1 ? "" : "s"}</span> past expected delivery — review →</span>
+            </Link>
+          ) : null}
+          <form method="GET" action="/inventory/purchase-orders" className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { key: "all", label: "All" },
+                { key: "draft", label: "Draft" },
+                { key: "ordered", label: "Ordered" },
+                { key: "partial", label: "Partial" },
+                { key: "received", label: "Received" },
+                { key: "overdue", label: "Overdue" },
+              ].map((s) => (
+                <Link
+                  key={s.key}
+                  href={`/inventory/purchase-orders?status=${s.key}${q ? `&q=${encodeURIComponent(q)}` : ""}${sort !== "newest" ? `&sort=${sort}` : ""}`}
+                  className={`rounded-full px-3 py-1 text-[0.75rem] font-semibold transition ${
+                    statusFilter === s.key
+                      ? "border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
+                      : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+                  }`}
+                >
+                  {s.label}
+                </Link>
+              ))}
+            </div>
+            <input type="hidden" name="status" value={statusFilter} />
+            <label className="sr-only" htmlFor="po-search">Search purchase orders</label>
+            <input
+              id="po-search"
+              name="q"
+              defaultValue={q}
+              placeholder="PO #, supplier…"
+              className="ml-auto h-8 w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+            />
+            <select name="sort" defaultValue={sort} className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem] text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+              <option value="newest">Newest</option>
+              <option value="expected">Expected first</option>
+            </select>
+            <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+              Filter
+            </button>
+            {q || statusFilter !== "all" || sort !== "newest" ? (
+              <Link href="/inventory/purchase-orders" className="h-8 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Reset</Link>
+            ) : null}
+          </form>
+        </>
+      }
       footer={total > 0 ? (
         <p className="px-1 text-right text-xs font-semibold text-[var(--ink-muted)]">Raised this month: {thisMonthCount}</p>
       ) : null}
@@ -143,12 +221,21 @@ export default async function PurchaseOrdersPage({
         pagination={{ page: pageView.page, pageSize: PAGE_SIZE, total, hrefForPage: poHref,
             hrefForSize: poHrefSize, unit: "purchase orders" }}
         empty={
-          <div className="space-y-3">
-            <p>No purchase orders yet.</p>
-            <Link href="/inventory/purchase-orders/new" className="inline-flex rounded-md border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-2.5 py-1.5 font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/15">
-              Create PO
-            </Link>
-          </div>
+          q || statusFilter !== "all" ? (
+            <div className="space-y-3">
+              <p>No purchase orders match these filters.</p>
+              <Link href="/inventory/purchase-orders" className="inline-flex rounded-md border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-2.5 py-1.5 font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/15">
+                Clear filters
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p>No purchase orders yet.</p>
+              <Link href="/inventory/purchase-orders/new" className="inline-flex rounded-md border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-2.5 py-1.5 font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/15">
+                Create PO
+              </Link>
+            </div>
+          )
         }
         columns={[
           {

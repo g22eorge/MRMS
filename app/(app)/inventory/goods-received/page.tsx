@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
+import { icontains } from "@/lib/db/search";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
@@ -24,27 +25,47 @@ export default async function GoodsReceivedPage({
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const page = parsePage(params.page);
   const pageSize = parsePageSize(params.size);
+  const q = String(params.q ?? "").trim();
+  const statusFilter = String(params.status ?? "all").trim().toLowerCase();
+  const sort = params.sort === "oldest" ? "oldest" : "newest";
+
+  const where = {
+    orgId,
+    ...(statusFilter !== "all" && ["posted", "cancelled"].includes(statusFilter)
+      ? { status: statusFilter.toUpperCase() as never }
+      : {}),
+    ...(q
+      ? {
+          OR: [
+            { grnNumber: icontains(q) },
+            { supplier: { name: icontains(q) } },
+            { po: { reference: icontains(q) } },
+          ],
+        }
+      : {}),
+  };
+  const orderBy = sort === "oldest" ? { receivedAt: "asc" as const } : { receivedAt: "desc" as const };
 
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const [notes, notesTotal, receivedThisMonth] = await Promise.all([
     prisma.goodsReceived.findMany({
-      where: { orgId },
+      where,
       include: {
         supplier: { select: { name: true } },
         po: { select: { id: true, reference: true } },
         location: { select: { name: true, code: true } },
         items: { select: { quantity: true, unitCost: true } },
       },
-      orderBy: { receivedAt: "desc" },
+      orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }).catch(() => []),
-    prisma.goodsReceived.count({ where: { orgId } }).catch(() => 0),
+    prisma.goodsReceived.count({ where }).catch(() => 0),
     prisma.goodsReceived.count({ where: { orgId, receivedAt: { gte: monthStart } } }).catch(() => 0),
   ]);
 
   const pageView = paginationView(page, notesTotal, pageSize);
-  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPageFilters = { q: q || "", status: statusFilter !== "all" ? statusFilter : "", sort: sort !== "newest" ? sort : "", size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const hrefForPage = pageHrefBuilder("/inventory/goods-received", hrefForPageFilters);
   const hrefForPageSize = sizeHrefBuilder("/inventory/goods-received", hrefForPageFilters);
 
@@ -70,12 +91,60 @@ export default async function GoodsReceivedPage({
           </>
         ),
       }}
+      filters={
+        <form method="GET" action="/inventory/goods-received" className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { key: "all", label: "All" },
+              { key: "posted", label: "Posted" },
+              { key: "cancelled", label: "Cancelled" },
+            ].map((s) => (
+              <Link
+                key={s.key}
+                href={`/inventory/goods-received?status=${s.key}${q ? `&q=${encodeURIComponent(q)}` : ""}${sort !== "newest" ? `&sort=${sort}` : ""}`}
+                className={`rounded-full px-3 py-1 text-[0.75rem] font-semibold transition ${
+                  statusFilter === s.key
+                    ? "border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
+                    : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+                }`}
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+          <input type="hidden" name="status" value={statusFilter} />
+          <label className="sr-only" htmlFor="grn-search">Search receipts</label>
+          <input
+            id="grn-search"
+            name="q"
+            defaultValue={q}
+            placeholder="GRN #, supplier, PO…"
+            className="ml-auto h-8 w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+          />
+          <select name="sort" defaultValue={sort} className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem] text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+          </select>
+          <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+            Filter
+          </button>
+          {q || statusFilter !== "all" || sort !== "newest" ? (
+            <Link href="/inventory/goods-received" className="h-8 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Reset</Link>
+          ) : null}
+        </form>
+      }
     >
       <DataTable
         rows={notes}
         getRowKey={(grn) => grn.id}
         pagination={{ page: pageView.page, pageSize, total: notesTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "notes" }}
-        empty="No goods received yet. Open a purchase order to receive stock."
+        empty={
+          q || statusFilter !== "all" ? (
+            <>No receipts match these filters. <Link href="/inventory/goods-received" className="text-[var(--accent)] hover:underline">Clear filters</Link></>
+          ) : (
+            "No goods received yet. Open a purchase order to receive stock."
+          )
+        }
         columns={[
           {
             key: "grn",

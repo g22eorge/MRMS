@@ -238,9 +238,14 @@ export default async function SupplierDetailPage({
         secondary={
           supplier.isActive ? (
             <>
-              <Link href={`/inventory/purchase-orders/new?supplierId=${supplier.id}`} className="btn-premium rounded-lg px-3 py-2 text-xs font-semibold">New PO</Link>
+              <Link href={`/inventory/purchase-orders/new?supplierId=${supplier.id}`} className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">New PO</Link>
               <Link href={`/inventory/supplier-bills/new?supplierId=${supplier.id}`} className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/15">New Bill</Link>
             </>
+          ) : undefined
+        }
+        primary={
+          supplier.isActive ? (
+            <Link href={`/inventory/purchase-orders/new?supplierId=${supplier.id}&fast=1`} className="btn-premium rounded-lg px-3 py-2 text-xs font-semibold">Buy & Receive</Link>
           ) : undefined
         }
       />
@@ -278,7 +283,14 @@ export default async function SupplierDetailPage({
             ) : null}
           </section>
 
-          <SupplierEditForm supplier={supplier} />
+          <details className="dc-card overflow-hidden">
+            <summary className="cursor-pointer px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+              Edit supplier details
+            </summary>
+            <div className="border-t border-[var(--line)] p-4">
+              <SupplierEditForm supplier={supplier} />
+            </div>
+          </details>
         </div>
 
         <div className="space-y-4">
@@ -291,19 +303,24 @@ export default async function SupplierDetailPage({
               {averageLeadDays != null ? <span className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-muted)]">{averageLeadDays}d avg lead</span> : null}
             </div>
 
-            <form action={createSupplierPriceAction} className="grid gap-2 border-b border-[var(--line)] p-3 md:grid-cols-[1.2fr_1fr_0.7fr_0.55fr_0.55fr_0.55fr_auto]">
-              <input type="hidden" name="supplierId" value={supplier.id} />
-              <select name="partId" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
-                <option value="">No linked item</option>
-                {parts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
-              </select>
-              <input name="description" placeholder="Description *" required className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-              <input name="sku" placeholder="SKU" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-              <input name="unitCost" placeholder="Cost *" required inputMode="decimal" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-              <input name="minQuantity" placeholder="MOQ" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-              <input name="leadTimeDays" placeholder="Lead" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-              <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-semibold">Add</SubmitButton>
-            </form>
+            <details>
+              <summary className="cursor-pointer border-b border-[var(--line)] p-3 text-[0.8125rem] font-semibold text-[var(--accent)] hover:underline">
+                Add a price line
+              </summary>
+              <form action={createSupplierPriceAction} className="grid gap-2 border-b border-[var(--line)] p-3 md:grid-cols-[1.2fr_1fr_0.7fr_0.55fr_0.55fr_0.55fr_auto]">
+                <input type="hidden" name="supplierId" value={supplier.id} />
+                <select name="partId" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60">
+                  <option value="">No linked item</option>
+                  {parts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
+                </select>
+                <input name="description" placeholder="Description *" required className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                <input name="sku" placeholder="SKU" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                <input name="unitCost" placeholder="Cost *" required inputMode="decimal" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                <input name="minQuantity" placeholder="MOQ" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                <input name="leadTimeDays" placeholder="Lead" inputMode="numeric" className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                <SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-[0.8125rem] font-semibold">Add</SubmitButton>
+              </form>
+            </details>
 
             <DataTable
               frameless

@@ -22,10 +22,12 @@ export function NewPurchaseOrderForm({
   suppliers,
   parts,
   defaultSupplierId,
+  fastMode,
 }: {
   suppliers: Supplier[];
   parts: Part[];
   defaultSupplierId?: string;
+  fastMode?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -79,6 +81,8 @@ export function NewPurchaseOrderForm({
     const fd = new FormData(e.currentTarget);
     const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
     if (submitter?.name) fd.set(submitter.name, submitter.value);
+    // Fast mode is single-action: always create ORDERED + receive in full.
+    if (fastMode) fd.set("receiveNow", "1");
     appendToFormData(fd, "items", ({ description, qtyOrdered, unitCost, partId }) => ({
       description,
       qtyOrdered,
@@ -102,7 +106,11 @@ export function NewPurchaseOrderForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[0.8125rem] text-[var(--ink-muted)]">
-        Pick or add a supplier, list what you bought and the price, then <span className="font-semibold text-[var(--ink)]">Receive now</span> to stock it in — or save a draft / send the order to the supplier instead.
+        {fastMode ? (
+          <><span className="font-semibold text-[var(--ink)]">Fast buy</span> — creates the order as issued and stocks it in immediately. No draft, no separate receive step.</>
+        ) : (
+          <>Pick or add a supplier, list what you bought and the price, then <span className="font-semibold text-[var(--ink)]">Receive now</span> to stock it in — or save a draft / send the order to the supplier instead.</>
+        )}
       </p>
 
       <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)]">
@@ -278,15 +286,23 @@ export function NewPurchaseOrderForm({
         <Link href="/inventory/purchase-orders" className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]">
           Cancel
         </Link>
-        <button type="submit" disabled={pending || !canSubmit} className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] disabled:opacity-50">
-          {pending ? "Saving..." : "Save as draft"}
-        </button>
-        <button type="submit" name="issueNow" value="1" disabled={pending || !canSubmit || totals.zeroCostLines > 0} className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)] disabled:opacity-50">
-          {pending ? "Issuing..." : "Send to supplier"}
-        </button>
-        <button type="submit" name="receiveNow" value="1" disabled={pending || !canSubmit || totals.zeroCostLines > 0} className="btn-premium rounded-md px-4 py-2 text-sm font-bold disabled:opacity-50" title="Create the order and stock it in immediately">
-          {pending ? "Receiving..." : "Receive now"}
-        </button>
+        {fastMode ? (
+          <button type="submit" name="receiveNow" value="1" disabled={pending || !canSubmit || totals.zeroCostLines > 0} className="btn-premium rounded-md px-4 py-2 text-sm font-bold disabled:opacity-50" title="Create the order and stock it in immediately">
+            {pending ? "Buying..." : "Buy & Receive"}
+          </button>
+        ) : (
+          <>
+            <button type="submit" disabled={pending || !canSubmit} className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)] disabled:opacity-50">
+              {pending ? "Saving..." : "Save as draft"}
+            </button>
+            <button type="submit" name="issueNow" value="1" disabled={pending || !canSubmit || totals.zeroCostLines > 0} className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--panel-strong)] disabled:opacity-50">
+              {pending ? "Issuing..." : "Send to supplier"}
+            </button>
+            <button type="submit" name="receiveNow" value="1" disabled={pending || !canSubmit || totals.zeroCostLines > 0} className="btn-premium rounded-md px-4 py-2 text-sm font-bold disabled:opacity-50" title="Create the order and stock it in immediately">
+              {pending ? "Receiving..." : "Receive now"}
+            </button>
+          </>
+        )}
       </div>
     </form>
   );

@@ -33,11 +33,16 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
   const suppliers = await prisma.supplier.findMany({ where: { orgId, isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } });
   const fmt = (d: Date | null) => d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "-";
   const total = request.items.reduce((sum, item) => sum + item.quantity * (item.estimatedUnitCost ?? 0), 0);
-  const canReview = ["DRAFT", "SUBMITTED", "APPROVED"].includes(request.status);
+  // Review is only actionable before a decision: once approved the path forward
+  // is Convert to PO, and rejected/cancelled/converted requests are terminal.
+  const canReview = ["DRAFT", "SUBMITTED"].includes(request.status);
   const canConvert = request.status === "APPROVED";
+  // One-click convert when the request already names its supplier — the same
+  // fast path the list page uses. Otherwise the convert card below collects it.
+  const quickConvert = canConvert && !request.convertedPo && request.supplierId;
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="space-y-4">
       <RecordActionBar
         backHref="/inventory/purchase-requests"
         eyebrow="Inventory · Purchase Request"
@@ -51,6 +56,15 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
             </Link>
           </>
         }
+        primary={
+          quickConvert ? (
+            <form action={convertPurchaseRequestToPoAction}>
+              <input type="hidden" name="id" value={request.id} />
+              <input type="hidden" name="supplierId" value={request.supplierId ?? ""} />
+              <SubmitButton bare className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">Create PO</SubmitButton>
+            </form>
+          ) : undefined
+        }
         overflow={
           <RowActionsMenu label={`Purchase request actions for ${request.requestNumber}`} size="compact">
             <MenuDestructiveRow>
@@ -62,15 +76,16 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
           </RowActionsMenu>
         }
       />
-      <p className="text-sm text-[var(--ink-muted)]">Requested by {request.requestedBy.name || request.requestedBy.email}</p>
+      <p className="text-sm text-[var(--ink-muted)]">
+        Requested by {request.requestedBy.name || request.requestedBy.email}
+        {" · "}{request.priority.toLowerCase()} priority
+        {" · "}needed {fmt(request.neededBy)}
+        {" · "}{request.supplier?.name ?? "no supplier preference"}
+        {" · "}est. <span className="font-semibold tabular-nums text-[var(--ink)]">{total.toLocaleString()}</span>
+      </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Priority</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{request.priority}</p></div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Needed</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{fmt(request.neededBy)}</p></div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Supplier</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{request.supplier?.name ?? "No preference"}</p></div>
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Estimate</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)] tabular-nums">{total.toLocaleString()}</p></div>
-      </div>
-
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-x-auto">
         <div className="px-5 py-3 border-b border-[var(--line)]"><p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Items</p></div>
         <DataTable
@@ -92,16 +107,79 @@ export default async function PurchaseRequestDetailPage({ params }: { params: Pr
             { key: "estCost", header: "Est. Cost", align: "right", className: "tabular-nums text-[var(--ink-muted)]", cell: (item) => (item.estimatedUnitCost ?? 0).toLocaleString() },
             { key: "total", header: "Total", align: "right", className: "tabular-nums font-semibold text-[var(--ink)]", cell: (item) => (item.quantity * (item.estimatedUnitCost ?? 0)).toLocaleString() },
           ]}
+          tableFooter={
+            <tr>
+              <td colSpan={2} className="px-3 py-2 text-right text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Estimate</td>
+              <td className="px-3 py-2" />
+              <td className="px-3 py-2" />
+              <td className="px-3 py-2 text-right font-black tabular-nums text-[var(--ink)]">{total.toLocaleString()}</td>
+            </tr>
+          }
         />
       </div>
 
       {request.reason || request.notes || request.reviewNote ? <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4 text-sm text-[var(--ink)]"><p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)] mb-2">Notes</p>{request.reason ? <p><strong>Reason:</strong> {request.reason}</p> : null}{request.notes ? <p className="mt-2 whitespace-pre-wrap">{request.notes}</p> : null}{request.reviewNote ? <p className="mt-2"><strong>Review:</strong> {request.reviewNote}</p> : null}</div> : null}
 
-      {request.convertedPo ? <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-700">Converted to <Link href={`/inventory/purchase-orders/${request.convertedPo.id}`} className="font-semibold underline">{request.convertedPo.reference ?? "purchase order"}</Link>.</div> : null}
+      {canConvert && !request.convertedPo && !request.supplierId ? <form action={convertPurchaseRequestToPoAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3"><input type="hidden" name="id" value={request.id} /><p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Convert to Purchase Order</p><p className="text-sm text-[var(--ink-muted)]">Pick the supplier to order from — everything else carries over.</p><div className="grid gap-3 sm:grid-cols-3"><select name="supplierId" defaultValue={request.supplierId ?? ""} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"><option value="">Select supplier</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select><input name="reference" placeholder="PO reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]" /><input name="expectedAt" type="date" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]" /></div><SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">Create PO</SubmitButton></form> : null}
 
-      {canConvert ? <form action={convertPurchaseRequestToPoAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3"><input type="hidden" name="id" value={request.id} /><p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Convert to Purchase Order</p><div className="grid gap-3 sm:grid-cols-3"><select name="supplierId" defaultValue={request.supplierId ?? ""} required className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"><option value="">Select supplier</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select><input name="reference" placeholder="PO reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]" /><input name="expectedAt" type="date" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]" /></div><SubmitButton bare className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold">Create PO</SubmitButton></form> : null}
+      {canReview ? (
+        <form action={reviewPurchaseRequestAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
+          <input type="hidden" name="id" value={request.id} />
+          <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Review request</p>
+          <textarea name="reviewNote" rows={2} placeholder="Review note (optional)" className="mt-3 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <SubmitButton bare name="action" value="APPROVED" className="rounded-lg bg-emerald-500/15 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-500/25">Approve</SubmitButton>
+            <SubmitButton bare name="action" value="REJECTED" className="rounded-lg bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-500/20">Reject</SubmitButton>
+            <SubmitButton bare name="action" value="CANCELLED" className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] transition hover:bg-[var(--panel-strong)]">Cancel</SubmitButton>
+          </div>
+        </form>
+      ) : null}
+      {["REJECTED", "CANCELLED"].includes(request.status) ? (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-5 py-4 text-sm text-[var(--ink-muted)]">
+          This request was <span className="font-semibold text-[var(--ink)]">{request.status.toLowerCase()}</span>
+          {request.reviewedBy ? <> by {request.reviewedBy.name || request.reviewedBy.email}</> : null}
+          {request.reviewNote ? <> — {request.reviewNote}</> : null}.
+        </div>
+      ) : null}
+        </div>
 
-      {canReview ? <div className="grid gap-3 sm:grid-cols-3"><form action={reviewPurchaseRequestAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 space-y-2"><input type="hidden" name="id" value={request.id} /><input type="hidden" name="action" value="APPROVED" /><textarea name="reviewNote" rows={2} placeholder="Approval note" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs" /><SubmitButton bare className="w-full rounded-lg bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-700">Approve</SubmitButton></form><form action={reviewPurchaseRequestAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 space-y-2"><input type="hidden" name="id" value={request.id} /><input type="hidden" name="action" value="REJECTED" /><textarea name="reviewNote" rows={2} placeholder="Rejection reason" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs" /><SubmitButton bare className="w-full rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-600">Reject</SubmitButton></form><form action={reviewPurchaseRequestAction} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 space-y-2"><input type="hidden" name="id" value={request.id} /><input type="hidden" name="action" value="CANCELLED" /><textarea name="reviewNote" rows={2} placeholder="Cancel note" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-xs" /><SubmitButton bare className="w-full rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink-muted)]">Cancel</SubmitButton></form></div> : null}
+        <aside className="min-w-0 space-y-4">
+          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <p className="border-b border-[var(--line)] px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Related</p>
+            <div className="divide-y divide-[var(--line)]">
+              <div className="px-4 py-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Supplier</p>
+                {request.supplier ? (
+                  <Link href={`/inventory/suppliers/${request.supplier.id}`} className="mt-0.5 block truncate text-sm font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
+                    {request.supplier.name}
+                  </Link>
+                ) : (
+                  <p className="mt-0.5 text-sm text-[var(--ink-muted)]">No preference</p>
+                )}
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Purchase order</p>
+                {request.convertedPo ? (
+                  <Link href={`/inventory/purchase-orders/${request.convertedPo.id}`} className="mono mt-0.5 block truncate text-sm font-bold text-[var(--accent)] hover:underline">
+                    {request.convertedPo.reference ?? "Purchase order"}
+                  </Link>
+                ) : canConvert && request.supplierId ? (
+                  <p className="mt-0.5 text-sm text-[var(--ink-muted)]">Ready — use Create PO above.</p>
+                ) : (
+                  <p className="mt-0.5 text-sm text-[var(--ink-muted)]">Converts on approval.</p>
+                )}
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Requested by</p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{request.requestedBy.name || request.requestedBy.email}</p>
+                {request.reviewedBy ? (
+                  <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">Reviewed by {request.reviewedBy.name || request.reviewedBy.email}</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
