@@ -25,6 +25,10 @@ const JOBS = [
   { name: "audit-prune",            path: "/api/cron/audit-prune",            schedule: "0 3 * * 0" },
   { name: "payment-reminders",      path: "/api/cron/payment-reminders",      schedule: "0 8 * * *" },
   { name: "fx-rates",               path: "/api/cron/fx-rates",               schedule: "0 5 * * *" },
+  // Arrived from main, where vercel.json still scheduled it. That file is gone
+  // here, so the route came across with nothing to invoke it — recurring
+  // expenses would never have been raised and no payables digest sent.
+  { name: "payables",               path: "/api/cron/payables",               schedule: "0 6 * * *" },
 ];
 
 if (!CRON_SECRET) {
