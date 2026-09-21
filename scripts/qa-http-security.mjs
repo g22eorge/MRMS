@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { applyQaEnv } from "./qa-env.mjs";
+
+// Build directory and database, shared with the other QA scripts.
+applyQaEnv();
 
 const base = process.env.QA_BASE_URL ?? "http://127.0.0.1:4030";
 
@@ -44,10 +48,7 @@ try {
       env: {
         ...process.env,
         PORT: port,
-        ALLOW_SQLITE_PRODUCTION: "1",
-        DATABASE_URL: process.env.DATABASE_URL ?? "file:./dev.db",
-        TURSO_DATABASE_URL: "",
-        TURSO_AUTH_TOKEN: "",
+        DATABASE_URL: process.env.DATABASE_URL,
         BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "qa-local-better-auth-secret-at-least-32-chars",
         BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? base,
         NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? base,

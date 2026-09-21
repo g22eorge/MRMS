@@ -32,7 +32,7 @@ export async function generateStatementBuffer(
   });
   if (!client) return { ok: false, error: "Client not found" };
 
-  // NB: never call this inside a $transaction — it deadlocks on Turso.
+  // NB: never call this inside a $transaction — the query escapes it.
   const branding = await getDocumentBrandingSettings(orgId);
   const logoUrl = await resolvePdfLogo();
   const statement = await getClientStatement(orgId, clientId, normalizeCurrency(baseCurrency, "UGX"));

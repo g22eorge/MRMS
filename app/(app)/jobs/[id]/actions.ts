@@ -12,8 +12,9 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
+import { isMissingTableError } from "@/lib/db-errors";
 import { resolveTechCost } from "@/lib/billing";
 import { can } from "@/lib/permissions";
 import { hasJobPayoutColumns } from "@/lib/payouts";
@@ -953,7 +954,6 @@ export async function recordClientPaymentAction(formData: FormData) {
   // Ensure the FX column + cash-basis ledger tables exist before opening the
   // transaction; a missing column/table would otherwise abort the whole payment
   // (SQLite rolls back the transaction on the first failed statement).
-  await ensureMoneySchema();
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -1202,7 +1202,6 @@ export async function recordTechnicianPayoutAction(formData: FormData) {
       : PaymentMethod.OTHER;
 
     // Ledger post below needs the C5 accounting tables present before the txn.
-    await ensureMoneySchema();
 
     await prisma.$transaction(async (tx) => {
       // Ceiling, cost basis and double-submit guard are evaluated inside the
@@ -1448,8 +1447,11 @@ export async function updateOneTimeExternalAssignmentAction(formData: FormData) 
       }),
     ]);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.toLowerCase().includes("no such table") || message.toLowerCase().includes("onetimeexternaltechassignment")) {
+    // The table is in the datamodel and arrives with the migrations, so "not yet
+    // deployed" is only reachable if migrations genuinely have not run. The old
+    // condition also matched any error merely mentioning the model — an ordinary
+    // constraint violation reported itself as an undeployed schema.
+    if (isMissingTableError(error)) {
       return { error: "One-time external assignments are not yet deployed to this database. Apply the latest schema changes and try again." };
     }
     return { error: "Failed to save one-time external assignment" };

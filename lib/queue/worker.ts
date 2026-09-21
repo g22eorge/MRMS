@@ -4,7 +4,7 @@
  * Start it alongside the Next.js server:
  *   bun lib/queue/worker.ts
  *
- * Or add to render.yaml / Dockerfile as a separate service.
+ * In production it is the `worker` service in docker-compose.yml.
  * When Redis is absent the process exits cleanly (no-op).
  */
 import { Worker } from "bullmq";
@@ -85,6 +85,16 @@ const worker = new Worker(
     concurrency: 4,
   },
 );
+
+// A worker that logs only failures is indistinguishable from one that never
+// started — the container sits "running" either way. Say so on both events.
+worker.on("ready", () => {
+  console.info(`[worker] ready — queue "${worker.name}", concurrency ${worker.opts.concurrency}`);
+});
+
+worker.on("error", (err) => {
+  console.error("[worker] connection error:", err.message);
+});
 
 worker.on("completed", (job) => {
   console.info(`[worker] completed ${job.name} id=${job.id}`);

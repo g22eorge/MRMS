@@ -8,7 +8,12 @@ import { describe, it, expect, mock } from "bun:test";
  * way the diagnosis form does — one FormData, one call, no retry.
  */
 
-process.env.DATABASE_URL = "file:./dev.db";
+// Came over from main pinned to `file:./dev.db`. The datasource is postgresql
+// now and rejects a `file:` URL outright, so the five tests below failed before
+// they reached anything they were written to check. `test:unit` provisions the
+// scratch database and passes DATABASE_URL; the fallback keeps a bare
+// `bun test <this file>` working on the same database.
+process.env.DATABASE_URL ??= "postgresql://mrms:mrms_dev_password@localhost:5434/mrms_scratch?schema=public";
 process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "test-secret";
 
 const ADMIN = {
@@ -37,10 +42,13 @@ mock.module("@/lib/platform-admin", () => ({
 let asRole: "ADMIN" | "TECHNICIAN_EXTERNAL" = "ADMIN";
 
 function sessionFor() {
+  // Both ids come from the seeded rows, not from constants: the action writes
+  // audit and timeline rows keyed to the acting user, so an id that is not in
+  // this database fails the foreign key rather than the assertion.
   const user =
     asRole === "ADMIN"
-      ? ADMIN
-      : { ...ADMIN, id: "cmtegkn41000p2lxezd6r8o61", email: "exttech@eagle.test", name: "Abdu External Tech", role: "TECHNICIAN_EXTERNAL" as const };
+      ? { ...ADMIN, id: FIXTURES?.adminId ?? ADMIN.id }
+      : { ...ADMIN, id: FIXTURES?.techId ?? "", email: "exttech@eagle.test", name: "Abdu External Tech", role: "TECHNICIAN_EXTERNAL" as const };
   return {
     session: { id: "sess-test", userId: user.id, user, expiresAt: new Date(Date.now() + 3_600_000) },
     user,
@@ -58,7 +66,43 @@ async function loadPrisma() {
   return import("@/lib/prisma").then((m) => m.prisma);
 }
 
-describe("diagnosis save persists external notes on the first attempt", () => {
+/**
+ * This file drives a real server action against real rows, so it needs a
+ * database with seed data in it. It arrived hard-coded to one external
+ * technician's cuid, which existed on the machine it was written on and
+ * nowhere else — not in prisma/seed.ts, not in the imported production data.
+ * Resolved from the seeded email instead, and skipped rather than failed when
+ * the target database has no seed in it at all.
+ */
+const FIXTURES = await (async () => {
+  try {
+    const prisma = await loadPrisma();
+    const tech = await prisma.user.findFirst({
+      where: { email: "exttech@eagle.test" },
+      select: { id: true },
+    });
+    const admin = await prisma.user.findFirst({
+      where: { email: "admin@eagle.test" },
+      select: { id: true },
+    });
+    if (!tech || !admin) return null;
+    const job = await prisma.job.findFirst({
+      where: { orgId: "org_eis_01", assignedToId: tech.id },
+      select: { id: true },
+    });
+    return job ? { techId: tech.id, adminId: admin.id } : null;
+  } catch {
+    return null;
+  }
+})();
+
+if (!FIXTURES) {
+  console.warn(
+    "[diagnosis-first-save] skipped: no seeded job assigned to exttech@eagle.test in org_eis_01. Run `bun run seed` against this database to exercise it.",
+  );
+}
+
+describe.skipIf(!FIXTURES)("diagnosis save persists external notes on the first attempt", () => {
   it("saves externalDiagnosis in one updateJobAction call (admin)", async () => {
     asRole = "ADMIN";
     const stamp = `repro-admin-${Date.now()}`;
@@ -87,7 +131,7 @@ describe("diagnosis save persists external notes on the first attempt", () => {
     const prisma = await loadPrisma();
     // Use the job actually assigned to this external technician.
     const job = await prisma.job.findFirst({
-      where: { orgId: "org_eis_01", assignedToId: "cmtegkn41000p2lxezd6r8o61" },
+      where: { orgId: "org_eis_01", assignedToId: FIXTURES!.techId },
       select: { id: true, updatedAt: true },
     });
     expect(job).toBeTruthy();
@@ -155,7 +199,7 @@ describe("diagnosis save persists external notes on the first attempt", () => {
     const stamp = `repro-extview-${Date.now()}`;
     const prisma = await loadPrisma();
     const job = await prisma.job.findFirst({
-      where: { orgId: "org_eis_01", assignedToId: "cmtegkn41000p2lxezd6r8o61" },
+      where: { orgId: "org_eis_01", assignedToId: FIXTURES!.techId },
       select: { id: true, updatedAt: true, status: true },
     });
     expect(job).toBeTruthy();
@@ -188,7 +232,7 @@ describe("diagnosis save persists external notes on the first attempt", () => {
     const stamp = `repro-emptytl-${Date.now()}`;
     const prisma = await loadPrisma();
     const job = await prisma.job.findFirst({
-      where: { orgId: "org_eis_01", assignedToId: "cmtegkn41000p2lxezd6r8o61" },
+      where: { orgId: "org_eis_01", assignedToId: FIXTURES!.techId },
       select: { id: true, updatedAt: true, timelineMinMinutes: true },
     });
     expect(job).toBeTruthy();

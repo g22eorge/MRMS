@@ -1,0 +1,54 @@
+# Overlay for deploying MRMS on a VPS that already runs a shared Traefik
+# "edge" proxy for other sites (this pattern comes from the eaglestays server:
+# see its docker/edge/ stack and docs/MULTI_DOMAIN.md — same idea, applied
+# here so MRMS can join that box without colliding with what is already on it).
+#
+# On a shared box, `app` must NOT publish a host port itself: only the edge
+# Traefik container may bind 80/443, and having `app` additionally listen on
+# a host port would let traffic reach it directly, in plain HTTP, bypassing
+# Traefik/TLS/Cloudflare entirely. This overlay removes that publish and
+# routes to `app` over the external `edge` Docker network by Host() instead.
+#
+#   docker network create edge || true      # once, if it does not exist yet
+#   cp .env.docker.example .env             # then fill it in, plus MRMS_HOSTNAME below
+#   docker compose -f docker-compose.yml -f docker-compose.shared-edge.yml up -d --build
+#
+# Add to .env:
+#   MRMS_HOSTNAME=<the domain Traefik should route to this stack>
+# Use a staging subdomain until the Postgres/Docker migration is confirmed;
+# switch it to the real care./app.eagleinfosolutions.com domains (and update
+# DNS) only once it is. That swap is the entire cutover — no data or
+# container move required, since it is the same running stack throughout.
+#
+# Capacity note: this box also runs eaglestays, whose own docs say it already
+# asks for more CPU than a 1 vCPU server has. Every MRMS service below carries
+# explicit resource limits (see docker-compose.yml) to cap its blast radius,
+# but combined memory headroom is tight — watch `docker stats` after deploy,
+# and prefer bumping to a larger box before this carries real production
+# traffic on top of eaglestays.
+
+services:
+  app:
+    # Drop the host-port publish from docker-compose.yml — Traefik reaches
+    # this container over the `edge` network, not via the host.
+    ports: !reset []
+    expose:
+      - "3000"
+    networks:
+      - default   # reaches postgres/redis, same as the standalone stack
+      - edge      # reachable by the shared Traefik proxy
+    labels:
+      - "traefik.enable=true"
+      # Required whenever a container sits on more than one network — without
+      # it Traefik can pick the wrong one and routing fails intermittently.
+      - "traefik.docker.network=edge"
+      - "traefik.http.routers.mrms.rule=Host(`${MRMS_HOSTNAME:?set MRMS_HOSTNAME in .env}`)"
+      - "traefik.http.routers.mrms.entrypoints=websecure"
+      - "traefik.http.services.mrms.loadbalancer.server.port=3000"
+
+networks:
+  # Shared external network owned by the edge stack, not by this project —
+  # `docker compose down` here must never delete the network other sites on
+  # the box are attached to.
+  edge:
+    external: true

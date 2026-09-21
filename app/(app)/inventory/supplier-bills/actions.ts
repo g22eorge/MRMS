@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { effectiveRateFromSettlement, readCurrencyAndRate, rowToBase, toBaseAmount } from "@/lib/currency";
 import { redirect } from "next/navigation";
 
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { postSupplierPayment, postSupplierTransferFee } from "@/lib/accounting/post";
@@ -235,7 +235,6 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
   }
 
   // postSupplierPayment writes to the C5 ledger inside the txn — ensure schema first.
-  await ensureMoneySchema();
 
   const paid = await prisma.$transaction(async (tx) => {
     const bill = await tx.supplierBill.findFirst({
@@ -344,7 +343,6 @@ export async function deleteSupplierPaymentAction(formData: FormData): Promise<v
   const billId = String(formData.get("billId") ?? "").trim();
   if (!id || !billId) return;
 
-  await ensureMoneySchema();
   await prisma.$transaction(async (tx) => {
     const payment = await tx.supplierPayment.findFirst({ where: { id, orgId, billId }, select: { id: true, amount: true } });
     if (!payment) return;

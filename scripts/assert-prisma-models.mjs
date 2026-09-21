@@ -1,7 +1,8 @@
 // Check required Prisma models exist in the generated client using the DMMF
 // (Data Model Meta Format) — zero database connection, no URL validation.
 // PrismaClient instantiation triggers Prisma's runtime schema check against
-// DATABASE_URL which fails when DATABASE_URL is a Turso libsql:// URL.
+// DATABASE_URL. With a postgresql provider no connection is needed to read
+// the generated client, so this runs without a reachable database.
 import { Prisma } from "@prisma/client";
 
 const requiredModels = [

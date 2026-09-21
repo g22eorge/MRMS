@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
 
+import type { TxClient } from "@/lib/prisma";
+
 import { prisma } from "@/lib/prisma";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextExpenseNumber } from "@/lib/commercial/org-number";
@@ -64,7 +66,7 @@ export async function issueRecurringExpense(
   for (let attempt = 0; attempt < 3 && !created; attempt += 1) {
     expenseNumber = await nextExpenseNumber(orgId, now);
     try {
-      created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      created = await prisma.$transaction(async (tx: TxClient) => {
         const expense = await tx.expense.create({
           data: {
             orgId,

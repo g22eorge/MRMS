@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import type { TxClient } from "@/lib/prisma";
 
 import { postExpensePayment } from "@/lib/accounting/post";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
@@ -26,7 +26,7 @@ export type RecordExpensePaymentResult = {
  * any violation — callers turn it into their banner.
  */
 export async function recordExpensePayment(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   params: {
     orgId: string;
     userId: string;

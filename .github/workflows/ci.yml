@@ -11,11 +11,25 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: file:${{ github.workspace }}/prisma/dev.db
+      DATABASE_URL: postgresql://mrms:mrms_ci@localhost:5432/mrms_ci?schema=public
       BETTER_AUTH_SECRET: "test-only-not-a-real-secret-for-ci-builds-only"
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       BETTER_AUTH_URL: http://127.0.0.1:3000
 
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mrms
+          POSTGRES_PASSWORD: mrms_ci
+          POSTGRES_DB: mrms_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mrms -d mrms_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,11 +91,25 @@ jobs:
   qa-backend:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: file:${{ github.workspace }}/prisma/dev.db
+      DATABASE_URL: postgresql://mrms:mrms_ci@localhost:5432/mrms_ci?schema=public
       BETTER_AUTH_SECRET: "test-only-not-a-real-secret-for-ci-builds-only"
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       BETTER_AUTH_URL: http://127.0.0.1:3000
 
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mrms
+          POSTGRES_PASSWORD: mrms_ci
+          POSTGRES_DB: mrms_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mrms -d mrms_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -119,15 +147,12 @@ jobs:
       - name: Prisma migrate deploy
         run: bunx prisma migrate deploy
 
-      - name: Reconcile empty migrated schema
-        env:
-          ALLOW_EMPTY_DB_RECONCILE: "1"
-        run: bun run db:reconcile-empty
-
-      - name: Verify migration drift
-        env:
-          CHECK_CURRENT_DATABASE: "1"
-        run: bun run db:drift-check
+      - name: Verify the schema matches the datamodel
+        # `migrate status` exits non-zero when a migration is pending or the
+        # history has diverged. The old gate ran a reconciler that diffed the
+        # datamodel against a live SQLite database and issued the missing DDL;
+        # migrations are the only path now, so there is nothing to reconcile.
+        run: bunx prisma migrate status
 
       - name: Seed data
         run: bun run seed
@@ -173,11 +198,25 @@ jobs:
   qa-e2e:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: file:${{ github.workspace }}/prisma/dev.db
+      DATABASE_URL: postgresql://mrms:mrms_ci@localhost:5432/mrms_ci?schema=public
       BETTER_AUTH_SECRET: "test-only-not-a-real-secret-for-ci-builds-only"
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:4173
       BETTER_AUTH_URL: http://127.0.0.1:4173
 
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: mrms
+          POSTGRES_PASSWORD: mrms_ci
+          POSTGRES_DB: mrms_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mrms -d mrms_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -226,15 +265,12 @@ jobs:
       - name: Prisma migrate deploy
         run: bunx prisma migrate deploy
 
-      - name: Reconcile empty migrated schema
-        env:
-          ALLOW_EMPTY_DB_RECONCILE: "1"
-        run: bun run db:reconcile-empty
-
-      - name: Verify migration drift
-        env:
-          CHECK_CURRENT_DATABASE: "1"
-        run: bun run db:drift-check
+      - name: Verify the schema matches the datamodel
+        # `migrate status` exits non-zero when a migration is pending or the
+        # history has diverged. The old gate ran a reconciler that diffed the
+        # datamodel against a live SQLite database and issued the missing DDL;
+        # migrations are the only path now, so there is nothing to reconcile.
+        run: bunx prisma migrate status
 
       - name: Seed data
         run: bun run seed

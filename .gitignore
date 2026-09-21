@@ -17,6 +17,10 @@
 
 # next.js
 /.next/
+# Alternate build output directories: scripts/build.mjs uses .next-gate off-CI,
+# the QA scripts use .next-qa and Playwright uses .next-e2e. Globbed so a new
+# one cannot get committed by accident.
+.next-*/
 /.next-gate/
 /out/
 
@@ -38,7 +42,12 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the committed template. `.env*` would otherwise hide it, and a
+# fresh clone would have nothing to copy from.
+!.env.docker.example
 !.env.example
+!.env.example
+!.env.ci.example
 
 # vercel
 .vercel
@@ -52,6 +61,24 @@ next-env.d.ts
 # local sqlite files
 dev.db
 *.db
+
+# Database exports (bun run pg:export). Whatever the development database holds,
+# which today is imported production data — never commit one.
+backups/
+*.dump
+
+# db/init/01-data.sql IS committed. It is the database a fresh `dev:up`
+# restores from, and it only helps a new developer if it arrives with the
+# clone. It is the output of `bun run pg:anonymise`, which refuses to write a
+# file containing a customer name, phone number, address or mailbox — see the
+# header of scripts/pg/anonymise.mjs for what that does and does not cover.
+#
+# Anything else here would be a hand-made dump nobody has checked, so the rule
+# is deny-by-default with that one file named.
+db/init/*
+!db/init/.gitkeep
+!db/init/01-data.sql
+
 # Generated per test run by scripts/test-schema.mjs — a copy of schema.prisma
 # pointing at test.db. Regenerated every time, so committing it only creates
 # churn and a second file to keep in step with the models.
@@ -61,9 +88,14 @@ prisma/schema.test.prisma
 *.db-shm
 # stray libSQL local-file artifacts (created when a command treats the Turso URL as a path)
 libsql:*
+.agents/
+package-lock.json
+prisma/dev.db.bak-before-date-fix
 
-# Environment values pulled down from Vercel. The .env* rule above only matches
-# files whose NAME starts with .env, so a directory of *.env files slips past it.
+# `.env*` above matches by filename, so a directory of *.env files slips past it.
+# vercel-env/ is a leftover of pulling values down from Vercel; deployment is
+# container-based now, but the rule costs nothing and keeps stray env files out.
 vercel-env/
 *.env
 !.env.example
+!.env.docker.example

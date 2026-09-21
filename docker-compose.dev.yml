@@ -1,0 +1,206 @@
+# The development stack. Everything runs in a container, including the database.
+#
+#   bun run dev:up      build and start (app on http://localhost:3000)
+#   bun run dev:logs    follow the app
+#   bun run dev:sh      a shell inside the app container
+#   bun run dev:psql    psql against the dev database
+#   bun run dev:down    stop, keep data
+#   bun run dev:reset   stop and wipe the volumes
+#
+# Editing a file on the host reloads the running container: the working tree is
+# bind-mounted, Next's dev server handles the app, and the worker and scheduler
+# run under a file watcher. Nothing needs restarting by hand except a change to
+# prisma/schema.prisma, which needs `bun run dev:up` again to regenerate the
+# client.
+#
+# Own compose project, so these containers are never confused with the
+# production stack in docker-compose.yml.
+name: mrms-dev
+
+x-dev-env: &dev-env
+  NODE_ENV: development
+  # The app reaches Postgres inside the compose network. Port 5433 below is for
+  # host tools (psql, the migration scripts), not for the app.
+  DATABASE_URL: postgresql://mrms:mrms_dev_password@postgres:5432/mrms?schema=public
+  REDIS_URL: redis://redis:6379
+  UPLOADS_DIR: /data/uploads
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+  BETTER_AUTH_URL: http://localhost:3000
+  # Development-only values. Both are committed on purpose: there is nothing to
+  # protect on a local machine, and a placeholder that fails closed would just
+  # mean nobody can log in.
+  BETTER_AUTH_SECRET: dev-only-secret-not-used-anywhere-else-32c
+  CRON_SECRET: dev-only-cron-secret-not-used-anywhere-else
+  # See the dev target in the Dockerfile: bind-mounted file events are
+  # unreliable on macOS, so the watcher polls.
+  WATCHPACK_POLLING: "true"
+  CHOKIDAR_USEPOLLING: "true"
+
+# Third-party credentials (WhatsApp, Resend, Pesapal, Anthropic) come from .env
+# so they are configured in one place. Everything above overrides it, because
+# `environment` wins over `env_file`.
+x-dev-env-file: &dev-env-file
+  - path: .env
+    required: false
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: mrms-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mrms
+      POSTGRES_PASSWORD: mrms_dev_password
+      POSTGRES_DB: mrms
+      # Deterministic collation so ORDER BY matches production regardless of
+      # the host locale.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      # 5433, not 5432: a host Postgres commonly holds 5432 and the collision is
+      # silent — you connect to the wrong server and believe the results.
+      - "5433:5432"
+    volumes:
+      # Postgres 18+ wants a single mount at /var/lib/postgresql, not at
+      # .../data — the image places the cluster in a version-named subdirectory
+      # so `pg_upgrade --link` does not cross a mount boundary.
+      - pgdata:/var/lib/postgresql
+      # Anything here runs, once, the first time this volume is initialised —
+      # so a new machine comes up with data instead of an empty schema. Written
+      # by `bun run pg:export --setup`, and it carries the _prisma_migrations
+      # table with it, which is why `migrate deploy` afterwards has nothing to
+      # do rather than colliding with tables that already exist. Empty or
+      # missing is fine: the app container seeds demo data instead.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mrms -d mrms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Scratch database for the test suite, the QA scripts and import rehearsals,
+  # so none of them can touch the database you are developing against.
+  postgres-scratch:
+    image: postgres:18-alpine
+    container_name: mrms-postgres-scratch
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mrms
+      POSTGRES_PASSWORD: mrms_dev_password
+      POSTGRES_DB: mrms_scratch
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-scratch:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mrms -d mrms_scratch"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: mrms-redis-dev
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      target: dev
+    container_name: mrms-app-dev
+    restart: unless-stopped
+    env_file: *dev-env-file
+    environment: *dev-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${DEV_PORT:-3000}:3000"
+    volumes:
+      # The working tree, so an edit on the host reaches the dev server.
+      - .:/app
+      # These two must NOT come from the host: a bind-mounted node_modules
+      # shadows the install baked into the image, and sharing .next with host
+      # builds corrupts Turbopack's on-disk cache.
+      - node_modules:/app/node_modules
+      - next_cache:/app/.next
+      - uploads:/data/uploads
+    # Interactive so Next's dev output is readable in `docker compose logs`.
+    tty: true
+
+  worker:
+    build:
+      context: .
+      target: dev
+    container_name: mrms-worker-dev
+    restart: unless-stopped
+    env_file: *dev-env-file
+    environment: *dev-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      # Not an ordering preference — a race. app, worker and scheduler all mount
+      # the same `node_modules` volume, and on a machine that has never run this
+      # before it is empty, so Docker populates it from the image at first mount.
+      # Started together, two containers copy into it at once and one of them
+      # dies with `mkdir .../node_modules/_data/<pkg>: file exists`. Only the
+      # first `dev:up` on a new clone can hit it, which is the worst possible
+      # audience for it. app goes first, populates the volume, these two attach
+      # to a volume that is already there. scheduler already waited; worker did
+      # not, and that is the one that failed.
+      app:
+        condition: service_started
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - uploads:/data/uploads
+    # --watch restarts the worker when any file it imports changes.
+    command: ["bun", "--watch", "lib/queue/worker.ts"]
+    # The dev image's HEALTHCHECK curls the app's port; this service serves no
+    # HTTP, so an inherited check could only ever report unhealthy.
+    healthcheck:
+      disable: true
+
+  scheduler:
+    build:
+      context: .
+      target: dev
+    container_name: mrms-scheduler-dev
+    restart: unless-stopped
+    environment:
+      APP_URL: http://app:3000
+      CRON_SECRET: dev-only-cron-secret-not-used-anywhere-else
+    depends_on:
+      app:
+        condition: service_started
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    # node --watch restarts the scheduler when the script changes.
+    command: ["node", "--watch", "scripts/scheduler.mjs"]
+    healthcheck:
+      disable: true
+
+volumes:
+  pgdata:
+  pgdata-scratch:
+  redisdata:
+  node_modules:
+  next_cache:
+  uploads:

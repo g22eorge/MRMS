@@ -11,7 +11,7 @@ import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
 import { nextExpenseNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { postExpensePayment, reverseJournalEntry } from "@/lib/accounting/post";
 import { recordExpensePayment } from "@/lib/commercial/expense-payments";
@@ -328,7 +328,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
     // Mark-paid posts with the same key, so rows posted while unpaid are
     // never double-posted when paid for real.
     if (paidAt) {
-      await ensureMoneySchema();
       await prisma.$transaction((tx) =>
         postExpensePayment(tx, {
           orgId,
@@ -373,7 +372,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
     // Double taps serialize inside the shared recorder (balance rechecked
     // beside the write); the loser gets the balance message, not a double pay.
-    await ensureMoneySchema();
     await prisma.$transaction(async (tx) => {
       await recordExpensePayment(tx, {
         orgId,
@@ -486,7 +484,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
     // Deleting reverses every ledger post tied to the expense — each part
     // payment posted under its own key, plus the legacy single post — or the
     // P&L keeps money that no longer exists. Missing posts no-op.
-    await ensureMoneySchema();
     await prisma.$transaction(async (tx) => {
       const payments = await tx.expensePayment.findMany({
         where: { orgId, expenseId },

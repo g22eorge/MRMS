@@ -90,9 +90,9 @@ export async function retrieveAiKnowledge(query: string, orgId?: string | null, 
           { OR: [{ orgId: null }, ...(includeOrgKnowledge ? [{ orgId }] : [])] },
           {
             OR: queryTokens.flatMap((token) => [
-              { title: { contains: token } },
-              { module: { contains: token } },
-              { content: { contains: token } },
+              { title: { contains: token , mode: "insensitive" as const} },
+              { module: { contains: token , mode: "insensitive" as const} },
+              { content: { contains: token , mode: "insensitive" as const} },
             ]),
           },
         ],

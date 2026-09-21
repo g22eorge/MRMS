@@ -11,7 +11,7 @@ import { Prisma } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { formatEATDateTime } from "@/lib/date-eat";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma, type TxClient } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -39,6 +39,7 @@ import { saleCustomerName } from "@/lib/client-name";
 import { sanitizeOptionalText } from "@/lib/sanitize";
 
 import { flash } from "@/lib/flash";
+import { isMissingTableError } from "@/lib/db-errors";
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
 /**
@@ -51,7 +52,7 @@ function posReject(saleId: string, message: string): never {
 }
 
 async function recalcSaleTotals(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   saleId: string,
   orgId: string,
   overrideTaxApplicable?: boolean,
@@ -218,8 +219,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
+    if (isMissingTableError(err)) dbNeedsFix = true;
     sale = null;
   }
 
@@ -650,7 +650,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       : "OTHER" as PaymentMethod;
 
     // Receipt + C5 ledger post run inside the txn; ensure their schema exists first.
-    await ensureMoneySchema();
 
     await prisma.$transaction(async (tx) => {
       // Re-read inside the txn: status, items and paid total must be true at
@@ -1006,7 +1005,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
     // Refund write + C5 ledger post + sale paid-state recompute must be atomic;
     // ensure the ledger/FX schema exists before opening the txn.
-    await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
       // Ceiling and dedupe rechecked inside the txn, against the rows written
       // beside — the outside reads race.
