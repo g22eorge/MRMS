@@ -63,7 +63,14 @@ function contents() {
 try {
   docker([...COMPOSE, "ps", "-q", SERVICE], { stdio: ["ignore", "pipe", "pipe"] });
 } catch {
-  console.error("\n  docker is not reachable. Start Docker, then `bun run dev:up`.\n");
+  // Same as pg:anonymise: pg_dump lives in the Postgres image, so this drives
+  // the containers from outside rather than running inside one.
+  console.error(`
+  docker is not reachable. This runs on the host, not in the app container —
+  it needs the docker CLI and pg_dump, and the app image has neither.
+
+  Start Docker, then \`bun run dev:up\`, then run this from the repository root.
+`);
   process.exit(1);
 }
 

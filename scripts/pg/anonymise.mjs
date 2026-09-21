@@ -76,9 +76,14 @@ const EMPTY = [
 ];
 
 // ── Rewrites ────────────────────────────────────────────────────────────────
-// `substr(md5(id),1,6)` rather than a counter: derived from the row, so it is
-// the same on every regeneration and a reviewer can tell two dumps apart from
-// their content rather than their ordering.
+// `substr(md5(id),1,6)` rather than a counter: derived from the row, so a given
+// client is the same fake person every time this runs and a regenerated file
+// diffs against its predecessor by what actually changed in the data.
+//
+// The file is not byte-identical between runs even so — password hashes are
+// salted, and pg_dump stamps each dump with a random \restrict token. That is
+// around 26 lines of churn on a 700 KB file, which is cheaper than either a
+// deterministic salt or post-processing somebody would have to maintain.
 const REWRITES = [
   `UPDATE "Client" SET
      "fullName" = 'Client ' || upper(substr(md5(id), 1, 6)),
@@ -146,6 +151,25 @@ const REWRITES = [
 ];
 
 // ── Run ─────────────────────────────────────────────────────────────────────
+
+// `pg_dump` exists in the Postgres image and nowhere else, so this drives the
+// containers rather than running in one. Same as `bun run dev:up` itself: the
+// app runs in Docker, the commands that manage it do not. Run inside the app
+// container it fails on a missing `docker` binary, which explains nothing.
+try {
+  execFileSync("docker", ["version", "--format", "{{.Server.Version}}"], { stdio: "ignore" });
+} catch {
+  console.error(`
+  This one runs on the host, not in the app container — it needs the docker CLI
+  and pg_dump, and the app image has neither. From the repository root:
+
+      bun run pg:anonymise
+
+  (\`bun run dev:up\` is a host command too. The app runs in Docker; the commands
+  that manage it do not.)
+`);
+  process.exit(1);
+}
 
 console.log(`\nANONYMISE  ${DEV.db}  ->  ${path.relative(process.cwd(), OUT)}`);
 console.log("=".repeat(74));

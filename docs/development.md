@@ -145,6 +145,29 @@ bun run pg:export     # -> backups/mrms-dev-<timestamp>.dump, and tells you what
 It writes `pg_dump -Fc`, the same format the production `backup` service uses,
 so it restores with `pg_restore` the same way.
 
+## Which commands run where
+
+The app runs in Docker. The commands that manage it do not — `bun run dev:up`
+is itself a host command, and the `dev:*` scripts are host-side wrappers that
+`docker compose exec` into a container. So "we develop inside Docker" means the
+code executes there, not that you type everything from a shell inside it.
+
+| | Runs | Needs |
+| --- | --- | --- |
+| `dev:up`, `dev:down`, `dev:logs`, `dev:reset` | host, drives compose | docker |
+| `dev:check`, `dev:test`, `dev:migrate`, `dev:seed`, `dev:psql`, `dev:import`, `dev:verify` | host, executes **in** the container | docker |
+| migrations, the bootstrap seed, the app, worker, scheduler | inside the containers | nothing of yours |
+| `pg:export`, `pg:anonymise` | host only | docker **and** bun on the host |
+
+The last row is the one that bites. `pg_dump` exists in the Postgres image and
+nowhere else, so those two drive the containers from outside rather than running
+in one — the app image has no `docker`, no `pg_dump` and no `psql`. Run either
+inside the app container and it now says so instead of failing on a missing
+binary.
+
+Nothing a new developer does on day one is in that row. `bun run dev:up` is the
+whole setup.
+
 ## Editing code
 
 **Nothing needs restarting.** The working tree is bind-mounted into the
