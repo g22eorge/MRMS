@@ -205,6 +205,42 @@ Do not start a host dev server alongside it. Both would bind :3000, and the one
 that loses is not obvious — the symptom is stale HTML served from whichever
 process won.
 
+### The database is in Docker. There is no local one.
+
+Every database this app uses runs in a container. Nothing is installed on the
+host, nothing reads a `file:` URL, and there is no `prisma/dev.db` to fall back
+on. Point tooling at the published ports:
+
+| | host port | database | credentials |
+| --- | --- | --- | --- |
+| development | **5433** | `mrms` | `mrms` / `mrms_dev_password` |
+| scratch (tests, QA, import rehearsals) | **5434** | `mrms_scratch` | same |
+
+```bash
+bun run dev:psql     # psql against the development database
+docker exec mrms-postgres-dev psql -U mrms -d mrms -c '<sql>'
+```
+
+**Port 5432 is not this app.** A native Postgres commonly holds it on a
+developer machine — on this one it serves carecheck, credopo and eaglestays, and
+has no `mrms` database at all. `psql -p 5432 -d mrms` at least fails loudly; a
+GUI client pointed at the server just lists the other projects' databases and
+shows nothing belonging to this one, which reads as "the import never ran" while
+the data sits in 5433 untouched. That has already cost one debugging session.
+If the data looks missing, check the port before checking the data.
+
+The development database holds **imported production data**, not seed data. Its
+users are the real ones — `admin@eagle.tech`, `kakande@eagle.tech`,
+`g22eorge@gmail.com`, all on org `org_eis_01`, all carrying production password
+hashes. The seed accounts (`admin@eagle.test` / `password123`, note the TLD)
+exist only in a database that has had `bun run seed` run against it, which the
+development one has not. Offering seed credentials for it sends someone to a
+login screen that will never accept them.
+
+`bun run seed` refuses to run where business tables already hold rows, and needs
+`ALLOW_DESTRUCTIVE_SEED=1` to proceed. That guard is there for the database
+described above. Seed the scratch database, or a throwaway one, never this.
+
 Never use `prisma db push` against a database that matters: it is what produced
 the drift this migration had to reconcile (51 columns the datamodel expected and
 the database lacked, 16 the reverse, six undeclared tables). Generate a migration
