@@ -64,6 +64,13 @@ services:
       # .../data — the image places the cluster in a version-named subdirectory
       # so `pg_upgrade --link` does not cross a mount boundary.
       - pgdata:/var/lib/postgresql
+      # Anything here runs, once, the first time this volume is initialised —
+      # so a new machine comes up with data instead of an empty schema. Written
+      # by `bun run pg:export --setup`, and it carries the _prisma_migrations
+      # table with it, which is why `migrate deploy` afterwards has nothing to
+      # do rather than colliding with tables that already exist. Empty or
+      # missing is fine: the app container seeds demo data instead.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mrms -d mrms"]
       interval: 5s

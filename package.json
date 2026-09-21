@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "echo \"Development runs in Docker: use 'bun run dev:up' (app on :3000, logs via 'bun run dev:logs'). A host dev server would bind the same port as the container and whichever wins is not obvious \u2014 the symptom is stale HTML. See docs/development.md.\" >&2; exit 1",
+    "dev": "echo \"Development runs in Docker: use 'bun run dev:up' (app on :3000, logs via 'bun run dev:logs'). A host dev server would bind the same port as the container and whichever wins is not obvious — the symptom is stale HTML. See docs/development.md.\" >&2; exit 1",
     "build": "node scripts/build.mjs",
     "vercel-build": "node scripts/build.mjs",
     "start": "PORT=${PORT:-3000} BIND_HOST=${BIND_HOST:-0.0.0.0}; next start -p $PORT -H $BIND_HOST",
@@ -47,7 +47,7 @@
     "pg:import": "node scripts/pg/import.mjs",
     "pg:verify": "node scripts/pg/verify-import.mjs",
     "pg:verify-business": "bun scripts/pg/verify-business.ts",
-    "dev:docker": "bunx prisma migrate deploy && bunx prisma generate && node scripts/assert-prisma-models.mjs && next dev -H 0.0.0.0 -p 3000",
+    "dev:docker": "bunx prisma migrate deploy && bunx prisma generate && node scripts/assert-prisma-models.mjs && node scripts/dev-bootstrap.mjs && next dev -H 0.0.0.0 -p 3000",
     "dev:up": "docker compose -f docker-compose.dev.yml up -d --build",
     "dev:down": "docker compose -f docker-compose.dev.yml down",
     "dev:reset": "docker compose -f docker-compose.dev.yml down -v",
@@ -58,7 +58,11 @@
     "dev:check": "docker compose -f docker-compose.dev.yml exec app sh -c \"bunx tsc --noEmit && bun run lint\"",
     "dev:seed": "docker compose -f docker-compose.dev.yml exec app bun run seed",
     "dev:migrate": "docker compose -f docker-compose.dev.yml exec app bunx prisma migrate dev",
-    "dev:host": "export CLEAR_NEXT_CACHE=1; bunx prisma migrate deploy && node scripts/generate-prisma-clean.mjs && node scripts/assert-prisma-models.mjs && next dev"
+    "dev:host": "export CLEAR_NEXT_CACHE=1; bunx prisma migrate deploy && node scripts/generate-prisma-clean.mjs && node scripts/assert-prisma-models.mjs && next dev",
+    "pg:export": "node scripts/pg/export.mjs",
+    "dev:import": "docker compose -f docker-compose.dev.yml exec app node scripts/pg/import.mjs",
+    "dev:verify": "docker compose -f docker-compose.dev.yml exec app node scripts/pg/verify-import.mjs",
+    "dev:verify-business": "docker compose -f docker-compose.dev.yml exec app bun scripts/pg/verify-business.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

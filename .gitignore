@@ -61,6 +61,19 @@ next-env.d.ts
 # local sqlite files
 dev.db
 *.db
+
+# Database exports (bun run pg:export). Whatever the development database holds,
+# which today is imported production data — never commit one.
+backups/
+*.dump
+
+# The database a fresh `dev:up` restores from (bun run pg:export --setup).
+# Ignored by default because it is a copy of whatever the development database
+# holds — today, real clients and their phone numbers. Commit it only once the
+# contents are safe for everyone who can clone this repo.
+db/init/*.sql
+!db/init/.gitkeep
+
 # Generated per test run by scripts/test-schema.mjs — a copy of schema.prisma
 # pointing at test.db. Regenerated every time, so committing it only creates
 # churn and a second file to keep in step with the models.
