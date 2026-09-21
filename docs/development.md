@@ -70,24 +70,42 @@ bun run dev:reset && bun run dev:up   # verify it the way a new machine would
 start, and seeds only when it finds no business rows at all. That is the path
 described under [First run](#first-run).
 
-### Whether that file is committed is a decision, not a default
+### The committed file is anonymised, and regenerating it is one command
 
-`db/init/*.sql` is gitignored. A dump of the development database as it stands
-today contains 95 real clients with 95 real phone numbers, 11 production
-password hashes, and the audit log. Committing it puts all of that in git
-history permanently, on every laptop that clones the repo, including people who
-join later and people who leave.
+`db/init/01-data.sql` is in git, because it only helps a new developer if it
+arrives with the clone. It is not a copy of the development database: it is the
+output of
 
-Three ways to resolve it, in the order I would try them:
+```bash
+bun run pg:anonymise      # -> db/init/01-data.sql
+```
 
-| | What a new dev gets | Cost |
-| --- | --- | --- |
-| Demo seed only | 33 jobs, 15 clients, no real data | none — works today |
-| Anonymised dump, committed | real volume and money flows, scrubbed identities | a scrubbing step that has to be got right and kept right |
-| Real dump, shared out of band | everything | no automation; each person is handed a file and told where to put it |
+which takes a copy of development into a throwaway database, empties the tables
+that are all identity and no structure (sessions, audit log, message bodies,
+notifications), rewrites every customer name, phone number, address and mailbox,
+sweeps free text for the same, resets every password, and then **reads back the
+file it wrote** and fails if anything survived. The source database is never
+touched.
 
-Option three still works with the mechanism above: put the file at
-`db/init/01-data.sql` yourself before the first `dev:up`.
+What a new developer ends up with is the real shape of the data — 101 jobs, 95
+clients, 103 invoices, payments totalling 58,846,362 — belonging to nobody:
+
+```
+admin1@eagle.test  admin2@eagle.test  admin3@eagle.test  ops1@eagle.test
+ops2@eagle.test  technicianinternal1@eagle.test  technicianexternal1@eagle.test
+salescorporate1@eagle.test   … password for all: password123
+```
+
+Regenerate it whenever the development database gains something worth having,
+and commit the result. Everything else under `db/init/` is gitignored: a
+hand-made dump dropped there is one nobody has checked.
+
+**What it does not cover.** A colleague's first name that is also an ordinary
+word — Mark, Grace, Hope — is left out of the free-text sweep, because sweeping
+it would turn "marked as paid" into "[redacted]ed as paid". Those can survive
+inside an expense description. Customer identities cannot; that is the line the
+script enforces. The full reasoning is in the header of
+`scripts/pg/anonymise.mjs`.
 
 ## Working with production data
 

@@ -62,7 +62,8 @@
     "pg:export": "node scripts/pg/export.mjs",
     "dev:import": "docker compose -f docker-compose.dev.yml exec app node scripts/pg/import.mjs",
     "dev:verify": "docker compose -f docker-compose.dev.yml exec app node scripts/pg/verify-import.mjs",
-    "dev:verify-business": "docker compose -f docker-compose.dev.yml exec app bun scripts/pg/verify-business.ts"
+    "dev:verify-business": "docker compose -f docker-compose.dev.yml exec app bun scripts/pg/verify-business.ts",
+    "pg:anonymise": "bun scripts/pg/anonymise.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

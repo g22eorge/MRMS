@@ -67,12 +67,17 @@ dev.db
 backups/
 *.dump
 
-# The database a fresh `dev:up` restores from (bun run pg:export --setup).
-# Ignored by default because it is a copy of whatever the development database
-# holds — today, real clients and their phone numbers. Commit it only once the
-# contents are safe for everyone who can clone this repo.
-db/init/*.sql
+# db/init/01-data.sql IS committed. It is the database a fresh `dev:up`
+# restores from, and it only helps a new developer if it arrives with the
+# clone. It is the output of `bun run pg:anonymise`, which refuses to write a
+# file containing a customer name, phone number, address or mailbox — see the
+# header of scripts/pg/anonymise.mjs for what that does and does not cover.
+#
+# Anything else here would be a hand-made dump nobody has checked, so the rule
+# is deny-by-default with that one file named.
+db/init/*
 !db/init/.gitkeep
+!db/init/01-data.sql
 
 # Generated per test run by scripts/test-schema.mjs — a copy of schema.prisma
 # pointing at test.db. Regenerated every time, so committing it only creates
