@@ -1,3 +1,8 @@
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time. Aligns with the force-dynamic convention used on
+// every other document list page.
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -9,7 +14,8 @@ import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { Prisma } from "@prisma/client";
 import { orgDb } from "@/lib/db";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { isMissingTableError } from "@/lib/db-errors";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -24,32 +30,21 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
-import { clientDisplayName } from "@/lib/client-name";
+import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
-import { isMissingTableError } from "@/lib/db-errors";
 function saleStatusTone(status: string): BadgeTone {
   if (status === "PAID") return "success";
   if (status === "VOID") return "danger";
   return "warning";
 }
 
-function monthKey(d: Date) {
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 async function nextSaleNumber(db: ReturnType<typeof orgDb>, orgId: string) {
-  const inner = `S-${monthKey(new Date())}-`;
-  const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
-    db.sale.findMany({
-      where: { saleNumber: { contains: inner , mode: "insensitive" as const} },
-      select: { saleNumber: true },
-    }),
-  ]);
-  const next = maxNumberSequence(inner, rows.map((r) => r.saleNumber)) + 1;
-  return composeOrgNumber(tag, inner, next);
+  return nextUniversalNumber(orgId, "SAL", {
+    taken: async (candidate) =>
+      Boolean(await db.sale.findFirst({ where: { saleNumber: candidate }, select: { id: true } })),
+  });
 }
 
 const SEGMENTS = ["all", "today", "month", "open"] as const;
@@ -58,20 +53,21 @@ type Segment = (typeof SEGMENTS)[number];
 export default async function PosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; q?: string; page?: string; size?: string; error?: string }>;
+  searchParams: Promise<{ period?: string; q?: string; page?: string; size?: string; sort?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
-  if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
+  if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK", "OPERATIONS_MANAGER"].includes(user.role))) {
     redirect("/dashboard");
   }
 
-  const { period, q: rawQ, page: pageParam, size: sizeParam, error: posListError } = await searchParams;
+  const { period, q: rawQ, page: pageParam, size: sizeParam, sort: sortParam, error: posListError } = await searchParams;
   const page = parsePage(pageParam);
   const pageSize = parsePageSize(sizeParam);
   const currency = org.baseCurrency;
   const segment: Segment = SEGMENTS.includes(period as Segment) ? (period as Segment) : "all";
   const q = (rawQ ?? "").trim();
+  const sort = sortParam === "oldest" ? "oldest" : sortParam === "highest" ? "highest" : "newest";
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -88,6 +84,7 @@ export default async function PosPage({
     ? {
         OR: [
           { saleNumber: icontains(q) },
+          { name: icontains(q) },
           { notes: icontains(q) },
           { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
         ],
@@ -122,7 +119,7 @@ export default async function PosPage({
     const { user: _u2, orgId: _orgId2, org } = await requireOrgSession();
     assertOrgCanMutate({ access: org.access, userRole: _u2.role, userAccessMode: _u2.accessMode, kind: "GENERAL" });
     const db = orgDb(_orgId2);
-    if (!(can.viewFinancials(_u2) || ["ADMIN", "OPS", "FRONT_DESK"].includes(_u2.role))) redirect("/dashboard");
+    if (!(can.viewFinancials(_u2) || ["ADMIN", "OPS", "FRONT_DESK", "OPERATIONS_MANAGER"].includes(_u2.role))) redirect("/dashboard");
 
     // Double-submit guard: a double-tap on "New Sale" would open two empty tills.
     // Reuse the just-created empty draft (nothing is lost — it has no items yet).
@@ -138,17 +135,31 @@ export default async function PosPage({
     // org has opted in (Settings -> Branding -> VAT). Cashiers can still flip it
     // per-sale on the sale page.
     const branding = await getDocumentBrandingSettings(_orgId2);
-    const sale = await db.sale.create({
-      data: {
-        orgId: _orgId2,
-        saleNumber,
-        status: "OPEN",
-        // currency uses schema default
-        taxApplicable: branding.vatDefaultApplicable,
-        createdById: _u2.id,
-      },
-      select: { id: true },
-    });
+    // Currency is set from the org: the till rejects non-base sales, so the
+    // schema default would strand non-UGX orgs as unpayable.
+    // Sale numbers allocate read-max-then-create: retry on collision instead
+    // of 500ing on concurrent taps.
+    let sale: { id: string } | null = null;
+    for (let attempt = 0; attempt < 3 && !sale; attempt += 1) {
+      const numbered = attempt === 0 ? saleNumber : await nextSaleNumber(db, _orgId2);
+      try {
+        sale = await db.sale.create({
+          data: {
+            orgId: _orgId2,
+            saleNumber: numbered,
+            status: "OPEN",
+            currency: org.baseCurrency,
+            taxApplicable: branding.vatDefaultApplicable,
+            createdById: _u2.id,
+          },
+          select: { id: true },
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002" && attempt < 2) continue;
+        throw error;
+      }
+    }
+    if (!sale) redirect("/pos?error=" + encodeURIComponent("Could not number the new sale. Please try again."));
 
     revalidatePath("/pos");
     redirect(flash(`/pos/${sale.id}`, "Sale created"));
@@ -186,10 +197,10 @@ export default async function PosPage({
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
         if (!item.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: item.partId }, select: { id: true, qtyOnHand: true } });
+        const part = await tx.part.findFirst({ where: { id: item.partId, orgId: _orgId3 }, select: { id: true, qtyOnHand: true } });
         if (!part) continue;
         const baseQty = Math.abs(item.quantity) * (item.saleUomFactor ?? 1);
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
+        await tx.part.updateMany({ where: { id: part.id, orgId: _orgId3 }, data: { qtyOnHand: { increment: baseQty } } });
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
@@ -202,7 +213,7 @@ export default async function PosPage({
           },
         });
       }
-      await tx.sale.deleteMany({ where: { id: sale.id } });
+      await tx.sale.deleteMany({ where: { id: sale.id, orgId: _orgId3 } });
     });
 
     revalidatePath("/pos");
@@ -211,6 +222,7 @@ export default async function PosPage({
   let sales: Array<{
     id: string;
     saleNumber: string;
+    name: string | null;
     status: string;
     currency: string | null;
     totalAmount: number;
@@ -227,12 +239,13 @@ export default async function PosPage({
     salesTotal = await db.sale.count({ where: salesWhere });
     sales = await db.sale.findMany({
       where: salesWhere,
-      orderBy: { createdAt: "desc" },
+      orderBy: sort === "oldest" ? { createdAt: "asc" } : sort === "highest" ? { totalAmount: "desc" } : { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
         id: true,
         saleNumber: true,
+        name: true,
         status: true,
         currency: true,
         totalAmount: true,
@@ -253,15 +266,16 @@ export default async function PosPage({
   }
 
   const salesPage = paginationView(page, salesTotal, pageSize);
-  const salesHrefFilters = { ...{ period: segment !== "all" ? segment : "", q }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const salesHrefFilters = { ...{ period: segment !== "all" ? segment : "", q, sort: sort !== "newest" ? sort : "" }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const salesHref = pageHrefBuilder("/pos", salesHrefFilters);
   const salesHrefSize = sizeHrefBuilder("/pos", salesHrefFilters);
-  const hasSaleFilters = Boolean(q) || segment !== "all";
+  const hasSaleFilters = Boolean(q) || segment !== "all" || sort !== "newest";
 
   function filterHref(next: Segment, search = q) {
     const params = new URLSearchParams();
     if (next !== "all") params.set("period", next);
     if (search) params.set("q", search);
+    if (sort !== "newest") params.set("sort", sort);
     const query = params.toString();
     return query ? `/pos?${query}` : "/pos";
   }
@@ -379,6 +393,7 @@ export default async function PosPage({
             {/* Search — full width, no redundant button */}
             <form method="GET">
               {segment !== "all" ? <input type="hidden" name="period" value={segment} /> : null}
+              {sort !== "newest" ? <input type="hidden" name="sort" value={sort} /> : null}
               <div className="relative">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]/50" aria-hidden>
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -386,7 +401,7 @@ export default async function PosPage({
                 <input
                   name="q"
                   defaultValue={q}
-                  placeholder="Sale number, client or note..."
+                  placeholder="Sale number, name, client or note..."
                   className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-strong)] pl-9 pr-4 text-[0.8125rem] outline-none placeholder:text-[var(--ink-muted)]/50 focus:border-[var(--accent)]/60 focus:ring-2 focus:ring-[var(--accent)]/14"
                 />
                 {q ? (
@@ -479,9 +494,14 @@ export default async function PosPage({
             name="q"
             defaultValue={q}
             aria-label="Search sales"
-            placeholder="Search by sale number, client or note..."
+            placeholder="Search by sale number, name, client or note..."
             className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15"
           />
+          <select name="sort" defaultValue={sort} aria-label="Sort sales" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-sm text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="highest">Highest first</option>
+          </select>
           <SubmitButton variant="secondary" size="sm">Search</SubmitButton>
           {hasSaleFilters ? (
             <Link href="/pos" className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] text-[var(--ink-muted)]">Reset</Link>
@@ -519,13 +539,15 @@ export default async function PosPage({
                       : s.status === "VOID" ? "bg-red-500/15 text-red-600"
                       : "bg-[var(--accent)]/15 text-[var(--accent)]"
                     }`}>
-                      {(s.client?.fullName?.[0] ?? "W").toUpperCase()}
+                      {(saleCustomerName(s)[0] ?? "W").toUpperCase()}
                     </div>
                   </Link>
                   <Link href={`/pos/${s.id}`} className="min-w-0 flex-1 active:opacity-70">
-                    <p className="truncate font-bold text-[var(--ink)]">{clientDisplayName(s.client, "Walk-in")}</p>
+                    <p className="truncate font-bold text-[var(--ink)]">{saleCustomerName(s)}</p>
                     <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                       <span className="mono">{s.saleNumber}</span>
+                      {/* Only when it is not already the customer label above. */}
+                      {s.client && s.name ? <>{" · "}{s.name}</> : null}
                       {" · "}{formatEATDate(s.createdAt)}
                       {s.createdBy ? <> · {s.createdBy.name}</> : null}
                     </p>
@@ -558,12 +580,14 @@ export default async function PosPage({
                 ),
               },
               {
-                key: "client",
-                header: "Client",
+                key: "customer",
+                header: "Customer",
                 cell: (s) =>
-                  s.client
-                    ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(s.client)}</Link>
-                    : <span className="text-[var(--ink-muted)]">Walk-in</span>,
+                  s.client ? (
+                    <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(s.client)}</Link>
+                  ) : (
+                    <span className={s.name ? "font-medium text-[var(--ink)]" : "text-[var(--ink-muted)]"}>{saleCustomerName(s)}</span>
+                  ),
               },
               {
                 key: "createdBy",

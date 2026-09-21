@@ -1,12 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { session, user, orgId } = await requireOrgSession();
+
+  // Bounded list: the response stays a top-level array (e2e privacy specs
+  // assert Array.isArray), but page/limit keep a large history from
+  // becoming an unbounded JSON dump.
+  const params = req.nextUrl.searchParams;
+  const limit = Math.min(Math.max(Number(params.get("limit") ?? 200) || 200, 1), 500);
+  const page = Math.max(Number(params.get("page") ?? 1) || 1, 1);
 
   const supportsOneTimeExternal = Boolean(
     Prisma.dmmf.datamodel.models
@@ -51,8 +58,8 @@ export async function GET() {
         : selectBase;
 
       return prisma.job
-        .findMany({ where, select: selectWith, orderBy: { updatedAt: "desc" } })
-        .catch(() => prisma.job.findMany({ where, select: selectBase, orderBy: { updatedAt: "desc" } }));
+        .findMany({ where, select: selectWith, orderBy: { updatedAt: "desc" }, take: limit, skip: (page - 1) * limit })
+        .catch(() => prisma.job.findMany({ where, select: selectBase, orderBy: { updatedAt: "desc" }, take: limit, skip: (page - 1) * limit }));
     }
 
     const selectBase = {
@@ -101,8 +108,8 @@ export async function GET() {
       : selectBase;
 
     return prisma.job
-      .findMany({ where, select: selectWith, orderBy: { updatedAt: "desc" } })
-      .catch(() => prisma.job.findMany({ where, select: selectBase, orderBy: { updatedAt: "desc" } }));
+      .findMany({ where, select: selectWith, orderBy: { updatedAt: "desc" }, take: limit, skip: (page - 1) * limit })
+      .catch(() => prisma.job.findMany({ where, select: selectBase, orderBy: { updatedAt: "desc" }, take: limit, skip: (page - 1) * limit }));
   })();
 
   return NextResponse.json(jobs);

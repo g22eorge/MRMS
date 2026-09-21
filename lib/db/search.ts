@@ -37,6 +37,11 @@ export function searchIsCaseInsensitiveByDefault() {
   return !IS_POSTGRES;
 }
 
+/** True when queries run on PostgreSQL — raw SQL must use Postgres dialect. */
+export function isPostgresEngine() {
+  return IS_POSTGRES;
+}
+
 /**
  * A "contains" filter that matches regardless of case on either engine.
  *

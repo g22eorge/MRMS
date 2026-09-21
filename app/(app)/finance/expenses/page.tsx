@@ -9,15 +9,16 @@ import { getCurrentUserRole } from "@/lib/session";
 
 import { can } from "@/lib/permissions";
 import { orgDb } from "@/lib/db";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextExpenseNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
-import { postExpensePayment } from "@/lib/accounting/post";
+import { postExpensePayment, reverseJournalEntry } from "@/lib/accounting/post";
+import { recordExpensePayment } from "@/lib/commercial/expense-payments";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { RowActionsMenu, MenuDestructiveRow, MenuActionLink } from "@/components/shared/RowActionsMenu";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
@@ -26,6 +27,8 @@ import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, si
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { requireOrgSession } from "@/lib/org-context";
 import { icontains } from "@/lib/db/search";
+import { CreateExpenseDialog, type ExpenseFormState } from "./CreateExpenseDialog";
+import { EditDialog } from "@/components/ui/EditDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +83,10 @@ export default async function ExpensesPage({ searchParams }: Props) {
     ? (sp.category as ExpenseCategory)
     : undefined;
   const q = sp.q?.trim() ?? "";
+  const editId = sp.edit?.trim() || null;
   const periodFilter = (sp.period ?? "all") as "all" | "this_month" | "last_month" | "ytd";
+  const statusFilter = (sp.status ?? "all") as "all" | "paid" | "unpaid";
+  const sort = sp.sort === "oldest" ? "oldest" : sp.sort === "due" ? "due" : "newest";
   const page = parsePage(sp.page);
   const pageSize = parsePageSize(sp.size);
 
@@ -95,9 +101,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const prevMonthEnd = new Date(thisYear, thisMonth, 0, 23, 59, 59);
   const _thisMonthStart = new Date(thisYear, thisMonth, 1);
 
-  // 6-month trend window
-  const trendStart = new Date(thisYear, thisMonth - 5, 1);
-
   // The period chips have never narrowed anything: `periodFilter` was read from
   // the URL and used only to highlight the active chip, and `where` referenced
   // no date at all. Clicking "This month" reloaded the identical list, so the
@@ -110,6 +113,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   const where: Prisma.ExpenseWhereInput = {
     ...(catFilter ? { category: catFilter } : {}),
+    ...(statusFilter === "paid" ? { paidAt: { not: null } } : {}),
+    ...(statusFilter === "unpaid" ? { paidAt: null } : {}),
     // paidAt where it exists, falling back to createdAt — the same pairing the
     // KPI tiles on this page already use, so the chip and the tiles agree.
     ...(periodRange
@@ -126,7 +131,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
       : {}),
   };
 
-  const [expenses, statsRows, total, suppliers, trendExpenses, prevMonthExpenses, ytdExpenses, prevYtdExpenses] =
+  const [expenses, statsRows, total, suppliers, historyExpenses] =
     await Promise.all([
       db.expense.findMany({
         where,
@@ -134,7 +139,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
           supplier: { select: { id: true, name: true } },
           createdBy: { select: { name: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: sort === "oldest" ? { createdAt: "asc" } : sort === "due" ? { dueAt: "asc" } : { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -149,24 +154,17 @@ export default async function ExpensesPage({ searchParams }: Props) {
       db.supplier
         .findMany({ where: {}, select: { id: true, name: true }, orderBy: { name: "asc" } })
         .catch(() => [] as { id: string; name: string }[]),
-      // For 6-month trend chart (all categories, no filters)
+      // One wide slim fetch for the trend chart + MoM/YTD comparisons below,
+      // bucketed in JS — replaces four overlapping full scans.
       db.expense.findMany({
-        where: { paidAt: { gte: trendStart } },
+        where: { paidAt: { gte: prevYtdStart } },
         select: { amount: true, currency: true, exchangeRateToBase: true, paidAt: true, createdAt: true },
       }),
-      db.expense.findMany({
-        where: { paidAt: { gte: prevMonthStart, lte: prevMonthEnd } },
-        select: { amount: true, currency: true, exchangeRateToBase: true },
-      }),
-      db.expense.findMany({
-        where: { paidAt: { gte: ytdStart } },
-        select: { amount: true, currency: true, exchangeRateToBase: true },
-      }),
-      db.expense.findMany({
-        where: { paidAt: { gte: prevYtdStart, lte: prevYtdEnd } },
-        select: { amount: true, currency: true, exchangeRateToBase: true },
-      }),
     ]);
+  const trendExpenses = historyExpenses;
+  const prevMonthExpenses = historyExpenses.filter((e) => e.paidAt && e.paidAt >= prevMonthStart && e.paidAt <= prevMonthEnd);
+  const ytdExpenses = historyExpenses.filter((e) => e.paidAt && e.paidAt >= ytdStart);
+  const prevYtdExpenses = historyExpenses.filter((e) => e.paidAt && e.paidAt >= prevYtdStart && e.paidAt <= prevYtdEnd);
 
   // The organisation's own currency, not a literal. A tenant whose books are
   // kept in KES was shown every figure on this page labelled UGX.
@@ -184,6 +182,10 @@ export default async function ExpensesPage({ searchParams }: Props) {
     rowToBase(e, currency);
 
   const totalAmount = statsRows.reduce((sum, e) => sum + toBase(e), 0);
+  // Still owed: recorded but never paid. The ledger posts on payment, so
+  // these rows are debt, not spend.
+  const unpaidRows = statsRows.filter((e) => !e.paidAt);
+  const unpaidTotal = unpaidRows.reduce((sum, e) => sum + toBase(e), 0);
 
   const thisMonthAmount = statsRows
     .filter((e) => {
@@ -211,7 +213,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
   for (const e of trendExpenses) {
     const d = e.paidAt ?? e.createdAt;
     const bucket = trendMonths.find((m) => m.yr === d.getFullYear() && m.mo === d.getMonth());
-    if (bucket) bucket.amount += e.amount;
+    if (bucket) bucket.amount += toBase(e);
   }
   const trendData = trendMonths.map(({ key, amount }) => ({ key, amount }));
 
@@ -220,12 +222,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const items = statsRows.filter((e) => e.category === cat);
     return {
       cat,
-      total: items.reduce((s, e) => s + e.amount, 0),
+      total: items.reduce((s, e) => s + toBase(e), 0),
       count: items.length,
     };
   }).filter((x) => x.count > 0);
 
-  async function createExpenseAction(formData: FormData) {
+  async function createExpenseAction(_prev: ExpenseFormState, formData: FormData): Promise<ExpenseFormState> {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
@@ -241,15 +243,22 @@ export default async function ExpensesPage({ searchParams }: Props) {
     const reference = String(formData.get("reference") ?? "").trim() || null;
     const notes = String(formData.get("notes") ?? "").trim() || null;
     const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
+    const manualNumber = String(formData.get("expenseNumber") ?? "").trim() || null;
+    if (manualNumber) {
+      const taken = await db.expense.findFirst({ where: { orgId, expenseNumber: manualNumber }, select: { id: true } });
+      if (taken) {
+        return { error: `Expense number ${manualNumber} already exists — update it and try again.` };
+      }
+    }
 
     // Was a bare `return`, so a description of only spaces — which passes the
     // HTML `required` attribute and is then trimmed to "" here — made Save
     // Expense do nothing at all, with no message. Tell the user instead.
     if (!description) {
-      redirect(`/finance/expenses?error=${encodeURIComponent("Enter a description for this expense.")}`);
+      return { error: "Enter a description for this expense." };
     }
     if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
-      redirect(`/finance/expenses?error=${encodeURIComponent("Enter an amount greater than zero.")}`);
+      return { error: "Enter an amount greater than zero." };
     }
 
     const category = CATEGORIES.includes(categoryRaw as ExpenseCategory)
@@ -260,6 +269,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
         ? (methodRaw as PaymentMethod)
         : null;
     const paidAt = paidAtRaw ? new Date(paidAtRaw) : null;
+    const dueAtRaw = String(formData.get("dueAt") ?? "").trim();
+    const dueAt = dueAtRaw ? new Date(`${dueAtRaw}T12:00:00.000Z`) : null;
+    if (dueAt && Number.isNaN(dueAt.getTime())) {
+      return { error: "Enter a valid due date." };
+    }
 
     // Double-submit guard: an identical expense landed seconds ago — reuse it
     // instead of recording (and paying out) the same money twice.
@@ -267,63 +281,194 @@ export default async function ExpensesPage({ searchParams }: Props) {
     if (dupExpense) {
       // Double-submit guard. Silently returning here looked identical to a
       // broken button, so name it — the expense is already recorded.
-      revalidatePath("/finance/expenses");
-      redirect(`/finance/expenses?error=${encodeURIComponent("That expense was just recorded — not saving it twice.")}`);
+      return { error: "That expense was just recorded — not saving it twice." };
     }
 
-    const inner = `EXP-${new Date().getFullYear()}-`;
-    const [tag, existingNumbers] = await Promise.all([
-      orgTagFor(orgId),
-      db.expense.findMany({ where: { expenseNumber: { contains: inner , mode: "insensitive" as const} }, select: { expenseNumber: true } }),
-    ]);
-    const expenseSeq = maxNumberSequence(inner, existingNumbers.map((e) => e.expenseNumber)) + 1;
-    const expenseNumber = composeOrgNumber(tag, inner, expenseSeq);
+    // Compact number Exp/TAG/YY/MM/NNN (e.g. Exp/EIS/26/09/042), auto-allocated
+    // unless the user typed their own (checked for existence above).
+    let expense: { id: string } | null = null;
+    let expenseNumber = manualNumber ?? "";
+    for (let attempt = 0; attempt < 3 && !expense; attempt += 1) {
+      if (!manualNumber) expenseNumber = await nextExpenseNumber(orgId, new Date());
+      try {
+        expense = await db.expense.create({
+          data: {
+            expenseNumber,
+            description,
+            amount: amountRaw,
+            currency,
+            category,
+            method: method ?? undefined,
+            supplierId,
+            reference,
+            notes,
+            paidAt,
+            dueAt,
+            // Paid on record: balance starts settled so part-pay math holds.
+            ...(paidAt ? { paidAmount: amountRaw } : {}),
+            createdById: user.id,
+            orgId,
+          },
+          select: { id: true },
+        });
+      } catch (error) {
+        const collision = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+        if (collision && manualNumber) {
+          return { error: `Expense number ${manualNumber} already exists — update it and try again.` };
+        }
+        if (collision && attempt < 2) continue;
+        throw error;
+      }
+    }
+    if (!expense) {
+      return { error: "Could not number the expense. Please try again." };
+    }
 
-    const expense = await db.expense.create({
-      data: {
-        expenseNumber,
-        description,
-        amount: amountRaw,
-        currency,
-        category,
-        method: method ?? undefined,
-        supplierId,
-        reference,
-        notes,
-        paidAt,
-        createdById: user.id,
-        orgId,
-      },
-    });
-
-    // C5: cash-basis ledger post — Dr Operating Expenses, Cr Cash. Idempotent
-    // on the expense id, so a retry or backfill won't double-post.
-    await prisma.$transaction((tx) =>
-      postExpensePayment(tx, {
-        orgId,
-        userId: user.id,
-        amount: amountRaw,
-        date: paidAt ?? undefined,
-        reference: `expense:${expense.id}`,
-        description: `Expense ${expenseNumber} — ${description}`,
-      }),
-    );
+    // Cash-basis post on payment only: an unpaid expense is owed, not spent.
+    // Mark-paid posts with the same key, so rows posted while unpaid are
+    // never double-posted when paid for real.
+    if (paidAt) {
+      await prisma.$transaction((tx) =>
+        postExpensePayment(tx, {
+          orgId,
+          userId: user.id,
+          amount: amountRaw,
+          method,
+          date: paidAt ?? undefined,
+          reference: `expense:${expense.id}`,
+          description: `Expense ${expenseNumber} — ${description}`,
+        }),
+      );
+    }
 
     await writeSystemAuditEvent({
       entityType: "Expense",
       entityId: expense.id,
       action: "EXPENSE_CREATED",
-      summary: `${expenseNumber} — ${description} — ${currency} ${amountRaw.toLocaleString()}`,
+      summary: `${expenseNumber} — ${description} — ${currency} ${amountRaw.toLocaleString()}${paidAt ? "" : " (recorded as owed)"}`,
       actorUserId: user.id,
     });
 
     revalidatePath("/finance/expenses");
+    return null;
+  }
+
+  async function markExpensePaidAction(formData: FormData) {
+    "use server";
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
+    if (!can.viewFinancials(user)) redirect("/dashboard");
+
+    const fail = (message: string): never =>
+      redirect(`/finance/expenses?error=${encodeURIComponent(message)}`);
+
+    const expenseId = String(formData.get("expenseId") ?? "").trim();
+    if (!expenseId) return;
+    const methodRaw = String(formData.get("method") ?? "").trim();
+    const amountRaw = Number(String(formData.get("amount") ?? "").trim());
+    const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
+    const paidAt = paidAtRaw ? new Date(`${paidAtRaw}T12:00:00.000Z`) : new Date();
+    if (Number.isNaN(paidAt.getTime())) fail("Enter a valid payment date.");
+
+    // Double taps serialize inside the shared recorder (balance rechecked
+    // beside the write); the loser gets the balance message, not a double pay.
+    await prisma.$transaction(async (tx) => {
+      await recordExpensePayment(tx, {
+        orgId,
+        userId: user.id,
+        expenseId,
+        amount: amountRaw,
+        method: methodRaw || null,
+        paidAt,
+      });
+    }).catch((error: unknown) => {
+      // NEXT_REDIRECT (from fail()) must propagate.
+      if (error instanceof Error && "digest" in error) throw error;
+      fail(error instanceof Error ? error.message : "Could not record the payment.");
+    });
+
+    revalidatePath("/finance/expenses");
+    revalidatePath("/payables");
+  }
+
+  async function updateExpenseAction(formData: FormData) {
+    "use server";
+    const { user, orgId, org } = await requireOrgSession();
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+    const db = orgDb(orgId);
+    if (!can.viewFinancials(user)) redirect("/dashboard");
+
+    const fail = (message: string): never =>
+      redirect(`/finance/expenses?error=${encodeURIComponent(message)}`);
+
+    const expenseId = String(formData.get("expenseId") ?? "").trim();
+    if (!expenseId) return;
+    const description = String(formData.get("description") ?? "").trim();
+    const amountRaw = Number(String(formData.get("amount") ?? "").trim());
+    const categoryRaw = String(formData.get("category") ?? "").trim();
+    const supplierId = String(formData.get("supplierId") ?? "").trim() || null;
+    const reference = String(formData.get("reference") ?? "").trim() || null;
+    const notes = String(formData.get("notes") ?? "").trim() || null;
+    const dueAtRaw = String(formData.get("dueAt") ?? "").trim();
+
+    if (!description) fail("Enter a description for this expense.");
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) fail("Enter an amount greater than zero.");
+    const category = (CATEGORIES as readonly string[]).includes(categoryRaw)
+      ? (categoryRaw as ExpenseCategory)
+      : fail("Pick a valid category.");
+    const dueAt = dueAtRaw ? new Date(`${dueAtRaw}T12:00:00.000Z`) : null;
+    if (dueAt && Number.isNaN(dueAt.getTime())) fail("Enter a valid due date.");
+    if (supplierId) {
+      const supplier = await db.supplier.findFirst({ where: { id: supplierId }, select: { id: true } });
+      if (!supplier) fail("That supplier was not found.");
+    }
+
+    const existing = await db.expense.findFirst({
+      where: { id: expenseId },
+      select: { id: true, expenseNumber: true, paidAt: true },
+    });
+    if (!existing) return;
+    // Money already booked stays booked: amount is editable only while
+    // unpaid (the input renders read-only once paid). Everything else —
+    // category, supplier, dates, notes — is always editable.
+    const data: Record<string, unknown> = {
+      description,
+      category,
+      supplierId,
+      reference,
+      notes,
+      dueAt,
+    };
+    if (!existing.paidAt) {
+      data.amount = amountRaw;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.expense.updateMany({ where: { id: expenseId, orgId }, data });
+      if (!updated.count) throw new Error("Expense not found.");
+    }).catch((error: unknown) => {
+      if (error instanceof Error && "digest" in error) throw error;
+      fail(error instanceof Error ? error.message : "Could not save the expense.");
+    });
+
+    await writeSystemAuditEvent({
+      entityType: "Expense",
+      entityId: expenseId,
+      action: "EXPENSE_UPDATED",
+      summary: `${existing.expenseNumber} — ${description} updated`,
+      actorUserId: user.id,
+    }).catch(() => {});
+
+    revalidatePath("/finance/expenses");
+    revalidatePath("/payout-followups");
+    // Close the edit dialog: a plain revalidate would leave ?edit= set.
+    redirect("/finance/expenses");
   }
 
   async function deleteExpenseAction(formData: FormData) {
     "use server";
-    const { user, org } = await requireOrgSession();
-    const db = orgDb(user.orgId);
+    const { user, org, orgId } = await requireOrgSession();
+    const db = orgDb(orgId);
     if (!["ADMIN"].includes(user.role)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
@@ -336,7 +481,30 @@ export default async function ExpensesPage({ searchParams }: Props) {
     });
     if (!expense) return;
 
-    await db.expense.delete({ where: { id: expenseId } });
+    // Deleting reverses every ledger post tied to the expense — each part
+    // payment posted under its own key, plus the legacy single post — or the
+    // P&L keeps money that no longer exists. Missing posts no-op.
+    await prisma.$transaction(async (tx) => {
+      const payments = await tx.expensePayment.findMany({
+        where: { orgId, expenseId },
+        select: { id: true },
+      });
+      for (const p of payments) {
+        await reverseJournalEntry(tx, {
+          orgId,
+          userId: user.id,
+          originalReference: `expensepay:${p.id}`,
+          description: `Reversal — deleted ${expense.expenseNumber}`,
+        });
+      }
+      await reverseJournalEntry(tx, {
+        orgId,
+        userId: user.id,
+        originalReference: `expense:${expenseId}`,
+        description: `Reversal — deleted ${expense.expenseNumber}`,
+      });
+      await tx.expense.deleteMany({ where: { id: expenseId, orgId } });
+    });
 
     await writeSystemAuditEvent({
       entityType: "Expense",
@@ -351,25 +519,85 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   const canWrite = can.viewFinancials(user);
   const canDelete = ["ADMIN"].includes(user.role);
+  const todayInput = new Date().toISOString().slice(0, 10);
 
   // Named so the same actions menu renders in the desktop table AND mobile card.
-  const renderExpenseActions = canDelete
-    ? (expense: (typeof expenses)[number]) => (
-        <RowActionsMenu label="Expense actions">
-          <MenuDestructiveRow>
-            <form action={deleteExpenseAction}>
-              <input type="hidden" name="expenseId" value={expense.id} />
-              <ConfirmSubmitButton
-                message={`Delete expense ${expense.expenseNumber}? This cannot be undone.`}
-                className="w-full text-left text-[0.75rem] text-red-600"
-              >
-                Delete
-              </ConfirmSubmitButton>
-            </form>
-          </MenuDestructiveRow>
-        </RowActionsMenu>
-      )
-    : undefined;
+  // Mark-paid is a finance action (anyone who can write), Delete stays ADMIN.
+  // Text editing lives in the ?edit= dialog below, not in this menu.
+  const renderExpenseActions =
+    canDelete || canWrite
+      ? (expense: (typeof expenses)[number]) => (
+          <RowActionsMenu label="Expense actions">
+            {canWrite ? (
+              <MenuActionLink href={filterUrl({ edit: expense.id })} icon="open">Edit details</MenuActionLink>
+            ) : null}
+            {!expense.paidAt && canWrite ? (
+              <form action={markExpensePaidAction} className="space-y-2 border-b border-[var(--line)] px-3 py-2.5">
+                <input type="hidden" name="expenseId" value={expense.id} />
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                  Record payment · {expense.currency} {(expense.amount - expense.paidAmount).toLocaleString()} due
+                  {expense.paidAmount > 0 ? ` (paid ${expense.paidAmount.toLocaleString()} so far)` : ""}
+                </p>
+                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                  Amount
+                  <input
+                    name="amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    max={expense.amount - expense.paidAmount}
+                    required
+                    defaultValue={expense.amount - expense.paidAmount}
+                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                  />
+                </label>
+                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                  Date paid
+                  <input
+                    name="paidAt"
+                    type="date"
+                    defaultValue={todayInput}
+                    required
+                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                  />
+                </label>
+                <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
+                  Method
+                  <select
+                    name="method"
+                    defaultValue={expense.method ?? ""}
+                    className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
+                  >
+                    <option value="">— none —</option>
+                    {METHODS.map((m) => (
+                      <option key={m} value={m}>{m.replace(/_/g, " ")}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black"
+                >
+                  Record payment
+                </button>
+              </form>
+            ) : null}
+            {canDelete ? (
+              <MenuDestructiveRow>
+                <form action={deleteExpenseAction}>
+                  <input type="hidden" name="expenseId" value={expense.id} />
+                  <ConfirmSubmitButton
+                    message={`Delete expense ${expense.expenseNumber}? This cannot be undone.`}
+                    className="w-full text-left text-[0.75rem] text-red-600"
+                  >
+                    Delete
+                  </ConfirmSubmitButton>
+                </form>
+              </MenuDestructiveRow>
+            ) : null}
+          </RowActionsMenu>
+        )
+      : undefined;
 
   const filterUrl = (params: Record<string, string | undefined>) => {
     const base = new URLSearchParams();
@@ -379,9 +607,16 @@ export default async function ExpensesPage({ searchParams }: Props) {
     // produced the same URL and none of them could ever become active.
     const nextPeriod =
       params.period !== undefined ? params.period : periodFilter !== "all" ? periodFilter : "";
+    const nextStatus =
+      params.status !== undefined ? params.status : statusFilter !== "all" ? statusFilter : "";
+    const nextSort = params.sort !== undefined ? params.sort : sort !== "newest" ? sort : "";
+    const nextEdit = params.edit !== undefined ? params.edit : editId ?? "";
     if (nextCat) base.set("category", nextCat);
     if (nextQ) base.set("q", nextQ);
     if (nextPeriod) base.set("period", nextPeriod);
+    if (nextStatus) base.set("status", nextStatus);
+    if (nextSort) base.set("sort", nextSort);
+    if (nextEdit) base.set("edit", nextEdit);
     const s = base.toString();
     return `/finance/expenses${s ? `?${s}` : ""}`;
   };
@@ -393,10 +628,24 @@ export default async function ExpensesPage({ searchParams }: Props) {
     category: catFilter ?? "",
     q,
     period: periodFilter !== "all" ? periodFilter : "",
+    status: statusFilter !== "all" ? statusFilter : "",
+    sort: sort !== "newest" ? sort : "",
     size: pageSize !== PAGE_SIZE ? pageSize : "",
   };
   const expensesHref = pageHrefBuilder("/finance/expenses", expensesHrefFilters);
   const expensesHrefSize = sizeHrefBuilder("/finance/expenses", expensesHrefFilters);
+
+  // Edit-dialog target: loaded only when ?edit= is set, org-scoped.
+  const editExpense = editId && canWrite
+    ? await db.expense.findFirst({
+        where: { id: editId, orgId: user.orgId ?? "" },
+        select: {
+          id: true, expenseNumber: true, description: true, category: true,
+          amount: true, paidAt: true, dueAt: true, reference: true,
+          notes: true, supplierId: true,
+        },
+      }).catch(() => null)
+    : null;
 
   return (
     <div className="space-y-4">
@@ -412,6 +661,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
         actions={
           <>
             <Link
+              href="/finance/recurring-expenses"
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
+            >
+              Schedules →
+            </Link>
+            <Link
               href="/finance/reports/pl"
               className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]"
             >
@@ -424,138 +679,19 @@ export default async function ExpensesPage({ searchParams }: Props) {
               ↓ CSV
             </Link>
             {canWrite && (
-          <details className="group relative">
-            <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[0.75rem]">
-              + Record Expense
-            </summary>
-            <div className="absolute right-0 top-full z-20 mt-2 w-96 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-xl">
-              <p className="mb-3 text-[0.75rem] font-bold text-[var(--ink)]">Record Business Expense</p>
-              <form action={createExpenseAction} className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                    Description *
-                  </label>
-                  <input
-                    name="description"
-                    required
-                    placeholder="What was this expense for?"
-                    className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                  />
-
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                      Amount *
-                    </label>
-                    <input
-                      name="amount"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      required
-                      placeholder="0.00"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                    />
-                  </div>
-                  {/* Currency locked to org base — hidden field */}
-                  <input type="hidden" name="currency" value="UGX" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                      Category
-                    </label>
-                    <select
-                      name="category"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                      Payment Method
-                    </label>
-                    <select
-                      name="method"
-                      className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                    >
-                      <option value="">— none —</option>
-                      {METHODS.map((m) => (
-                        <option key={m} value={m}>{m.replace(/_/g, " ")}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                {/* Rarely-needed fields stay in the form (native <details> keeps
-                    them in the DOM so they still submit) but collapse by default
-                    so "rent, 500k, cash" is a three-field job. */}
-                <details className="rounded-lg border border-[var(--line)]">
-                  <summary className="cursor-pointer select-none px-3 py-2 text-[0.8125rem] font-semibold text-[var(--ink)]">
-                    More details <span className="font-normal text-[var(--ink-muted)]">— optional</span>
-                  </summary>
-                  <div className="space-y-3 px-3 pb-3">
-                    <div>
-                      <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                        Date paid <span className="font-normal">(defaults to today)</span>
-                      </label>
-                      <input
-                        name="paidAt"
-                        type="date"
-                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                      />
-                    </div>
-                    {suppliers.length > 0 && (
-                      <div>
-                        <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                          Supplier
-                        </label>
-                        <select
-                          name="supplierId"
-                          className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                        >
-                          <option value="">— none —</option>
-                          {suppliers.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    <div>
-                      <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">
-                        Reference / Receipt #
-                      </label>
-                      <input
-                        name="reference"
-                        placeholder="Invoice or receipt number"
-                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Notes</label>
-                      <textarea
-                        name="notes"
-                        rows={2}
-                        className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]"
-                      />
-                    </div>
-                  </div>
-                </details>
-                <SubmitButton bare pendingLabel="Saving…" className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold disabled:opacity-60">
-                  Save Expense
-                </SubmitButton>
-              </form>
-            </div>
-          </details>
+            <CreateExpenseDialog
+              action={createExpenseAction}
+              categories={CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))}
+              methods={METHODS.map((m) => ({ value: m, label: m.replace(/_/g, " ") }))}
+              suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
+              currency={currency}
+            />
             )}
           </>
         }
       />
 
-      <StatCards columns={4} cards={[
+      <StatCards columns={5} cards={[
           {
             label: "This Month",
             value: formatMoneyCompact(thisMonthAmount, currency),
@@ -571,6 +707,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
               prevYtdTotal > 0
                 ? `${ytdDelta > 0 ? "+" : "−"}${formatMoneyCompact(Math.abs(ytdDelta), currency)} vs ${thisYear - 1} YTD`
                 : undefined,
+          },
+          {
+            label: "Outstanding",
+            value: unpaidRows.length > 0 ? formatMoneyCompact(unpaidTotal, currency) : "—",
+            sub: unpaidRows.length > 0 ? `${unpaidRows.length} unpaid` : "Nothing outstanding",
           },
           {
             label: "Avg / Month",
@@ -592,18 +733,32 @@ export default async function ExpensesPage({ searchParams }: Props) {
         ]} />
 
       {/* ── PERIOD CHIPS ─────────────────────────────────────────────────── */}
-      <div className="flex gap-2">
-        {([
-          { label: "All time", value: "all" },
-          { label: "This month", value: "this_month" },
-          { label: "Last month", value: "last_month" },
-          { label: "YTD", value: "ytd" },
-        ] as const).map(({ label, value }) => (
-          <Link key={value} href={filterUrl({ period: value === "all" ? "" : value })}
-            className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${periodFilter === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
-            {label}
-          </Link>
-        ))}
+      <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2">
+          {([
+            { label: "All time", value: "all" },
+            { label: "This month", value: "this_month" },
+            { label: "Last month", value: "last_month" },
+            { label: "YTD", value: "ytd" },
+          ] as const).map(({ label, value }) => (
+            <Link key={value} href={filterUrl({ period: value === "all" ? "" : value })}
+              className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${periodFilter === value ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-[var(--accent)]/40 hover:text-[var(--ink)]"}`}>
+              {label}
+            </Link>
+          ))}
+        </div>
+        <div className="flex gap-2 sm:ml-auto">
+          {([
+            { label: "All", value: "all" },
+            { label: "Paid", value: "paid" },
+            { label: "Unpaid", value: "unpaid" },
+          ] as const).map(({ label, value }) => (
+            <Link key={value} href={filterUrl({ status: value === "all" ? "" : value })}
+              className={`rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition ${statusFilter === value ? "border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400" : "border-[var(--line)] text-[var(--ink-muted)] hover:border-amber-500/40 hover:text-[var(--ink)]"}`}>
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* ── FILTER BAR ───────────────────────────────────────────────────── */}
@@ -611,12 +766,18 @@ export default async function ExpensesPage({ searchParams }: Props) {
         <form method="GET" action="/finance/expenses" className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {catFilter && <input type="hidden" name="category" value={catFilter} />}
           {periodFilter !== "all" && <input type="hidden" name="period" value={periodFilter} />}
+          {statusFilter !== "all" && <input type="hidden" name="status" value={statusFilter} />}
           <input
             name="q"
             defaultValue={q}
             placeholder="Search description, reference…"
             className="input-base h-8 min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.75rem] sm:min-w-[180px]"
           />
+          <select name="sort" defaultValue={sort} className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="due">Due first</option>
+          </select>
           <SubmitButton bare className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-medium hover:bg-[var(--panel-strong)]">
             Search
           </SubmitButton>
@@ -654,7 +815,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
           frameless
           rows={expenses}
           getRowKey={(expense) => expense.id}
-          empty={q || catFilter ? "No expenses match your filters." : "No expenses recorded yet."}
+          empty={
+            q || catFilter || statusFilter !== "all"
+              ? "No expenses match your filters."
+              : "No expenses recorded yet."
+          }
           columns={[
             {
               key: "number",
@@ -708,8 +873,28 @@ export default async function ExpensesPage({ searchParams }: Props) {
               key: "paid",
               header: "Paid",
               headerClassName: "hidden lg:table-cell",
-              className: "hidden text-[0.75rem] text-[var(--ink-muted)] lg:table-cell",
-              cell: (expense) => fmt(expense.paidAt),
+              className: "hidden text-[0.75rem] lg:table-cell",
+              cell: (expense) =>
+                expense.paidAt ? (
+                  <span className="text-[var(--ink-muted)]">{fmt(expense.paidAt)}</span>
+                ) : expense.paidAmount > 0 ? (
+                  <span>
+                    <StatusBadge tone="warning">Part paid</StatusBadge>
+                    <span className="mt-0.5 block text-[var(--ink-muted)]">
+                      {expense.currency} {expense.paidAmount.toLocaleString()} of {expense.amount.toLocaleString()}
+                    </span>
+                    {expense.dueAt ? (
+                      <span className="mt-0.5 block text-[var(--ink-muted)]">Due {fmt(expense.dueAt)}</span>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span>
+                    <StatusBadge tone="warning">Unpaid</StatusBadge>
+                    {expense.dueAt ? (
+                      <span className="mt-0.5 block text-[var(--ink-muted)]">Due {fmt(expense.dueAt)}</span>
+                    ) : null}
+                  </span>
+                ),
             },
             {
               key: "amount",
@@ -736,11 +921,17 @@ export default async function ExpensesPage({ searchParams }: Props) {
               <div className="min-w-0">
                 <p className="mono truncate font-bold text-[var(--ink)]">{expense.expenseNumber}</p>
                 <p className="mt-0.5 truncate text-[var(--ink)]">{expense.description}</p>
-                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {fmt(expense.paidAt ?? expense.createdAt)}</p>
+                <p className="mt-0.5 truncate text-[0.75rem] text-[var(--ink-muted)]">{expense.supplier?.name ?? "No supplier"} · {expense.paidAt ? fmt(expense.paidAt) : `Outstanding${expense.dueAt ? ` · due ${fmt(expense.dueAt)}` : ""}`}</p>
                 <p className="mt-1 font-semibold tabular-nums text-[var(--ink)]">{expense.currency} {expense.amount.toLocaleString()}</p>
+                {!expense.paidAt && expense.paidAmount > 0 ? (
+                  <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Paid {expense.paidAmount.toLocaleString()} · {(expense.amount - expense.paidAmount).toLocaleString()} left</p>
+                ) : null}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <StatusBadge tone={toneFor(CATEGORY_TONES, expense.category)}>{CATEGORY_LABELS[expense.category]}</StatusBadge>
+                {!expense.paidAt ? (
+                  <StatusBadge tone="warning">{expense.paidAmount > 0 ? "Part paid" : "Unpaid"}</StatusBadge>
+                ) : null}
                 {renderExpenseActions ? renderExpenseActions(expense) : null}
               </div>
             </div>
@@ -770,6 +961,98 @@ export default async function ExpensesPage({ searchParams }: Props) {
           pageSize={pageSize}
           hrefForSize={expensesHrefSize}
       />
+
+      {editExpense ? (
+        <EditDialog title={`Edit · ${editExpense.expenseNumber}`} closeHref="/finance/expenses">
+          <form action={updateExpenseAction} className="space-y-3">
+            <input type="hidden" name="expenseId" value={editExpense.id} />
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+              Description
+              <input
+                name="description"
+                required
+                defaultValue={editExpense.description}
+                className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Category
+                <select
+                  name="category"
+                  defaultValue={editExpense.category}
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Amount{editExpense.paidAt ? " (locked — paid)" : ""}
+                <input
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  defaultValue={editExpense.amount}
+                  readOnly={Boolean(editExpense.paidAt)}
+                  title={editExpense.paidAt ? "Paid expenses keep their booked amount — delete and re-record to correct it." : undefined}
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 read-only:opacity-60"
+                />
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Due date
+                <input
+                  name="dueAt"
+                  type="date"
+                  defaultValue={editExpense.dueAt ? new Date(editExpense.dueAt).toISOString().slice(0, 10) : ""}
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+                />
+              </label>
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Reference
+                <input
+                  name="reference"
+                  defaultValue={editExpense.reference ?? ""}
+                  placeholder="Optional"
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+                />
+              </label>
+            </div>
+            {suppliers.length > 0 ? (
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+                Supplier
+                <select
+                  name="supplierId"
+                  defaultValue={editExpense.supplierId ?? ""}
+                  className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+                >
+                  <option value="">— none —</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">
+              Notes
+              <input
+                name="notes"
+                defaultValue={editExpense.notes ?? ""}
+                placeholder="Optional"
+                className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+              />
+            </label>
+            <SubmitButton bare className="btn-premium w-full rounded-lg px-3 py-2 text-sm font-bold">
+              Save changes
+            </SubmitButton>
+          </form>
+        </EditDialog>
+      ) : null}
     </div>
   );
 }

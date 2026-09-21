@@ -11,8 +11,10 @@ import { orgDb } from "@/lib/db";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuActionButton } from "@/components/shared/RowActionsMenu";
+import { RowActionsMenu, MenuDestructiveRow, MenuActionLink } from "@/components/shared/RowActionsMenu";
+import { EditDialog } from "@/components/ui/EditDialog";
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
@@ -32,13 +34,13 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { type SourceGroup } from "@/components/documents/DocumentSourcePicker";
 import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { CreateReceiptDialog, type ReceiptFormState } from "./CreateReceiptDialog";
-import { clientDisplayName } from "@/lib/client-name";
+import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
 import { icontains } from "@/lib/db/search";
 
 export default async function ReceiptsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; new?: string; page?: string; size?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; period?: string; new?: string; page?: string; size?: string; error?: string; edit?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
   const db = orgDb(orgId);
@@ -46,6 +48,7 @@ export default async function ReceiptsPage({
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
   }
+  const canVoid = can.voidInvoices(user);
 
   const params = await searchParams;
   const q = (params.q ?? "").trim();
@@ -53,7 +56,30 @@ export default async function ReceiptsPage({
   const page = parsePage(params.page);
   const pageSize = parsePageSize(params.size);
   const createMode = params.new === "1";
+  const editId = (params.edit ?? "").trim() || null;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  // Edit-dialog link that keeps the current list filters.
+  const editHref = (id: string) => {
+    const sp = new URLSearchParams();
+    if (q) sp.set("q", q);
+    if (period !== "all") sp.set("period", period);
+    if (params.page) sp.set("page", params.page);
+    if (params.size) sp.set("size", params.size);
+    sp.set("edit", id);
+    return `/documents/receipts?${sp.toString()}`;
+  };
+
+  // Edit-dialog target: loaded only when ?edit= is set, void-gated like the menu form was.
+  const editPayment = editId && canVoid
+    ? await prisma.payment.findFirst({
+        where: { id: editId, orgId },
+        select: {
+          id: true, amount: true, method: true, reference: true, note: true,
+          receivedAt: true, receipts: { select: { issuedAt: true }, orderBy: { issuedAt: "desc" }, take: 1 },
+        },
+      }).catch(() => null)
+    : null;
 
   async function createReceiptAction(_prev: ReceiptFormState, formData: FormData): Promise<ReceiptFormState> {
     "use server";
@@ -138,7 +164,8 @@ export default async function ReceiptsPage({
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const db = orgDb(orgId);
     const baseCurrency = org.baseCurrency;
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
+    // Rewriting a recorded amount is void-class: same grant as deletion.
+    if (!can.voidInvoices(user)) redirect("/dashboard");
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
     const amount = Number(String(formData.get("amount") ?? "").trim());
@@ -224,6 +251,8 @@ export default async function ReceiptsPage({
 
     revalidatePath("/documents/receipts");
     revalidatePath("/documents/invoices");
+    // Close the edit dialog: a plain revalidate would leave ?edit= set.
+    redirect("/documents/receipts");
   }
 
   async function deleteReceiptAction(formData: FormData) {
@@ -231,7 +260,8 @@ export default async function ReceiptsPage({
     const { user, orgId, org } = await requireOrgSession();
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
     const baseCurrency = org.baseCurrency;
-    if (!("ADMIN" === user.role || can.approveInvoices(user))) return;
+    // Deleting a cash record destroys money history: voidInvoices grant only.
+    if (!can.voidInvoices(user)) return;
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
     if (!paymentId) return;
@@ -399,6 +429,7 @@ export default async function ReceiptsPage({
   type SaleOption = {
     id: string;
     saleNumber: string;
+    name: string | null;
     totalAmount: number;
     paidAmount: number;
     currency: string | null;
@@ -416,7 +447,7 @@ export default async function ReceiptsPage({
       where: { orgId, status: { not: "VOID" } },
       orderBy: { createdAt: "desc" },
       take: 80,
-      select: { id: true, saleNumber: true, totalAmount: true, paidAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
+      select: { id: true, saleNumber: true, name: true, totalAmount: true, paidAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
     }).then((rows: SaleOption[]) => rows.filter((sale) => sale.paidAmount < sale.totalAmount)),
   ]);
   // Customer first, so the person paying is what you search for and read.
@@ -436,7 +467,7 @@ export default async function ReceiptsPage({
     {
       label: "Sales",
       options: saleOptions.map((sale) => {
-        const who = clientDisplayName(sale.client, "Walk-in");
+        const who = saleCustomerName(sale, "Walk-in");
         return {
           value: `sale:${sale.id}`,
           label: `${who} — ${sale.saleNumber}`,
@@ -585,26 +616,19 @@ export default async function ReceiptsPage({
                       emailLabel="Email receipt"
                       waLinkHref={receiptWaPhone ? `https://wa.me/${receiptWaPhone}?text=${receiptShareText}` : null}
                     />
-                    <MenuSection label="Edit Receipt" />
-                    <form action={updateReceiptAction} className="space-y-2 p-3">
-                      <input type="hidden" name="paymentId" value={p.id} />
-                      <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
-                        <input name="issueDate" type="date" defaultValue={new Date(p.receipts[0]?.issuedAt ?? p.receivedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                      </label>
-                      <input name="amount" required type="number" min="0.01" step="0.01" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                      <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50">
-                        {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
-                      </select>
-                      <input name="reference" defaultValue={p.reference ?? ""} placeholder="Reference" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                      <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]/50" />
-                      <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Receipt</MenuActionButton>
-                    </form>
+                    {canVoid ? (
+                      <MenuActionLink href={editHref(p.id)} icon="edit">
+                        Edit receipt
+                      </MenuActionLink>
+                    ) : null}
+                    {canVoid ? (
                     <MenuDestructiveRow>
                       <form action={deleteReceiptAction}>
                         <input type="hidden" name="paymentId" value={p.id} />
                         <ConfirmSubmitButton message="Delete this receipt/payment? Totals will be recalculated." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Receipt</ConfirmSubmitButton>
                       </form>
                     </MenuDestructiveRow>
+                    ) : null}
                   </RowActionsMenu>
                 </div>
               </div>
@@ -710,26 +734,19 @@ export default async function ReceiptsPage({
                     emailLabel="Email receipt"
                     waLinkHref={receiptWaPhone ? `https://wa.me/${receiptWaPhone}?text=${receiptShareText}` : null}
                   />
-                  <MenuSection label="Edit Receipt" />
-                  <form action={updateReceiptAction} className="space-y-2 p-3">
-                    <input type="hidden" name="paymentId" value={p.id} />
-                    <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
-                      <input name="issueDate" type="date" defaultValue={new Date(p.receipts[0]?.issuedAt ?? p.receivedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
-                    </label>
-                    <input name="amount" required type="number" min="0.01" step="0.01" defaultValue={p.amount} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
-                    <select name="method" defaultValue={p.method} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50">
-                      {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
-                    </select>
-                    <input name="reference" defaultValue={p.reference ?? ""} placeholder="Reference" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
-                    <textarea name="note" defaultValue={p.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
-                    <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Receipt</MenuActionButton>
-                  </form>
+                    {canVoid ? (
+                      <MenuActionLink href={editHref(p.id)} icon="edit">
+                        Edit receipt
+                      </MenuActionLink>
+                    ) : null}
+                  {canVoid ? (
                   <MenuDestructiveRow>
                     <form action={deleteReceiptAction}>
                       <input type="hidden" name="paymentId" value={p.id} />
                       <ConfirmSubmitButton message="Delete this receipt/payment? Totals will be recalculated." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Receipt</ConfirmSubmitButton>
                     </form>
                   </MenuDestructiveRow>
+                  ) : null}
                 </RowActionsMenu>
               </>
             );
@@ -748,6 +765,34 @@ export default async function ReceiptsPage({
           pageSize={pageSize}
           hrefForSize={receiptsHrefSize}
       />
+
+      {editPayment ? (
+        <EditDialog title="Edit receipt" closeHref="/documents/receipts">
+          <form action={updateReceiptAction} className="space-y-3">
+            <input type="hidden" name="paymentId" value={editPayment.id} />
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Issue date
+              <input name="issueDate" type="date" defaultValue={new Date(editPayment.receipts[0]?.issuedAt ?? editPayment.receivedAt).toISOString().slice(0, 10)} className="mt-1 h-10 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50" />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Amount
+                <input name="amount" required type="number" min="0.01" step="0.01" defaultValue={editPayment.amount} className="mt-1 h-10 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50" />
+              </label>
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Method
+                <select name="method" defaultValue={editPayment.method} className="mt-1 h-10 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50">
+                  {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
+                </select>
+              </label>
+            </div>
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Reference
+              <input name="reference" defaultValue={editPayment.reference ?? ""} placeholder="Optional" className="mt-1 h-10 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50" />
+            </label>
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Note
+              <textarea name="note" defaultValue={editPayment.note ?? ""} placeholder="Optional" rows={3} className="mt-1 w-full resize-none rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+            </label>
+            <SubmitButton bare className="btn-premium h-10 w-full rounded-lg px-3 text-sm font-bold">Save receipt</SubmitButton>
+          </form>
+        </EditDialog>
+      ) : null}
     </section>
   );
 }

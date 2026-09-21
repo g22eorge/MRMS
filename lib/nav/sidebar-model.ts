@@ -65,6 +65,7 @@ export const NAV: readonly NavItem[] = [
   // AR/AP worklist (collect client payments, pay techs, track supplier bills).
   // Guarded by reviewExternalBills|ADMIN on the page — ADMIN static here, the rest via ensureItem below.
   { href: "/payout-followups", label: routeLabel("/payout-followups"), group: "finance", roles: ["ADMIN"] },
+  { href: "/payables", label: routeLabel("/payables"), group: "finance", roles: ["ADMIN"] },
   { href: "/technicians/payouts", label: routeLabel("/technicians/payouts"), group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
 
   // Insights — analytics/targets, previously reachable only from dashboards or (mobile) /more.
@@ -115,7 +116,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
     "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/recurring-expenses", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables",
     "/settings",
   ],
   MANAGER: [
@@ -125,7 +126,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
     "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/recurring-expenses", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables",
     "/settings",
   ],
   TECH_MANAGER: [
@@ -133,7 +134,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
     "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
-    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/payout-followups",
+    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/payout-followups", "/payables",
     "/settings",
   ],
   OPS: [
@@ -143,14 +144,14 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
     "/clients", "/sales", "/sales/campaigns", "/pos",
     "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/finance/expenses", "/finance/recurring", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/finance/expenses", "/finance/recurring", "/finance/recurring-expenses", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables",
     "/settings",
   ],
   FINANCE: [
     "/dashboard",
     "/clients",
     "/documents/invoices", "/documents/credit-notes", "/documents/refunds",
-    "/finance/expenses", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/finance/expenses", "/finance/recurring", "/finance/recurring-expenses", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables",
     "/settings",
   ],
   SALES: [
@@ -180,7 +181,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/settings",
   ],
   INTAKE: ["/dashboard", "/jobs", "/intake", "/technicians", "/clients", "/documents/job-cards", "/settings"],
-  SALES_MANAGER: ["/dashboard", "/jobs", "/intake", "/field", "/technicians", "/clients", "/sales", "/sales/campaigns", "/pos", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/reports", "/ai-insights", "/payout-followups", "/settings"],
+  SALES_MANAGER: ["/dashboard", "/jobs", "/intake", "/field", "/technicians", "/clients", "/sales", "/sales/campaigns", "/pos", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables", "/settings"],
   SALES_CORPORATE: ["/dashboard", "/jobs", "/clients", "/sales", "/documents/quotations", "/documents/invoices", "/settings"],
   SALES_RETAIL: ["/dashboard", "/jobs", "/clients", "/sales", "/pos", "/documents/quotations", "/documents/receipts", "/settings"],
   SALES_POS: ["/dashboard", "/pos", "/settings"],
@@ -233,8 +234,9 @@ export function orderedNavForRole(role: Role, permissions: string[], enabledModu
   }
   if (can.setTargets(permissionUser) || can.viewTeamTargets(permissionUser)) ensureItem("/targets");
   if (can.viewFinancials(permissionUser)) ensureItem("/documents");
-  // Matches the /payout-followups page guard (reviewExternalBills || ADMIN); ADMIN is a static NAV role.
+  // Matches the /payout-followups + /payables page guards (reviewExternalBills || ADMIN); ADMIN is a static NAV role.
   if (can.reviewExternalBills(permissionUser)) ensureItem("/payout-followups");
+  if (can.reviewExternalBills(permissionUser)) ensureItem("/payables");
   if (can.generateJobCards(permissionUser)) ensureItem("/documents");
 
   const ordered = roleOrder[role] ?? visible.map((item) => item.href);

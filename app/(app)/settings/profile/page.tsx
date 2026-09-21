@@ -1,3 +1,6 @@
+// Reads the live session; never prerender.
+export const dynamic = "force-dynamic";
+
 import { getCurrentUserRole } from "@/lib/session";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
 import { ProfileForm } from "@/components/settings/ProfileForm";

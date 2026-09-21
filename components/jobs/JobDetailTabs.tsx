@@ -20,7 +20,7 @@ import { PhotoUploader } from "@/components/shared/PhotoUploader";
 import { resolveTechCost } from "@/lib/billing";
 import { formatEATDateTime , formatElapsedHours } from "@/lib/date-eat";
 import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
-import { JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { JobStatus, normalizeJobStatus, canTransitionJobStatus, jobStageIndex, primaryNextStatus } from "@/lib/job-status";
 import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
 import type { JobDocumentTimelineEntry } from "@/lib/jobs/job-document-timeline-shared";
 import { can } from "@/lib/permissions";
@@ -121,9 +121,11 @@ type OutboundMsg = {
   to: string;
   body: string;
   type: string;
+  status: string;
   sentAt: Date | null;
   createdAt: Date;
   providerDeliveryStatus: string | null;
+  lastError: string | null;
 };
 
 type ThreadEntry =
@@ -150,6 +152,30 @@ function DeliveryDot({ status }: { status: string | null }) {
   return (
     <span className={`text-[0.75rem] font-medium ${color}`} title={status}>
       {status === "read" ? "Read" : status === "delivered" ? "Delivered" : status === "sent" ? "Sent" : status === "failed" ? "Failed" : status}
+    </span>
+  );
+}
+
+const OUTBOX_STATUS_STYLES: Record<string, { label: string; cls: string }> = {
+  PENDING: { label: "Queued", cls: "text-amber-600 dark:text-amber-400" },
+  FAILED: { label: "Failed", cls: "text-red-600 dark:text-red-400" },
+  DEAD: { label: "Dead", cls: "text-[var(--ink-muted)]" },
+  PREVIEW: { label: "Preview", cls: "text-sky-600 dark:text-sky-400" },
+};
+
+/**
+ * The outbox status of a generated message. The delivery dot below shows what
+ * Meta reports once sent; this shows whether the app ever got it out. Two
+ * states look identical without it: a message queued-but-never-sent and one
+ * actually delivered are both just bubbles here, and that is how whole runs of
+ * status messages silently went nowhere.
+ */
+function OutboxStatusBadge({ status, lastError }: { status: string | null; lastError?: string | null }) {
+  if (!status || status === "SENT") return null;
+  const s = OUTBOX_STATUS_STYLES[status] ?? { label: status, cls: "text-[var(--ink-muted)]" };
+  return (
+    <span className={`font-bold uppercase tracking-wide ${s.cls}`} title={status === "PENDING" && lastError ? lastError : undefined}>
+      {s.label}
     </span>
   );
 }
@@ -324,8 +350,17 @@ function MessagesTab({
                         {m.type.replaceAll("_", " ").toLowerCase()}
                       </span>
                     )}
+                    <OutboxStatusBadge status={m.status} lastError={m.lastError} />
                     <DeliveryDot status={m.providerDeliveryStatus} />
                   </div>
+                  {m.status !== "SENT" && m.lastError ? (
+                    <p
+                      className="mt-0.5 max-w-[85%] truncate text-right text-[0.7rem] text-red-600/90 dark:text-red-400/90"
+                      title={m.lastError}
+                    >
+                      {m.lastError}
+                    </p>
+                  ) : null}
                 </div>
               );
             } else {
@@ -506,6 +541,9 @@ type Props = {
       | "UNREPAIRABLE"
       | "CUSTOMER_CANCELLED"
       | "OTHER"
+      | "CLIENT_APPROVED"
+      | "CLIENT_APPROVED_PARTS_PENDING"
+      | "CLIENT_APPROVED_AWAITING_DEVICE"
       | null;
     statusNote?: string | null;
     updatedAt: Date;
@@ -591,9 +629,11 @@ type Props = {
       to: string;
       body: string;
       type: string;
+      status: string;
       sentAt: Date | null;
       createdAt: Date;
       providerDeliveryStatus: string | null;
+      lastError: string | null;
     }>;
     oneTimeExternalAssignment?: {
       technicianName: string;
@@ -646,6 +686,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const [billInput, setBillInput] = useState<string>(job.clientBill != null ? String(job.clientBill) : "");
   const [vatInput, setVatInput] = useState<boolean>(job.vatApplicable ?? false);
   const [showOneTimeForm, setShowOneTimeForm] = useState(false);
+  // Live value of the Assign-technician select. Null means "untouched —
+  // derive from the saved job". Reset after each save.
+  const [assignedSelect, setAssignedSelect] = useState<string | null>(null);
   const [isDiagnosisPending, startDiagnosisTransition] = useTransition();
   const [isOneTimeExternalPending, startOneTimeExternalTransition] = useTransition();
   const [isRepairPending, startRepairTransition] = useTransition();
@@ -658,6 +701,16 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   const [completionFlowOpen, setCompletionFlowOpen] = useState(false);
   const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
   const [showPayoutForm, setShowPayoutForm] = useState(false);
+  // Concurrency token echoed back by saves; refreshed on each success, reset
+  // on fresh server render (render-phase adjust, not an effect).
+  const jobUpdatedAtKey = job.updatedAt ? new Date(job.updatedAt).getTime() : null;
+  const [timestampToken, setTimestampToken] = useState<{ key: number | null; value: string | null }>({
+    key: jobUpdatedAtKey,
+    value: null,
+  });
+  if (timestampToken.key !== jobUpdatedAtKey) {
+    setTimestampToken({ key: jobUpdatedAtKey, value: null });
+  }
 
   useEffect(() => {
     if (!savedSection) return;
@@ -695,6 +748,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       return;
     }
     toast.success("Status updated");
+    acceptFreshTimestamp(res);
     setSavedSection("status");
     const changedTo = res.statusChangedTo ?? explicitNextStatus;
     if (
@@ -737,7 +791,20 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
   };
 
   const statusKey = normalizeJobStatus(job.status);
-  const statusActions = allowedStatusTransitions[job.status] ?? allowedStatusTransitions[statusKey] ?? [];
+  const allStatusActions = allowedStatusTransitions[job.status] ?? allowedStatusTransitions[statusKey] ?? [];
+  // Offer only what the server will accept for this role — unfiltered buttons
+  // that always answered "You do not have permission" were a recurring
+  // dead-end (e.g. internal tech → approval, OPS → start diagnosis).
+  const statusActions = allStatusActions.filter((s) => canTransitionJobStatus(permissionUser, s));
+  // The big button follows the happy path (IN_REPAIR → READY_FOR_PICKUP, not
+  // the WAITING_FOR_PARTS side branch that leads the raw list), so repeated
+  // presses walk the job to completion. Alternates still list everything.
+  const primaryStatusAction = primaryNextStatus(job.status, statusActions);
+  // The diagnosis card advances only during the diagnosis phase; later the
+  // card is Save-only and moves happen from the progress bar.
+  const diagnosisAdvanceTo = ["RECEIVED", "DIAGNOSING", "REFERRED"].includes(job.status)
+    ? primaryStatusAction
+    : null;
   const isTerminal = job.status === "COMPLETED" || job.status === "CLOSED";
   const existingMargin =
     typeof job.clientBill === "number"
@@ -826,7 +893,13 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             ? { type: "link" as const, label: "Generate Job Card", href: `/api/jobs/${job.id}/job-card` }
             : null;
 
-  const expectedUpdatedAt = new Date(job.updatedAt).toISOString();
+  const expectedUpdatedAt = timestampToken.value ?? new Date(job.updatedAt).toISOString();
+  function acceptFreshTimestamp(res: unknown) {
+    if (res && typeof res === "object" && "updatedAt" in res) {
+      const stamp = (res as { updatedAt?: unknown }).updatedAt;
+      if (typeof stamp === "string" && stamp) setTimestampToken({ key: jobUpdatedAtKey, value: stamp });
+    }
+  }
   const assignedRole = job.assignedTo?.role;
   const diagnosisMode: "internal" | "external" =
     assignedRole === "TECHNICIAN_EXTERNAL"
@@ -836,6 +909,35 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           : job.repairPath === "EXTERNAL"
             ? "external"
             : "internal";
+  // Technicians see only their own flow's box; everyone else sees the box
+  // matching the assigned technician (both submit, the hidden one untouched).
+  const canSeeBothDiagnoses =
+    role !== "TECHNICIAN_INTERNAL" &&
+    role !== "TECHNICIAN_EXTERNAL" &&
+    role !== "TECH_FIELD";
+  // The notes box follows the technician picked above, so notes land in the
+  // column matching the assignment. Falls back to the saved job when the
+  // select is untouched or absent.
+  const liveDiagnosisMode: "internal" | "external" = (() => {
+    if (!canAssignJobs || assignedSelect === null) return diagnosisMode;
+    if (assignedSelect === "__one_time__" || assignedSelect === "__one_time_current__") return "external";
+    if (!assignedSelect) return job.repairPath === "EXTERNAL" ? "external" : "internal";
+    const picked = technicians.find((t) => t.id === assignedSelect);
+    if (!picked) return diagnosisMode;
+    return picked.role === "TECHNICIAN_EXTERNAL" ? "external" : "internal";
+  })();
+  const showInternalDiagnosis =
+    canSeeBothDiagnoses || (role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external");
+  const showExternalDiagnosis = canSeeBothDiagnoses || diagnosisMode !== "internal";
+  // What the staff editor displays: single box following the dropdown.
+  const displayInternalDiagnosis = !canSeeBothDiagnoses
+    ? showInternalDiagnosis
+    : liveDiagnosisMode !== "external";
+  const displayExternalDiagnosis = !canSeeBothDiagnoses
+    ? showExternalDiagnosis
+    : liveDiagnosisMode !== "internal";
+  // Server persists diagnosis for ADMIN/OPS, so the button matches it.
+  const canSaveDiagnosis = can.editDiagnosis(permissionUser) || role === "OPS" || role === "ADMIN";
   const derivedRepairPath = assignedRole
     ? diagnosisMode === "external"
       ? "EXTERNAL (from assigned technician)"
@@ -847,16 +949,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         : "Not set";
   const repairCostLabel = "Technician Cost";
   const stageLabels = ["Intake", "Diagnosis", "Approval", "Repair", job.status === "CLOSED" ? "Closed" : "Complete"];
-  const currentStageIndex =
-    job.status === "RECEIVED"
-      ? 0
-      : job.status === "DIAGNOSING"
-        ? 1
-        : job.status === "AWAITING_APPROVAL"
-          ? 2
-          : (["REFERRED", "IN_REPAIR", "READY_FOR_PICKUP"] as JobStatus[]).includes(job.status)
-            ? 3
-            : 4;
+  const currentStageIndex = jobStageIndex(job.status);
   const nextActionByStatus: Record<ReturnType<typeof normalizeJobStatus>, string> = {
     RECEIVED: "Start diagnosis",
     DIAGNOSING: "Capture diagnosis and set repair path",
@@ -1005,15 +1098,17 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               </div>
             ))}
           </div>
-          {!isTerminal && statusActions.length > 0 ? (
+          {!isTerminal && primaryStatusAction ? (
             <form
-              action={(fd) => {
+              onSubmit={(event) => {
+                event.preventDefault();
+                const fd = new FormData();
                 fd.set("jobId", job.id);
-                fd.set("nextStatus", statusActions[0]);
+                fd.set("nextStatus", primaryStatusAction);
                 fd.set("expectedUpdatedAt", expectedUpdatedAt);
                 startStatusTransition(async () => {
                   const res = await updateJobAction(fd);
-                  handleStatusUpdateResult(res, statusActions[0]);
+                  handleStatusUpdateResult(res, primaryStatusAction);
                 });
               }}
             >
@@ -1034,10 +1129,10 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           ) : null}
         </div>
         {/* Every other valid transition stays one click away — nothing is hidden. */}
-        {!isTerminal && statusActions.length > 1 ? (
+        {!isTerminal && statusActions.filter((s) => s !== primaryStatusAction).length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2">
             <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Or move to</span>
-            {statusActions.slice(1).map((status) =>
+            {statusActions.filter((s) => s !== primaryStatusAction).map((status) =>
               status === "CLOSED" ? (
                 <button
                   key={status}
@@ -1051,7 +1146,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               ) : (
                 <form
                   key={status}
-                  action={(fd) => {
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const fd = new FormData();
                     fd.set("jobId", job.id);
                     fd.set("nextStatus", status);
                     fd.set("expectedUpdatedAt", expectedUpdatedAt);
@@ -1147,14 +1244,16 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </div>
 
         {/* Primary workflow CTA */}
-        {!isTerminal && statusActions.length > 0 ? (
-          <form action={(fd) => {
+        {!isTerminal && primaryStatusAction ? (
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            const fd = new FormData();
             fd.set("jobId", job.id);
-            fd.set("nextStatus", statusActions[0]);
+            fd.set("nextStatus", primaryStatusAction);
             fd.set("expectedUpdatedAt", expectedUpdatedAt);
             startStatusTransition(async () => {
               const res = await updateJobAction(fd);
-              handleStatusUpdateResult(res, statusActions[0]);
+              handleStatusUpdateResult(res, primaryStatusAction);
             });
           }}>
             <SubmitButton bare disabled={isStatusPending}
@@ -1490,7 +1589,16 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
       {segment === "work" ? (
         <div className="space-y-4">
           <form
-            action={(formData) => {
+            onSubmit={(event) => {
+              // Keep entered values on success or validation errors. A React
+              // form action resets uncontrolled selects to their initial default.
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
+              // "Save & advance" merges its target status in (new FormData
+              // excludes the clicked button); plain Save moves nothing.
+              const submitter = (event.nativeEvent as unknown as { submitter?: HTMLElement | null }).submitter;
+              const advanceTo = submitter?.getAttribute("data-advance-to");
+              if (advanceTo) formData.set("nextStatus", advanceTo);
               formData.set("jobId", job.id);
               formData.set("expectedUpdatedAt", expectedUpdatedAt);
               startDiagnosisTransition(async () => {
@@ -1499,9 +1607,19 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   toast.error(res.error);
                   return;
                 }
-                toast.success("Diagnosis updated");
-                setSavedSection("diagnosis");
-                router.refresh();
+                acceptFreshTimestamp(res);
+                // Selection is now persisted — drop the live override so the
+                // notes box re-derives from the refreshed job, not stale state.
+                setAssignedSelect(null);
+                if (advanceTo) {
+                  // Moving status shares the completion-flow handling (modal,
+                  // toasts) with the progress-bar buttons.
+                  handleStatusUpdateResult(res, advanceTo as JobStatus);
+                } else {
+                  toast.success("Diagnosis updated");
+                  setSavedSection("diagnosis");
+                  router.refresh();
+                }
               });
             }}
             className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
@@ -1515,40 +1633,36 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                     <Link href="/settings/users" className="text-[var(--accent)] underline">Settings → Users</Link> to pick from a list.
                   </p>
                 ) : null}
-                {showOneTimeForm || oneTimeExternal ? (
+                {showOneTimeForm ? (
+                  // Gated to "form is open" only. The old condition included
+                  // oneTimeExternal, which forced the sentinel-valued select
+                  // below onto every job that has a one-time record — so the
+                  // default submitted value was "__one_time__", the server
+                  // answered "Invalid assignee", and the whole save (notes,
+                  // parts, everything) was discarded until the tech was
+                  // re-picked by hand, several times.
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div className="min-w-0 sm:col-span-2">
                       <div className="flex items-center gap-2">
                         <label htmlFor="assignedToId" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
-                          Assignment
+                          Assigned technician
                         </label>
-                        {!oneTimeExternal && (
-                          <button
-                            type="button"
-                            onClick={() => setShowOneTimeForm(false)}
-                            className="text-[0.75rem] text-[var(--accent)] underline"
-                          >
-                            ← Back to list
-                          </button>
-                        )}
                       </div>
                       <select
                         id="assignedToId"
                         name="assignedToId"
-                        // defaultValue, not value: pinned to the sentinel it was
-                        // a controlled select that could never change, so this
-                        // form always posted "__one_time__". On any job with a
-                        // one-time external tech, saving diagnosis notes came
-                        // back "Invalid assignee. Select an active technician."
-                        // and discarded everything typed. The sibling select
-                        // below has always done it this way.
-                        defaultValue="__one_time__"
+                        // Snapshotted when the one-time form was opened, so the
+                        // form submits the technician actually in force while
+                        // typing. The stale constant default made the select
+                        // display and submit the "__one_time__" sentinel on
+                        // any job with a one-time record, which the server
+                        // rejected — losing notes and parts with it.
+                        defaultValue={job.assignedTo?.id ?? (oneTimeExternal ? "__one_time_current__" : "")}
                         className={fieldClass}
                         onChange={(e) => {
+                          setAssignedSelect(e.target.value);
                           if (e.target.value === "__one_time__") {
                             setShowOneTimeForm(true);
-                          } else {
-                            setShowOneTimeForm(false);
                           }
                         }}
                       >
@@ -1560,6 +1674,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                               {technician.name} ({technician.role === "TECHNICIAN_EXTERNAL" ? "External" : "Internal"})
                             </option>
                           ))}
+                        {oneTimeExternal ? (
+                          <option value="__one_time_current__">One-time external: {oneTimeExternal.technicianName}</option>
+                        ) : null}
                         <option value="__one_time__">One-Time External...</option>
                       </select>
                     </div>
@@ -1582,6 +1699,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                         defaultValue={job.assignedTo?.id ?? ""}
                         className={fieldClass}
                         onChange={(e) => {
+                          setAssignedSelect(e.target.value);
                           if (e.target.value === "__one_time__") {
                             setShowOneTimeForm(true);
                           }
@@ -1609,23 +1727,39 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               </div>
             ) : null}
 
-            {role !== "TECHNICIAN_EXTERNAL" && diagnosisMode !== "external" ? (
-              <textarea
-                name="diagnosisNotes"
-                defaultValue={job.diagnosisNotes ?? ""}
-                placeholder="Internal diagnosis notes"
-                className={areaClass}
-              />
+            {showInternalDiagnosis ? (
+              <div className={canSeeBothDiagnoses && !displayInternalDiagnosis ? "hidden" : undefined}>
+                {canSeeBothDiagnoses ? (
+                  <label htmlFor="diagnosisNotes" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                    Internal diagnosis notes
+                  </label>
+                ) : null}
+                <textarea
+                  id="diagnosisNotes"
+                  name="diagnosisNotes"
+                  defaultValue={job.diagnosisNotes ?? ""}
+                  placeholder="Internal diagnosis notes"
+                  className={areaClass}
+                />
+              </div>
             ) : null}
-            {diagnosisMode !== "internal" ? (
-              <textarea
-                name="externalDiagnosis"
-                defaultValue={job.externalDiagnosis ?? ""}
-                placeholder="External diagnosis"
-                className={areaClass}
-              />
+            {showExternalDiagnosis ? (
+              <div className={canSeeBothDiagnoses && !displayExternalDiagnosis ? "hidden" : undefined}>
+                {canSeeBothDiagnoses ? (
+                  <label htmlFor="externalDiagnosis" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                    External diagnosis
+                  </label>
+                ) : null}
+                <textarea
+                  id="externalDiagnosis"
+                  name="externalDiagnosis"
+                  defaultValue={job.externalDiagnosis ?? ""}
+                  placeholder="External diagnosis"
+                  className={areaClass}
+                />
+              </div>
             ) : null}
-            {diagnosisMode === "internal" ? (
+            {!canSeeBothDiagnoses && diagnosisMode === "internal" ? (
               <p className="text-xs text-[var(--ink-muted)]">External diagnosis is hidden for internal technician flow.</p>
             ) : null}
             <textarea
@@ -1638,11 +1772,22 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
-                disabled={(isTerminal && !canAssignJobs) || !can.editDiagnosis(permissionUser) || isDiagnosisPending}
+                disabled={(isTerminal && !canAssignJobs) || !canSaveDiagnosis || isDiagnosisPending}
                 className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60"
               >
                 Save
               </button>
+              {diagnosisAdvanceTo && diagnosisAdvanceTo !== "CLOSED" ? (
+                <button
+                  type="submit"
+                  data-advance-to={diagnosisAdvanceTo}
+                  title={`Save diagnosis and move to ${prettyEnum(diagnosisAdvanceTo)}`}
+                  disabled={(isTerminal && !canAssignJobs) || !canSaveDiagnosis || isDiagnosisPending}
+                  className="btn-premium-secondary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                >
+                  Save & advance to {prettyEnum(diagnosisAdvanceTo)}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => router.back()}
@@ -1656,23 +1801,26 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           </form>
 
           {showOneTimeExternalPanel ? (
-            <form
-              action={(formData) => {
-                formData.set("jobId", job.id);
-                formData.set("expectedUpdatedAt", expectedUpdatedAt);
-                startOneTimeExternalTransition(async () => {
-                  const res = await updateOneTimeExternalAssignmentAction(formData);
-                  if (res.error) {
-                    toast.error(res.error);
-                    return;
-                  }
-                  toast.success("One-time external technician saved");
-                  setSavedSection("oneTimeExternal");
-                  router.refresh();
-                });
-              }}
-              className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
-            >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            formData.set("jobId", job.id);
+            formData.set("expectedUpdatedAt", expectedUpdatedAt);
+            startOneTimeExternalTransition(async () => {
+              const res = await updateOneTimeExternalAssignmentAction(formData);
+              if (res.error) {
+                toast.error(res.error);
+                return;
+              }
+              toast.success("One-time external technician saved");
+              acceptFreshTimestamp(res);
+              setSavedSection("oneTimeExternal");
+              router.refresh();
+            });
+          }}
+          className={`${panelShellClass} space-y-3 [&_*]:min-w-0`}
+        >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold text-[var(--ink-muted)]">One-time external tech</p>
                 <div className="shrink-0">
@@ -1791,7 +1939,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
       {segment === "work" ? (
         <form
-          action={(formData) => {
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
             formData.set("jobId", job.id);
             formData.set("expectedUpdatedAt", expectedUpdatedAt);
             startRepairTransition(async () => {
@@ -1801,6 +1951,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 return;
               }
               toast.success("Repair log updated");
+              acceptFreshTimestamp(res);
               setSavedSection("repair");
               router.refresh();
             });
@@ -1830,7 +1981,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
 
       {segment === "money" && canViewFinancials ? (
         <form
-          action={(formData) => {
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
             formData.set("jobId", job.id);
             formData.set("expectedUpdatedAt", expectedUpdatedAt);
             startFinancialTransition(async () => {
@@ -1840,6 +1993,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 return;
               }
               toast.success("Financials updated");
+              acceptFreshTimestamp(res);
               setSavedSection("financials");
               router.refresh();
             });
@@ -2058,6 +2212,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                               const res = await recordClientPaymentAction(fd);
                               if (res.error) { toast.error(res.error); return; }
                               toast.success("Payment recorded");
+                              acceptFreshTimestamp(res);
                               setShowAddPaymentForm(false);
                               router.refresh();
                             });
@@ -2247,6 +2402,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                               const res = await recordTechnicianPayoutAction(fd);
                               if (res.error) { toast.error(res.error); return; }
                               toast.success("Technician payout recorded");
+                              acceptFreshTimestamp(res);
                               setShowPayoutForm(false);
                               router.refresh();
                             });
@@ -2377,13 +2533,18 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         <div className={`${panelShellClass} space-y-4`}>
           {canUpdateClientCommunication ? (
             <form
-              action={(formData) => {
+              onSubmit={(event) => {
+                // Keep entered values on success or validation errors. A React
+                // form action resets uncontrolled selects to their initial default.
+                event.preventDefault();
+                const formData = new FormData(event.currentTarget);
                 formData.set("jobId", job.id);
                 formData.set("expectedUpdatedAt", expectedUpdatedAt);
                 startCommunicationTransition(async () => {
                   const res = await updateJobAction(formData);
                   if (res.error) { toast.error(res.error); return; }
                   toast.success("Workflow updated");
+                  acceptFreshTimestamp(res);
                   setSavedSection("workflow");
                   router.refresh();
                 });
@@ -2430,6 +2591,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                   <label className="mb-1.5 block text-xs font-medium text-[var(--ink-muted)]">Workflow reason</label>
                   <select name="workflowReason" defaultValue={job.workflowReason ?? "NONE"} className={fieldClass}>
                     <option value="NONE">No specific reason</option>
+                    <option value="CLIENT_APPROVED">Client approved — repair proceeding</option>
+                    <option value="CLIENT_APPROVED_PARTS_PENDING">Client approved — parts pending</option>
+                    <option value="CLIENT_APPROVED_AWAITING_DEVICE">Client approved — awaiting device hand-in</option>
                     <option value="PARTS_PENDING">Parts pending</option>
                     <option value="SPECIALIST_ESCALATION">Specialist escalation</option>
                     <option value="CLIENT_DECLINED">Client declined</option>
@@ -2529,13 +2693,24 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 return;
               }
               toast.success("Status updated");
+              acceptFreshTimestamp(res);
               setSavedSection("status");
               router.refresh();
             });
           }}
         />
         <form
-          action={(formData) => {
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            // new FormData(form) excludes the clicked submit button, but the
+            // status buttons carry nextStatus as name/value — without merging
+            // the submitter back in, the save runs with no move and the chain
+            // never advances.
+            const submitter = (event.nativeEvent as unknown as { submitter?: HTMLElement | null }).submitter;
+            const submitName = submitter?.getAttribute("name");
+            const submitValue = submitter?.getAttribute("value");
+            if (submitName && submitValue) formData.set(submitName, submitValue);
             formData.set("jobId", job.id);
             formData.set("expectedUpdatedAt", expectedUpdatedAt);
             startStatusTransition(async () => {
@@ -2564,9 +2739,13 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
                 value={status === "CLOSED" ? undefined : status}
                 disabled={isStatusPending}
                 onClick={status === "CLOSED" ? () => setConfirmClose(true) : undefined}
-                className="btn-premium-dark rounded-lg px-3 py-1.5 text-[0.8125rem]"
+                className={
+                  status === "CLOSED" || status !== primaryStatusAction
+                    ? "rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-60"
+                    : "rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black shadow-md shadow-[var(--accent)]/20 transition active:scale-[0.98] disabled:opacity-60"
+                }
               >
-                Set {prettyEnum(status)}
+                {prettyEnum(status)}
               </button>
             ))}
           </div>

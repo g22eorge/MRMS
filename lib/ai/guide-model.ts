@@ -2,6 +2,11 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import { corpusForModel } from "@/lib/ai-knowledge";
 
+import {
+  getAnthropicApiKey,
+  getGuideModel,
+} from "@/lib/platform-settings";
+
 /**
  * The AI Guide's model call: Claude, with the how-to corpus cached.
  *
@@ -35,12 +40,14 @@ function supportsEffort(model: string): boolean {
   return !/haiku|sonnet-4-5/i.test(model);
 }
 
-export function guideModel(): string {
-  return process.env.ANTHROPIC_GUIDE_MODEL?.trim() || DEFAULT_MODEL;
+export async function guideModel(): Promise<string> {
+  const stored = await getGuideModel();
+  if (stored) return stored;
+  return DEFAULT_MODEL;
 }
 
-export function guideConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+export async function guideConfigured(): Promise<boolean> {
+  return Boolean(await getAnthropicApiKey());
 }
 
 export type GuideTurn = { role: "user" | "assistant"; text: string };
@@ -88,11 +95,10 @@ export async function askGuide(params: {
   textStream: AsyncGenerator<string>;
   usage: () => { cacheRead: number; cacheWrite: number; input: number; output: number } | null;
 }> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured.");
 
   const client = new Anthropic({ apiKey });
-  const model = guideModel();
 
   const history = (params.history ?? [])
     .filter((m) => m.text.trim().length > 0)
@@ -120,6 +126,8 @@ export async function askGuide(params: {
       text: `This workspace has added its own notes. Prefer them where they conflict with the general procedures:\n\n${params.orgKnowledge.trim()}`,
     });
   }
+
+  const model = await guideModel();
 
   const stream = client.messages.stream({
     model,

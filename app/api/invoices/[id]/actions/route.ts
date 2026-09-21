@@ -89,7 +89,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   if (action === "void") {
-    if (!(can.voidInvoices(user) || ["ADMIN", "OPS"].includes(user.role))) {
+    if (!can.voidInvoices(user)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     // Don't void an invoice that has collected money — voiding leaves the
@@ -104,7 +104,12 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     }
     const alreadyVoid = invoice.status === "VOID";
     const updated = await prisma.$transaction(async (tx) => {
-      const inv = await tx.invoice.update({ where: { id: invoice.id }, data: { status: "VOID" } });
+      // Org-scoped write: the id above was verified in-org, but the write
+      // itself must also carry orgId so a raced/forged id can never touch
+      // another tenant's row.
+      const voided = await tx.invoice.updateMany({ where: { id: invoice.id, orgId }, data: { status: "VOID" } });
+      if (!voided.count) throw new Error("Invoice not found");
+      const inv = { id: invoice.id, invoiceNumber: invoice.invoiceNumber, status: "VOID" as const };
       // Restore stock for product lines decremented at issue (sourceType "Part").
       // Repair invoices (QuotationItem lines) were consumed at job completion, not
       // here, so they aren't restored. Guarded on status so voiding is idempotent.
@@ -120,7 +125,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
           if (qty <= 0) continue;
           const part = await tx.part.findFirst({ where: { id: line.sourceId, orgId }, select: { id: true } });
           if (!part) continue;
-          await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: qty } } });
+          await tx.part.updateMany({ where: { id: part.id, orgId }, data: { qtyOnHand: { increment: qty } } });
           await tx.partStockTransaction.create({
             data: { partId: part.id, orgId, type: "IN", quantity: qty, reason: `Invoice ${inv.invoiceNumber} voided: ${line.description}`.slice(0, 500), createdById: user.id },
           });

@@ -534,7 +534,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (!guideConfigured()) {
+    if (!(await guideConfigured())) {
       await logAiPrompt({
         orgId: user?.orgId, userId: user?.id, feature: "AI_GUIDE",
         question: message, contextSummary: knowledgeContext, mode: "fallback",
@@ -554,7 +554,7 @@ export async function POST(request: NextRequest) {
 
     await logAiPrompt({
       orgId: user?.orgId, userId: user?.id, feature: "AI_GUIDE",
-      model: guideModel(), question: message, contextSummary: knowledgeContext, mode: "anthropic",
+      model: await guideModel(), question: message, contextSummary: knowledgeContext, mode: "anthropic",
     });
 
     const { textStream, usage } = await askGuide({
@@ -575,8 +575,9 @@ export async function POST(request: NextRequest) {
           // something, and that is worth noticing before the bill does.
           const u = usage();
           if (u) {
+            const model = await guideModel();
             console.info(
-              `[ai-guide] ${guideModel()} in=${u.input} out=${u.output} cacheRead=${u.cacheRead} cacheWrite=${u.cacheWrite}`,
+              `[ai-guide] ${model} in=${u.input} out=${u.output} cacheRead=${u.cacheRead} cacheWrite=${u.cacheWrite}`,
             );
           }
         } catch (streamErr) {

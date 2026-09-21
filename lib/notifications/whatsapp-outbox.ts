@@ -231,10 +231,11 @@ export async function deliverOutboundMessage(id: string) {
   const whatsappCfg = row.channel === "WHATSAPP" ? await getWhatsAppConfigForOrg(row.orgId ?? undefined) : null;
 
   if (row.channel === "WHATSAPP" && !whatsappCfg) {
+    const attempts = row.attemptCount + 1;
     await prisma.outboundMessage.update({
       where: { id },
       data: {
-        status: "FAILED",
+        status: attempts >= MAX_ATTEMPTS ? "DEAD" : "FAILED",
         lastErrorCode: "NOT_CONFIGURED",
         lastError: "WhatsApp not configured",
         attemptCount: { increment: 1 },
@@ -247,10 +248,11 @@ export async function deliverOutboundMessage(id: string) {
   }
 
   if (row.channel === "EMAIL" && !emailIsConfigured()) {
+    const attempts = row.attemptCount + 1;
     await prisma.outboundMessage.update({
       where: { id },
       data: {
-        status: "FAILED",
+        status: attempts >= MAX_ATTEMPTS ? "DEAD" : "FAILED",
         lastErrorCode: "NOT_CONFIGURED",
         lastError: "Email not configured",
         attemptCount: { increment: 1 },

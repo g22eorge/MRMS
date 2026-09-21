@@ -173,7 +173,8 @@ export async function POST(request: NextRequest) {
   // The rules-based answer is always available and costs nothing. It is the
   // answer when the model is not configured, and the answer when it fails —
   // so this feature degrades to something useful rather than to an error.
-  if (!copilotConfigured()) {
+  const configured = await copilotConfigured();
+  if (!configured) {
     await logAiPrompt({ orgId: user.orgId, userId: user.id, feature: "AI_BUSINESS_COPILOT", question, contextSummary: knowledgeContext, mode: "fallback" });
     return new Response(fallbackAnswer(question, dataPack), {
       headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-ai-mode": "fallback" },
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
   try {
     await logAiPrompt({
       orgId: user.orgId, userId: user.id, feature: "AI_BUSINESS_COPILOT",
-      model: copilotModel(), question, contextSummary: knowledgeContext, mode: "anthropic",
+      model: await copilotModel(), question, contextSummary: knowledgeContext, mode: "anthropic",
     });
 
     const result = await askCopilot({ question, dataPack, orgKnowledge: knowledgeContext });
@@ -197,8 +198,9 @@ export async function POST(request: NextRequest) {
     // A cache read of zero across repeated questions means the stable prefix is
     // being invalidated by something, which is worth noticing before the bill.
     const u = result.usage;
+    const model = await copilotModel();
     console.info(
-      `[ai-copilot] ${copilotModel()} in=${u.input} out=${u.output} cacheRead=${u.cacheRead} cacheWrite=${u.cacheWrite}`,
+      `[ai-copilot] ${model} in=${u.input} out=${u.output} cacheRead=${u.cacheRead} cacheWrite=${u.cacheWrite}`,
     );
 
     return new Response(result.text, {

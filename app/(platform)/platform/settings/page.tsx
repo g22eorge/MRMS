@@ -1,7 +1,8 @@
-import { getPlatformSettings } from "@/lib/platform-settings";
+import { getAiSettings, getPlatformSettings } from "@/lib/platform-settings";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { PesapalSettingsForm } from "@/components/platform/PesapalSettingsForm";
 import { ATSmsPlatformSettingsForm } from "@/components/platform/ATSmsPlatformSettingsForm";
+import { AnthropicSettingsForm } from "@/components/platform/AnthropicSettingsForm";
 import { PLAN_PRICES, getStoredIpnId, ipnSettingKey } from "@/lib/pesapal";
 import { formatMoney } from "@/lib/currency";
 
@@ -25,22 +26,54 @@ export default async function PlatformSettingsPage() {
     getStoredIpnId(),
   ]);
 
+  const aiSettings = await getAiSettings();
+
+  const platformSettings: Record<string, string | null> = {
+    PESAPAL_CONSUMER_KEY: stored.PESAPAL_CONSUMER_KEY ?? null,
+    PESAPAL_CONSUMER_SECRET: stored.PESAPAL_CONSUMER_SECRET ?? null,
+    [ipnKey]: stored[ipnKey] ?? null,
+    AT_API_KEY: stored.AT_API_KEY ?? null,
+    AT_USERNAME: stored.AT_USERNAME ?? null,
+    AT_SENDER_ID: stored.AT_SENDER_ID ?? null,
+    ANTHROPIC_API_KEY: null,
+    ANTHROPIC_GUIDE_MODEL: null,
+    ANTHROPIC_COPILOT_MODEL: null,
+  };
+
+  const aiStored = {
+    ANTHROPIC_API_KEY: aiSettings.apiKey,
+    ANTHROPIC_GUIDE_MODEL: aiSettings.guideModel,
+    ANTHROPIC_COPILOT_MODEL: aiSettings.copilotModel,
+  };
+  for (const key of Object.keys(aiStored) as Array<keyof typeof aiStored>) {
+    platformSettings[key] = aiStored[key] ?? null;
+  }
+
   const configured = {
-    PESAPAL_CONSUMER_KEY: !!stored.PESAPAL_CONSUMER_KEY || !!process.env.PESAPAL_CONSUMER_KEY,
-    PESAPAL_CONSUMER_SECRET: !!stored.PESAPAL_CONSUMER_SECRET || !!process.env.PESAPAL_CONSUMER_SECRET,
+    PESAPAL_CONSUMER_KEY: !!platformSettings.PESAPAL_CONSUMER_KEY || !!process.env.PESAPAL_CONSUMER_KEY,
+    PESAPAL_CONSUMER_SECRET: !!platformSettings.PESAPAL_CONSUMER_SECRET || !!process.env.PESAPAL_CONSUMER_SECRET,
     PESAPAL_IPN_ID: !!ipnId,
-    PESAPAL_CONSUMER_KEY_inDb: !!stored.PESAPAL_CONSUMER_KEY,
-    PESAPAL_CONSUMER_SECRET_inDb: !!stored.PESAPAL_CONSUMER_SECRET,
-    PESAPAL_IPN_ID_inDb: !!stored[ipnKey],
+    PESAPAL_CONSUMER_KEY_inDb: !!platformSettings.PESAPAL_CONSUMER_KEY,
+    PESAPAL_CONSUMER_SECRET_inDb: !!platformSettings.PESAPAL_CONSUMER_SECRET,
+    PESAPAL_IPN_ID_inDb: !!platformSettings[ipnKey],
   };
 
   const atConfigured = {
-    AT_API_KEY: !!stored.AT_API_KEY || !!process.env.AT_API_KEY,
-    AT_USERNAME: !!stored.AT_USERNAME || !!process.env.AT_USERNAME,
-    AT_SENDER_ID: !!stored.AT_SENDER_ID || !!process.env.AT_SENDER_ID,
-    AT_API_KEY_inDb: !!stored.AT_API_KEY,
-    AT_USERNAME_inDb: !!stored.AT_USERNAME,
-    AT_SENDER_ID_inDb: !!stored.AT_SENDER_ID,
+    AT_API_KEY: !!platformSettings.AT_API_KEY || !!process.env.AT_API_KEY,
+    AT_USERNAME: !!platformSettings.AT_USERNAME || !!process.env.AT_USERNAME,
+    AT_SENDER_ID: !!platformSettings.AT_SENDER_ID || !!process.env.AT_SENDER_ID,
+    AT_API_KEY_inDb: !!platformSettings.AT_API_KEY,
+    AT_USERNAME_inDb: !!platformSettings.AT_USERNAME,
+    AT_SENDER_ID_inDb: !!platformSettings.AT_SENDER_ID,
+  };
+
+  const aiFormConfigured = {
+    apiKey: !!aiStored.ANTHROPIC_API_KEY || !!process.env.ANTHROPIC_API_KEY,
+    apiKeyInDb: !!aiStored.ANTHROPIC_API_KEY,
+    guideModel: aiStored.ANTHROPIC_GUIDE_MODEL ?? "",
+    guideModelInDb: !!aiStored.ANTHROPIC_GUIDE_MODEL,
+    copilotModel: aiStored.ANTHROPIC_COPILOT_MODEL ?? "",
+    copilotModelInDb: !!aiStored.ANTHROPIC_COPILOT_MODEL,
   };
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -58,6 +91,8 @@ export default async function PlatformSettingsPage() {
       <PesapalSettingsForm configured={configured} webhookUrl={webhookUrl} ipnId={ipnId} ipnKey={ipnKey} />
 
       <ATSmsPlatformSettingsForm configured={atConfigured} />
+
+      <AnthropicSettingsForm configured={aiFormConfigured} />
 
       {/* Pricing reference */}
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">

@@ -7,8 +7,8 @@ import { Prisma } from "@prisma/client";
  * Maps every `Decimal` column to `number` at the Prisma boundary.
  *
  * Money is stored as exact `numeric` in Postgres (see
- * docs/pg-migration/numeric-classification.json: 110 columns across
- * 45 models) while the application reads and writes plain numbers. A
+ * docs/pg-migration/numeric-classification.json: 113 columns across
+ * 47 models) while the application reads and writes plain numbers. A
  * `result` extension is what makes those two facts consistent: it changes the
  * field's declared type as well as its value, so TypeScript and the runtime
  * agree. Without it the generated types promise `Decimal` while the code —
@@ -163,6 +163,20 @@ export const decimalToNumberExtension = Prisma.defineExtension({
         needs: { exchangeRateToBase: true },
         compute(r) {
           return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
+      paidAmount: {
+        needs: { paidAmount: true },
+        compute(r) {
+          return Number(r.paidAmount);
+        },
+      },
+    },
+    expensePayment: {
+      amount: {
+        needs: { amount: true },
+        compute(r) {
+          return Number(r.amount);
         },
       },
     },
@@ -545,6 +559,14 @@ export const decimalToNumberExtension = Prisma.defineExtension({
         needs: { exchangeRateToBase: true },
         compute(r) {
           return r.exchangeRateToBase === null || r.exchangeRateToBase === undefined ? null : Number(r.exchangeRateToBase);
+        },
+      },
+    },
+    recurringExpense: {
+      amount: {
+        needs: { amount: true },
+        compute(r) {
+          return Number(r.amount);
         },
       },
     },

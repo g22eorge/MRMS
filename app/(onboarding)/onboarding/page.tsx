@@ -1,3 +1,6 @@
+// Reads the live session; never prerender.
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 
 import { OnboardingForm } from "./OnboardingForm";

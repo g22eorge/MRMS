@@ -4,12 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { requireOrgSession } from "@/lib/org-context";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { can } from "@/lib/permissions";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { formatEATDate, formatEATTime } from "@/lib/date-eat";
 import type { BadgeTone } from "@/components/ui/StatusBadge";
 import Link from "next/link";
-import { sanitizeText } from "@/lib/sanitize";
+import { sanitizeText, sanitizeOptionalText } from "@/lib/sanitize";
+import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { EditDialog } from "@/components/ui/EditDialog";
 import { shareReceiptDocument } from "@/lib/notifications/share-document";
 import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
 import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail";
@@ -28,6 +31,32 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
   const { id } = await params;
   const sp = searchParams ? await searchParams : {};
   const sent = typeof sp.sent === "string" ? sp.sent : undefined;
+
+  // Reference + note are metadata only — amount, method and date never change
+  // here, so the booked money stays exactly as posted.
+  async function updateReceiptDetailsAction(formData: FormData) {
+    "use server";
+    const { user: actor, orgId: actorOrg } = await requireOrgSession();
+    if (!(can.viewFinancials(actor) || ["ADMIN", "OPS"].includes(actor.role))) redirect("/dashboard");
+    const reference = sanitizeOptionalText(String(formData.get("reference") ?? ""));
+    const note = sanitizeOptionalText(String(formData.get("note") ?? ""));
+    const target = await prisma.payment.findFirst({ where: { id, orgId: actorOrg }, select: { id: true } });
+    if (!target) return;
+    await prisma.payment.updateMany({
+      where: { id, orgId: actorOrg },
+      data: { reference: reference || null, note: note || null },
+    });
+    await writeSystemAuditEvent({
+      orgId: actorOrg,
+      actorUserId: actor.id,
+      entityType: "Payment",
+      entityId: id,
+      action: "RECEIPT_DETAILS_UPDATED",
+      summary: "Receipt reference/note updated",
+    }).catch(() => {});
+    revalidatePath(`/documents/receipts/${id}`);
+    redirect(`/documents/receipts/${id}`);
+  }
 
   // `[id]` is a Payment id — the receipt PDF and share actions are keyed by payment.
   const payment = await prisma.payment.findFirst({
@@ -54,6 +83,8 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
   const client = payment.invoice?.job?.client ?? payment.invoice?.client ?? payment.sale?.client ?? null;
   const isVoid = !!receipt?.voidedAt;
   const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
+  const canEdit = (can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role)) && !isVoid;
+  const isEdit = sp.edit === "1" && canEdit;
   const methodLabel = payment.method.replaceAll("_", " ");
 
   const source = payment.invoice
@@ -94,6 +125,9 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
         </form>
       )}
       <Link href={`/api/payments/${payment.id}/receipt`} className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-bold">PDF</Link>
+      {canEdit && !isEdit ? (
+        <Link href={`/documents/receipts/${payment.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Edit</Link>
+      ) : null}
     </>
   );
 
@@ -187,6 +221,32 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
           activity={[{ label: "Payment received", at: formatEATDate(payment.receivedAt) }, ...(isVoid && receipt?.voidedAt ? [{ label: "Voided", at: formatEATDate(receipt.voidedAt) }] : [])]}
         />
       </div>
+
+      {isEdit ? (
+        <EditDialog title={`Edit receipt · ${receipt?.receiptNumber ?? payment.id.slice(-6)}`} closeHref={`/documents/receipts/${payment.id}`}>
+          <form action={updateReceiptDetailsAction} className="space-y-3">
+            <p className="text-[0.8125rem] text-[var(--ink-muted)]">Reference and note only — amount, method and date never change, so the booked money stays exact.</p>
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Reference
+              <input
+                name="reference"
+                defaultValue={payment.reference ?? ""}
+                placeholder="Optional"
+                className="mt-1 h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50"
+              />
+            </label>
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Note
+              <textarea
+                name="note"
+                rows={3}
+                defaultValue={payment.note ?? ""}
+                placeholder="Optional"
+                className="mt-1 w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50"
+              />
+            </label>
+            <SubmitButton bare className="btn-premium h-10 w-full rounded-lg px-3 text-sm font-bold">Save changes</SubmitButton>
+          </form>
+        </EditDialog>
+      ) : null}
     </section>
   );
 }

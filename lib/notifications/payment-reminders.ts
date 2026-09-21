@@ -147,203 +147,215 @@ export async function runPaymentReminders(params: {
   const statementClients = new Map<string, string>();
 
   for (const invoice of outstanding) {
-    const balance = invoice.totalAmount - invoice.paidAmount;
-    const currency = normalizeCurrency(invoice.currency, org.baseCurrency);
-    const due = effectiveDueDate(invoice, settings.paymentTermsDays);
-    // What this invoice has actually been *delivered*, so the ladder can tell a
-    // cold start from a customer who has been climbing it.
-    //
-    // SENT only, deliberately. A message that failed at the provider — a dead
-    // number, a block — was never heard, and counting it would walk someone up
-    // the ladder on the strength of messages that never arrived, until the
-    // final rung fired at a person who had received nothing. The dedupe below
-    // still counts the attempt, so nothing is re-queued; the two guards ask
-    // different questions and want different answers.
-    const sentStages = (
-      await prisma.outboundMessage.findMany({
+    try {
+      const balance = invoice.totalAmount - invoice.paidAmount;
+      const currency = normalizeCurrency(invoice.currency, org.baseCurrency);
+      const due = effectiveDueDate(invoice, settings.paymentTermsDays);
+      // What this invoice has actually been *delivered*, so the ladder can tell a
+      // cold start from a customer who has been climbing it.
+      //
+      // SENT only, deliberately. A message that failed at the provider — a dead
+      // number, a block — was never heard, and counting it would walk someone up
+      // the ladder on the strength of messages that never arrived, until the
+      // final rung fired at a person who had received nothing. The dedupe below
+      // still counts the attempt, so nothing is re-queued; the two guards ask
+      // different questions and want different answers.
+      const sentStages = (
+        await prisma.outboundMessage.findMany({
+          where: {
+            orgId: params.orgId,
+            invoiceId: invoice.id,
+            type: OutboundMessageType.INVOICE_REMINDER,
+            status: "SENT",
+            reminderStage: { not: null },
+          },
+          select: { reminderStage: true },
+        })
+      ).map((m) => m.reminderStage!);
+      const stage = stageDueNow(due, now, sentStages);
+      const push = (action: ReminderOutcome["action"], reason?: string) =>
+        results.push({ invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, stage: stage?.key ?? "-", action, reason });
+
+      if (!stage) continue;
+
+      if (balance > settings.manualReviewAbove) {
+        push("manual-review", `balance ${formatMoney(balance, currency)} is above the automatic ceiling`);
+        continue;
+      }
+      if (settings.statementForMultiInvoice && invoice.clientId && (perClient.get(invoice.clientId) ?? 0) > 1) {
+        // Deferred, not dropped: the client is collected here and sent one
+        // statement after the loop, so ten invoices produce one message rather
+        // than ten. Recording the invoice that triggered it keeps the reason
+        // visible in the run summary.
+        statementClients.set(invoice.clientId, invoice.invoiceNumber);
+        push("statement", "client holds several unpaid invoices — one statement sent instead");
+        continue;
+      }
+      if (!invoice.client) {
+        push("skipped", "no client on the invoice");
+        continue;
+      }
+
+      // Already attempted at this rung — attempted, not delivered. A failed
+      // message is the retry sweep's to re-send, and queuing a second row for the
+      // same rung would mean two copies could both eventually land. This is why
+      // it asks a different question from the delivery history above.
+      //
+      // PREVIEW rows are excluded deliberately. A dry run is a rehearsal, and
+      // counting it as the message would mean a fortnight of watching the outbox
+      // silently consumed every reminder the customer was owed: the switch to
+      // live would then send nothing at all, and look like it was working.
+      const already = await prisma.outboundMessage.findFirst({
+        where: {
+          orgId: params.orgId,
+          invoiceId: invoice.id,
+          reminderStage: stage.key,
+          status: { not: "PREVIEW" },
+        },
+        select: { id: true },
+      });
+      if (already) continue;
+
+      // One message per invoice per day, whatever the ladder thinks. Two rungs
+      // can fall close together and the customer does not care why.
+      const sentToday = await prisma.outboundMessage.findFirst({
         where: {
           orgId: params.orgId,
           invoiceId: invoice.id,
           type: OutboundMessageType.INVOICE_REMINDER,
-          status: "SENT",
-          reminderStage: { not: null },
+          status: { not: "PREVIEW" },
+          createdAt: { gte: startOfDay(now) },
         },
-        select: { reminderStage: true },
-      })
-    ).map((m) => m.reminderStage!);
-    const stage = stageDueNow(due, now, sentStages);
-    const push = (action: ReminderOutcome["action"], reason?: string) =>
-      results.push({ invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, stage: stage?.key ?? "-", action, reason });
+        select: { id: true },
+      });
+      if (sentToday) {
+        push("skipped", "already messaged today");
+        continue;
+      }
 
-    if (!stage) continue;
-
-    if (balance > settings.manualReviewAbove) {
-      push("manual-review", `balance ${formatMoney(balance, currency)} is above the automatic ceiling`);
-      continue;
-    }
-    if (settings.statementForMultiInvoice && invoice.clientId && (perClient.get(invoice.clientId) ?? 0) > 1) {
-      // Deferred, not dropped: the client is collected here and sent one
-      // statement after the loop, so ten invoices produce one message rather
-      // than ten. Recording the invoice that triggered it keeps the reason
-      // visible in the run summary.
-      statementClients.set(invoice.clientId, invoice.invoiceNumber);
-      push("statement", "client holds several unpaid invoices — one statement sent instead");
-      continue;
-    }
-    if (!invoice.client) {
-      push("skipped", "no client on the invoice");
-      continue;
-    }
-
-    // Already attempted at this rung — attempted, not delivered. A failed
-    // message is the retry sweep's to re-send, and queuing a second row for the
-    // same rung would mean two copies could both eventually land. This is why
-    // it asks a different question from the delivery history above.
-    //
-    // PREVIEW rows are excluded deliberately. A dry run is a rehearsal, and
-    // counting it as the message would mean a fortnight of watching the outbox
-    // silently consumed every reminder the customer was owed: the switch to
-    // live would then send nothing at all, and look like it was working.
-    const already = await prisma.outboundMessage.findFirst({
-      where: {
-        orgId: params.orgId,
-        invoiceId: invoice.id,
-        reminderStage: stage.key,
-        status: { not: "PREVIEW" },
-      },
-      select: { id: true },
-    });
-    if (already) continue;
-
-    // One message per invoice per day, whatever the ladder thinks. Two rungs
-    // can fall close together and the customer does not care why.
-    const sentToday = await prisma.outboundMessage.findFirst({
-      where: {
-        orgId: params.orgId,
-        invoiceId: invoice.id,
-        type: OutboundMessageType.INVOICE_REMINDER,
-        status: { not: "PREVIEW" },
-        createdAt: { gte: startOfDay(now) },
-      },
-      select: { id: true },
-    });
-    if (sentToday) {
-      push("skipped", "already messaged today");
-      continue;
-    }
-
-    const anchor = reminderAnchor(invoice);
-    const body = reminderBody({
-      tone: stage.tone,
-      clientName: invoice.client.fullName,
-      invoiceNumber: invoice.invoiceNumber,
-      amount: formatMoney(balance, currency),
-      dueLabel: formatEATDocDate(due),
-      companyName: org.name,
-      anchorSource: anchor.source,
-      anchorLabel: formatEATDocDate(anchor.at),
-    });
-
-    // One channel, not both. Two copies of the same chase reads as a machine
-    // losing track of itself.
-    const channel = invoice.client.phone ? "whatsapp" : invoice.client.email ? "email" : null;
-    if (!channel) {
-      push("skipped", "client has neither phone nor email");
-      continue;
-    }
-
-    // Never chase the business on its own line. A client record holding the
-    // org's own WhatsApp number turns every reminder into the shop dunning
-    // itself, and the ladder would keep climbing because nobody replies to
-    // themselves. care has such a record today — the owner's own customer row
-    // carries the configured business number — and it is only harmless because
-    // that customer has no invoices. This is the cheap guard, not a diagnosis:
-    // nothing has been misdirected yet. Compared canonically, since the config
-    // and a client record are almost never written the same way.
-    if (channel === "whatsapp" && ownNumber && normalizePhoneForStorage(invoice.client.phone!) === ownNumber) {
-      push("skipped", "client phone is the organisation's own WhatsApp number — correct the client record");
-      continue;
-    }
-
-    // WhatsApp will not deliver a free-form business message outside the
-    // 24-hour window the customer opens by writing first, and a customer who
-    // owes money is quiet by definition — so that window is nearly always shut.
-    // Meta accepts the send regardless and returns a message id, which is why
-    // the first live run reported five sent and one arrived. An approved
-    // template is the only thing that reaches a closed window.
-    //
-    // Two templates, chosen by which side of the due date we are on, because a
-    // template cannot branch and "falls due on" is wrong for July.
-    const rendered = await renderCommunicationTemplate({
-      orgId: params.orgId,
-      key: stage.offsetDays < 0 ? "PAYMENT_REMINDER_UPCOMING" : "PAYMENT_REMINDER_OVERDUE",
-      channel: channel === "whatsapp" ? "WHATSAPP" : "EMAIL",
-      variables: {
-        customerName: invoice.client.fullName,
-        companyName: org.name,
+      const anchor = reminderAnchor(invoice);
+      const body = reminderBody({
+        tone: stage.tone,
+        clientName: invoice.client.fullName,
         invoiceNumber: invoice.invoiceNumber,
         amount: formatMoney(balance, currency),
         dueLabel: formatEATDocDate(due),
-        dueDate: formatEATDocDate(due),
-      },
-      // No template configured: fall back to the hand-written body rather than
-      // sending nothing. Inside an open window it still arrives, and the outbox
-      // records which path was taken.
-      fallback: { body, subject: `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}` },
-    });
-
-    const common = {
-      orgId: params.orgId,
-      invoiceId: invoice.id,
-      reminderStage: stage.key,
-      type: OutboundMessageType.INVOICE_REMINDER,
-      metaTemplateName: rendered.metaTemplateName,
-      metaTemplateLanguage: rendered.metaLanguageCode,
-      metaTemplateVars: rendered.metaParamValues.length > 0 ? JSON.stringify(rendered.metaParamValues) : null,
-    };
-    // A dry run writes the message it would have sent, as PREVIEW. Recording
-    // nothing would have made the preview unreadable — the settings page
-    // promises the outbox can be read for a fortnight before the feature is
-    // allowed to speak, and a summary in a cron response is not that.
-    if (dryRun) {
-      await prisma.outboundMessage.create({
-        data: {
-          orgId: params.orgId,
-          invoiceId: invoice.id,
-          reminderStage: stage.key,
-          type: OutboundMessageType.INVOICE_REMINDER,
-          channel: channel === "whatsapp" ? "WHATSAPP" : "EMAIL",
-          status: "PREVIEW",
-          to: channel === "whatsapp" ? invoice.client.phone! : invoice.client.email!,
-          subject: channel === "email" ? `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}` : null,
-          body,
-        },
+        companyName: org.name,
+        anchorSource: anchor.source,
+        anchorLabel: formatEATDocDate(anchor.at),
       });
-      push("dry-run");
-      continue;
-    }
 
-    // Enqueue then deliver, which is the house pattern every other sender
-    // follows. Enqueueing alone only writes a PENDING row; nothing sends it
-    // until the retry sweep runs, and that is a daily job — a reminder saying
-    // "due today" would have arrived tomorrow.
-    const enqueued =
-      channel === "whatsapp"
-        ? await enqueueWhatsAppMessage({ ...common, to: invoice.client.phone!, body: rendered.body || body })
-        : await enqueueEmailMessage({
-            ...common,
-            to: invoice.client.email!,
-            subject: rendered.subject ?? `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}`,
-            body: rendered.body || body,
-          });
+      // One channel, not both. Two copies of the same chase reads as a machine
+      // losing track of itself.
+      const channel = invoice.client.phone ? "whatsapp" : invoice.client.email ? "email" : null;
+      if (!channel) {
+        push("skipped", "client has neither phone nor email");
+        continue;
+      }
 
-    if (enqueued && "outboxId" in enqueued && enqueued.outboxId) {
-      // A failure here is not a failure of the run: the row is written, carries
-      // its error, and the retry sweep will take it. Throwing would abandon
-      // every invoice after this one in the loop.
-      await deliverOutboundMessage(enqueued.outboxId).catch(() => null);
+      // Never chase the business on its own line. A client record holding the
+      // org's own WhatsApp number turns every reminder into the shop dunning
+      // itself, and the ladder would keep climbing because nobody replies to
+      // themselves. care has such a record today — the owner's own customer row
+      // carries the configured business number — and it is only harmless because
+      // that customer has no invoices. This is the cheap guard, not a diagnosis:
+      // nothing has been misdirected yet. Compared canonically, since the config
+      // and a client record are almost never written the same way.
+      if (channel === "whatsapp" && ownNumber && normalizePhoneForStorage(invoice.client.phone!) === ownNumber) {
+        push("skipped", "client phone is the organisation's own WhatsApp number — correct the client record");
+        continue;
+      }
+
+      // WhatsApp will not deliver a free-form business message outside the
+      // 24-hour window the customer opens by writing first, and a customer who
+      // owes money is quiet by definition — so that window is nearly always shut.
+      // Meta accepts the send regardless and returns a message id, which is why
+      // the first live run reported five sent and one arrived. An approved
+      // template is the only thing that reaches a closed window.
+      //
+      // Two templates, chosen by which side of the due date we are on, because a
+      // template cannot branch and "falls due on" is wrong for July.
+      const rendered = await renderCommunicationTemplate({
+        orgId: params.orgId,
+        key: stage.offsetDays < 0 ? "PAYMENT_REMINDER_UPCOMING" : "PAYMENT_REMINDER_OVERDUE",
+        channel: channel === "whatsapp" ? "WHATSAPP" : "EMAIL",
+        variables: {
+          customerName: invoice.client.fullName,
+          companyName: org.name,
+          invoiceNumber: invoice.invoiceNumber,
+          amount: formatMoney(balance, currency),
+          dueLabel: formatEATDocDate(due),
+          dueDate: formatEATDocDate(due),
+        },
+        // No template configured: fall back to the hand-written body rather than
+        // sending nothing. Inside an open window it still arrives, and the outbox
+        // records which path was taken.
+        fallback: { body, subject: `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}` },
+      });
+
+      const common = {
+        orgId: params.orgId,
+        invoiceId: invoice.id,
+        reminderStage: stage.key,
+        type: OutboundMessageType.INVOICE_REMINDER,
+        metaTemplateName: rendered.metaTemplateName,
+        metaTemplateLanguage: rendered.metaLanguageCode,
+        metaTemplateVars: rendered.metaParamValues.length > 0 ? JSON.stringify(rendered.metaParamValues) : null,
+      };
+      // A dry run writes the message it would have sent, as PREVIEW. Recording
+      // nothing would have made the preview unreadable — the settings page
+      // promises the outbox can be read for a fortnight before the feature is
+      // allowed to speak, and a summary in a cron response is not that.
+      if (dryRun) {
+        await prisma.outboundMessage.create({
+          data: {
+            orgId: params.orgId,
+            invoiceId: invoice.id,
+            reminderStage: stage.key,
+            type: OutboundMessageType.INVOICE_REMINDER,
+            channel: channel === "whatsapp" ? "WHATSAPP" : "EMAIL",
+            status: "PREVIEW",
+            to: channel === "whatsapp" ? invoice.client.phone! : invoice.client.email!,
+            subject: channel === "email" ? `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}` : null,
+            body,
+          },
+        });
+        push("dry-run");
+        continue;
+      }
+
+      // Enqueue then deliver, which is the house pattern every other sender
+      // follows. Enqueueing alone only writes a PENDING row; nothing sends it
+      // until the retry sweep runs, and that is a daily job — a reminder saying
+      // "due today" would have arrived tomorrow.
+      const enqueued =
+        channel === "whatsapp"
+          ? await enqueueWhatsAppMessage({ ...common, to: invoice.client.phone!, body: rendered.body || body })
+          : await enqueueEmailMessage({
+              ...common,
+              to: invoice.client.email!,
+              subject: rendered.subject ?? `Invoice ${invoice.invoiceNumber} — ${formatMoney(balance, currency)}`,
+              body: rendered.body || body,
+            });
+
+      if (enqueued && "outboxId" in enqueued && enqueued.outboxId) {
+        // A failure here is not a failure of the run: the row is written, carries
+        // its error, and the retry sweep will take it. Throwing would abandon
+        // every invoice after this one in the loop.
+        await deliverOutboundMessage(enqueued.outboxId).catch(() => null);
+      }
+      push("queued");
+    } catch (error) {
+      // One bad invoice (bad data, dead template render, failed enqueue)
+      // must not abandon every invoice after it in the run.
+      results.push({
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        stage: "-",
+        action: "skipped",
+        reason: error instanceof Error ? error.message.slice(0, 160) : "unexpected error",
+      });
     }
-    push("queued");
   }
 
   // ── statements ────────────────────────────────────────────────────────────

@@ -107,6 +107,8 @@ model Organization {
   taxRates                TaxRate[]
   expenses                Expense[]
   recurringInvoices       RecurringInvoice[]
+  recurringExpenses       RecurringExpense[]
+  expensePayments         ExpensePayment[]
   chartOfAccounts         ChartOfAccount[]
   journalEntries          JournalEntry[]
   bankAccounts            BankAccount[]
@@ -230,7 +232,9 @@ model User {
   stockCountsCreated        StockCount[]             @relation("StockCountCreatedBy")
   stockCountsApproved       StockCount[]             @relation("StockCountApprovedBy")
   expensesCreated           Expense[]                @relation("ExpenseCreatedBy")
+  expensePaymentsCreated    ExpensePayment[]         @relation("ExpensePaymentCreatedBy")
   recurringInvoicesCreated  RecurringInvoice[]       @relation("RecurringInvoiceCreatedBy")
+  recurringExpensesCreated  RecurringExpense[]       @relation("RecurringExpenseCreatedBy")
   journalEntriesCreated     JournalEntry[]           @relation("JournalEntryCreatedBy")
   campaignsCreated          Campaign[]               @relation("CampaignCreatedBy")
   receiptsIssued            Receipt[]                @relation("ReceiptIssuedBy")
@@ -354,6 +358,7 @@ enum Role {
   SALES_POS
   TECH_FIELD
   OPS
+  OPERATIONS_MANAGER
   TECHNICIAN_INTERNAL
   TECHNICIAN_EXTERNAL
   FRONT_DESK
@@ -501,6 +506,9 @@ enum WorkflowReason {
   UNREPAIRABLE
   CUSTOMER_CANCELLED
   OTHER
+  CLIENT_APPROVED
+  CLIENT_APPROVED_PARTS_PENDING
+  CLIENT_APPROVED_AWAITING_DEVICE
 }
 
 enum PartReservationStatus {
@@ -550,6 +558,7 @@ model Client {
   portalUsers       PortalUser[]       @relation("ClientPortalUsers")
   linkedPortalUsers PortalUserClient[] @relation("ClientLinkedPortalUsers")
   outboundMessages  OutboundMessage[]
+  complaints        Complaint[]
 
   @@unique([phone, orgId])
   @@index([orgId])
@@ -952,6 +961,7 @@ model Sale {
 
   status     SaleStatus @default(OPEN)
   saleNumber String     @unique
+  name       String?
 
   billingMode   SaleBillingMode @default(CASH)
   invoiceNumber String?
@@ -1081,6 +1091,9 @@ model Part {
   sellingPrice      Decimal? @db.Decimal(18, 2)
   category          String?
   description       String?
+  // User-picked one-liner for table views; falls back to the description's
+  // first line when empty, so no backfill is ever needed.
+  shortDescription  String?
   taxable           Boolean      @default(true)
   taxRate           Decimal? @db.Decimal(12, 6)
   baseUom           String?
@@ -1261,6 +1274,7 @@ enum NotificationType {
   FIELD_VISIT_COMPLETED
   CREDIT_NOTE_ISSUED
   REFUND_ISSUED
+  PAYABLE_DUE
   BILLING
   PORTAL_MESSAGE
 }
@@ -1636,19 +1650,20 @@ model RepairRequestSequence {
   @@unique([orgId, year])
 }
 
-// Atomic per-(type,year) counter for shared document numbers (INV/QT/RCT/CN/DN).
-// Numbers stay globally sequential (matching the existing @unique columns); the
-// counter just removes the read-max-then-write race that could 500 under
-// concurrent creation. Lazy-initialised from the current max for continuity.
+// Atomic per-(org,type,year,month) counter for universal document numbers
+// (TAG/TYPE/YYYY/MM/NNN). The sequence resets every month; pre-reset yearly
+// rows (month 0) stay untouched as history. New-format strings can never
+// collide with legacy shapes, so monthly counters start at zero.
 model DocumentSequence {
   id        String   @id @default(cuid())
   orgId     String?
   type      String
   year      Int
+  month     Int      @default(0)
   value     Int      @default(0)
   updatedAt DateTime @updatedAt
 
-  @@unique([orgId, type, year])
+  @@unique([orgId, type, year, month])
 }
 
 enum RepairRequestStatus {
@@ -1741,6 +1756,7 @@ model Supplier {
   goodsReceivedNotes GoodsReceived[]
   supplierBills      SupplierBill[]
   expenses           Expense[]
+  recurringExpenses  RecurringExpense[]
 
   @@index([orgId])
 }
@@ -2487,6 +2503,13 @@ model Expense {
   currency           String          @default("UGX")
   exchangeRateToBase Decimal? @db.Decimal(12, 6)
   paidAt             DateTime?
+  // When the money is (or was) due. Null = payable on record (ages from
+  // creation). Populated for rent-type obligations so maturity, buckets and
+  // due-soon nudges work the same as supplier-bill due dates.
+  dueAt              DateTime?
+  // Paid so far across ExpensePayment rows. paidAt is stamped when this
+  // reaches the full amount; derived status: 0 owed, < amount part-paid.
+  paidAmount         Decimal @db.Decimal(18, 2) @default(0)
   method             PaymentMethod?
   supplierId         String?
   supplier           Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
@@ -2497,8 +2520,10 @@ model Expense {
   createdById        String
   createdBy          User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   createdAt          DateTime        @default(now())
+  payments           ExpensePayment[]
 
   @@index([orgId, paidAt])
+  @@index([orgId, dueAt])
   @@index([orgId, category])
   @@index([orgId, createdAt])
   @@index([supplierId])
@@ -2546,6 +2571,57 @@ model RecurringInvoiceItem {
   lineTotal          Decimal @db.Decimal(18, 2)
 
   @@index([recurringInvoiceId])
+}
+
+// Payables-side mirror of RecurringInvoice: a rent / retainer / subscription
+// template that issues UNPAID Expense rows on schedule, so recurring
+// obligations appear as owed (and age) instead of being retyped monthly.
+model RecurringExpense {
+  id          String          @id @default(cuid())
+  orgId       String
+  org         Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  description String
+  category    ExpenseCategory @default(OTHER)
+  amount      Decimal         @db.Decimal(18, 2)
+  currency    String          @default("UGX")
+  supplierId  String?
+  supplier    Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  frequency   String // WEEKLY | MONTHLY | MONTH_END | QUARTERLY | ANNUAL
+  nextDueAt   DateTime
+  lastIssuedAt DateTime?
+  isActive    Boolean         @default(true)
+  autoIssue   Boolean         @default(true)
+  notes       String?
+  createdById String
+  createdBy   User            @relation("RecurringExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([orgId, isActive, nextDueAt])
+  @@index([supplierId])
+}
+
+// Part-payments against an expense. Same shape as SupplierPayment: each row
+// is one till movement, so an obligation can be cleared over several visits
+// instead of all-or-nothing.
+model ExpensePayment {
+  id           String   @id @default(cuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  expenseId    String
+  expense      Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  currency     String   @default("UGX")
+  amount       Decimal  @db.Decimal(18, 2)
+  method       PaymentMethod @default(CASH)
+  reference    String?
+  paidAt       DateTime @default(now())
+  note         String?
+  createdById  String
+  createdBy    User     @relation("ExpensePaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now())
+
+  @@index([orgId, paidAt])
+  @@index([expenseId])
 }
 
 model DocumentTaxLine {
@@ -2751,6 +2827,8 @@ model Complaint {
   saleId String?
 
   // Complainant info
+  clientId    String?
+  client      Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
   clientName  String
   clientPhone String
   clientEmail String?
@@ -3190,6 +3268,10 @@ model BankAccount {
   currency       String       @default("UGX")
   openingBalance Decimal @db.Decimal(18, 2)        @default(0)
   currentBalance Decimal @db.Decimal(18, 2)        @default(0)
+  // Cash sub-ledger this account tracks (1010 Till, 1020 Mobile, 1030 Bank).
+  // Set by postings: money moving on that channel accrues here automatically.
+  // Null = manually kept, postings leave it alone.
+  ledgerCode     String?
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -3197,6 +3279,7 @@ model BankAccount {
   transactions BankTransaction[]
 
   @@index([orgId])
+  @@index([orgId, ledgerCode])
 }
 
 enum BankTransactionType {

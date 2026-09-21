@@ -24,8 +24,10 @@ export async function consumeRepairPartsForJob(params: {
   const { orgId, jobId, userId } = params;
 
   await prisma.$transaction(async (tx) => {
+    // Org-scoped idempotency: the unscoped check could match another tenant's
+    // row and skip a real consume, or collide with reservation-consume rows.
     const already = await tx.partStockTransaction.findFirst({
-      where: { jobId, reason: { startsWith: "REPAIR_CONSUME" , mode: "insensitive" as const} },
+      where: { orgId, jobId, reason: { startsWith: "REPAIR_CONSUME" , mode: "insensitive" as const} },
       select: { id: true },
     });
     if (already) return;
@@ -51,8 +53,8 @@ export async function consumeRepairPartsForJob(params: {
       });
       if (!part) continue;
 
-      await tx.part.update({
-        where: { id: part.id },
+      await tx.part.updateMany({
+        where: { id: part.id, orgId },
         data: { qtyOnHand: { decrement: item.quantity } },
       });
       await tx.partStockTransaction.create({

@@ -66,7 +66,9 @@ export default async function CreditNotesPage({
   async function markItemsReceivedAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
-    if (!can.viewFinancials(user) && !["ADMIN", "OPS"].includes(user.role)) return;
+    // Restoring stock moves inventory: inventory grant required, not just
+    // financial visibility.
+    if (!can.manageInventory(user)) return;
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "PAYMENT" });
 
     const creditNoteId = String(formData.get("creditNoteId") ?? "").trim();
@@ -80,9 +82,16 @@ export default async function CreditNotesPage({
       // Restore returned stock — the POS "received back" path did this but the
       // Documents path only stamped a timestamp, silently losing inventory (H5).
       const items = await tx.creditNoteItem.findMany({ where: { creditNoteId }, select: { partId: true, quantity: true, description: true, saleUomFactor: true } });
+      // One lookup for all line parts up front instead of a findFirst per
+      // line while the transaction stays open.
+      const partIds = [...new Set(items.map((it) => it.partId).filter((id): id is string => Boolean(id)))];
+      const parts = partIds.length > 0
+        ? await tx.part.findMany({ where: { id: { in: partIds }, orgId, isActive: true }, select: { id: true, sku: true, name: true } })
+        : [];
+      const partById = new Map(parts.map((p) => [p.id, p]));
       for (const it of items) {
         if (!it.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, sku: true, name: true } });
+        const part = partById.get(it.partId);
         if (!part) continue;
         const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: baseQty } } });
@@ -229,6 +238,7 @@ export default async function CreditNotesPage({
         orgId,
         userId: user.id,
         amount: baseRefund,
+        method,
         reference: `refund:${created.id}`,
         description: `Refund from credit note ${cn.creditNoteNumber}`,
       });
@@ -546,10 +556,16 @@ export default async function CreditNotesPage({
 
       // Restock the returned units (mirror markItemsReceivedAction). Only lines
       // that came from stock carry a partId, so labour on a repair invoice
-      // credits money without touching inventory.
+      // credits money without touching inventory. One lookup for all line
+      // parts up front instead of a findFirst per line.
+      const restockPartIds = [...new Set(items.map((it) => it.partId).filter((id): id is string => Boolean(id)))];
+      const restockParts = restockPartIds.length > 0
+        ? await tx.part.findMany({ where: { id: { in: restockPartIds }, orgId, isActive: true }, select: { id: true, name: true } })
+        : [];
+      const restockPartById = new Map(restockParts.map((p) => [p.id, p]));
       for (const it of items) {
         if (!it.partId) continue;
-        const part = await tx.part.findFirst({ where: { id: it.partId, orgId, isActive: true }, select: { id: true, name: true } });
+        const part = restockPartById.get(it.partId);
         if (!part) continue;
         const baseQty = Math.abs(it.quantity) * (it.saleUomFactor ?? 1);
         await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: baseQty } } });
@@ -590,6 +606,7 @@ export default async function CreditNotesPage({
         orgId,
         userId: user.id,
         amount: baseRefund,
+        method,
         reference: `refund:${refund.id}`,
         description: `Refund from credit note ${creditNoteNumber}`,
       });
@@ -662,6 +679,8 @@ export default async function CreditNotesPage({
             { creditNoteNumber: icontains(q) },
             { reason: icontains(q) },
             { sale: { saleNumber: icontains(q) } },
+            // A walk-in sale is found by the name the till typed on it.
+            { sale: { name: icontains(q) } },
             { sale: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } },
             { invoice: { invoiceNumber: icontains(q) } },
             { invoice: { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } } },
@@ -681,7 +700,7 @@ export default async function CreditNotesPage({
     prisma.creditNote.findMany({
       where: creditNotesWhere,
       include: {
-        sale: { select: { saleNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+        sale: { select: { saleNumber: true, name: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
         invoice: {
           select: {
             invoiceNumber: true,
@@ -706,6 +725,7 @@ export default async function CreditNotesPage({
       select: {
         id: true,
         saleNumber: true,
+        name: true,
         totalAmount: true,
         currency: true,
         client: { select: { fullName: true, phone: true, organization: true } },
@@ -800,7 +820,7 @@ export default async function CreditNotesPage({
             Open WhatsApp Link
           </MenuActionLink>
         ) : null}
-        {!cn.itemsReceivedBackAt ? (
+        {!cn.itemsReceivedBackAt && can.manageInventory(user) ? (
           <>
             <MenuSection label="Inventory Return" />
             <form action={markItemsReceivedAction} className="p-3">
@@ -882,6 +902,7 @@ export default async function CreditNotesPage({
                     key: `sale:${sale.id}`,
                     kind: "sale" as const,
                     reference: sale.saleNumber,
+                    name: sale.name,
                     totalAmount: sale.totalAmount,
                     currency: sale.currency,
                     client: sale.client,

@@ -26,6 +26,16 @@ export async function submitPortalRepairRequest(_state: SubmitState, formData: F
   if (!brand) return { error: "Enter the device brand" };
   if (problemDescription.length < 5) return { error: "Describe the problem" };
 
+  // Double-submit guard: an identical request seconds ago (impatient tap on a
+  // slow connection) reuses the open one instead of cloning the queue.
+  const { findRecentDuplicate } = await import("@/lib/dedup");
+  const dup = await findRecentDuplicate(
+    prisma.repairRequest,
+    { orgId: org.id, phone: client.phone, brand, problemDescription },
+    { windowMs: 60_000 },
+  ).catch(() => null);
+  if (dup) redirect("/portal/repairs?submitted=1");
+
   const result = await createRepairRequest({
     orgId: org.id,
     customerName: client.fullName,

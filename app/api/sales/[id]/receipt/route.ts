@@ -29,6 +29,7 @@ export async function GET(
       select: {
         id: true,
         saleNumber: true,
+        name: true,
         status: true,
         currency: true,
         subtotal: true,

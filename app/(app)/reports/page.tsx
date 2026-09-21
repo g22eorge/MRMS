@@ -14,10 +14,11 @@ import { MobileActivityFeed } from "@/components/reports/MobileActivityFeed";
 import { getClientBill, getExternalTechBill, resolveTechCost } from "@/lib/billing";
 import { formatMoneyCompact, toBaseAmount } from "@/lib/currency";
 import { formatEATMonthLabel } from "@/lib/date-eat";
-import { monthLabel, monthRange, monthSequence, yearRange } from "@/lib/date-ranges";
+import { monthLabel, monthRange, yearRange } from "@/lib/date-ranges";
 import { loadBilledTotals, loadCashCollectionsByChannel, loadReceivablesTotal } from "@/lib/finance/reconciliation";
-import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
+import { ACTIVE_JOB_STATUSES, UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
+import { isPostgresEngine } from "@/lib/db/search";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -59,20 +60,15 @@ function yearOptions(startYear: number, endYear: number) {
 }
 
 /**
- * The six statuses that make a job "open", matching the openJobs query below.
+ * Which jobs count as "open" pipeline / aging. Uses the canonical active list
+ * so external-repair and waiting-parts jobs are not silently dropped (the old
+ * six-status copy disagreed with the dashboard's own "open work" figure).
  *
  * Shared with the scorecard's link so the destination shows the same jobs the
  * figure counted. When the two drift the tile becomes a lie that is very hard
  * to notice, because both halves look right on their own.
  */
-const OPEN_JOB_STATUSES = [
-  "RECEIVED",
-  "DIAGNOSING",
-  "REFERRED",
-  "AWAITING_APPROVAL",
-  "IN_REPAIR",
-  "READY_FOR_PICKUP",
-] as const;
+const OPEN_JOB_STATUSES = ACTIVE_JOB_STATUSES;
 
 /**
  * One cell of the executive scorecard.
@@ -241,7 +237,6 @@ export default async function ReportsPage({
   const selectedMonthString =
     period === "year" ? String(selectedYear) : monthLabel(selectedMonth.year, selectedMonth.month);
   const trendNow = new Date();
-  const trendMonths = monthSequence(trendNow.getFullYear(), trendNow.getMonth() + 1, trendNow.getMonth() + 1);
 
   // Rolling window for the all-jobs analyses (avg turnaround, common faults) so
   // they don't scan every completed job the org has ever had — the query grew
@@ -250,41 +245,56 @@ export default async function ReportsPage({
 
   const [
     statusGroup,
-    completedAll,
+    avgTurnaroundHours,
+    faultSample,
     completedSelected,
     completedPrev,
     openJobs,
     externalCount,
     inHouseCount,
-    _externalPayoutOutstandingJobs,
     paidExternalJobs,
     earliestJob,
     latestJob,
-    techPerfJobsRaw,
+    periodJobs,
     approvalDelayJobs,
     salesByPeriod,
-    _invoicesByPeriod,
     salesTargetsForPeriod,
-    staffJobRevenue,
     leadFunnel,
     lowStockParts,
     supplierBillsAgg,
     expensesMtd,
-    _trendJobs,
-    jobsInSelectedPeriod,
   ] = await Promise.all([
     prisma.job.groupBy({ by: ["status"], where: { orgId }, _count: { status: true } }),
+    // Turnaround average is a DB-side AVG over the rolling window (exact at
+    // any volume — the old take:5000 silently dropped jobs past the cap).
+    // Fault keywords come from a small recent text sample below.
+    (async () => {
+      if (isPostgresEngine()) {
+        const rows = await prisma.$queryRaw<Array<{ avgH: number | null }>>`
+          SELECT AVG(EXTRACT(EPOCH FROM ("completedAt" - "receivedAt")) / 3600) AS "avgH"
+          FROM "Job" WHERE "orgId" = ${orgId} AND "status" = 'COMPLETED' AND "completedAt" >= ${rollingStart}`;
+        return Number(rows[0]?.avgH ?? 0) || 0;
+      }
+      const rows = await prisma.$queryRaw<Array<{ avgH: number | null }>>`
+        SELECT AVG((julianday("completedAt") - julianday("receivedAt")) * 24) AS "avgH"
+        FROM "Job" WHERE "orgId" = ${orgId} AND "status" = 'COMPLETED' AND "completedAt" >= ${rollingStart}`;
+      return Number(rows[0]?.avgH ?? 0) || 0;
+    })(),
     prisma.job.findMany({
       where: { orgId, status: "COMPLETED", completedAt: { gte: rollingStart } },
-      select: { completedAt: true, receivedAt: true, diagnosisNotes: true, externalDiagnosis: true },
+      select: { diagnosisNotes: true, externalDiagnosis: true },
       orderBy: { completedAt: "desc" },
-      take: 5000,
+      take: 300,
     }),
     prisma.job.findMany({
       where: { orgId, status: "COMPLETED", completedAt: { gte: selectedRange.start, lte: selectedRange.end } },
+      // One scan serves revenue, margin AND staff-revenue below (same filter
+      // as the old staffJobRevenue query, which this replaces).
+      select: { clientBill: true, externalTechBill: true, createdById: true, createdBy: { select: { id: true, name: true } } },
     }),
     prisma.job.findMany({
       where: { orgId, status: "COMPLETED", completedAt: { gte: prevRange.start, lte: prevRange.end } },
+      select: { clientBill: true },
     }),
     prisma.job.findMany({
       where: {
@@ -310,31 +320,26 @@ export default async function ReportsPage({
       },
     }),
     prisma.job.findMany({
-      where: {
-        orgId,
-        repairPath: "EXTERNAL",
-        status: { in: ["READY_FOR_PICKUP", "COMPLETED", "DELIVERED"] as JobStatus[] },
-      },
-      select: { id: true, externalTechBill: true },
-    }),
-    prisma.job.findMany({
       where: { orgId, externalPaid: true, externalPaidAt: { gte: selectedRange.start, lte: selectedRange.end } },
       select: { externalTechFee: true, externalTechBill: true },
     }),
     prisma.job.findFirst({ where: { orgId }, orderBy: { receivedAt: "asc" }, select: { receivedAt: true } }),
     prisma.job.findFirst({ where: { orgId }, orderBy: { receivedAt: "desc" }, select: { receivedAt: true } }),
+    // One scan of the received-in-window set serves tech performance, device
+    // insights AND the repeat-client rate below (replaces techPerfJobsRaw,
+    // jobsInSelectedPeriod and periodJobClientRows).
     prisma.job.findMany({
       where: {
         orgId,
         receivedAt: { gte: selectedRange.start, lte: selectedRange.end },
-        assignedToId: { not: null },
       },
       select: {
+        deviceType: true,
         status: true,
+        clientBill: true,
         completedAt: true,
         receivedAt: true,
-        clientBill: true,
-        externalTechBill: true,
+        clientId: true,
         assignedTo: { select: { id: true, name: true, role: true } },
       },
     }),
@@ -358,37 +363,7 @@ export default async function ReportsPage({
         select: { totalAmount: true, createdById: true, createdBy: { select: { id: true, name: true } } },
       })
       .catch(() => [] as Array<{ totalAmount: number; createdById: string | null; createdBy: { id: string; name: string } | null }>),
-    prisma.invoice
-      .findMany({
-        where: { orgId, status: "PAID", paidAt: { gte: selectedRange.start, lte: selectedRange.end } },
-        select: {
-          totalAmount: true,
-          job: { select: { createdById: true, createdBy: { select: { id: true, name: true } } } },
-        },
-      })
-      .catch(
-        () =>
-          [] as Array<{
-            totalAmount: number;
-            job: { createdById: string | null; createdBy: { id: string; name: string } | null } | null;
-          }>,
-      ),
     prisma.salesTarget.findMany({ where: { orgId, period: selectedMonthString } }).catch(() => [] as Array<{ userId: string | null; targetRevenue: number; period: string }>),
-    prisma.job
-      .findMany({
-        where: {
-          orgId,
-          status: "COMPLETED",
-          completedAt: { gte: selectedRange.start, lte: selectedRange.end },
-        },
-        select: {
-          clientBill: true,
-          externalTechBill: true,
-          createdById: true,
-          createdBy: { select: { id: true, name: true } },
-        },
-      })
-      .catch(() => [] as Array<{ clientBill: number | null; externalTechBill: number | null; createdById: string | null; createdBy: { id: string; name: string } | null }>),
     prisma.lead
       .groupBy({ by: ["status"], where: { orgId }, _count: { status: true } })
       .catch(() => [] as Array<{ status: string; _count: { status: number } }>),
@@ -407,26 +382,9 @@ export default async function ReportsPage({
     prisma.expense
       .findMany({
         where: { orgId, paidAt: { gte: selectedRange.start, lte: selectedRange.end } },
-        select: { amount: true },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
       })
-      .catch(() => [] as Array<{ amount: number }>),
-    prisma.job.findMany({
-      where: { orgId, receivedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end } },
-      select: { deviceType: true, receivedAt: true },
-    }),
-    prisma.job.findMany({
-      where: { orgId, receivedAt: { gte: selectedRange.start, lte: selectedRange.end } },
-      select: {
-        deviceType: true,
-        status: true,
-        receivedAt: true,
-        completedAt: true,
-        repairPath: true,
-        assignedTo: { select: { name: true } },
-        clientBill: true,
-        externalTechBill: true,
-      },
-    }),
+      .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>),
   ]);
 
   const payments = await prisma.payment
@@ -444,7 +402,7 @@ export default async function ReportsPage({
     .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>);
 
   const [collectionsByChannel, billedByChannel] = await Promise.all([
-    loadCashCollectionsByChannel({ orgId, baseCurrency: org.baseCurrency, range: selectedRange }).catch(() => ({ repairs: 0, products: 0, corporate: 0, unallocated: 0, total: 0 })),
+    loadCashCollectionsByChannel({ orgId, baseCurrency: org.baseCurrency, range: selectedRange }).catch(() => ({ repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 })),
     loadBilledTotals({ orgId, range: selectedRange }).catch(() => ({ repairs: 0, products: 0, corporate: 0, total: 0 })),
   ]);
 
@@ -467,24 +425,21 @@ export default async function ReportsPage({
     ytdRefundsRaw,
     ytdExternalPaidJobs,
     sparklinePaymentsRaw,
-    periodJobClientRows,
   ] = await Promise.all([
     loadCashCollectionsByChannel({ orgId, baseCurrency: org.baseCurrency, range: { start: ytdStart } })
-      .catch(() => ({ repairs: 0, products: 0, corporate: 0, unallocated: 0, total: 0 })),
-    prisma.expense.findMany({ where: { orgId, paidAt: { gte: ytdStart } }, select: { amount: true } })
-      .catch(() => [] as Array<{ amount: number }>),
+      .catch(() => ({ repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0, total: 0 })),
+    prisma.expense.findMany({ where: { orgId, paidAt: { gte: ytdStart } }, select: { amount: true, currency: true, exchangeRateToBase: true } })
+      .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>),
     prisma.refund.findMany({ where: { orgId, refundedAt: { gte: ytdStart } }, select: { amount: true, currency: true, exchangeRateToBase: true } })
       .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null }>),
     prisma.job.findMany({ where: { orgId, externalPaid: true, externalPaidAt: { gte: ytdStart } }, select: { externalTechFee: true, externalTechBill: true } })
       .catch(() => [] as Array<{ externalTechFee: number | null; externalTechBill: number | null }>),
     prisma.payment.findMany({ where: { orgId, ...INCOMING_PAYMENT, receivedAt: { gte: sparklineStart } }, select: { amount: true, currency: true, exchangeRateToBase: true, receivedAt: true } })
       .catch(() => [] as Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null; receivedAt: Date | null }>),
-    prisma.job.findMany({ where: { orgId, receivedAt: { gte: selectedRange.start, lte: selectedRange.end }, clientId: { not: undefined } }, select: { clientId: true } })
-      .catch(() => [] as Array<{ clientId: string | null }>),
   ]);
 
   // Repeat client rate — needs unique client IDs from period first (sequential)
-  const uniquePeriodClientIds = [...new Set(periodJobClientRows.map((j) => j.clientId).filter(Boolean))] as string[];
+  const uniquePeriodClientIds = [...new Set(periodJobs.map((j) => j.clientId).filter(Boolean))] as string[];
   const returningClientRows = uniquePeriodClientIds.length > 0
     ? await prisma.job.groupBy({
         by: ["clientId"],
@@ -500,14 +455,11 @@ export default async function ReportsPage({
   const maxYear = Math.max(currentYear, latestJob?.receivedAt?.getFullYear() ?? currentYear);
   const selectableMonths = period === "year" ? yearOptions(minYear, maxYear) : monthOptions(18);
 
-  const revenueFor = (jobs: typeof completedSelected) =>
+  const revenueFor = (jobs: Array<{ clientBill: number | null }>) =>
     jobs.filter((j) => getClientBill(j) !== null).reduce((s, j) => s + (getClientBill(j) ?? 0), 0);
   const revenueSelected = revenueFor(completedSelected);
   const revenuePrev = revenueFor(completedPrev);
   const revenueDelta = revenueSelected - revenuePrev;
-  const marginSelected = completedSelected
-    .filter((j) => getClientBill(j) !== null)
-    .reduce((s, j) => s + ((getClientBill(j) ?? 0) - (getExternalTechBill(j) ?? 0)), 0);
 
   const cashIn = payments.reduce(
     (s, p) =>
@@ -546,12 +498,7 @@ export default async function ReportsPage({
     value: statusCount.get(status) ?? 0,
   }));
 
-  const avgTurnaround = (() => {
-    const vals = completedAll
-      .filter((j) => j.completedAt)
-      .map((j) => (j.completedAt!.getTime() - j.receivedAt.getTime()) / 36e5);
-    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-  })();
+  const avgTurnaround = avgTurnaroundHours;
 
   const nowTs = new Date();
   const agingJobs = openJobs
@@ -587,7 +534,7 @@ export default async function ReportsPage({
       revenue: number;
     }
   >();
-  for (const job of techPerfJobsRaw) {
+  for (const job of periodJobs) {
     if (!job.assignedTo) continue;
     const e = techPerfMap.get(job.assignedTo.id) ?? {
       name: job.assignedTo.name,
@@ -619,12 +566,11 @@ export default async function ReportsPage({
     .sort((a, b) => b.total - a.total);
 
   // Revenue channels
-  const repairCollectionsTotal = collectionsByChannel.repairs;
   const posSalesTotal = collectionsByChannel.products;
-  const invoicesPaidTotal = collectionsByChannel.corporate + collectionsByChannel.unallocated;
+  const invoicesPaidTotal = collectionsByChannel.corporate + collectionsByChannel.merchandise + collectionsByChannel.service + collectionsByChannel.unallocated;
   const totalAllChannels = collectionsByChannel.total;
   const totalBilledAllChannels = billedByChannel.total;
-  const expensesTotal = expensesMtd.reduce((s, e) => s + e.amount, 0);
+  const expensesTotal = expensesMtd.reduce((s, e) => s + toBaseAmount({ amount: e.amount, currency: e.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: e.exchangeRateToBase }), 0);
 
   // Inventory cost of goods sold for product sales paid in each window (report
   // layer only — the ledger recognises inventory cost via supplier payments).
@@ -640,7 +586,7 @@ export default async function ReportsPage({
 
   // YTD P&L
   const ytdRevenue = ytdCollections.total;
-  const ytdExpensesTotal = ytdExpensesRaw.reduce((s, e) => s + e.amount, 0);
+  const ytdExpensesTotal = ytdExpensesRaw.reduce((s, e) => s + toBaseAmount({ amount: e.amount, currency: e.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: e.exchangeRateToBase }), 0);
   const ytdCashOutExternal = ytdExternalPaidJobs.reduce((s, j) => s + resolveTechCost(j.externalTechFee, j.externalTechBill), 0);
   const ytdCashOutRefunds = ytdRefundsRaw.reduce((s, r) => s + toBaseAmount({ amount: r.amount, currency: r.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: r.exchangeRateToBase }), 0);
   const ytdGrossProfit = ytdRevenue - ytdCashOutExternal - ytdCogsTotal;
@@ -682,7 +628,7 @@ export default async function ReportsPage({
     string,
     { name: string; repairRev: number; posRev: number; invoiceRev: number; total: number; target: number }
   >();
-  for (const j of staffJobRevenue) {
+  for (const j of completedSelected) {
     if (!j.createdById || !j.createdBy) continue;
     const e = staffRevenueMap.get(j.createdById) ?? {
       name: j.createdBy.name,
@@ -726,7 +672,7 @@ export default async function ReportsPage({
 
   // Device insights
   const deviceMap = new Map<string, { total: number; completed: number; revenue: number }>();
-  for (const job of jobsInSelectedPeriod) {
+  for (const job of periodJobs) {
     const d = deviceLabel[job.deviceType] ?? job.deviceType;
     const e = deviceMap.get(d) ?? { total: 0, completed: 0, revenue: 0 };
     e.total += 1;
@@ -762,7 +708,7 @@ export default async function ReportsPage({
     "works", "opens", "close", "power", "press", "click", "touch", "boots",
   ]);
   const commonFaults = (() => {
-    const source = completedAll
+    const source = faultSample
       .map((j) => `${j.diagnosisNotes ?? ""} ${j.externalDiagnosis ?? ""}`)
       .join(" ")
       .toLowerCase();
@@ -1277,11 +1223,11 @@ export default async function ReportsPage({
           <section className="dc-card overflow-hidden">
             <div className="border-b border-[var(--line)] px-4 py-3">
               <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Balance Position</p>
-              <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">What clients owe you vs what you owe suppliers</p>
+              <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Client receivables vs supplier and expense payables</p>
             </div>
             <div className="grid grid-cols-2 divide-x divide-[var(--line)]">
               <div className="px-4 py-4">
-                <p className="text-[0.75rem] font-bold uppercase tracking-wide text-emerald-600">Receivables — Owed to You</p>
+                <p className="text-[0.75rem] font-bold uppercase tracking-wide text-emerald-600">Accounts Receivable</p>
                 <p className="mt-1 text-2xl font-black tabular-nums text-[var(--ink)]">{formatMoneyCompact(receivables.total, currency)}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">{receivables.invoiceCount + receivables.saleCount} open invoices &amp; sales</p>
                 {receivables.total > 0 && (
@@ -1291,7 +1237,7 @@ export default async function ReportsPage({
                 )}
               </div>
               <div className="px-4 py-4">
-                <p className="text-[0.75rem] font-bold uppercase tracking-wide text-amber-600">Payables — You Owe</p>
+                <p className="text-[0.75rem] font-bold uppercase tracking-wide text-amber-600">Accounts Payable</p>
                 <p className={`mt-1 text-2xl font-black tabular-nums ${payablesOutstanding > 0 ? "text-amber-500" : "text-[var(--ink)]"}`}>{formatMoneyCompact(payablesOutstanding, currency)}</p>
                 <p className="mt-1 text-xs text-[var(--ink-muted)]">outstanding supplier bills</p>
                 {payablesOutstanding > 0 && (

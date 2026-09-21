@@ -1,3 +1,8 @@
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time. Aligns with the force-dynamic convention used
+// across the app.
+export const dynamic = "force-dynamic";
+
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -16,6 +21,7 @@ import { PosAddItemFields } from "@/components/pos/PosAddItemFields";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { FormField, FormRow, FormSelect, FormTextarea } from "@/components/ui/form-field";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { DocumentShareMenuSection } from "@/components/documents/DocumentShareMenuSection";
@@ -29,7 +35,8 @@ import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { computeLinesVat } from "@/lib/commercial/vat";
-import { clientDisplayName } from "@/lib/client-name";
+import { saleCustomerName } from "@/lib/client-name";
+import { sanitizeOptionalText } from "@/lib/sanitize";
 
 import { flash } from "@/lib/flash";
 import { isMissingTableError } from "@/lib/db-errors";
@@ -52,7 +59,7 @@ async function recalcSaleTotals(
 ) {
   const items = await tx.saleItem.findMany({ where: { saleId }, select: { partId: true, lineTotal: true } });
   const subtotal = items.reduce((sum, it) => sum + (it.lineTotal ?? 0), 0);
-  const current = await tx.sale.findUnique({ where: { id: saleId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
+  const current = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
   const currency = normalizeCurrency(current?.currency, "UGX");
   // VAT config: read the three fields we need on the SAME transaction connection
   // with a minimal SELECT. Do NOT use getDocumentBrandingSettings() here — it runs
@@ -107,8 +114,8 @@ async function recalcSaleTotals(
   const vatAmount = roundMoney(raw.vatAmount, currency);
   const totalAmount = roundMoney(raw.totalAmount, currency);
 
-  await tx.sale.update({
-    where: { id: saleId },
+  await tx.sale.updateMany({
+    where: { id: saleId, orgId },
     data: {
       subtotal,
       discountAmount,
@@ -125,6 +132,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     redirect("/dashboard");
   }
+  const canDiscount = can.applyPosDiscount(user);
+  const canRefund = can.processRefunds(user);
+  const canToggleVat = can.overrideDiscount(user);
 
   const { id } = await params;
   const errorMessage = (await searchParams)?.error?.trim() || null;
@@ -133,6 +143,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   let sale: {
     id: string;
     saleNumber: string;
+    name: string | null;
     status: string;
     billingMode: "CASH" | "INVOICE";
     invoiceNumber: string | null;
@@ -178,14 +189,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     creditNoteId: string | null;
   }> = [];
 
-  const deliveryNotes: never[] = [];
-
   try {
     sale = await prisma.sale.findFirst({
       where: { id, orgId },
       select: {
         id: true,
         saleNumber: true,
+        name: true,
         status: true,
         billingMode: true,
         invoiceNumber: true,
@@ -282,19 +292,26 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
     const saleId = String(formData.get("saleId") ?? "").trim();
     const branchId = String(formData.get("branchId") ?? "").trim() || null;
-    const notes = String(formData.get("notes") ?? "").trim();
+    // Bounded + whitespace-collapsed, like every other free-text write in the app.
+    const name = sanitizeOptionalText(String(formData.get("name") ?? ""))?.slice(0, 80) ?? null;
+    const notes = sanitizeOptionalText(String(formData.get("notes") ?? ""))?.slice(0, 500) ?? null;
     if (!saleId) return;
+
+    // A voided sale is a historical record: its details and its receipt are frozen.
+    const target = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
+    if (!target) return;
+    if (target.status === "VOID") posReject(saleId, "This sale is void, so its details can no longer be edited.");
 
     if (branchId) {
       const branch = await prisma.branch.findFirst({ where: { id: branchId, orgId, isActive: true }, select: { id: true } });
-      if (!branch) return;
+      if (!branch) posReject(saleId, "That branch is not available in this workspace.");
     }
 
     await prisma.sale.updateMany({
       where: { id: saleId, orgId },
-      data: { branchId, notes: notes || null },
+      data: { name, branchId, notes },
     });
-    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: saleId, action: "POS_SALE_UPDATED", summary: "POS sale metadata updated" });
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: saleId, action: "POS_SALE_UPDATED", summary: `POS sale details updated${name ? ` (name: ${name})` : ""}` });
 
     revalidatePath(`/pos/${saleId}`);
     revalidatePath("/pos");
@@ -362,9 +379,12 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       }
 
       for (const [partId, restored] of restoreByPart) {
-        await tx.part.update({
-          where: { id: partId },
-          data: { qtyOnHand: partById.get(partId)!.qtyOnHand + restored },
+        // Atomic increment, org-scoped: the read-modify-write above lost
+        // concurrent updates (two deletes/returns interleaved) and the bare
+        // id write crossed tenants.
+        await tx.part.updateMany({
+          where: { id: partId, orgId },
+          data: { qtyOnHand: { increment: restored } },
         });
       }
       await tx.sale.deleteMany({ where: { id: sale.id, orgId } });
@@ -403,7 +423,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       if (item.partId) {
         const priced = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { name: true, sellingPrice: true } });
         if (priced?.sellingPrice != null && unitPrice < priced.sellingPrice) {
-          const cur = await tx.sale.findFirst({ where: { id: saleId }, select: { currency: true } });
+          const cur = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { currency: true } });
           posReject(saleId, `${priced.name} cannot be sold below its minimum of ${formatMoney(priced.sellingPrice, normalizeCurrency(cur?.currency, org.baseCurrency))}.`);
         }
       }
@@ -412,12 +432,21 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       if (item.partId && delta !== 0) {
         const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
         if (!part) return;
-        // Move stock by the line's snapshot factor so it stays consistent with
-        // the original decrement even if the product's factor changed since.
+        // Guarded atomic move: only applies when enough stock is really
+        // there, so concurrent edits cannot oversell.
         const baseDelta = delta * (item.saleUomFactor ?? 1);
-        const nextQty = part.qtyOnHand - baseDelta;
-        if (nextQty < 0) posReject(saleId, "Not enough stock for that quantity.");
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: nextQty } });
+        if (baseDelta > 0) {
+          const moved = await tx.part.updateMany({
+            where: { id: part.id, orgId, qtyOnHand: { gte: baseDelta } },
+            data: { qtyOnHand: { decrement: baseDelta } },
+          });
+          if (!moved.count) posReject(saleId, "Not enough stock for that quantity.");
+        } else {
+          await tx.part.updateMany({
+            where: { id: part.id, orgId },
+            data: { qtyOnHand: { increment: -baseDelta } },
+          });
+        }
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
@@ -460,7 +489,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         const part = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { id: true, qtyOnHand: true } });
         if (part) {
           const baseQty = Math.abs(item.quantity) * (item.saleUomFactor ?? 1);
-          await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand + baseQty } });
+          await tx.part.updateMany({ where: { id: part.id, orgId }, data: { qtyOnHand: { increment: baseQty } } });
           await tx.partStockTransaction.create({
             data: {
               partId: part.id,
@@ -502,6 +531,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     if (!saleId) return;
     if (!partId && !description) posReject(saleId, "Choose a product or enter an item description.");
     if (!Number.isFinite(qty) || qty <= 0) posReject(saleId, "Enter a valid quantity.");
+    // SaleItem.quantity is an Int — reject fractions cleanly instead of a
+    // Prisma validation 500 after stock already moved.
+    if (!Number.isInteger(qty)) posReject(saleId, "Quantity must be a whole number.");
     if (priceProvided && (!Number.isFinite(unitPrice) || unitPrice < 0)) posReject(saleId, "Enter a valid unit price.");
     if (!priceProvided && !partId) posReject(saleId, "Enter a unit price for a custom item.");
 
@@ -524,7 +556,12 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         saleFactor = part.saleUomFactor && part.saleUomFactor > 0 ? part.saleUomFactor : 1;
         costAtSale = part.unitCost ?? null;
         const baseQty = Math.abs(qty) * saleFactor;
-        if (part.qtyOnHand - baseQty < 0) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
+        // Atomic guarded decrement: concurrent tills cannot both pass and oversell.
+        const moved = await tx.part.updateMany({
+          where: { id: part.id, orgId, qtyOnHand: { gte: baseQty } },
+          data: { qtyOnHand: { decrement: baseQty } },
+        });
+        if (!moved.count) posReject(saleId, `Not enough stock — only ${part.qtyOnHand} of ${part.name} on hand.`);
 
         resolvedPartId = part.id;
         resolvedDescription = part.name;
@@ -537,7 +574,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           posReject(saleId, `${part.name} cannot be sold below its minimum of ${formatMoney(part.sellingPrice, lineCurrency)}.`);
         }
 
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: part.qtyOnHand - baseQty } });
         await tx.partStockTransaction.create({
           data: {
             partId: part.id,
@@ -563,8 +599,10 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   // Flip VAT on/off for this specific sale (overrides the org default per-sale).
   async function toggleSaleVatAction(formData: FormData) {
     "use server";
-    const { user, orgId } = await requireOrgSession();
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+    const { user, orgId, org } = await requireOrgSession();
+    // Switching VAT off undercharges and under-reports tax: same bar as till
+    // price overrides, not every cashier.
+    if (!can.overrideDiscount(user)) redirect("/dashboard");
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     const saleId = String(formData.get("saleId") ?? "").trim();
@@ -614,12 +652,31 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     // Receipt + C5 ledger post run inside the txn; ensure their schema exists first.
 
     await prisma.$transaction(async (tx) => {
+      // Re-read inside the txn: status, items and paid total must be true at
+      // write time, not page-load time.
+      const liveSale = await tx.sale.findFirst({
+        where: { id: saleId, orgId },
+        select: { id: true, status: true, totalAmount: true, paidAmount: true },
+      });
+      if (!liveSale || liveSale.status === "VOID") posReject(saleId, "This sale is void — no payment can be recorded.");
+      const lineCount = await tx.saleItem.count({ where: { saleId } });
+      if (lineCount === 0 || !(liveSale.totalAmount > 0)) {
+        posReject(saleId, "Add items to the sale before taking payment.");
+      }
+      const balanceDue = Math.max(0, liveSale.totalAmount - liveSale.paidAmount);
+      const roundedAmount = roundMoney(amount, saleCurrency);
+      if (roundedAmount <= 0) posReject(saleId, "Enter a valid payment amount.");
+      // No change handling exists at the till: refuse anything over the
+      // balance, like the receipts flow does.
+      if (roundedAmount > balanceDue) {
+        posReject(saleId, `That is more than the ${formatMoney(balanceDue, saleCurrency)} balance due.`);
+      }
       // Double-submit guard: an identical till payment landed seconds ago — reuse
       // it instead of recording the same money twice.
       const dupPayment = await findRecentDuplicate(tx.payment, {
         orgId,
         saleId,
-        amount,
+        amount: roundedAmount,
         method: safeMethod,
         kind: "PAYMENT",
       });
@@ -631,7 +688,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
           invoiceId: null,
           currency: saleCurrency,
           exchangeRateToBase: null,
-          amount,
+          amount: roundedAmount,
           method: safeMethod,
           reference: reference || null,
           createdById: session.user.id,
@@ -647,9 +704,10 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         paymentId: payment.id,
         saleId,
         clientId: existingSale.clientId,
-        amount,
+        amount: roundedAmount,
         currency: saleCurrency,
         issuedById: session.user.id,
+        method: safeMethod,
       });
 
       await syncSalePaymentState(tx, { orgId, saleId });
@@ -662,7 +720,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   async function createCreditNoteAction(formData: FormData) {
     "use server";
     const { user, orgId, org, session } = await requireOrgSession();
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
+    // Issuing a credit note writes off till value: refunds grant only, not
+    // every role that can view financials.
+    if (!can.processRefunds(user)) redirect("/dashboard");
     // Expired workspaces are read-only except for payment entry.
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
@@ -691,7 +751,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       if (!raw) continue;
       const qty = Math.max(0, Math.floor(Number(raw)));
       if (!Number.isFinite(qty) || qty <= 0) continue;
-      if (qty > it.quantity) continue;
+      // A typed over-quantity used to be silently dropped, hiding mistakes.
+      // Say so instead.
+      if (qty > it.quantity) posReject(saleId, `Return quantity for "${it.description}" exceeds the ${it.quantity} sold.`);
       picked.push({
         saleItemId: it.id,
         description: it.description,
@@ -720,6 +782,16 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       // Double-submit guard: an identical credit note for this sale landed seconds ago.
       const dupCn = await findRecentDuplicate(tx.creditNote, { orgId, saleId, totalAmount });
       if (dupCn) return { id: dupCn.id, creditNoteNumber: dupCn.creditNoteNumber, deduped: true };
+
+      // Re-check the cumulative cap inside the txn: concurrent returns could
+      // otherwise both pass and over-credit.
+      const priorInTx = await tx.creditNote.aggregate({
+        where: { orgId, saleId },
+        _sum: { totalAmount: true },
+      });
+      if ((priorInTx._sum.totalAmount ?? 0) + totalAmount > existingSale.totalAmount) {
+        posReject(saleId, "This return exceeds the value of the sale.");
+      }
 
       const creditNoteNumber = await nextDocumentNumber(tx, "CN", "creditNote", orgId);
 
@@ -823,14 +895,14 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       }
 
       for (const [partId, returned] of returnByPart) {
-        await tx.part.update({
-          where: { id: partId },
-          data: { qtyOnHand: returnedById.get(partId)!.qtyOnHand + returned },
+        await tx.part.updateMany({
+          where: { id: partId, orgId },
+          data: { qtyOnHand: { increment: returned } },
         });
       }
 
-      await tx.creditNote.update({
-        where: { id: creditNoteId },
+      await tx.creditNote.updateMany({
+        where: { id: creditNoteId, orgId },
         data: {
           itemsReceivedBackAt: new Date(),
           itemsReceivedBackById: session.user.id,
@@ -854,7 +926,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   async function createRefundAction(formData: FormData) {
     "use server";
     const { user, orgId, org, session } = await requireOrgSession();
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
+    // Paying cash out of the till: refunds grant only.
+    if (!can.processRefunds(user)) redirect("/dashboard");
     // Expired workspaces are read-only except for payment entry.
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
@@ -933,6 +1006,29 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     // Refund write + C5 ledger post + sale paid-state recompute must be atomic;
     // ensure the ledger/FX schema exists before opening the txn.
     const refund = await prisma.$transaction(async (tx) => {
+      // Ceiling and dedupe rechecked inside the txn, against the rows written
+      // beside — the outside reads race.
+      const dupInTx = await findRecentDuplicate(tx.refund, {
+        orgId,
+        saleId,
+        creditNoteId: creditNote.id,
+        amount,
+        method: safeMethod,
+      });
+      if (dupInTx) return { id: dupInTx.id, deduped: true };
+      const priorRefunds = await tx.refund.findMany({
+        where: { orgId, creditNoteId: creditNote.id },
+        select: { amount: true, currency: true, exchangeRateToBase: true },
+      });
+      const priorBase = priorRefunds.reduce(
+        (sum, r) => sum + toBaseAmount({ amount: r.amount, currency: r.currency, baseCurrency: org.baseCurrency, exchangeRateToBase: r.exchangeRateToBase }),
+        0,
+      );
+      const noteBase = toBaseAmount({ amount: creditNote.totalAmount, currency: cnCurrency, baseCurrency: org.baseCurrency, exchangeRateToBase: null });
+      const amountBase = toBaseAmount({ amount, currency, baseCurrency: org.baseCurrency, exchangeRateToBase });
+      if (amountBase > Math.max(0, noteBase - priorBase)) {
+        posReject(saleId, "Refund exceeds the remaining refundable amount on this credit note.");
+      }
       const created = await tx.refund.create({
         data: {
           orgId,
@@ -962,20 +1058,23 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         orgId,
         userId: session.user.id,
         amount: baseRefund,
+        method,
         reference: `refund:${created.id}`,
         description: `Refund on sale ${saleId} (credit note ${creditNote.id})`,
       });
-      return created;
+      return { ...created, deduped: false };
     });
 
-    await writeSystemAuditEvent({
-      orgId,
-      actorUserId: user.id,
-      entityType: "Refund",
-      entityId: refund.id,
-      action: "REFUND_CREATED",
-      summary: `Refund ${formatMoney(amount, currency)} for sale ${saleId} against credit note ${creditNoteId}`,
-    });
+    if (!("deduped" in refund && refund.deduped)) {
+      await writeSystemAuditEvent({
+        orgId,
+        actorUserId: user.id,
+        entityType: "Refund",
+        entityId: refund.id,
+        action: "REFUND_CREATED",
+        summary: `Refund ${formatMoney(amount, currency)} for sale ${saleId} against credit note ${creditNoteId}`,
+      });
+    }
 
     revalidatePath(`/pos/${saleId}`);
     revalidatePath("/reports");
@@ -986,6 +1085,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   const canDeleteSale = user.role === "ADMIN" && sale.status === "OPEN" && !sale.invoicedAt && sale._count.payments === 0 && sale._count.creditNotes === 0 && sale._count.refunds === 0;
 
   const isOpen = sale.status === "OPEN";
+  // Details stay editable until the sale is voided — after that it is history.
+  const canEditDetails = sale.status !== "VOID";
   const refundedTotal = refunds.reduce((sum, r) => sum + r.amount, 0);
 
   // Share the sale receipt PDF with the customer through the outbox (WhatsApp/email).
@@ -1068,21 +1169,68 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
-          {/* -- Sale settings -- */}
+          {/* -- Sale details — the sale's own settings: what it is called, which
+              branch it belongs to, and the internal note. -- */}
           <section className="dc-card overflow-hidden">
-            <form action={updateSaleAction} className="grid gap-2 p-3 md:grid-cols-[200px_minmax(0,1fr)_auto]">
-              <input type="hidden" name="saleId" value={sale.id} />
-              <select name="branchId" defaultValue={sale.branchId ?? ""} aria-label="Branch" className={field}>
-                <option value="">No branch</option>
-                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-              <input name="notes" defaultValue={sale.notes ?? ""} placeholder="Sale note" className={field} />
-              <SubmitButton variant="secondary" size="sm" pendingLabel="Saving…">Save</SubmitButton>
-            </form>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
+              <p className={cardLabel}>Sale details</p>
+              <p className="text-[0.75rem] text-[var(--ink-muted)]">
+                {canEditDetails ? "Names the customer when no client is linked" : "Voided sales are read-only"}
+              </p>
+            </div>
+
+            {canEditDetails ? (
+              <form action={updateSaleAction} className="space-y-3 p-4">
+                <input type="hidden" name="saleId" value={sale.id} />
+                <FormRow>
+                  <FormField
+                    label="Sale name"
+                    name="name"
+                    defaultValue={sale.name ?? ""}
+                    placeholder="Optional"
+                    maxLength={80}
+                    hint="Shown as the customer when no client is linked"
+                  />
+                  <FormSelect label="Branch" name="branchId" defaultValue={sale.branchId ?? ""}>
+                    <option value="">No branch</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </FormSelect>
+                </FormRow>
+                <FormTextarea
+                  label="Internal note"
+                  name="notes"
+                  defaultValue={sale.notes ?? ""}
+                  placeholder="Optional — not printed on the receipt"
+                  rows={2}
+                  maxLength={500}
+                />
+                <div className="flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
+                  <span className="text-[0.75rem] text-[var(--ink-muted)]">Saved with the sale, and written to the audit log.</span>
+                  <SubmitButton size="sm" pendingLabel="Saving…">Save details</SubmitButton>
+                </div>
+              </form>
+            ) : (
+              <dl className="divide-y divide-[var(--line)]">
+                {([
+                  ["Sale name", sale.name ?? null],
+                  ["Branch", sale.branch?.name ?? "No branch"],
+                  ["Internal note", sale.notes ?? null],
+                ] as const).map(([label, value]) => (
+                  <div key={label} className="flex items-start justify-between gap-3 px-5 py-2.5">
+                    <dt className="text-[0.75rem] text-[var(--ink-muted)]">{label}</dt>
+                    <dd className="max-w-[70%] text-right text-[0.8125rem] font-semibold text-[var(--ink)] [overflow-wrap:anywhere]">
+                      {value || <span className="text-[var(--ink-muted)]/40">—</span>}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </section>
 
-      {/* -- Items -- */}
-      <section className="dc-card overflow-hidden">
+          {/* -- Items -- */}
+          <section className="dc-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
           <p className={cardLabel}>Items</p>
           <p className="text-[0.75rem] text-[var(--ink-muted)]">
@@ -1177,11 +1325,15 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                 VAT {formatMoney(sale.vatAmount, saleCurrency)} &middot; Total {formatMoney(sale.totalAmount, saleCurrency)}
               </span>
             </summary>
+            {canDiscount ? (
             <form
               action={async (formData: FormData) => {
                 "use server";
-                const { user, orgId } = await requireOrgSession();
-                if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+                const { user, orgId, org } = await requireOrgSession();
+                // Till discounts move real money: canonical discount grant
+                // only (grantable per-user via extra permissions).
+                if (!can.applyPosDiscount(user)) redirect("/dashboard");
+                assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
                 const saleId = String(formData.get("saleId") ?? "").trim();
                 const raw = String(formData.get("discountAmount") ?? "").trim();
                 if (!saleId) return;
@@ -1195,7 +1347,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                   const itemsAgg = await tx.saleItem.aggregate({ where: { saleId }, _sum: { lineTotal: true } });
                   const subtotal = itemsAgg._sum.lineTotal ?? 0;
                   const capped = Math.max(0, Math.min(discountAmount, subtotal));
-                  await tx.sale.update({ where: { id: saleId }, data: { discountAmount: capped } });
+                  await tx.sale.updateMany({ where: { id: saleId, orgId }, data: { discountAmount: capped } });
                   await recalcSaleTotals(tx, saleId, orgId);
                 });
 
@@ -1215,6 +1367,8 @@ export default async function SalePage({ params, searchParams }: { params: Promi
               />
               <SubmitButton variant="secondary" size="sm" pendingLabel="Applying…">Apply</SubmitButton>
             </form>
+            ) : null}
+            {canToggleVat ? (
             <form
               action={toggleSaleVatAction}
               className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-3 py-2.5"
@@ -1229,6 +1383,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
                 {sale.taxApplicable ? "Charged on this sale" : "Not charged on this sale"}
               </span>
             </form>
+            ) : null}
           </details>
         ) : null}
       </section>
@@ -1275,7 +1430,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       </section>
 
       {/* -- Return / Refund: only surfaced once the sale is paid -- */}
-      {["PAID", "PARTIALLY_RETURNED"].includes(sale.status) ? (
+      {canRefund && ["PAID", "PARTIALLY_RETURNED"].includes(sale.status) ? (
       <details
         open={creditNotes.length > 0 || refunds.length > 0}
         className="dc-card overflow-hidden"
@@ -1458,12 +1613,19 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             { label: "Balance", value: balance > 0 ? formatMoney(balance, saleCurrency) : "Cleared" },
             ...(refundedTotal > 0 ? [{ label: "Refunded", value: formatMoney(refundedTotal, saleCurrency) }] : []),
             { label: "Items", value: sale.items.length },
+            // The customer card above already shows this for a walk-in.
+            ...(sale.client && sale.name ? [{ label: "Sale name", value: sale.name }] : []),
             { label: "Branch", value: sale.branch?.name ?? "No branch" },
+            ...(sale.notes ? [{ label: "Note", value: sale.notes }] : []),
             { label: "Created", value: formatEATDateTime(sale.createdAt) },
             ...(sale.paidAt ? [{ label: "Paid at", value: formatEATDateTime(sale.paidAt) }] : []),
             ...(sale.invoiceNumber ? [{ label: "Invoice", value: sale.invoiceNumber }] : []),
           ] as SummaryRow[]}
-          party={{ title: "Customer", name: clientDisplayName(sale.client, "Walk-in") }}
+          party={{
+            title: "Customer",
+            name: saleCustomerName(sale),
+            lines: sale.client ? [sale.client.phone, sale.client.email] : undefined,
+          }}
         />
       </div>
     </div>

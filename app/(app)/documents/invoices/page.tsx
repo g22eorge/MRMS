@@ -309,7 +309,7 @@ export default async function InvoicesPage({
       for (const item of items) {
         if (!item.partId) continue;
         const baseQty = item.quantity * (taxByPart.get(item.partId)?.saleUomFactor ?? 1);
-        await tx.part.update({ where: { id: item.partId }, data: { qtyOnHand: { decrement: baseQty } } });
+        await tx.part.updateMany({ where: { id: item.partId, orgId }, data: { qtyOnHand: { decrement: baseQty } } });
         await tx.partStockTransaction.create({
           data: {
             partId: item.partId,

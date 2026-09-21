@@ -12,7 +12,8 @@ import {
   COMPLAINT_STATUSES,
   SLA_HOURS,
 } from "@/lib/complaints";
-import { RowActionsMenu, MenuSection } from "@/components/shared/RowActionsMenu";
+import { RowActionsMenu, MenuActionLink } from "@/components/shared/RowActionsMenu";
+import { EditDialog } from "@/components/ui/EditDialog";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import {PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
@@ -47,6 +48,7 @@ export default async function ComplaintsPage({
   const params = await searchParams;
   const page = parsePage(params.page);
   const pageSize = parsePageSize(params.size);
+  const editId = typeof params.edit === "string" ? params.edit.trim() : "";
   const filterStatus = STATUSES.includes(params.status as ComplaintStatus)
     ? (params.status as ComplaintStatus)
     : null;
@@ -78,6 +80,8 @@ export default async function ComplaintsPage({
       },
     });
     revalidatePath("/complaints");
+    // Close the edit dialog: a plain revalidate would leave ?edit= set.
+    redirect("/complaints");
   }
 
   const qSearch = params.q?.trim() ?? "";
@@ -134,6 +138,14 @@ export default async function ComplaintsPage({
   const byStatus = Object.fromEntries(counts.map((c) => [c.status, c._count?.status ?? 0]));
   const now = new Date();
 
+  // Update-dialog target: loaded only when ?edit= is set.
+  const editComplaint = editId
+    ? await prisma.complaint.findFirst({
+        where: { id: editId, orgId },
+        select: { id: true, complaintNumber: true, status: true, resolution: true, internalNotes: true },
+      }).catch(() => null)
+    : null;
+
   function slaStatus(complaint: (typeof complaints)[0]) {
     const ageHours = (now.getTime() - new Date(complaint.createdAt).getTime()) / 3600000;
     if (!complaint.acknowledgedAt && ageHours > SLA_HOURS.acknowledgement) return "overdue-ack";
@@ -151,18 +163,10 @@ export default async function ComplaintsPage({
     .filter((c) => c.status !== "CLOSED" && c.status !== "RESOLVED")
     .reduce((sum, c) => sum + (c._count?.status ?? 0), 0);
 
+  // Text editing lives in the ?edit= dialog below, not in this menu.
   const updateMenu = (c: (typeof complaints)[0]) => (
     <RowActionsMenu label="Update complaint">
-      <MenuSection label="Update Status" />
-      <form action={updateStatusAction} className="space-y-2 p-3">
-        <input type="hidden" name="id" value={c.id} />
-        <select name="status" defaultValue={c.status} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none">
-          {STATUSES.map((s) => <option key={s} value={s}>{COMPLAINT_STATUS_LABELS[s]}</option>)}
-        </select>
-        <textarea name="resolution" defaultValue={c.resolution ?? ""} placeholder="Resolution (shown to client)" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
-        <textarea name="internalNotes" defaultValue={c.internalNotes ?? ""} placeholder="Internal notes" rows={2} className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs outline-none resize-none" />
-        <SubmitButton bare className="btn-premium w-full rounded-lg px-3 py-1.5 text-xs">Save</SubmitButton>
-      </form>
+      <MenuActionLink href={`/complaints?edit=${c.id}`} icon="open">Update & resolve</MenuActionLink>
     </RowActionsMenu>
   );
 
@@ -335,6 +339,26 @@ export default async function ComplaintsPage({
           pageSize={pageSize}
           hrefForSize={complaintsHrefSize}
       />
+
+      {editComplaint ? (
+        <EditDialog title={`Update · ${editComplaint.complaintNumber}`} closeHref="/complaints">
+          <form action={updateStatusAction} className="space-y-3">
+            <input type="hidden" name="id" value={editComplaint.id} />
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Status
+              <select name="status" defaultValue={editComplaint.status} className="mt-1 h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50">
+                {STATUSES.map((s) => <option key={s} value={s}>{COMPLAINT_STATUS_LABELS[s]}</option>)}
+              </select>
+            </label>
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Resolution (shown to client)
+              <textarea name="resolution" defaultValue={editComplaint.resolution ?? ""} rows={3} className="mt-1 w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+            </label>
+            <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Internal notes
+              <textarea name="internalNotes" defaultValue={editComplaint.internalNotes ?? ""} rows={3} className="mt-1 w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+            </label>
+            <SubmitButton bare className="btn-premium h-10 w-full rounded-lg px-3 text-sm font-bold">Save</SubmitButton>
+          </form>
+        </EditDialog>
+      ) : null}
     </ListPageLayout>
   );
 }

@@ -53,11 +53,14 @@ export function trendMonthsForYear(year: number, endMonth: number) {
 
 /** Repair revenue only — job clientBill on COMPLETED jobs (used by TECH_MANAGER) */
 export async function loadRepairRevenueTrend(trendMonths: TrendMonth[], orgId?: string | null) {
+  // Fail closed like the sales path below: without an org this would sum
+  // every tenant's completed jobs.
+  if (!orgId) return trendMonths.map((m) => ({ key: m.key, revenue: 0, margin: 0 }));
   // Single query — externalTechFee (admin override) and externalTechBill both selected directly,
   // eliminating the second getJobPayoutsByIds round-trip
   const completed = await prisma.job.findMany({
     where: {
-      ...(orgId ? { orgId } : {}),
+      orgId,
       status: "COMPLETED",
       completedAt: { gte: trendMonths[0].start, lte: trendMonths[trendMonths.length - 1].end },
     },

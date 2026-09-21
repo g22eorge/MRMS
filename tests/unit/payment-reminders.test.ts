@@ -97,7 +97,9 @@ describe("ladder", () => {
 });
 
 describe("quiet hours", () => {
-  const at = (h: number) => { const d = new Date("2026-10-01T00:00:00"); d.setHours(h, 0, 0, 0); return d; };
+  // Hours are Africa/Kampala wall-clock regardless of server timezone:
+  // construct instants by their EAT hour (UTC+3, no DST).
+  const at = (eatHour: number) => new Date(Date.UTC(2026, 9, 1, eatHour - 3, 0, 0, 0));
 
   it("refuses the small hours", () => {
     expect(withinQuietHours(at(6), 8, 20)).toBe(false);
@@ -108,6 +110,16 @@ describe("quiet hours", () => {
     expect(withinQuietHours(at(8), 8, 20)).toBe(true);
     expect(withinQuietHours(at(19), 8, 20)).toBe(true);
     expect(withinQuietHours(at(20), 8, 20)).toBe(false);
+  });
+
+  it("wraps overnight windows instead of bricking them", () => {
+    expect(withinQuietHours(at(22), 20, 8)).toBe(true);
+    expect(withinQuietHours(at(3), 20, 8)).toBe(true);
+    expect(withinQuietHours(at(12), 20, 8)).toBe(false);
+  });
+
+  it("treats an equal window as full-day", () => {
+    expect(withinQuietHours(at(3), 8, 8)).toBe(true);
   });
 });
 

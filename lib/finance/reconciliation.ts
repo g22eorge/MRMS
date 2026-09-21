@@ -61,6 +61,8 @@ export async function loadCashCollectionsByChannel(params: {
   const channels = {
     repairs: 0,
     products: 0,
+    merchandise: 0,
+    service: 0,
     corporate: 0,
     unallocated: 0,
   };
@@ -71,6 +73,10 @@ export async function loadCashCollectionsByChannel(params: {
       channels.products += amount;
     } else if (payment.invoice?.invoiceType === InvoiceType.REPAIR) {
       channels.repairs += amount;
+    } else if (payment.invoice?.invoiceType === InvoiceType.MERCHANDISE) {
+      channels.merchandise += amount;
+    } else if (payment.invoice?.invoiceType === InvoiceType.SERVICE) {
+      channels.service += amount;
     } else if (payment.invoice) {
       channels.corporate += amount;
     } else {
@@ -83,15 +89,11 @@ export async function loadCashCollectionsByChannel(params: {
     channels.repairs += job.clientBill ?? 0;
   }
 
-  const total = channels.repairs + channels.products + channels.corporate + channels.unallocated;
+  const total = channels.repairs + channels.products + channels.merchandise + channels.service + channels.corporate + channels.unallocated;
   return { ...channels, total };
 }
 
-type ChannelTotals = { repairs: number; products: number; corporate: number; unallocated: number; total: number };
-
-function zeroChannels(): ChannelTotals {
-  return { repairs: 0, products: 0, corporate: 0, unallocated: 0, total: 0 };
-}
+type ChannelTotals = { repairs: number; products: number; merchandise: number; service: number; corporate: number; unallocated: number; total: number };
 
 function bucketchannels(
   payments: { amount: number; currency: string | null; exchangeRateToBase: number | null; saleId: string | null; receivedAt: Date | null; invoice: { invoiceType: string } | null }[],
@@ -99,13 +101,15 @@ function bucketchannels(
   baseCurrency: string,
   range: { start: Date; end?: Date },
 ): ChannelTotals {
-  const channels = { repairs: 0, products: 0, corporate: 0, unallocated: 0 };
+  const channels = { repairs: 0, products: 0, merchandise: 0, service: 0, corporate: 0, unallocated: 0 };
   const end = range.end ?? new Date(8640000000000000);
   for (const p of payments) {
     if (!p.receivedAt || p.receivedAt < range.start || p.receivedAt > end) continue;
     const amount = toBaseAmount({ amount: p.amount, currency: p.currency, baseCurrency, exchangeRateToBase: p.exchangeRateToBase });
     if (p.saleId) channels.products += amount;
     else if (p.invoice?.invoiceType === InvoiceType.REPAIR) channels.repairs += amount;
+    else if (p.invoice?.invoiceType === InvoiceType.MERCHANDISE) channels.merchandise += amount;
+    else if (p.invoice?.invoiceType === InvoiceType.SERVICE) channels.service += amount;
     else if (p.invoice) channels.corporate += amount;
     else channels.unallocated += amount;
   }
@@ -113,11 +117,150 @@ function bucketchannels(
     if (j.invoice || !j.clientPaidAt || j.clientPaidAt < range.start || j.clientPaidAt > end) continue;
     channels.repairs += j.clientBill ?? 0;
   }
-  const total = channels.repairs + channels.products + channels.corporate + channels.unallocated;
+  const total = channels.repairs + channels.products + channels.merchandise + channels.service + channels.corporate + channels.unallocated;
   return { ...channels, total };
 }
 
-/** Single wide fetch covering mtdStart→today, bucketed into mtd/today/yesterday — 2 queries not 6 */
+/** Single wide fetch covering chartStart→today, bucketed per period in JS — 2 queries, not 2×N */
+export type CashCollectionRows = {
+  payments: Array<{ amount: number; currency: string | null; exchangeRateToBase: number | null; saleId: string | null; receivedAt: Date | null; invoice: { invoiceType: string } | null }>;
+  legacyJobs: Array<{ clientBill: number | null; clientPaidAt: Date | null; invoice: { id: string } | null }>;
+};
+
+export async function loadCashCollectionRows(params: {
+  orgId: string;
+  start: Date;
+}): Promise<CashCollectionRows> {
+  const [payments, legacyJobs] = await Promise.all([
+    prisma.payment.findMany({
+      where: { orgId: params.orgId, ...INCOMING_PAYMENT, receivedAt: { gte: params.start } },
+      select: { amount: true, currency: true, exchangeRateToBase: true, saleId: true, receivedAt: true, invoice: { select: { invoiceType: true } } },
+    }),
+    prisma.job.findMany({
+      where: { orgId: params.orgId, clientPaid: true, clientPaidAt: { gte: params.start } },
+      select: { clientBill: true, clientPaidAt: true, invoice: { select: { id: true } } },
+    }),
+  ]);
+  return {
+    payments: payments.map((p) => ({ ...p, invoice: p.invoice ? { invoiceType: p.invoice.invoiceType as string } : null })),
+    legacyJobs: legacyJobs.map((j) => ({ ...j, invoice: j.invoice })),
+  };
+}
+
+export function bucketCashCollections(
+  rows: CashCollectionRows,
+  baseCurrency: string,
+  range: { start: Date; end?: Date },
+): ChannelTotals {
+  return bucketchannels(rows.payments, rows.legacyJobs, baseCurrency, range);
+}
+
+export type ExpenseRow = { amount: number; currency: string | null; exchangeRateToBase: number | null; paidAt: Date | null };
+
+/** Single wide fetch for the cash-flow chart — bucketed per period in JS. */
+export async function loadExpenseRows(params: {
+  orgId: string;
+  start: Date;
+}): Promise<ExpenseRow[]> {
+  return prisma.expense.findMany({
+    where: { orgId: params.orgId, paidAt: { gte: params.start } },
+    select: { amount: true, currency: true, exchangeRateToBase: true, paidAt: true },
+  });
+}
+
+type MoneyGroupRow = { currency: string | null; rate: number | null; balance: number | null; n: number | bigint | null };
+
+function toBaseGroups(rows: MoneyGroupRow[], baseCurrency: string): number {
+  let total = 0;
+  for (const row of rows) {
+    total += baseAmount(
+      { amount: Number(row.balance ?? 0), currency: row.currency, exchangeRateToBase: row.rate },
+      baseCurrency,
+    );
+  }
+  return total;
+}
+
+export function bucketExpenses(
+  rows: ExpenseRow[],
+  baseCurrency: string,
+  range: { start: Date; end?: Date },
+): number {
+  const end = range.end ?? new Date(8640000000000000);
+  let total = 0;
+  for (const e of rows) {
+    if (!e.paidAt || e.paidAt < range.start || e.paidAt > end) continue;
+    total += baseAmount(e, baseCurrency);
+  }
+  return total;
+}
+
+/**
+ * Open-bill balances as GROUP BY (currency, rate) rows — a handful of rows
+ * instead of the full open-bill table. FX conversion stays per-group in JS,
+ * so multi-currency books convert exactly as the row loop did.
+ */
+export async function loadBillBalances(params: {
+  orgId: string;
+  baseCurrency: string;
+  now: Date;
+  weekOut: Date;
+}): Promise<{ total: number; overdue: number; overdueCount: number; dueWeekCount: number; count: number }> {
+  const { orgId, baseCurrency, now, weekOut } = params;
+  type BillRow = MoneyGroupRow & { overdue: number | null; overdueN: number | bigint | null; dueWeekN: number | bigint | null };
+  const rows = await prisma.$queryRaw<BillRow[]>`
+    SELECT currency, "exchangeRateToBase" AS rate,
+      SUM("totalAmount" - "paidAmount") AS balance,
+      COUNT(*) AS n,
+      SUM(CASE WHEN "dueAt" < ${now} THEN "totalAmount" - "paidAmount" ELSE 0 END) AS overdue,
+      COUNT(CASE WHEN "dueAt" < ${now} THEN 1 END) AS "overdueN",
+      COUNT(CASE WHEN "dueAt" >= ${now} AND "dueAt" <= ${weekOut} THEN 1 END) AS "dueWeekN"
+    FROM "SupplierBill"
+    WHERE "orgId" = ${orgId} AND "status" IN ('POSTED', 'PART_PAID')
+    GROUP BY currency, "exchangeRateToBase"`;
+  return {
+    total: toBaseGroups(rows, baseCurrency),
+    overdue: toBaseGroups(rows.map((r) => ({ ...r, balance: r.overdue })), baseCurrency),
+    overdueCount: rows.reduce((s, r) => s + Number(r.overdueN ?? 0), 0),
+    dueWeekCount: rows.reduce((s, r) => s + Number(r.dueWeekN ?? 0), 0),
+    count: rows.reduce((s, r) => s + Number(r.n ?? 0), 0),
+  };
+}
+
+/** Open expenses (owed, not spent) as GROUP BY rows. */
+export async function loadOpenExpenseTotals(params: {
+  orgId: string;
+  baseCurrency: string;
+}): Promise<{ total: number; count: number }> {
+  const rows = await prisma.$queryRaw<MoneyGroupRow[]>`
+    SELECT currency, "exchangeRateToBase" AS rate,
+      SUM(amount) AS balance, COUNT(*) AS n
+    FROM "Expense"
+    WHERE "orgId" = ${params.orgId} AND "paidAt" IS NULL
+    GROUP BY currency, "exchangeRateToBase"`;
+  return {
+    total: toBaseGroups(rows, params.baseCurrency),
+    count: rows.reduce((s, r) => s + Number(r.n ?? 0), 0),
+  };
+}
+
+/** Overdue issued invoices as GROUP BY rows. */
+export async function loadOverdueInvoiceTotals(params: {
+  orgId: string;
+  baseCurrency: string;
+  now: Date;
+}): Promise<{ total: number; count: number }> {
+  const rows = await prisma.$queryRaw<MoneyGroupRow[]>`
+    SELECT currency, "exchangeRateToBase" AS rate,
+      SUM(CASE WHEN "totalAmount" > "paidAmount" THEN "totalAmount" - "paidAmount" ELSE 0 END) AS balance, COUNT(*) AS n
+    FROM "Invoice"
+    WHERE "orgId" = ${params.orgId} AND "status" = 'ISSUED' AND "dueAt" < ${params.now}
+    GROUP BY currency, "exchangeRateToBase"`;
+  return {
+    total: toBaseGroups(rows, params.baseCurrency),
+    count: rows.reduce((s, r) => s + Number(r.n ?? 0), 0),
+  };
+}
 export async function loadCashCollectionsByChannelWide(params: {
   orgId: string;
   baseCurrency: string;
@@ -166,14 +309,15 @@ export async function loadRefundsTotal(params: {
 
 export async function loadExpensesTotal(params: {
   orgId: string;
+  baseCurrency: string;
   range: DateRange;
 }) {
   const expenses = await prisma.expense.findMany({
     where: { orgId: params.orgId, paidAt: dateWhere(params.range) },
-    select: { amount: true },
+    select: { amount: true, currency: true, exchangeRateToBase: true },
   });
 
-  return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  return expenses.reduce((sum, expense) => sum + baseAmount(expense, params.baseCurrency), 0);
 }
 
 export async function loadReceivablesTotal(orgId: string) {

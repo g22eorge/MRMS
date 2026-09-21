@@ -68,7 +68,10 @@ type WorkflowReason =
   | "CLIENT_DECLINED"
   | "UNREPAIRABLE"
   | "CUSTOMER_CANCELLED"
-  | "OTHER";
+  | "OTHER"
+  | "CLIENT_APPROVED"
+  | "CLIENT_APPROVED_PARTS_PENDING"
+  | "CLIENT_APPROVED_AWAITING_DEVICE";
 
 type HighlightReason = Exclude<WorkflowReason, "NONE">;
 
@@ -79,6 +82,9 @@ const workflowReasonConfig: Record<HighlightReason, { badge: string; label: stri
   UNREPAIRABLE:         { badge: "bg-red-500/10 text-red-700 border border-red-400/30 dark:text-red-400",           label: "Unrepairable" },
   CUSTOMER_CANCELLED:   { badge: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",    label: "Cancelled" },
   OTHER:                { badge: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",    label: "Other" },
+  CLIENT_APPROVED:      { badge: "bg-emerald-500/10 text-emerald-700 border border-emerald-400/30 dark:text-emerald-400", label: "Approved" },
+  CLIENT_APPROVED_PARTS_PENDING: { badge: "bg-amber-500/10 text-amber-700 border border-amber-400/30 dark:text-amber-400", label: "Approved · parts pending" },
+  CLIENT_APPROVED_AWAITING_DEVICE: { badge: "bg-sky-500/10 text-sky-700 border border-sky-400/30 dark:text-sky-400", label: "Approved · awaiting device" },
 };
 
 type JobListFlag = { badge: string; label: string };

@@ -127,3 +127,49 @@ export async function registerIpnAction(
     return { ok: false, error: err instanceof Error ? err.message : "IPN registration failed" };
   }
 }
+
+// ── Anthropic AI (platform-wide) ──────────────────────────────────────────────
+
+export async function saveAnthropicSettingsAction(
+  _prev: { ok: boolean; error?: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  await requirePlatformAdmin();
+
+  const apiKey = (formData.get("ANTHROPIC_API_KEY") as string | null)?.trim() ?? "";
+  const guideModel = (formData.get("ANTHROPIC_GUIDE_MODEL") as string | null)?.trim() ?? "";
+  const copilotModel = (formData.get("ANTHROPIC_COPILOT_MODEL") as string | null)?.trim() ?? "";
+
+  try {
+    if (apiKey) await setPlatformSetting("ANTHROPIC_API_KEY", apiKey);
+    if (guideModel) await setPlatformSetting("ANTHROPIC_GUIDE_MODEL", guideModel);
+    if (copilotModel) await setPlatformSetting("ANTHROPIC_COPILOT_MODEL", copilotModel);
+    revalidatePlatformSettings();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed" };
+  }
+}
+
+export async function clearAnthropicKeyAction(
+  _prev: { ok: boolean } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  await requirePlatformAdmin();
+  const key = formData.get("key") as string | null;
+  const allowed = [
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_GUIDE_MODEL",
+    "ANTHROPIC_COPILOT_MODEL",
+  ];
+  if (!key || !allowed.includes(key)) {
+    return { ok: false, error: "Invalid key" };
+  }
+  try {
+    await deletePlatformSetting(key);
+    revalidatePlatformSettings();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Delete failed" };
+  }
+}

@@ -86,7 +86,7 @@ export async function generateQuotationBuffer(
         const already = fresh?.quotationNumber?.trim();
         if (already) return already;
 
-        const allocated = await nextDocumentNumber(tx, "QT", "quotation", orgId);
+        const allocated = await nextDocumentNumber(tx, "EST", "quotation", orgId);
         await tx.job.update({
           where: { id: job.id },
           data: { quotationNumber: allocated },

@@ -11,6 +11,8 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
+import { RowActionsMenu, MenuDestructiveRow } from "@/components/shared/RowActionsMenu";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { reverseGoodsReceivedAction } from "@/app/(app)/inventory/purchase-orders/actions";
 import { flashError } from "@/lib/flash";
 
@@ -127,27 +129,35 @@ export default async function GoodsReceivedDetailPage({
           <>
             <RecordPreviewButton variant="button" label="Preview" pdfUrl={`/api/procurement/documents/goods-received/${grn.id}`} title={`GRN ${grn.grnNumber}`} />
             <Link href={`/api/procurement/documents/goods-received/${grn.id}`} target="_blank" className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">Print / PDF</Link>
-            <Link href={newBillHref} className="btn-premium rounded-lg px-3 py-2 text-xs font-semibold">Create Bill</Link>
-            {canReverse && (
-              <form
-                action={async (fd: FormData) => {
-                  "use server";
-                  // The action refuses a GRN that is already billed, or whose
-                  // stock has since been sold, and says why. That reason was
-                  // thrown away here, so the page re-rendered unchanged and the
-                  // operator was left to guess whether the click had registered.
-                  const res = await reverseGoodsReceivedAction(fd);
-                  if (res?.error) redirect(flashError(`/inventory/goods-received/${grn.id}`, res.error));
-                  revalidatePath(`/inventory/goods-received/${grn.id}`);
-                }}
-              >
-                <input type="hidden" name="grnId" value={grn.id} />
-                <button type="submit" className="rounded-lg border border-red-400/40 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-400">
-                  Reverse GRN
-                </button>
-              </form>
-            )}
           </>
+        }
+        primary={
+          grn.status === "POSTED" && !hasActiveBill ? (
+            <Link href={newBillHref} className="btn-premium rounded-lg px-3 py-2 text-xs font-semibold">Create Bill</Link>
+          ) : undefined
+        }
+        overflow={
+          canReverse ? (
+            <RowActionsMenu label={`GRN actions for ${grn.grnNumber}`} size="compact">
+              <MenuDestructiveRow>
+                <form
+                  action={async (fd: FormData) => {
+                    "use server";
+                    // The action refuses a GRN that is already billed, or whose
+                    // stock has since been sold, and says why. That reason was
+                    // thrown away here, so the page re-rendered unchanged and the
+                    // operator was left to guess whether the click had registered.
+                    const res = await reverseGoodsReceivedAction(fd);
+                    if (res?.error) redirect(flashError(`/inventory/goods-received/${grn.id}`, res.error));
+                    revalidatePath(`/inventory/goods-received/${grn.id}`);
+                  }}
+                >
+                  <input type="hidden" name="grnId" value={grn.id} />
+                  <SubmitButton bare className="w-full text-left text-[0.75rem] text-red-600">Reverse GRN</SubmitButton>
+                </form>
+              </MenuDestructiveRow>
+            </RowActionsMenu>
+          ) : undefined
         }
       />
       <p className="text-[0.8125rem] text-[var(--ink-muted)]">
@@ -196,18 +206,6 @@ export default async function GoodsReceivedDetailPage({
                 </div>
               </div>
             ) : null}
-          </section>
-
-          <section className="dc-card p-4">
-            <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
-              <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Supplier Contact</p>
-              <Link href={`/inventory/suppliers/${grn.supplier.id}`} className="text-xs font-semibold text-[var(--accent)] hover:underline">Open Supplier</Link>
-            </div>
-            <div className="mt-3 divide-y divide-[var(--line)]">
-              <InfoRow label="Person">{grn.supplier.contactName || "-"}</InfoRow>
-              <InfoRow label="Phone">{grn.supplier.phone ? <a href={`tel:${grn.supplier.phone}`} className="font-semibold text-[var(--ink)] hover:text-[var(--accent)]">{grn.supplier.phone}</a> : "-"}</InfoRow>
-              <InfoRow label="Email">{grn.supplier.email ? <a href={`mailto:${grn.supplier.email}`} className="font-semibold text-[var(--ink)] hover:text-[var(--accent)]">{grn.supplier.email}</a> : "-"}</InfoRow>
-            </div>
           </section>
 
           <ActivitySection

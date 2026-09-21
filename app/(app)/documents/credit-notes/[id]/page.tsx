@@ -129,6 +129,11 @@ export default async function CreditNoteDetailPage({ params, searchParams }: { p
         title={`Credit note ${creditNote.creditNoteNumber}`}
         status={status}
         secondary={secondary}
+        primary={
+          outstanding > 0 ? (
+            <Link href="/documents/refunds" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-bold">Record refund</Link>
+          ) : undefined
+        }
       />
 
       {sent && (

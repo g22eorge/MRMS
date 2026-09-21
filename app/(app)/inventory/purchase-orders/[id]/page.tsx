@@ -61,6 +61,14 @@ export default async function PurchaseOrderDetailPage({
         include: { part: { select: { id: true, name: true, sku: true } } },
         orderBy: { createdAt: "asc" },
       },
+      purchaseRequests: {
+        select: { id: true, requestNumber: true, status: true },
+        orderBy: { createdAt: "desc" },
+      },
+      supplierBills: {
+        select: { id: true, billNumber: true, status: true, totalAmount: true, currency: true },
+        orderBy: { issuedAt: "desc" },
+      },
       _count: { select: { purchaseRequests: true, supplierBills: true } },
     },
   });
@@ -149,13 +157,12 @@ export default async function PurchaseOrderDetailPage({
         }
       />
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
         {[
           ["Supplier", po.supplier.name],
           ["Ordered", fmtDate(po.orderedAt)],
           ["Expected", fmtDate(po.expectedAt)],
           ["Received", `${receivedQty}/${orderedQty}`],
-          ["Progress", `${receivedRatio}%`],
           ["Value", formatMoney(totalOrdered)],
         ].map(([label, value]) => (
           <div key={label} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
@@ -170,7 +177,14 @@ export default async function PurchaseOrderDetailPage({
       </div>
 
       {po.status !== "RECEIVED" && po.status !== "CANCELLED" ? (
-        <POMetaForm po={{ id: po.id, reference: po.reference, orderedAt: po.orderedAt, expectedAt: po.expectedAt, notes: po.notes, status: po.status }} />
+        <details className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
+          <summary className="cursor-pointer px-3 py-2 text-sm font-bold text-[var(--ink)] transition hover:text-[var(--accent)]">
+            Order details <span className="ml-1 font-normal text-[var(--ink-muted)]">— reference, dates, notes</span>
+          </summary>
+          <div className="border-t border-[var(--line)]">
+            <POMetaForm po={{ id: po.id, reference: po.reference, orderedAt: po.orderedAt, expectedAt: po.expectedAt, notes: po.notes, status: po.status }} />
+          </div>
+        </details>
       ) : null}
 
       <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
@@ -272,6 +286,42 @@ export default async function PurchaseOrderDetailPage({
         </div>
 
         <div className="space-y-3">
+          <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
+            <p className="border-b border-[var(--line)] px-3 py-2 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Related</p>
+            <div className="divide-y divide-[var(--line)]">
+              <div className="px-3 py-2">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Supplier</p>
+                <Link href={`/inventory/suppliers/${po.supplier.id}`} className="mt-0.5 block truncate text-sm font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
+                  {po.supplier.name}
+                </Link>
+              </div>
+              <div className="px-3 py-2">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Requests ({po.purchaseRequests.length})</p>
+                {po.purchaseRequests.length === 0 ? (
+                  <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">Raised directly — no request.</p>
+                ) : (
+                  po.purchaseRequests.map((req) => (
+                    <Link key={req.id} href={`/inventory/purchase-requests/${req.id}`} className="mono mt-0.5 block truncate text-[0.8125rem] font-bold text-[var(--accent)] hover:underline">
+                      {req.requestNumber}
+                    </Link>
+                  ))
+                )}
+              </div>
+              <div className="px-3 py-2">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Bills ({po.supplierBills.length})</p>
+                {po.supplierBills.length === 0 ? (
+                  <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">Not billed yet.</p>
+                ) : (
+                  po.supplierBills.map((bill) => (
+                    <Link key={bill.id} href={`/inventory/supplier-bills/${bill.id}`} className="mt-0.5 flex items-baseline justify-between gap-2 text-[0.8125rem] hover:text-[var(--accent)]">
+                      <span className="mono truncate font-bold text-[var(--accent)]">{bill.billNumber}</span>
+                      <span className="shrink-0 tabular-nums text-[var(--ink-muted)]">{bill.currency} {bill.totalAmount.toLocaleString()}</span>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
           {po.notes ? (
             <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">Notes</p>

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -20,13 +20,10 @@ async function requireInventoryManager() {
 }
 
 async function generateRequestNumber(orgId: string): Promise<string> {
-  const inner = `PR-${new Date().getFullYear()}-`;
-  const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
-    prisma.purchaseRequest.findMany({ where: { orgId, requestNumber: { contains: inner , mode: "insensitive" as const} }, select: { requestNumber: true } }),
-  ]);
-  const next = maxNumberSequence(inner, rows.map((r) => r.requestNumber)) + 1;
-  return composeOrgNumber(tag, inner, next);
+  return nextUniversalNumber(orgId, "PR", {
+    taken: async (candidate) =>
+      Boolean(await prisma.purchaseRequest.findFirst({ where: { requestNumber: candidate }, select: { id: true } })),
+  });
 }
 
 type RequestLine = { description: string; quantity: number; estimatedUnitCost?: number | null; partId?: string | null };
@@ -181,13 +178,18 @@ export async function convertPurchaseRequestToPoAction(formData: FormData): Prom
   const hasZeroCost = request.items.some((item) => !item.estimatedUnitCost || item.estimatedUnitCost <= 0);
   const poStatus = hasZeroCost ? "DRAFT" : "ORDERED";
 
+  // Universal PO numbering, allocated before the write transaction (a counter
+  // tx inside the outer tx would deadlock Turso's single connection).
+  // A typed reference still wins when given.
+  const poReference = reference ?? (await nextUniversalNumber(orgId, "PO"));
+
   const po = await prisma.$transaction(async (tx) => {
     const created = await tx.purchaseOrder.create({
       data: {
         orgId,
         supplierId,
         status: poStatus,
-        reference,
+        reference: poReference,
         orderedAt: hasZeroCost ? null : new Date(),
         expectedAt: expectedAtRaw ? new Date(expectedAtRaw) : null,
         notes: `Converted from ${request.requestNumber}${request.reason ? `: ${request.reason}` : ""}`,

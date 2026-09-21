@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireOrgSession } from "@/lib/org-context";
 import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { whatsappConfigSummaryForOrg, whatsappHealthCheckForOrg } from "@/lib/notifications/whatsapp";
+import { assessWhatsAppRenewal } from "@/lib/notifications/whatsapp-renewal";
 import { getOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { WhatsAppConfigForm } from "@/components/settings/WhatsAppConfigForm";
 import { WhatsAppTestPanel } from "@/components/settings/WhatsAppTestPanel";
@@ -13,9 +14,10 @@ export default async function WhatsAppSettingsPage() {
   const { user, orgId } = await requireOrgSession();
   if (user.role !== "ADMIN") redirect(COMMUNICATIONS_ROUTES.outbox);
 
-  const [currentConfig, summary] = await Promise.all([
+  const [currentConfig, summary, renewal] = await Promise.all([
     getOrgWhatsAppConfig(orgId),
     whatsappConfigSummaryForOrg(orgId),
+    assessWhatsAppRenewal(orgId),
   ]);
   const health = summary.configured ? await whatsappHealthCheckForOrg(orgId) : null;
 
@@ -36,6 +38,30 @@ export default async function WhatsAppSettingsPage() {
 
   return (
     <div className="space-y-4">
+      {/* Send-health / renewal banner: shows when Meta is rejecting sends, the
+          token is dead, or the account needs payment/verification attention. */}
+      {renewal.status !== "ok" && renewal.headline ? (
+        <div
+          role="status"
+          className={`rounded-xl border px-4 py-3 ${
+            renewal.status === "broken"
+              ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300"
+          }`}
+        >
+          <p className="text-[0.8125rem] font-bold">{renewal.headline}</p>
+          {renewal.detail ? <p className="mt-1 text-[0.75rem] leading-relaxed opacity-90">{renewal.detail}</p> : null}
+          {renewal.sampleError ? (
+            <p
+              className="mt-2 truncate font-mono text-[0.6875rem] opacity-80"
+              title={renewal.sampleError}
+            >
+              Last error: {renewal.sampleError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Connected account panel */}
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
         <div className="flex items-start justify-between gap-3">

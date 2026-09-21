@@ -1,3 +1,8 @@
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time. Aligns with the force-dynamic convention used
+// across the app.
+export const dynamic = "force-dynamic";
+
 import { Button } from "@/components/ui/Button";
 import { NewProductModal } from "@/components/inventory/NewProductModal";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -11,6 +16,7 @@ import { Prisma } from "@prisma/client";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { formatMoney } from "@/lib/currency";
+import { partShortView } from "@/lib/part-display";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
@@ -24,6 +30,8 @@ type InventoryRow = {
   sku: string;
   name: string;
   manufacturer: string | null;
+  shortDescription: string | null;
+  description: string | null;
   qtyOnHand: number;
   qtyReserved: number;
   reorderLevel: number;
@@ -74,6 +82,8 @@ export default async function InventoryPage({
     sku: String(r.sku),
     name: String(r.name),
     manufacturer: r.manufacturer == null ? null : String(r.manufacturer),
+    shortDescription: r.shortDescription == null ? null : String(r.shortDescription),
+    description: r.description == null ? null : String(r.description),
     qtyOnHand: Number(r.qtyOnHand),
     qtyReserved: Number(r.qtyReserved),
     reorderLevel: Number(r.reorderLevel),
@@ -121,7 +131,7 @@ export default async function InventoryPage({
   const filteredTotal = Number(filteredCountRows[0]?.c ?? 0);
   const pageView = paginationView(page, filteredTotal, pageSize);
   const pageRowsRaw = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT id, sku, name, manufacturer, "qtyOnHand", "qtyReserved", "reorderLevel", "unitCost", "isActive"
+    SELECT id, sku, name, manufacturer, "shortDescription", description, "qtyOnHand", "qtyReserved", "reorderLevel", "unitCost", "isActive"
     FROM "Part" ${rowWhere}
     ORDER BY "qtyOnHand" ASC, name ASC
     LIMIT ${pageView.take} OFFSET ${pageView.skip}
@@ -295,9 +305,13 @@ export default async function InventoryPage({
               cell: (part) => {
                 const isLow = part.reorderLevel > 0 && part.qtyOnHand <= part.reorderLevel;
                 const isOut = part.qtyOnHand === 0;
+                const short = partShortView(part);
                 return (
                   <Link href={`/inventory/${part.id}`} className="group flex flex-col gap-0.5">
                     <span className="font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">{part.name}</span>
+                    {short ? (
+                      <span className="truncate text-[0.6875rem] text-[var(--ink-muted)]">{short}</span>
+                    ) : null}
                     <span className="text-[0.6875rem] text-[var(--ink-muted)] md:hidden">{part.manufacturer ?? ""}</span>
                     {!part.isActive && <span className="text-[0.6875rem] font-semibold text-amber-600">Inactive</span>}
                     {isOut && part.isActive && <span className="text-[0.6875rem] font-semibold text-red-600">Out of stock</span>}

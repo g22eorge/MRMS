@@ -7,7 +7,7 @@ import React from "react";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
-import { clientDisplayName } from "@/lib/client-name";
+import { saleCustomerName } from "@/lib/client-name";
 
 type Branding = {
   documentTitle?: string | null; companyName?: string | null; companyContacts?: string | null;
@@ -18,6 +18,7 @@ type Branding = {
 
 type Sale = {
   saleNumber: string; status: string; createdAt: Date; currency?: string | null;
+  name?: string | null;
   branch: { name: string } | null;
   client: { fullName: string; phone: string | null; organization?: string | null } | null;
   subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number; paidAmount: number;
@@ -80,7 +81,7 @@ export function SaleReceiptDocumentThermal({ sale, branding }: { sale: Sale; bra
         <Text style={s.receiptLbl}>{branding?.documentTitle || "RECEIPT"}</Text>
         <View style={s.metaRow}><Text style={s.metaLbl}>No.</Text><Text style={s.metaVal}>{sale.saleNumber}</Text></View>
         <View style={s.metaRow}><Text style={s.metaLbl}>Date</Text><Text style={s.metaVal}>{sale.createdAt.toLocaleString("en-GB", { timeZone: "Africa/Nairobi" })}</Text></View>
-        <View style={s.metaRow}><Text style={s.metaLbl}>Customer</Text><Text style={s.metaVal}>{clientDisplayName(sale.client, "Walk-in")}</Text></View>
+        <View style={s.metaRow}><Text style={s.metaLbl}>Customer</Text><Text style={s.metaVal}>{saleCustomerName(sale, "Walk-in")}</Text></View>
         {sale.client?.phone ? <View style={s.metaRow}><Text style={s.metaLbl}>Phone</Text><Text style={s.metaVal}>{sale.client.phone}</Text></View> : null}
         {sale.branch        ? <View style={s.metaRow}><Text style={s.metaLbl}>Branch</Text><Text style={s.metaVal}>{sale.branch.name}</Text></View>  : null}
 

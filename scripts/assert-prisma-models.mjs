@@ -15,7 +15,18 @@ const requiredModels = [
   "supplierBill",
   "supplierPayment",
   "stockCount",
+  "recurringExpense",
+  "expensePayment",
 ];
+
+// Field-level pins: a client generated from an older schema passes the model
+// check above but crashes at runtime with PrismaClientValidationError on the
+// first select of a new column (exactly what happened with Expense.paidAmount
+// on the Payables page). Pin the hot fields so staleness fails the build.
+const requiredFields = {
+  Expense: ["paidAmount", "dueAt"],
+  BankAccount: ["ledgerCode"],
+};
 
 // Read generated model names from DMMF — no DB connection needed
 const generatedModels = new Set(
@@ -26,10 +37,30 @@ const generatedModels = new Set(
 
 const missing = requiredModels.filter((model) => !generatedModels.has(model));
 
-if (missing.length > 0) {
-  console.error(`Generated Prisma Client is missing required models: ${missing.join(", ")}`);
+const fieldsByModel = new Map(
+  Prisma.dmmf.datamodel.models.map((m) => [m.name, new Set(m.fields.map((f) => f.name))]),
+);
+const missingFields = [];
+for (const [model, fields] of Object.entries(requiredFields)) {
+  const available = fieldsByModel.get(model);
+  if (!available) {
+    missingFields.push(`${model} (model missing)`);
+    continue;
+  }
+  for (const field of fields) {
+    if (!available.has(field)) missingFields.push(`${model}.${field}`);
+  }
+}
+
+if (missing.length > 0 || missingFields.length > 0) {
+  if (missing.length > 0) {
+    console.error(`Generated Prisma Client is missing required models: ${missing.join(", ")}`);
+  }
+  if (missingFields.length > 0) {
+    console.error(`Generated Prisma Client is missing required fields: ${missingFields.join(", ")}`);
+  }
   console.error("Run `bunx prisma generate` from the current schema before building/deploying.");
   process.exit(1);
 }
 
-console.log(`✓ All ${requiredModels.length} required Prisma models present.`);
+console.log(`✓ All ${requiredModels.length} required Prisma models and ${Object.values(requiredFields).flat().length} pinned fields present.`);

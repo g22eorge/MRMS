@@ -56,11 +56,11 @@ function hasExtraPermission(user: PermissionUser, permission: ExtraPermission) {
 }
 
 const ADMIN_ROLES: Role[] = ["ADMIN"];
-const OPS_ROLES: Role[] = ["ADMIN", "MANAGER", "OPS"];
-const SALES_ROLES: Role[] = ["ADMIN", "MANAGER", "OPS", "SALES", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL"];
+const OPS_ROLES: Role[] = ["ADMIN", "MANAGER", "OPS", "OPERATIONS_MANAGER"];
+const SALES_ROLES: Role[] = ["ADMIN", "MANAGER", "OPS", "OPERATIONS_MANAGER", "SALES", "SALES_MANAGER", "SALES_CORPORATE", "SALES_RETAIL"];
 const TECH_ROLES: Role[] = ["ADMIN", "MANAGER", "TECH_MANAGER", "TECHNICIAN_INTERNAL", "TECH_FIELD"];
 const FINANCE_ROLES: Role[] = ["ADMIN", "MANAGER", "FINANCE"];
-const MANAGER_ROLES: Role[] = ["ADMIN", "MANAGER", "SALES_MANAGER", "TECH_MANAGER"];
+const MANAGER_ROLES: Role[] = ["ADMIN", "MANAGER", "SALES_MANAGER", "TECH_MANAGER", "OPERATIONS_MANAGER"];
 
 export const can = {
   // Client & Job visibility

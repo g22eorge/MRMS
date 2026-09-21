@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -48,11 +49,14 @@ export default async function NewSupplierBillPage({
   ]);
 
   return (
-    <div className="max-w-5xl space-y-4">
-      <div className="dc-card overflow-hidden">
-        <div className="px-4 py-3">
-          <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
-          <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New Supplier Bill</p>
+    <div className="space-y-4">
+      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Inventory · Supplier Bill</p>
+            <h1 className="text-base font-bold text-[var(--ink)]">New supplier bill</h1>
+          </div>
+          <Link href="/inventory/supplier-bills" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">All bills</Link>
         </div>
       </div>
       <NewSupplierBillForm

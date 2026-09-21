@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { effectiveRateFromSettlement, readCurrencyAndRate, rowToBase, toBaseAmount } from "@/lib/currency";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
-import { orgTagFor, maxNumberSequence, composeOrgNumber } from "@/lib/commercial/org-number";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { postSupplierPayment, postSupplierTransferFee } from "@/lib/accounting/post";
 import { requireOrgSession } from "@/lib/org-context";
@@ -21,13 +22,10 @@ async function requireInventoryManager() {
 }
 
 async function generateBillNumber(orgId: string): Promise<string> {
-  const inner = `SB-${new Date().getFullYear()}-`;
-  const [tag, rows] = await Promise.all([
-    orgTagFor(orgId),
-    prisma.supplierBill.findMany({ where: { orgId, billNumber: { contains: inner , mode: "insensitive" as const} }, select: { billNumber: true } }),
-  ]);
-  const next = maxNumberSequence(inner, rows.map((r) => r.billNumber)) + 1;
-  return composeOrgNumber(tag, inner, next);
+  return nextUniversalNumber(orgId, "BILL", {
+    taken: async (candidate) =>
+      Boolean(await prisma.supplierBill.findFirst({ where: { billNumber: candidate }, select: { id: true } })),
+  });
 }
 
 type BillLine = { description: string; quantity: number; unitCost: number };
@@ -125,36 +123,59 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
     }
   }
 
-  const billNumber = await generateBillNumber(orgId);
-
-  const bill = await prisma.supplierBill.create({
-    data: {
-      orgId,
-      billNumber,
-      supplierRef,
-      supplierId,
-      poId,
-      grnId,
-      currency,
-      exchangeRateToBase: money.exchangeRateToBase,
-      subtotal,
-      taxAmount,
-      totalAmount,
-      issuedAt: issuedAtRaw ? new Date(issuedAtRaw) : new Date(),
-      dueAt: dueAtRaw ? new Date(dueAtRaw) : null,
-      notes,
-      createdById: session.user.id,
-      items: {
-        create: lines.map((line) => ({
-          description: line.description,
-          quantity: line.quantity,
-          unitCost: line.unitCost,
-          lineTotal: line.quantity * line.unitCost,
-        })),
-      },
-    },
-    select: { id: true },
-  });
+  // Create inside a transaction with the guards rechecked beside the write:
+  // pre-txn checks race, and two concurrent posts double-billed the same GRN.
+  // Bill numbers allocate read-max, so retry on collision.
+  let bill: { id: string } | null = null;
+  for (let attempt = 0; attempt < 3 && !bill; attempt += 1) {
+    const billNumber = await generateBillNumber(orgId);
+    try {
+      bill = await prisma.$transaction(async (tx) => {
+        if (grnId) {
+          const raced = await tx.supplierBill.findFirst({
+            where: { orgId, grnId, status: { not: "CANCELLED" } },
+            select: { billNumber: true },
+          });
+          if (raced) throw new Error(`This goods-received note is already billed on ${raced.billNumber}`);
+        }
+        return tx.supplierBill.create({
+          data: {
+            orgId,
+            billNumber,
+            supplierRef,
+            supplierId,
+            poId,
+            grnId,
+            currency,
+            exchangeRateToBase: money.exchangeRateToBase,
+            subtotal,
+            taxAmount,
+            totalAmount,
+            issuedAt: issuedAtRaw ? new Date(issuedAtRaw) : new Date(),
+            dueAt: dueAtRaw ? new Date(dueAtRaw) : null,
+            notes,
+            createdById: session.user.id,
+            items: {
+              create: lines.map((line) => ({
+                description: line.description,
+                quantity: line.quantity,
+                unitCost: line.unitCost,
+                lineTotal: line.quantity * line.unitCost,
+              })),
+            },
+          },
+          select: { id: true },
+        });
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002" && attempt < 2) continue;
+      if (error instanceof Error && error.message.startsWith("This goods-received note is already billed")) {
+        return { error: error.message };
+      }
+      throw error;
+    }
+  }
+  if (!bill) return { error: "Could not number the bill. Please try again." };
 
   await writeSystemAuditEvent({
     orgId,
@@ -162,7 +183,7 @@ export async function createSupplierBillAction(formData: FormData): Promise<{ id
     entityType: "SupplierBill",
     entityId: bill.id,
     action: "SUPPLIER_BILL_CREATED",
-    summary: `${billNumber} — ${currency} ${totalAmount.toLocaleString()}`,
+    summary: `${currency} ${totalAmount.toLocaleString()} from supplier ${supplierId}`,
   });
 
   revalidatePath("/inventory/supplier-bills");
@@ -280,6 +301,7 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
       orgId,
       userId: session.user.id,
       amount: goodsBase,
+      method,
       date: supplierPayment.paidAt ?? undefined,
       reference: `supplier-pay:${supplierPayment.id}`,
       description: `Supplier payment on bill ${billId}`,
@@ -291,6 +313,7 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
         orgId,
         userId: session.user.id,
         amount: feeAmount,
+        method,
         date: supplierPayment.paidAt ?? undefined,
         reference: `supplier-fee:${supplierPayment.id}`,
         description: `Transfer charge on bill ${billId}`,
@@ -315,7 +338,7 @@ export async function createSupplierPaymentAction(formData: FormData): Promise<v
 }
 
 export async function deleteSupplierPaymentAction(formData: FormData): Promise<void> {
-  const { orgId } = await requireInventoryManager();
+  const { orgId, session } = await requireInventoryManager();
   const id = String(formData.get("id") ?? "").trim();
   const billId = String(formData.get("billId") ?? "").trim();
   if (!id || !billId) return;
@@ -336,7 +359,30 @@ export async function deleteSupplierPaymentAction(formData: FormData): Promise<v
         status: nextBillStatus(bill.totalAmount, nextPaid),
       },
     });
+    // Reverse this payment's ledger post (and its fee post, same key family)
+    // or the P&L keeps money that no longer exists.
+    const { reverseJournalEntry } = await import("@/lib/accounting/post");
+    await reverseJournalEntry(tx, {
+      orgId,
+      userId: session.user.id,
+      originalReference: `supplier-pay:${payment.id}`,
+      description: `Reversal — supplier payment deleted (bill ${billId})`,
+    });
+    await reverseJournalEntry(tx, {
+      orgId,
+      userId: session.user.id,
+      originalReference: `supplier-fee:${payment.id}`,
+      description: `Reversal — transfer charge deleted (bill ${billId})`,
+    });
   });
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: session.user.id,
+    entityType: "SupplierPayment",
+    entityId: id,
+    action: "SUPPLIER_PAYMENT_DELETED",
+    summary: `Supplier payment deleted on bill ${billId}`,
+  }).catch(() => {});
 
   revalidatePath("/inventory/supplier-bills");
   revalidatePath(`/inventory/supplier-bills/${billId}`);

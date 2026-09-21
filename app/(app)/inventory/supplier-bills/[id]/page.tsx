@@ -40,6 +40,7 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
 
   const fmt = (d: Date | null) => d ? d.toLocaleDateString("en-UG", { day: "numeric", month: "short", year: "numeric" }) : "-";
   const balance = bill.totalAmount - bill.paidAmount;
+  const payable = balance > 0 && bill.status !== "CANCELLED";
 
   // Landed cost, for pricing. The books treat a transfer charge as a finance
   // cost so that cost of sales stays the cost of the goods; pricing needs the
@@ -77,7 +78,7 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
   }).catch(() => null);
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="space-y-4">
       <RecordActionBar
         backHref="/inventory/supplier-bills"
         eyebrow="Inventory · Supplier Bill"
@@ -90,6 +91,11 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
               Print / PDF
             </Link>
           </>
+        }
+        primary={
+          payable ? (
+            <Link href="#payments" className="btn-premium rounded-lg px-3 py-1.5 text-xs font-semibold">Record payment</Link>
+          ) : undefined
         }
         overflow={
           bill.status !== "CANCELLED" && bill.paidAmount === 0 ? (
@@ -113,6 +119,8 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
         <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2"><p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Balance</p><p className="mt-0.5 text-sm font-semibold text-[var(--ink)] tabular-nums">{bill.currency} {balance.toLocaleString()}</p></div>
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
         {showLanded ? (
           <div className="border-b border-[var(--line)] bg-[var(--panel-strong)] px-5 py-3">
@@ -191,7 +199,7 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
 
       {bill.notes ? <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4"><p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)] mb-1">Notes</p><p className="text-sm text-[var(--ink)] whitespace-pre-wrap">{bill.notes}</p></div> : null}
 
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden">
+      <div id="payments" className="rounded-xl border border-[var(--line)] bg-[var(--panel)] overflow-hidden scroll-mt-4">
         <div className="px-5 py-3 border-b border-[var(--line)] flex items-center justify-between gap-2">
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Payments ({bill.payments.length})</p>
           <p className="text-xs font-semibold text-[var(--ink-muted)]">Paid {bill.currency} {bill.paidAmount.toLocaleString()}</p>
@@ -239,9 +247,45 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
           )}
         />
       </div>
+        </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--ink-muted)]">
-        <p>Posted by {bill.createdBy.name || bill.createdBy.email}.</p>
+        <aside className="min-w-0 space-y-4">
+          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+            <p className="border-b border-[var(--line)] px-4 py-3 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Related</p>
+            <div className="divide-y divide-[var(--line)]">
+              <div className="px-4 py-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Supplier</p>
+                <Link href={`/inventory/suppliers/${bill.supplier.id}`} className="mt-0.5 block truncate text-sm font-semibold text-[var(--ink)] hover:text-[var(--accent)]">
+                  {bill.supplier.name}
+                </Link>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Purchase order</p>
+                {bill.po ? (
+                  <Link href={`/inventory/purchase-orders/${bill.po.id}`} className="mono mt-0.5 block truncate text-sm font-bold text-[var(--accent)] hover:underline">
+                    {bill.po.reference ?? "Purchase order"}
+                  </Link>
+                ) : (
+                  <p className="mt-0.5 text-sm text-[var(--ink-muted)]">Direct bill — no order</p>
+                )}
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Goods receipt</p>
+                {bill.grn ? (
+                  <Link href={`/inventory/goods-received/${bill.grn.id}`} className="mono mt-0.5 block truncate text-sm font-bold text-[var(--accent)] hover:underline">
+                    {bill.grn.grnNumber}
+                  </Link>
+                ) : (
+                  <p className="mt-0.5 text-sm text-[var(--ink-muted)]">Billed before receipt</p>
+                )}
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Posted by</p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{bill.createdBy.name || bill.createdBy.email}</p>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

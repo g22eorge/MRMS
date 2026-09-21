@@ -15,6 +15,8 @@ import { sanitizeText } from "@/lib/sanitize";
 import { shareDeliveryNoteDocument } from "@/lib/notifications/share-document";
 import { DocumentActionBar } from "@/components/documents/DocumentActionBar";
 import { DocumentSummaryRail } from "@/components/documents/DocumentSummaryRail";
+import { EditDialog } from "@/components/ui/EditDialog";
+import Link from "next/link";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { flash } from "@/lib/flash";
@@ -137,6 +139,9 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
         </form>
       )}
       <a href={`/api/delivery-notes/${note.id}`} target="_blank" rel="noreferrer" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-bold">PDF</a>
+      {canEditItems && !isEdit ? (
+        <Link href={`/documents/delivery-notes/${note.id}?edit=1`} className="btn-premium-secondary rounded-lg px-3 py-1.5 text-[0.75rem] font-medium">Edit items</Link>
+      ) : null}
     </>
   );
 
@@ -174,45 +179,8 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <div className={cardClass}>
-            <div className={`${cardHeadClass} flex items-center justify-between`}>
-              <span>Items delivered{isEdit ? " · editing" : ""}</span>
-              {canEditItems ? (
-                <a href={`/documents/delivery-notes/${id}${isEdit ? "" : "?edit=1"}`} className="text-[0.6875rem] font-semibold normal-case tracking-normal text-[var(--accent)] hover:underline">
-                  {isEdit ? "Done" : "Edit"}
-                </a>
-              ) : null}
-            </div>
-            {isEdit ? (
-              <div className="divide-y divide-[var(--line)]">
-                {note.items.map((item) => (
-                  <div key={item.id} className="flex flex-wrap items-end gap-2 p-3">
-                    <form action={updateDeliveryItem} className="flex flex-1 flex-wrap items-end gap-2">
-                      <input type="hidden" name="itemId" value={item.id} />
-                      <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description
-                        <input name="description" defaultValue={item.description} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-                      </label>
-                      <label className="w-16 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
-                        <input name="quantity" type="number" min="1" step="1" defaultValue={item.quantity} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-                      </label>
-                      <SubmitButton bare className="btn-premium-secondary h-9 rounded-md px-3 text-[0.75rem] font-semibold">Save</SubmitButton>
-                    </form>
-                    <form action={removeDeliveryItem}>
-                      <input type="hidden" name="itemId" value={item.id} />
-                      <SubmitButton bare className="h-9 rounded-md border border-red-500/30 px-3 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</SubmitButton>
-                    </form>
-                  </div>
-                ))}
-                <form action={addDeliveryItem} className="flex flex-wrap items-end gap-2 bg-[var(--panel-strong)]/40 p-3">
-                  <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Add item
-                    <input name="description" required placeholder="Item delivered" className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-                  </label>
-                  <label className="w-16 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
-                    <input name="quantity" type="number" min="1" step="1" defaultValue={1} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
-                  </label>
-                  <SubmitButton bare className="btn-premium h-9 rounded-md px-3 text-[0.75rem] font-bold">Add</SubmitButton>
-                </form>
-              </div>
-            ) : note.items.length ? (
+            <div className={cardHeadClass}>Items delivered</div>
+            {note.items.length ? (
               <DataTable
                 frameless
                 rows={note.items}
@@ -282,6 +250,40 @@ export default async function DeliveryNoteDetailPage({ params, searchParams }: {
           activity={[{ label: "Delivered", at: formatEATDate(note.deliveredAt) }]}
         />
       </div>
+
+      {isEdit ? (
+        <EditDialog title={`Edit items · ${note.deliveryNoteNumber}`} closeHref={`/documents/delivery-notes/${note.id}`}>
+          <div className="space-y-3">
+            {note.items.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 p-3">
+                <form action={updateDeliveryItem} className="flex flex-1 flex-wrap items-end gap-2">
+                  <input type="hidden" name="itemId" value={item.id} />
+                  <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description
+                    <input name="description" defaultValue={item.description} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                  </label>
+                  <label className="w-16 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
+                    <input name="quantity" type="number" min={1} step={1} defaultValue={item.quantity} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                  </label>
+                  <SubmitButton bare className="btn-premium-secondary h-9 rounded-md px-3 text-[0.75rem] font-semibold">Save</SubmitButton>
+                </form>
+                <form action={removeDeliveryItem}>
+                  <input type="hidden" name="itemId" value={item.id} />
+                  <SubmitButton bare className="h-9 rounded-md border border-red-500/30 px-3 text-[0.75rem] font-semibold text-red-600 hover:bg-red-500/10 dark:text-red-400">Remove</SubmitButton>
+                </form>
+              </div>
+            ))}
+            <form action={addDeliveryItem} className="space-y-3 rounded-lg border border-dashed border-[var(--line)] p-3">
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Add item
+                <input name="description" required placeholder="Item delivered" className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50" />
+              </label>
+              <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Qty
+                <input name="quantity" type="number" min={1} step={1} defaultValue={1} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50" />
+              </label>
+              <SubmitButton bare className="btn-premium h-9 w-full rounded-md px-3 text-[0.75rem] font-bold">Add item</SubmitButton>
+            </form>
+          </div>
+        </EditDialog>
+      ) : null}
     </section>
   );
 }

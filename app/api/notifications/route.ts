@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const all = searchParams.get("all") === "true";
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20", 10) || 20, 1), 100);
 
   try {
     const includeClient = can.viewClientInfo(user);

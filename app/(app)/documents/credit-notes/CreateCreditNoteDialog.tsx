@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { CheckboxField } from "@/components/forms";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { DocumentSourcePicker } from "@/components/documents/DocumentSourcePicker";
-import { clientDisplayName } from "@/lib/client-name";
+import { saleCustomerName } from "@/lib/client-name";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 type SourceLine = {
@@ -26,6 +26,8 @@ type SourceOption = {
   key: string;
   kind: "sale" | "invoice";
   reference: string;
+  /** A POS sale's own customer label — most of them have no client row. */
+  name?: string | null;
   totalAmount: number;
   currency: string;
   client: { fullName: string; phone: string | null; organization: string | null } | null;
@@ -55,13 +57,17 @@ export function CreateCreditNoteDialog({ eligibleSources, action, returnAndRefun
 
   const sales = eligibleSources.filter((s) => s.kind === "sale");
   const invoices = eligibleSources.filter((s) => s.kind === "invoice");
-  const toOption = (s: SourceOption) => ({
-    value: s.key,
-    label: `${clientDisplayName(s.client, "Walk-in")} — ${s.reference}`,
-    hint: money(s.totalAmount, s.currency),
-    // Customer name first: people search by who, not by document number.
-    search: [clientDisplayName(s.client, "Walk-in"), s.client?.phone, s.reference].filter(Boolean).join(" "),
-  });
+  const toOption = (s: SourceOption) => {
+    // A POS sale names its customer on the sale itself when no client is linked.
+    const who = saleCustomerName({ name: s.kind === "sale" ? s.name : null, client: s.client }, "Walk-in");
+    return {
+      value: s.key,
+      label: `${who} — ${s.reference}`,
+      hint: money(s.totalAmount, s.currency),
+      // Customer name first: people search by who, not by document number.
+      search: [who, s.client?.phone, s.reference].filter(Boolean).join(" "),
+    };
+  };
 
   return (
     <>

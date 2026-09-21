@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { getOrgNumberConfig, maxSequenceForYear, composeJobNumber } from "@/lib/commercial/org-number";
+import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { normalizePhoneForStorage } from "@/lib/phone";
@@ -90,37 +90,13 @@ function parseDevices(devicesJson: string) {
 }
 
 export async function generateJobNumber(orgId?: string) {
-  const year = new Date().getFullYear();
-  const { prefix, pad } = await getOrgNumberConfig(orgId);
-
-  // Two scans, run together:
-  //  - global scan of this prefix/year keeps the globally-@unique jobNumber
-  //    collision-free across tenants sharing a prefix;
-  //  - per-org scan of any this-year number (new slash form or legacy hyphen
-  //    form) continues the org's sequence instead of restarting at 0001.
-  const [globalRows, orgRows] = await Promise.all([
-    prisma.job.findMany({
-      where: { jobNumber: { startsWith: `${prefix}/${year}/` , mode: "insensitive" as const} },
-      select: { jobNumber: true },
-    }),
-    orgId
-      ? prisma.job.findMany({
-          where: {
-            orgId,
-            OR: [
-              { jobNumber: { contains: `/${year}/` , mode: "insensitive" as const} },
-              { jobNumber: { contains: `-${year}-` , mode: "insensitive" as const} },
-            ],
-          },
-          select: { jobNumber: true },
-        })
-      : Promise.resolve([] as { jobNumber: string }[]),
-  ]);
-
-  const globalMax = maxSequenceForYear(globalRows.map((r) => r.jobNumber), year);
-  const orgMax = maxSequenceForYear(orgRows.map((r) => r.jobNumber), year);
-  const next = Math.max(globalMax, orgMax) + 1;
-  return composeJobNumber(prefix, year, next, pad);
+  // Universal numbering: TAG/JOB/YYYY/MM/NNN, monthly atomic counter.
+  // Legacy numbers stay grandfathered; the taken check only guards the
+  // shared-tag edge where two orgs could compose the same string.
+  return nextUniversalNumber(orgId ?? "", "JOB", {
+    taken: async (candidate) =>
+      Boolean(await prisma.job.findFirst({ where: { jobNumber: candidate }, select: { id: true } })),
+  });
 }
 
 export async function createJobAction(
@@ -167,24 +143,34 @@ export async function createJobAction(
       select: { id: true },
     });
 
-    const client = existingClient
-      ? await prisma.client.update({
-          where: { id: existingClient.id },
-          data: {
-            fullName: sanitizeText(parsed.data.fullName),
-            email: sanitizeOptionalText(parsed.data.email),
-            organization: sanitizeOptionalText(parsed.data.organization),
-          },
-        })
-      : await prisma.client.create({
-          data: {
-            orgId,
-            fullName: sanitizeText(parsed.data.fullName),
-            phone: canonicalPhone,
-            email: sanitizeOptionalText(parsed.data.email),
-            organization: sanitizeOptionalText(parsed.data.organization),
-          },
-        });
+    // Writes stay org-scoped, and blank contact fields never erase stored
+    // ones — only values the user actually typed carry over.
+    const incomingEmail = sanitizeOptionalText(parsed.data.email);
+    const incomingOrg = sanitizeOptionalText(parsed.data.organization);
+    let clientId: string;
+    if (existingClient) {
+      await prisma.client.updateMany({
+        where: { id: existingClient.id, orgId },
+        data: {
+          fullName: sanitizeText(parsed.data.fullName),
+          ...(incomingEmail ? { email: incomingEmail } : {}),
+          ...(incomingOrg ? { organization: incomingOrg } : {}),
+        },
+      });
+      clientId = existingClient.id;
+    } else {
+      const created = await prisma.client.create({
+        data: {
+          orgId,
+          fullName: sanitizeText(parsed.data.fullName),
+          phone: canonicalPhone,
+          email: incomingEmail,
+          organization: incomingOrg,
+        },
+        select: { id: true },
+      });
+      clientId = created.id;
+    }
 
     const parsedDevices = parseDevices(parsed.data.devicesJson);
     if (!parsedDevices.ok) {
@@ -192,6 +178,9 @@ export async function createJobAction(
     }
     const devices = parsedDevices.devices;
     const receivedAt = parsed.data.receivedAt ? new Date(parsed.data.receivedAt) : new Date();
+    if (Number.isNaN(receivedAt.getTime())) {
+      return { error: "Invalid received date." };
+    }
 
     const openStatuses = filterSupportedJobStatuses([
       "RECEIVED",
@@ -207,6 +196,25 @@ export async function createJobAction(
 
     const createdJobs: Array<{ id: string; jobNumber: string }> = [];
 
+    // Validate every serial before creating anything: a dup-serial error
+    // mid-loop used to leave the earlier devices committed.
+    for (let i = 0; i < devices.length; i += 1) {
+      const preSerial = sanitizeOptionalText(devices[i]?.serialOrImei);
+      if (!preSerial) continue;
+      const preDup = await prisma.job.findFirst({
+        where: {
+          orgId,
+          clientId: clientId,
+          serialOrImei: preSerial,
+          status: { in: openStatuses },
+        },
+        select: { id: true, jobNumber: true },
+      });
+      if (preDup) {
+        return { error: `An open job already exists for this device serial/IMEI: ${preDup.jobNumber}` };
+      }
+    }
+
     for (let i = 0; i < devices.length; i += 1) {
       const device = devices[i];
       const serial = sanitizeOptionalText(device.serialOrImei);
@@ -214,7 +222,7 @@ export async function createJobAction(
         const dup = await prisma.job.findFirst({
           where: {
             orgId,
-            clientId: client.id,
+            clientId: clientId,
             serialOrImei: serial,
             status: { in: openStatuses },
           },
@@ -237,7 +245,7 @@ export async function createJobAction(
         ? await prisma.device.findFirst({ where: { orgId, serialOrImei: serial }, select: { id: true } })
         : null;
       const deviceData = {
-        clientId: client.id,
+        clientId: clientId,
         deviceType: device.deviceType,
         brand: sanitizeText(device.brand),
         model: sanitizeText(device.model),
@@ -245,7 +253,7 @@ export async function createJobAction(
         physicalNotes: sanitizeOptionalText(device.physicalNotes),
       };
       if (existingDevice) {
-        await prisma.device.update({ where: { id: existingDevice.id }, data: deviceData });
+        await prisma.device.updateMany({ where: { id: existingDevice.id, orgId }, data: deviceData });
         deviceId = existingDevice.id;
       } else {
         const createdDevice = await prisma.device.create({
@@ -306,7 +314,7 @@ export async function createJobAction(
           data: {
             orgId,
             jobNumber,
-            clientId: client.id,
+            clientId: clientId,
             createdById: session.user.id,
             ...(deviceId ? { deviceId } : {}),
             deviceType: device.deviceType,
