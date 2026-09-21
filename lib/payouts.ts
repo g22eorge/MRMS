@@ -43,15 +43,19 @@ export async function getJobPayoutsByIds(jobIds: string[], orgId?: string) {
     externalPaidAt: Date | string | null;
     externalPaymentRef: string | null;
   }>>(
+    // Every identifier quoted. Postgres folds an unquoted one to lower case, so
+    // `externalTechFee` became `externaltechfee` and the query died with 42703
+    // against a table whose columns were created quoted and mixed-case. It read
+    // as valid SQL and had been since the datasource changed.
     Prisma.sql`
       SELECT
-        id,
-        externalTechFee,
-        externalPaid,
-        externalPaidAt,
-        externalPaymentRef
+        "id",
+        "externalTechFee",
+        "externalPaid",
+        "externalPaidAt",
+        "externalPaymentRef"
       FROM "Job"
-      WHERE id IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}`))})
+      WHERE "id" IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}`))})
       ${orgId ? Prisma.sql`AND "orgId" = ${orgId}` : Prisma.sql``}
     `,
   );
