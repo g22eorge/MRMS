@@ -155,6 +155,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      # Not an ordering preference — a race. app, worker and scheduler all mount
+      # the same `node_modules` volume, and on a machine that has never run this
+      # before it is empty, so Docker populates it from the image at first mount.
+      # Started together, two containers copy into it at once and one of them
+      # dies with `mkdir .../node_modules/_data/<pkg>: file exists`. Only the
+      # first `dev:up` on a new clone can hit it, which is the worst possible
+      # audience for it. app goes first, populates the volume, these two attach
+      # to a volume that is already there. scheduler already waited; worker did
+      # not, and that is the one that failed.
+      app:
+        condition: service_started
     volumes:
       - .:/app
       - node_modules:/app/node_modules
