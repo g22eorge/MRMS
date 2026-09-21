@@ -72,6 +72,12 @@ const resolveDuplicates = args.includes("--resolve-duplicates");
 const orphanPolicy = importMap.orphanPolicy ?? {};
 const resolveOrphans = args.includes("--resolve-orphans");
 
+// Columns the datamodel has and the dump does not, whose value is derivable from
+// columns it does have. Unlike the policies above these need no flag: they are
+// not a judgement about ambiguous data, they are arithmetic the dump could not
+// carry. See `derivedColumns` in docs/pg-migration/import-map.json.
+const derivedColumns = importMap.derivedColumns ?? {};
+
 const sqlite = createClient({ url: `file:${dumpPath}` });
 const prisma = new PrismaClient({ log: ["error"] });
 
@@ -507,6 +513,47 @@ async function nullOrphans(table, column) {
 
 const ORPHAN_RESOLVERS = { nullOrphan: nullOrphans };
 
+// ── Derived columns ────────────────────────────────────────────────────────
+// Run after every row is written, because they read the rows they correct.
+//
+// A migration cannot do this job. `prisma migrate deploy` runs against an empty
+// database at cutover, so its backfill updates nothing, and the import that
+// follows writes the column at its default. The one time the ordering is
+// reversed — data already present, migration applied afterwards — the migration
+// does backfill correctly, and this pass then finds nothing left to do. Keeping
+// it in both places is what makes the two orderings agree.
+const DERIVERS = {
+  /**
+   * Expense.paidAmount — how much of an expense has been settled, tracked
+   * across ExpensePayment rows. The dump predates the column, so every row
+   * arrives at the default 0, including expenses whose paidAt says they were
+   * settled months ago. Those read as fully owing in payables until this runs.
+   *
+   * `paidAmount < amount` makes it idempotent and leaves part-payments alone:
+   * a row that already carries its full amount is not rewritten.
+   */
+  async "expense-paid-in-full"() {
+    return prisma.$executeRawUnsafe(
+      `UPDATE "Expense" SET "paidAmount" = "amount" WHERE "paidAt" IS NOT NULL AND "paidAmount" < "amount"`,
+    );
+  },
+};
+
+async function applyDerivedColumns() {
+  const applied = [];
+  for (const [target, spec] of Object.entries(derivedColumns)) {
+    const deriver = DERIVERS[spec.deriver];
+    if (!deriver) {
+      console.error(`\n  no deriver "${spec.deriver}" for ${target} — check docs/pg-migration/import-map.json\n`);
+      await sqlite.close();
+      await prisma.$disconnect();
+      process.exit(1);
+    }
+    applied.push({ target, rows: await deriver() });
+  }
+  return applied;
+}
+
 async function plannedResolutions() {
   const planned = [];
   for (const [key, policy] of Object.entries(duplicatePolicy)) {
@@ -674,9 +721,15 @@ for (const ref of deferredSelfRefs) {
   await prisma[ref.delegate].update({ where: { id: ref.id }, data: { [ref.column]: ref.value } });
 }
 
+// Columns the dump could not carry, derived from the rows just written.
+const derived = await applyDerivedColumns();
+
 console.log(`\n  wrote ${totalRows} rows across ${perTable.length} tables`);
 if (deferredSelfRefs.length) {
   console.log(`  resolved ${deferredSelfRefs.length} self-reference(s) in a second pass`);
+}
+for (const d of derived) {
+  console.log(`  derived ${d.target} on ${d.rows} row(s)`);
 }
 console.log("\n  largest tables:");
 for (const t of perTable.sort((a, b) => b.rows - a.rows).slice(0, 10)) {
