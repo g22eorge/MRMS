@@ -104,7 +104,7 @@ export default async function InventoryPage({
         SUM(CASE WHEN "reorderLevel" <= 0 THEN 1 ELSE 0 END) AS "noReorderItems",
         SUM(CASE WHEN "qtyReserved" > "qtyOnHand" THEN 1 ELSE 0 END) AS "overReserved",
         COALESCE(SUM(CASE WHEN "qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0 THEN ("reorderLevel" - "qtyOnHand") * COALESCE("unitCost", 0) ELSE 0 END), 0) AS "workingCapitalAtRisk"
-      FROM "Part" WHERE "orgId" = ${orgId} AND "isActive" = 1
+      FROM "Part" WHERE "orgId" = ${orgId} AND "isActive" = TRUE
     `.catch(() => [] as Array<Record<string, unknown>>),
     prisma.$queryRaw<Array<{ c: number | bigint }>>`SELECT COUNT(*) AS c FROM "Part" ${rowWhere}`.catch(() => [{ c: 0 }]),
     prisma.part

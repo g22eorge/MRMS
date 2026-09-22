@@ -125,15 +125,121 @@ if (process.env.NODE_ENV !== "production") {
  * (`_sum`, `_avg`, `_min`, `_max`), `groupBy`, and `$queryRaw`, all of which
  * hand back Decimals that no field mapping covers.
  */
-export const prisma = basePrisma
-  .$extends({
-    query: {
-      async $allOperations({ args, query }) {
-        return decimalsToNumbers(await query(args));
-      },
+/**
+ * Strip engine/extension metadata symbols from result rows.
+ *
+ * Prisma decorates rows flowing through `result` extensions with
+ * Symbol(nodejs.util.inspect.custom). String-key traversal never sees it, so a
+ * row can hold only plain numbers yet still fail RSC serialization with
+ * "Objects with symbol properties ... are not supported". Database rows carry
+ * no meaningful symbol payload — remove them at the boundary.
+ */
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object") return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Rebuild plain data, dropping engine/extension metadata.
+ *
+ * Result rows can carry Symbol(nodejs.util.inspect.custom) through exotic
+ * behavior where `delete` reports success yet the symbol persists — string-key
+ * traversal never sees it, so a row can hold only plain numbers yet still
+ * fail RSC serialization. Spreading into a fresh literal drops every symbol
+ * key for real, because the new object is genuinely plain. Class instances
+ * (Error, streams, Decimals that slipped conversion) are never rebuilt:
+ * Decimals convert to number, everything else passes through untouched.
+ */
+function stripResultSymbols(value: unknown, depth = 0): unknown {
+  if (value === null || value === undefined || depth > 12) return value;
+  if (isDecimal(value)) return value.toNumber();
+  if (typeof value !== "object") return value;
+  if (value instanceof Date || value instanceof Uint8Array) return value;
+  if (Array.isArray(value)) return value.map((item) => stripResultSymbols(item, depth + 1));
+  if (!isPlainRecord(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(value)) {
+    out[key] = stripResultSymbols((value as Record<string, unknown>)[key], depth + 1);
+  }
+  return out;
+}
+
+function isPromiseLike(value: unknown): value is Promise<unknown> {
+  return (
+    !!value &&
+    (typeof value === "object" || typeof value === "function") &&
+    typeof (value as { then?: unknown }).then === "function"
+  );
+}
+
+// Methods that must reach the real client untouched (bound, never wrapped).
+const PASSTHROUGH_METHODS = new Set(["$connect", "$disconnect", "$on", "$use"]);
+
+/**
+ * Wrap a client (or transaction client) so every promise result is stripped
+ * of metadata symbols before the caller sees it. Applied OUTSIDE all Prisma
+ * extensions — `$extends` chains resolve inside this wrapper — so it observes
+ * final results however the engine decorates them along the way.
+ */
+function wrapClient<T extends object>(target: T, seen = new WeakMap<object, unknown>()): T {
+  if (seen.has(target)) return seen.get(target) as T;
+  const proxy = new Proxy(target, {
+    get(t, prop, receiver) {
+      // Symbols (inspect, dispose, thenables) always pass through untouched.
+      if (typeof prop === "symbol") return Reflect.get(t, prop, receiver);
+      if (prop === "$transaction") {
+        const orig = Reflect.get(t, prop) as (...args: unknown[]) => unknown;
+        return (...args: unknown[]) => {
+          const [first, ...rest] = args;
+          if (typeof first === "function") {
+            return stripResultSymbols(
+              Reflect.apply(orig, t, [(tx: unknown) => (first as (tx: unknown) => unknown)(wrapClient(tx as object, seen)), ...rest]),
+            );
+          }
+          const out = Reflect.apply(orig, t, args);
+          return isPromiseLike(out) ? out.then(stripResultSymbols) : out;
+        };
+      }
+      if (prop === "$extends") {
+        const orig = Reflect.get(t, prop) as (...args: unknown[]) => unknown;
+        // Bound to the real target: Prisma reads internal slots off `this`.
+        return (...args: unknown[]) => wrapClient(Reflect.apply(orig, t, args) as object, seen);
+      }
+      const value = Reflect.get(t, prop, receiver);
+      if (typeof value === "function") {
+        if (PASSTHROUGH_METHODS.has(prop as string)) return value.bind(t);
+        return (...args: unknown[]) => {
+          const out = Reflect.apply(value as (...a: unknown[]) => unknown, t, args);
+          return isPromiseLike(out) ? out.then(stripResultSymbols) : out;
+        };
+      }
+      if (value !== null && typeof value === "object") return wrapClient(value as object, seen);
+      return value;
     },
-  })
-  .$extends(decimalToNumberExtension);
+  });
+  seen.set(target, proxy);
+  return proxy as T;
+}
+
+export const prisma = wrapClient(
+  basePrisma
+    .$extends({
+      query: {
+        async $allOperations({ args, query }) {
+          return decimalsToNumbers(await query(args));
+        },
+      },
+    })
+    .$extends(decimalToNumberExtension),
+);
+
+/**
+ * Wrap a client (or transaction client) so every promise result is stripped
+ * of metadata symbols before the caller sees it. Applied OUTSIDE all Prisma
+ * extensions — `$extends` chains resolve inside this wrapper — so it observes
+ * final results however the engine decorates them along the way.
+ */
 
 // Eagerly start the connection so it is ready before the first request.
 // Without this, Prisma's lazy initialiser races incoming requests (especially
