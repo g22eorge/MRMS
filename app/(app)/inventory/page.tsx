@@ -67,7 +67,7 @@ export default async function InventoryPage({
   // the WHOLE catalog to reduce in JS. Run the list as parameterised SQL so we
   // paginate in the DB and return aggregates, not every row.
   const baseConds: Prisma.Sql[] = [Prisma.sql`"orgId" = ${orgId}`];
-  if (statusFilter !== "all") baseConds.push(Prisma.sql`"isActive" = ${statusFilter === "active" ? 1 : 0}`);
+  if (statusFilter !== "all") baseConds.push(statusFilter === "active" ? Prisma.sql`"isActive"` : Prisma.sql`NOT "isActive"`);
   if (q) {
     const like = `%${q}%`;
     baseConds.push(Prisma.sql`("name" LIKE ${like} OR "sku" LIKE ${like} OR "manufacturer" LIKE ${like})`);
