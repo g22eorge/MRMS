@@ -61,3 +61,20 @@
 
 ## 2026-09-23 — Full E2E re-validation after all P1 changes
 - `bun run qa:e2e` (with `NEXT_DIST_DIR=.next` per known config quirk): **30 passed, 0 failed (3.7m)** across 11 files, incl. new `repair-parts` spec.
+
+## 2026-09-23 — Expense payment button (user-reported, fixed)
+- Symptom: row-menu "Record payment" appeared to do nothing. Causes: plain submit
+  gave zero feedback during slow action round-trips, and native min/max/step
+  could refuse submit without visible feedback.
+- Fix (`finance/expenses/page.tsx`): `SubmitButton bare` with "Recording…"
+  pending state (double-submit guard); amount input keeps `required` only —
+  server remains the validator (balance cap + error banner).
+- New `tests/e2e/expense-payment.spec.ts`: menu → fill 40000 → submit →
+  ExpensePayment row + paidAmount 40000, paidAt stays null (part payment).
+  E2E 1/1 pass (first attempt caught only a cold-server 5s poll — hardened to 30s).
+- Verification: `tsc` + `eslint` clean. Needs owner confirmation on production data.
+
+## 2026-09-23 — Button/navigation audit (no findings)
+- `bun run check:links`: OK, no broken static hrefs. All `router.push` targets resolve to real pages.
+- ~20 button candidates without single-line handlers inspected (`rg --pcre2`): all false positives — every one carries onClick/submit/form action on following lines. No dead buttons found.
+- Dynamic href prefixes sampled (`/api/procurement/documents/*` → `[kind]/[id]` handles all 4 kinds; `/api/portal/assessment/*` → `[jobId]`; pages/queriestrings) — all resolve. Verdict: sound, no changes.

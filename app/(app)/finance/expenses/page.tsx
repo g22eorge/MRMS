@@ -543,12 +543,14 @@ export default async function ExpensesPage({ searchParams }: Props) {
                 </p>
                 <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
                   Amount
+                  {/* No min/max/step: native constraints can refuse to submit
+                      with no visible feedback (fractional dues, float dust),
+                      and the server already rejects non-positive and
+                      over-balance amounts with an error banner. */}
                   <input
                     name="amount"
                     type="number"
-                    min="0.01"
-                    step="0.01"
-                    max={expense.amount - expense.paidAmount}
+                    step="any"
                     required
                     defaultValue={expense.amount - expense.paidAmount}
                     className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
@@ -577,12 +579,13 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     ))}
                   </select>
                 </label>
-                <button
-                  type="submit"
-                  className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black"
+                <SubmitButton
+                  bare
+                  className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black disabled:opacity-60"
+                  pendingLabel="Recording…"
                 >
                   Record payment
-                </button>
+                </SubmitButton>
               </form>
             ) : null}
             {canDelete ? (
