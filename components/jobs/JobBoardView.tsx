@@ -18,7 +18,7 @@ const COLUMNS: BoardCol[] = [
   { key: "RECEIVED",          label: "Received",          dot: "bg-sky-500",     strip: "bg-sky-500",     badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400",       text: "text-sky-700 dark:text-sky-400" },
   { key: "DIAGNOSING",        label: "Diagnosing",        dot: "bg-blue-500",    strip: "bg-blue-500",    badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400",    text: "text-blue-700 dark:text-blue-400" },
   { key: "REFERRED",          label: "Referred",          dot: "bg-slate-500",  strip: "bg-slate-500",  badge: "bg-slate-500/10 text-slate-700 dark:text-slate-400",  text: "text-slate-700 dark:text-slate-400" },
-  { key: "AWAITING_APPROVAL", label: "Awaiting Approval", dot: "bg-amber-500",  strip: "bg-amber-500",  badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400",  text: "text-amber-700 dark:text-amber-400" },
+  { key: "AWAITING_APPROVAL", label: "Awaiting Approval", dot: "bg-amber-500",  strip: "bg-amber-500",  badge: "bg-amber-500/10 text-amber-800 dark:text-amber-400",  text: "text-amber-800 dark:text-amber-400" },
   { key: "IN_REPAIR",         label: "In Repair",         dot: "bg-emerald-500", strip: "bg-emerald-500", badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400", text: "text-emerald-700 dark:text-emerald-400" },
 ];
 
@@ -102,9 +102,9 @@ export function JobBoardView({
                             <span
                               className={`rounded-full px-1.5 py-0.5 text-[0.8125rem] font-semibold ${
                                 age >= 7
-                                  ? "bg-red-500/10 text-red-700 dark:text-red-400"
+                                  ? "bg-red-500/10 text-red-800 dark:text-red-400"
                                   : age >= 3
-                                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                    ? "bg-amber-500/10 text-amber-800 dark:text-amber-400"
                                     : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"
                               }`}
                             >

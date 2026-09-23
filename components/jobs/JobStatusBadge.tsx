@@ -32,7 +32,7 @@ const statusConfig: Record<ReturnType<typeof normalizeJobStatus>, StatusConfig> 
   },
   AWAITING_APPROVAL: {
     dot: "bg-amber-400",
-    badge: "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    badge: "border-amber-400/30 bg-amber-500/10 text-amber-800 dark:text-amber-400",
     strip: "bg-amber-400",
     label: "Awaiting",
     help: "Waiting for client approval to proceed.",

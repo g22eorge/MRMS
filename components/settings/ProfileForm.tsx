@@ -70,7 +70,7 @@ export function ProfileForm({
   const fieldClass =
     "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
   const labelClass = "mb-1 block text-[0.75rem] font-medium text-[var(--ink-muted)]";
-  const metaLabelClass = "text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70";
+  const metaLabelClass = "text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
   const metaValueClass = "mt-0.5 truncate text-[0.8125rem] font-semibold text-[var(--ink)]";
 
   // ── Compact variant (settings popover) — unchanged shape ──
@@ -107,7 +107,7 @@ export function ProfileForm({
   return (
     <form action={formAction} className="dc-card overflow-hidden">
       <div className="border-b border-[var(--line)] px-4 py-2.5">
-        <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Your Details</p>
+        <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">Your Details</p>
         <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">
           Handoffs, approvals and client messages use these details.
         </p>

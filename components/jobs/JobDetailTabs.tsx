@@ -1762,13 +1762,18 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             {!canSeeBothDiagnoses && diagnosisMode === "internal" ? (
               <p className="text-xs text-[var(--ink-muted)]">External diagnosis is hidden for internal technician flow.</p>
             ) : null}
+            <label htmlFor="partsNeeded" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+              Parts needed (notes only)
+            </label>
             <textarea
+              id="partsNeeded"
               name="partsNeeded"
               defaultValue={job.partsNeeded ?? ""}
-              placeholder="Parts needed"
+              placeholder="Parts needed — notes only, does not affect stock"
               readOnly={isTerminal && !canAssignJobs}
               className={areaClass}
             />
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Typed notes do not move inventory. Reserve and fit parts in the parts panel so stock is tracked.</p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
@@ -1963,8 +1968,9 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             <textarea name="workDone" readOnly={isTerminal && !canAssignJobs} defaultValue={job.workDone ?? ""} placeholder="Describe the work carried out…" className={areaClass} />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-[var(--ink-muted)]">Parts replaced</label>
-            <textarea name="partsReplaced" readOnly={isTerminal && !canAssignJobs} defaultValue={job.partsReplaced ?? ""} placeholder="Any notes on the parts used…" className={areaClass} />
+            <label htmlFor="partsReplaced" className="mb-1.5 block text-xs font-semibold text-[var(--ink-muted)]">Parts replaced (notes only)</label>
+            <textarea id="partsReplaced" name="partsReplaced" readOnly={isTerminal && !canAssignJobs} defaultValue={job.partsReplaced ?? ""} placeholder="Any notes on the parts used — notes only, does not affect stock…" className={areaClass} />
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Only parts fitted through the parts panel reduce inventory.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <button disabled={(isTerminal && !canAssignJobs) || isRepairPending} className="btn-premium rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-60">

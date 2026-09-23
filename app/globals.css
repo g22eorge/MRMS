@@ -372,7 +372,8 @@ pre,
   --dc-accent-2: #665214;
   --dc-accent-soft: rgba(159, 128, 31, 0.12);
   --dc-good: #2c8f61;
-  --dc-warn: #bd8410;
+  /* #bd8410 was 3.11:1 on #fbfaf6 (fails AA for text) — #7a6000 is 5.74:1. */
+  --dc-warn: #7a6000;
   --dc-crit: #c9463a;
   --dc-crit-soft: rgba(201, 70, 58, 0.12);
   --dc-blue: #3d6fb4;
@@ -447,7 +448,8 @@ pre,
   --dc-accent-2: #665214;
   --dc-accent-soft: rgba(159, 128, 31, 0.12);
   --dc-good: #2c8f61;
-  --dc-warn: #bd8410;
+  /* #bd8410 was 3.11:1 on #fbfaf6 (fails AA for text) — #7a6000 is 5.74:1. */
+  --dc-warn: #7a6000;
   --dc-crit: #c9463a;
   --dc-crit-soft: rgba(201, 70, 58, 0.12);
   --dc-blue: #3d6fb4;

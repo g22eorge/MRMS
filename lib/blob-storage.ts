@@ -19,10 +19,9 @@ import { UTApi } from "uploadthing/server";
 // HEIC/HEIF is what an iPhone produces by default, so it is accepted and
 // converted to JPEG on the way in (see uploadJobImage) — browsers cannot decode
 // HEIC, so storing it as-is would mean photos that upload but never display.
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
-const HEIC_TYPES = new Set(["image/heic", "image/heif"]);
-// Phone photos routinely exceed 5 MB; this is the pre-conversion input limit.
-const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
+// Limits live in lib/upload-limits.ts (dependency-free) so tests can import them.
+import { ALLOWED_TYPES, MAX_BYTES, LOGO_MAX_BYTES, hasValidImageSignature, isHeicType } from "./upload-limits";
+export { ALLOWED_TYPES, MAX_BYTES, LOGO_MAX_BYTES, hasValidImageSignature };
 
 export function blobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
@@ -71,28 +70,7 @@ export function isUploadThingRef(urlOrKey: string): boolean {
   return !urlOrKey.includes("/");
 }
 
-/** Magic-byte check so a renamed non-image can't slip through the type filter. */
-export function hasValidImageSignature(contentType: string, bytes: Uint8Array): boolean {
-  if (contentType === "image/jpeg") return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  if (contentType === "image/png") return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
-  if (contentType === "image/webp") {
-    return bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 // RIFF
-      && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50; // WEBP
-  }
-  if (HEIC_TYPES.has(contentType)) {
-    // ISO-BMFF: "ftyp" at offset 4, then a HEIF-family brand at offset 8.
-    const ftyp = bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70;
-    if (!ftyp) return false;
-    const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
-    return HEIF_BRANDS.has(brand);
-  }
-  return false;
-}
-
-/** HEIF-family ftyp brands an iPhone (or a converter) can emit. */
-const HEIF_BRANDS = new Set([
-  "heic", "heix", "heim", "heis", "hevc", "hevx", "hevm", "hevs", "mif1", "msf1",
-]);
+/** Magic-byte check re-exported from upload-limits (dependency-free) for callers. */
 
 /**
  * Decode HEIC/HEIF to JPEG. The library is pulled in on demand so the decoder is
@@ -142,7 +120,7 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
   // iPhone photos arrive as HEIC, which no browser can display — convert to JPEG
   // so the job page and the customer portal can actually render them.
   let mimeType = file.type;
-  if (HEIC_TYPES.has(mimeType)) {
+  if (isHeicType(mimeType)) {
     const jpeg = await heicToJpeg(bytes);
     if (!jpeg) return { ok: false, error: "That HEIC image could not be converted. Try exporting it as JPEG." };
     bytes = jpeg;
@@ -219,7 +197,6 @@ export async function uploadJobImage(jobId: string, file: File): Promise<{ ok: t
  * documents and served to browsers.
  */
 const LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
 export async function uploadOrgLogo(
   orgId: string,

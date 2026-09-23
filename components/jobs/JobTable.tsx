@@ -16,13 +16,13 @@ function AgeBadge({ receivedAt, status }: { receivedAt: Date; status: string }) 
   const terminal = status === "COMPLETED" || status === "CLOSED";
   const days = jobAgeDays(receivedAt);
   if (terminal) {
-    return <span className="tabular-nums text-[var(--ink-muted)]/50">{days}d</span>;
+    return <span className="tabular-nums text-[var(--ink-muted)]">{days}d</span>;
   }
   const cls =
     days >= 8
-      ? "bg-red-500/10 text-red-700 dark:text-red-400"
+      ? "bg-red-500/10 text-red-800 dark:text-red-400"
       : days >= 4
-        ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+        ? "bg-amber-500/10 text-amber-800 dark:text-amber-400"
         : "bg-[var(--panel-strong)] text-[var(--ink-muted)]";
   return (
     <span className={`rounded-md px-1.5 py-0.5 text-[0.75rem] font-semibold leading-tight tabular-nums ${cls}`}>
@@ -76,14 +76,14 @@ type WorkflowReason =
 type HighlightReason = Exclude<WorkflowReason, "NONE">;
 
 const workflowReasonConfig: Record<HighlightReason, { badge: string; label: string }> = {
-  PARTS_PENDING:        { badge: "bg-amber-500/10 text-amber-700 border border-amber-400/30 dark:text-amber-400",   label: "Parts pending" },
+  PARTS_PENDING:        { badge: "bg-amber-500/10 text-amber-800 border border-amber-400/30 dark:text-amber-400",   label: "Parts pending" },
   SPECIALIST_ESCALATION:{ badge: "bg-slate-500/10 text-slate-600 border border-slate-400/30 dark:text-slate-400", label: "Escalated" },
   CLIENT_DECLINED:      { badge: "bg-red-500/10 text-red-700 border border-red-400/30 dark:text-red-400",           label: "Declined" },
   UNREPAIRABLE:         { badge: "bg-red-500/10 text-red-700 border border-red-400/30 dark:text-red-400",           label: "Unrepairable" },
   CUSTOMER_CANCELLED:   { badge: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",    label: "Cancelled" },
   OTHER:                { badge: "border border-[var(--line)] bg-[var(--panel-strong)] text-[var(--ink-muted)]",    label: "Other" },
   CLIENT_APPROVED:      { badge: "bg-emerald-500/10 text-emerald-700 border border-emerald-400/30 dark:text-emerald-400", label: "Approved" },
-  CLIENT_APPROVED_PARTS_PENDING: { badge: "bg-amber-500/10 text-amber-700 border border-amber-400/30 dark:text-amber-400", label: "Approved · parts pending" },
+  CLIENT_APPROVED_PARTS_PENDING: { badge: "bg-amber-500/10 text-amber-800 border border-amber-400/30 dark:text-amber-400", label: "Approved · parts pending" },
   CLIENT_APPROVED_AWAITING_DEVICE: { badge: "bg-sky-500/10 text-sky-700 border border-sky-400/30 dark:text-sky-400", label: "Approved · awaiting device" },
 };
 
@@ -113,7 +113,7 @@ function getJobListFlag(job: JobRow, canManagePricing: boolean): JobListFlag | n
 
   if (canManagePricing && typeof job.clientBill !== "number" && ["AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP"].includes(job.status)) {
     return {
-      badge: "border border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      badge: "border border-amber-400/30 bg-amber-500/10 text-amber-800 dark:text-amber-400",
       label: "Needs pricing",
     };
   }
