@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   // API
   "/api/auth",
   "/api/login",
+  "/api/health",          // Uptime monitors (returns only ok/db/uptime, no PII)
   "/api/webhooks",
   "/api/repair-requests",
   "/api/billing/callback", // Pesapal payment redirect (arrives without session)

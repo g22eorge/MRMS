@@ -86,6 +86,13 @@
 - Proof: new `onboarding-flow` E2E (register → workspace → dashboard, no error
   page) 1/1; full `test:unit` 1108/0 fail; full E2E **32/32**.
 
+## 2026-09-24 — Public /api/health for uptime monitors
+- `/api/health` was auth-gated by the proxy (307 without session), unusable for
+  external monitoring. Response carries no PII (`ok`/`db`/`uptime` only).
+- Fix: added to `PUBLIC_PATHS` in `proxy.ts` (prefix match, same pattern as
+  neighbouring entries). Verified: health unit tests 9/9, `tsc` + `eslint`
+  clean, production build compiles (proxy validated).
+
 ## 2026-09-23 — Button/navigation audit (no findings)
 - `bun run check:links`: OK, no broken static hrefs. All `router.push` targets resolve to real pages.
 - ~20 button candidates without single-line handlers inspected (`rg --pcre2`): all false positives — every one carries onClick/submit/form action on following lines. No dead buttons found.
