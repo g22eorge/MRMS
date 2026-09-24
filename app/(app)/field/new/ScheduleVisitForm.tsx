@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { FieldVisitType } from "@prisma/client";
+import type { FieldVisitType } from "@prisma/client";
 
 import { scheduleVisit } from "../actions";
 

@@ -1,6 +1,9 @@
-import { OrgModule, OrgPlan } from "@prisma/client";
-
-export { OrgModule };
+// Type-only: this module is imported by client components (onboarding,
+// module toggles, icons), and a runtime @prisma/client import crashes the
+// browser bundle (the generated .prisma/client entry does not exist
+// client-side). The runtime enum stays available to server code via
+// lib/module-access, which re-exports it from @prisma/client directly.
+import type { OrgModule, OrgPlan } from "@prisma/client";
 
 export const MODULE_LABELS: Record<OrgModule, string> = {
   JOBS: "Jobs & Repairs",
@@ -69,12 +72,17 @@ export function recommendPlanForModules(modules: OrgModule[]): OrgPlan {
   }, "STARTER");
 }
 
-export const ALL_MODULES: OrgModule[] = (() => {
-  try {
-    const vals = Object.values(OrgModule ?? {});
-    if (vals.length > 0) return vals as OrgModule[];
-  } catch {
-    // fall through to static enum list
-  }
-  return ["JOBS", "INVENTORY", "POS", "PURCHASE_ORDERS", "INVOICING", "COMPLAINTS", "REPORTS", "SALES", "FIELD", "TARGETS"] as OrgModule[];
-})();
+// Static list on purpose (see header): deriving this from the Prisma enum at
+// runtime reintroduces the client-bundle crash this module was fixed for.
+export const ALL_MODULES: OrgModule[] = [
+  "JOBS",
+  "INVENTORY",
+  "POS",
+  "PURCHASE_ORDERS",
+  "INVOICING",
+  "COMPLAINTS",
+  "REPORTS",
+  "SALES",
+  "FIELD",
+  "TARGETS",
+];

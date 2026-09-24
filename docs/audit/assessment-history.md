@@ -74,6 +74,18 @@
   E2E 1/1 pass (first attempt caught only a cold-server 5s poll — hardened to 30s).
 - Verification: `tsc` + `eslint` clean. Needs owner confirmation on production data.
 
+## 2026-09-24 — Commercial registration crash (P0-01 resolved)
+- Symptom: fresh app.* users hit the global error page on /onboarding. Loader
+  was innocent (47 keys locally) — the crash was a client-bundle import:
+  `OnboardingForm` → `module-catalog` (runtime Prisma enum + re-export) →
+  `@prisma/client` browser stub missing `.prisma/client` entry. Same disease in
+  `ModuleIcon` and `plan-prices` → `platform-settings` → `prisma` chains.
+- Fix: `module-catalog` type-only + static ALL_MODULES (runtime enum stays on
+  server-only `module-access`); new dependency-free `plan-price-table.ts`;
+  `ModuleIcon` + 8 more client files to `import type`.
+- Proof: new `onboarding-flow` E2E (register → workspace → dashboard, no error
+  page) 1/1; full `test:unit` 1108/0 fail; full E2E **32/32**.
+
 ## 2026-09-23 — Button/navigation audit (no findings)
 - `bun run check:links`: OK, no broken static hrefs. All `router.push` targets resolve to real pages.
 - ~20 button candidates without single-line handlers inspected (`rg --pcre2`): all false positives — every one carries onClick/submit/form action on following lines. No dead buttons found.

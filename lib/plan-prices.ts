@@ -26,29 +26,8 @@
 
 import { getPlatformSetting } from "@/lib/platform-settings";
 
-/**
- * The canonical plan prices, in UGX per month.
- *
- * These lived in lib/pesapal.ts, which only declared them and never used them —
- * the payment client was just where they happened to be parked. They belong
- * here, in the module named for them, so the resolver below cannot drift from
- * the figures checkout charges. pesapal.ts re-exports this, so every existing
- * importer is unaffected.
- *
- * STARTER is absent on purpose: it is free.
- */
-export const PLAN_PRICES: Record<string, number> = {
-  STANDARD:   19_900,
-  GROWTH:     39_900,
-  PREMIUM:    69_900,
-  ENTERPRISE: 99_900,
-};
-
-/**
- * The prices charged at checkout, and therefore the prices to verify against.
- * An alias rather than a second table: a second copy is what caused the drift.
- */
-export const FALLBACK_PLAN_PRICES: Record<string, number> = { ...PLAN_PRICES };
+export { PLAN_PRICES, FALLBACK_PLAN_PRICES } from "./plan-price-table";
+import { FALLBACK_PLAN_PRICES } from "./plan-price-table";
 
 /** Every plan's effective price, with any PlatformSetting override applied. */
 export async function getEffectivePlanPrices(): Promise<Record<string, number>> {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
