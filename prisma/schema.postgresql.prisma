@@ -70,6 +70,11 @@ model Organization {
   baseCurrency        String @default("UGX")
   supportedCurrencies String @default("UGX") // comma-separated ISO currency codes
 
+  // Client comms: append the public job-tracking link (/status/[jobNumber])
+  // to intake + status-change WhatsApp messages. Default ON; an org opts out
+  // rather than every org opting in (SPEC-001).
+  trackingLinksEnabled Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

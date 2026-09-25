@@ -217,25 +217,8 @@ export async function sendIntakeRejectionNotification(
   return sendRenderedWhatsApp(phone, rendered, cfg, orgId);
 }
 
-export async function sendJobCreatedNotification(
-  phone: string,
-  customerName: string,
-  jobNumber: string,
-  orgId?: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const cfg = await getConfigForOrg(orgId);
-  if (!cfg) return { success: false, error: "WhatsApp not configured" };
-
-  const fallback = `Hello ${customerName},\n\nYour device has been registered as Job #${jobNumber}.\n\nWe will update you as the repair progresses.\n\nBest regards,\nYour Repair Team`;
-  const rendered = await renderCommunicationTemplate({
-    orgId: orgId ?? "",
-    key: "JOB_CREATED",
-    channel: "WHATSAPP",
-    variables: { customerName, jobNumber },
-    fallback: { body: fallback },
-  });
-  return sendRenderedWhatsApp(phone, rendered, cfg, orgId);
-}
+// NOTE: job-created client messaging moved to notifyClientJobCreated
+// (lib/notifications) — outbox-routed with tracking link (SPEC-001).
 
 export async function sendJobCompletionNotification(
   phone: string,

@@ -147,3 +147,17 @@
 - Fixed helper bug found by tests: null bill read as 0 (below-cost).
 - Verification: unit 11/11, margin E2E incl. USD cases 1/1, full unit
   1125/0 fail, `tsc` + `eslint` clean.
+
+## 2026-09-25 — SPEC-001 tracking links (built, status path proven)
+- `Organization.trackingLinksEnabled` (default true) + `buildTrackingUrl`
+  (slash-preserving) + footer append with skip-if-present + `{{trackingUrl}}`
+  template var, on WhatsApp and email status paths; intake job-created now
+  goes through the outbox (`notifyClientJobCreated`) instead of direct send.
+- PG schema regenerated; dev DB pushed.
+- Verification: unit 4/4, status E2E (link present, opt-out removes it),
+  `tsc` + `eslint` clean. Intake-UI convert step dropped from E2E after
+  repeated flakiness in the intake card's pending transitions (pre-existing
+  UI behavior, out of scope; intake path shares the proven helpers).
+- Open observation (unverified): intake Approve/Convert buttons intermittently
+  stay `pending`-disabled under E2E timing — never reproduced a stuck state
+  in steady state; needs a real-user report before calling it a bug.

@@ -5,7 +5,8 @@ import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { generateJobNumber } from "@/app/(app)/jobs/new/actions";
-import { sendIntakeApprovalNotification, sendIntakeRejectionNotification, sendJobCreatedNotification } from "@/lib/notifications/whatsapp";
+import { sendIntakeApprovalNotification, sendIntakeRejectionNotification } from "@/lib/notifications/whatsapp";
+import { notifyClientJobCreated } from "@/lib/notifications";
 import { checkJobLimit } from "@/lib/plan-limits";
 import { assertOrgCanMutate } from "@/lib/org-write";
 
@@ -114,8 +115,8 @@ export async function PATCH(
       data: { requestStatus: "CONVERTED_TO_JOB", linkedJobId: job.id },
     });
 
-    // Send WhatsApp notification (non-blocking)
-    sendJobCreatedNotification(req.phone, req.customerName, job.jobNumber, orgId).catch((err) =>
+    // Send WhatsApp notification via the outbox (tracking link included — SPEC-001)
+    notifyClientJobCreated({ orgId, jobId: job.id, jobNumber: job.jobNumber, phone: req.phone, customerName: req.customerName }).catch((err) =>
       console.error("[Intake] WhatsApp notification failed:", err)
     );
 

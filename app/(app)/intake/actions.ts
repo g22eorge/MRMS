@@ -15,9 +15,8 @@ import { checkJobLimit } from "@/lib/plan-limits";
 import {
   sendIntakeApprovalNotification,
   sendIntakeRejectionNotification,
-  sendJobCreatedNotification,
 } from "@/lib/notifications/whatsapp";
-import { notifyRepairRequestReceived, notifyJobCreated } from "@/lib/notifications";
+import { notifyRepairRequestReceived, notifyJobCreated, notifyClientJobCreated } from "@/lib/notifications";
 
 const listSchema = z.object({
   take: z.coerce.number().int().positive().max(500).optional(),
@@ -242,8 +241,8 @@ export async function setRepairRequestStatusAction(input: { id: string; status: 
       data: { requestStatus: "CONVERTED_TO_JOB", linkedJobId: job.id },
     });
 
-    // Non-blocking WhatsApp
-    sendJobCreatedNotification(req.phone, req.customerName, job.jobNumber, orgId).catch((err) =>
+    // Non-blocking WhatsApp (outbox-routed with tracking link — SPEC-001)
+    notifyClientJobCreated({ orgId, jobId: job.id, jobNumber: job.jobNumber, phone: req.phone, customerName: req.customerName }).catch((err) =>
       console.error("[Intake] WhatsApp notification failed:", err),
     );
     notifyJobCreated({

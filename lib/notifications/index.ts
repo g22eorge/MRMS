@@ -282,6 +282,21 @@ async function getCommunicationPolicyForStatus(orgId: string, status: JobStatus)
   }
 }
 
+/**
+ * SPEC-001 opt-out: append tracking links unless the org disabled them.
+ * Fail-open (true) on lookup error — a tracking link points at the public
+ * status page with no PII, so a missing flag must not silence links; an
+ * explicit false is the only off switch.
+ */
+export async function trackingLinksEnabledForOrg(orgId: string): Promise<boolean> {
+  try {
+    const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { trackingLinksEnabled: true } });
+    return org?.trackingLinksEnabled ?? true;
+  } catch {
+    return true;
+  }
+}
+
 function isOutboundMessageType(value: string): value is OutboundMessageType {
   return (Object.values(OutboundMessageType) as string[]).includes(value);
 }
@@ -326,20 +341,37 @@ function statusMessageLinks(orgId: string, jobNumber: string, newStatus: JobStat
   const reviewUrl = isServiceDone && orgId === EIS_ORG_ID
     ? (process.env.GOOGLE_REVIEW_URL?.trim() || EIS_GOOGLE_REVIEW_URL)
     : "";
-  return { complaintUrl, reviewUrl };
+  const trackingUrl = buildTrackingUrl(appUrl, jobNumber);
+  return { complaintUrl, reviewUrl, trackingUrl };
 }
 
 /**
- * Append the review/complaint links to a rendered message body when they aren't
- * already present. These links are a care-level footer, so they must survive
+ * Public job-tracking URL (/status/[jobNumber]). Pure apart from its inputs
+ * so tests pin the slash-preserving encoding: EIS-3/2025/0042 must stay
+ * readable, and an unconfigured app URL yields "" (no link) rather than a
+ * broken one. Exported for unit tests.
+ */
+export function buildTrackingUrl(appUrl: string | undefined, jobNumber: string): string {
+  const base = (appUrl ?? "").replace(/\/$/, "");
+  if (!base) return "";
+  const ref = encodeURIComponent(jobNumber).replace(/%2F/gi, "/");
+  return `${base}/status/${ref}`;
+}
+
+/**
+ * Append the review/complaint/tracking links to a rendered message body when
+ * they aren't already present. These links are a care-level footer, so they must survive
  * whether the body came from a custom CommunicationTemplate or the built-in
  * fallback: a template that never references {complaintUrl}/{reviewUrl} would
  * otherwise silently drop them (the fallback carries them, but a resolved
  * template pre-empts the fallback). A link already in the body — a custom
  * template that opts in — is skipped so it isn't duplicated.
  */
-function appendClientLinks(body: string, complaintUrl: string, reviewUrl: string): string {
+function appendClientLinks(body: string, complaintUrl: string, reviewUrl: string, trackingUrl?: string): string {
   const extra: string[] = [];
+  if (trackingUrl && !body.includes(trackingUrl)) {
+    extra.push(`Track your repair live: ${trackingUrl}`);
+  }
   if (reviewUrl && !body.includes(reviewUrl)) {
     extra.push(`Enjoyed our service? A quick Google review means a lot: ${reviewUrl}`);
   }
@@ -372,12 +404,17 @@ async function sendClientWhatsAppForStatusChange(input: {
     ? (templateKey as OutboundMessageType)
     : OutboundMessageType.JOB_STATUS_UPDATE;
 
-  const { complaintUrl, reviewUrl } = statusMessageLinks(input.orgId, input.jobNumber, input.newStatus);
+  const { complaintUrl, reviewUrl, trackingUrl: fullTrackingUrl } = statusMessageLinks(input.orgId, input.jobNumber, input.newStatus);
+  // SPEC-001: the tracking link rides with every client status message unless
+  // the org opted out. Empty flows through the same skip-if-present paths as a
+  // missing app URL — one mechanism, no branches downstream.
+  const trackingUrl = (await trackingLinksEnabledForOrg(input.orgId)) ? fullTrackingUrl : "";
 
   // On completion we offer both — a review if they're happy, a complaint if not
   // (honest routing, not review-gating). Mid-repair updates carry just the
   // complaint link.
   const blocks = [`Hi ${client.fullName}, update on job ${input.jobNumber}: status is now ${input.newStatus.replaceAll("_", " ")}.`];
+  if (trackingUrl) blocks.push(`Track your repair live: ${trackingUrl}`);
   if (reviewUrl) blocks.push(`Enjoyed our service? A quick Google review means a lot: ${reviewUrl}`);
   if (complaintUrl) blocks.push(`${reviewUrl ? "Something not right? Tell us" : "Not happy with something? Let us know"}: ${complaintUrl}`);
   blocks.push("- Your Repair Team");
@@ -390,9 +427,10 @@ async function sendClientWhatsAppForStatusChange(input: {
     newStatus: input.newStatus,
     oldStatusLabel: input.oldStatus.replaceAll("_", " "),
     newStatusLabel: input.newStatus.replaceAll("_", " "),
-    // Available to custom/policy templates as {{complaintUrl}} / {{reviewUrl}}.
+    // Available to custom/policy templates as {{complaintUrl}} / {{reviewUrl}} / {{trackingUrl}}.
     complaintUrl,
     reviewUrl,
+    trackingUrl,
   };
 
   const rendered = await renderCommunicationTemplate({
@@ -403,7 +441,7 @@ async function sendClientWhatsAppForStatusChange(input: {
     fallback: { body: fallback },
   });
 
-  const body = appendClientLinks(rendered.body, complaintUrl, reviewUrl);
+  const body = appendClientLinks(rendered.body, complaintUrl, reviewUrl, trackingUrl);
 
   const enqueueResult = await enqueueWhatsAppMessage({
     orgId: input.orgId,
@@ -414,6 +452,59 @@ async function sendClientWhatsAppForStatusChange(input: {
     provider: "meta",
     templateKey,
     templateVars: JSON.stringify(templateVars),
+    metaTemplateName: rendered.metaTemplateName,
+    metaTemplateLanguage: rendered.metaLanguageCode,
+    metaTemplateVars: rendered.metaParamValues.length > 0 ? JSON.stringify(rendered.metaParamValues) : null,
+  }).catch(() => null);
+
+  if (enqueueResult && "outboxId" in enqueueResult && enqueueResult.outboxId) {
+    await deliverOutboundMessage(enqueueResult.outboxId).catch(() => null);
+  }
+}
+
+/**
+ * SPEC-001 intake message: the job-received WhatsApp carrying the tracking
+ * link, routed through the outbox (like status messages) so the job Messages
+ * tab shows the attempt even when delivery fails. Replaces direct
+ * sendJobCreatedNotification at the intake convert sites.
+ */
+export async function notifyClientJobCreated(input: {
+  orgId: string;
+  jobId: string;
+  jobNumber: string;
+  phone: string;
+  customerName: string;
+}): Promise<void> {
+  if (!input.phone) return;
+  const trackingUrl = (await trackingLinksEnabledForOrg(input.orgId))
+    ? buildTrackingUrl(process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || process.env.APP_URL?.replace(/\/$/, ""), input.jobNumber)
+    : "";
+
+  const fallbackBlocks = [
+    `Hello ${input.customerName},\n\nYour device has been registered as Job #${input.jobNumber}.`,
+  ];
+  if (trackingUrl) fallbackBlocks.push(`Track your repair live: ${trackingUrl}`);
+  fallbackBlocks.push("We will update you as the repair progresses.\n\nBest regards,\nYour Repair Team");
+
+  const rendered = await renderCommunicationTemplate({
+    orgId: input.orgId,
+    key: "JOB_CREATED",
+    channel: "WHATSAPP",
+    variables: { customerName: input.customerName, jobNumber: input.jobNumber, trackingUrl },
+    fallback: { body: fallbackBlocks.join("\n\n") },
+  });
+
+  const body = appendClientLinks(rendered.body, "", "", trackingUrl);
+
+  const enqueueResult = await enqueueWhatsAppMessage({
+    orgId: input.orgId,
+    to: input.phone,
+    body,
+    type: OutboundMessageType.JOB_CREATED,
+    jobId: input.jobId,
+    provider: "meta",
+    templateKey: "JOB_CREATED",
+    templateVars: JSON.stringify({ customerName: input.customerName, jobNumber: input.jobNumber, trackingUrl }),
     metaTemplateName: rendered.metaTemplateName,
     metaTemplateLanguage: rendered.metaLanguageCode,
     metaTemplateVars: rendered.metaParamValues.length > 0 ? JSON.stringify(rendered.metaParamValues) : null,
@@ -601,7 +692,8 @@ async function sendClientEmailForStatusChange(input: {
     ? (templateKey as OutboundMessageType)
     : OutboundMessageType.JOB_STATUS_UPDATE;
 
-  const { complaintUrl, reviewUrl } = statusMessageLinks(input.orgId, input.jobNumber, input.newStatus);
+  const { complaintUrl, reviewUrl, trackingUrl: fullTrackingUrl } = statusMessageLinks(input.orgId, input.jobNumber, input.newStatus);
+  const trackingUrl = (await trackingLinksEnabledForOrg(input.orgId)) ? fullTrackingUrl : "";
 
   const vars = {
     customerName: client.fullName,
@@ -610,13 +702,15 @@ async function sendClientEmailForStatusChange(input: {
     newStatus: input.newStatus,
     oldStatusLabel: input.oldStatus.replaceAll("_", " "),
     newStatusLabel: input.newStatus.replaceAll("_", " "),
-    // Available to custom/policy templates as {{complaintUrl}} / {{reviewUrl}}.
+    // Available to custom/policy templates as {{complaintUrl}} / {{reviewUrl}} / {{trackingUrl}}.
     complaintUrl,
     reviewUrl,
+    trackingUrl,
   };
 
   const fallbackSubject = `Update on Job #${input.jobNumber}`;
   const bodyBlocks = [`Hello ${client.fullName},`, `Update on Job #${input.jobNumber}: status is now ${vars.newStatusLabel}.`];
+  if (trackingUrl) bodyBlocks.push(`Track your repair live: ${trackingUrl}`);
   if (reviewUrl) bodyBlocks.push(`Enjoyed our service? A quick Google review means a lot: ${reviewUrl}`);
   if (complaintUrl) bodyBlocks.push(`${reviewUrl ? "Something not right? Tell us: " : "Not happy with something? Let us know: "}${complaintUrl}`);
   bodyBlocks.push("Your Repair Team");
@@ -630,7 +724,7 @@ async function sendClientEmailForStatusChange(input: {
     fallback: { subject: fallbackSubject, body: fallbackBody },
   });
 
-  const body = appendClientLinks(rendered.body, complaintUrl, reviewUrl);
+  const body = appendClientLinks(rendered.body, complaintUrl, reviewUrl, trackingUrl);
 
   const enqueueResult = await enqueueEmailMessage({
     orgId: input.orgId,
