@@ -4,6 +4,7 @@
 export const dynamic = "force-dynamic";
 
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { LeadStatus } from "@prisma/client";
 
 import { can } from "@/lib/permissions";
@@ -16,7 +17,7 @@ import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose
 import { toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail } from "@/components/record/RecordSummaryRail";
-import { updateLeadStatus, addLeadActivity, updateLeadDetails } from "../../actions";
+import { updateLeadStatus, addLeadActivity, updateLeadDetails, convertLeadToClient } from "../../actions";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -73,6 +74,7 @@ export default async function LeadDetailPage({
     include: {
       assignedTo: { select: { id: true, name: true } },
       createdBy: { select: { id: true, name: true } },
+      client: { select: { id: true, fullName: true } },
       activities: {
         include: { user: { select: { id: true, name: true } } },
         orderBy: { createdAt: "desc" },
@@ -102,14 +104,28 @@ export default async function LeadDetailPage({
     "use server";
     const status = String(formData.get("status") ?? "") as LeadStatus;
     const note = String(formData.get("note") ?? "") || undefined;
+    const lostReason = String(formData.get("lostReason") ?? "") || undefined;
     const validStatuses: LeadStatus[] = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL_SENT", "WON", "LOST", "STALE"];
     if (!validStatuses.includes(status)) {
       redirect(`/sales/leads/${id}?statusError=${encodeURIComponent("Invalid status")}`);
     }
     try {
-      await updateLeadStatus(id, status, note);
+      await updateLeadStatus(id, status, note, lostReason);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to update status";
+      redirect(`/sales/leads/${id}?statusError=${encodeURIComponent(msg)}`);
+    }
+  }
+
+  async function convertLeadAction() {
+    "use server";
+    try {
+      const { clientId } = await convertLeadToClient(id);
+      redirect(`/clients/${clientId}`);
+    } catch (e) {
+      // NEXT_REDIRECT (from the success redirect above) must propagate.
+      if (e instanceof Error && "digest" in e) throw e;
+      const msg = e instanceof Error ? e.message : "Failed to convert lead";
       redirect(`/sales/leads/${id}?statusError=${encodeURIComponent(msg)}`);
     }
   }
@@ -155,6 +171,7 @@ export default async function LeadDetailPage({
   const isTerminal = ["WON", "LOST", "STALE"].includes(lead.status);
   const isOverdue = lead.followUpAt != null && lead.followUpAt <= new Date() && !isTerminal;
   const quotedTotal = lead.quotations.reduce((sum, q) => sum + q.totalAmount, 0);
+  const LOST_REASONS = ["Price too high", "Chose competitor", "No budget", "Bad timing", "Unreachable", "Other"];
 
   const field =
     "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
@@ -201,8 +218,36 @@ export default async function LeadDetailPage({
                     ))}
                   </select>
                   <input name="note" placeholder="Optional note" className={field} />
+                  <select name="lostReason" defaultValue={lead.lostReason ?? ""} aria-label="Lost reason" title="Lost reason (used when marking LOST)" className={field}>
+                    <option value="">Lost reason…</option>
+                    {LOST_REASONS.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
                   <SubmitButton variant="secondary" size="sm">Update Stage</SubmitButton>
                 </div>
+              </form>
+            </section>
+          ) : null}
+
+          {/* ── Customer conversion ── */}
+          {lead.client ? (
+            <section className="dc-card overflow-hidden">
+              <div className="border-b border-[var(--line)] px-4 py-2.5"><p className={cardLabel}>Customer</p></div>
+              <div className="p-3">
+                <Link href={`/clients/${lead.client.id}`} className="font-semibold text-[var(--accent)] hover:underline">
+                  View customer: {lead.client.fullName} →
+                </Link>
+              </div>
+            </section>
+          ) : lead.status === "WON" && canEdit ? (
+            <section className="dc-card overflow-hidden">
+              <div className="border-b border-[var(--line)] px-4 py-2.5"><p className={cardLabel}>Customer</p></div>
+              <form action={convertLeadAction} className="space-y-2 p-3">
+                <p className="text-[0.8125rem] text-[var(--ink-muted)]">
+                  Won — create the customer record from this lead instead of re-typing it.
+                </p>
+                <SubmitButton size="sm">Convert to customer</SubmitButton>
               </form>
             </section>
           ) : null}
@@ -325,6 +370,8 @@ export default async function LeadDetailPage({
               ),
             },
             { label: "Activities", value: lead.activities.length },
+            ...(lead.client ? [{ label: "Customer", value: lead.client.fullName }] : []),
+            ...(lead.status === "LOST" && lead.lostReason ? [{ label: "Lost reason", value: lead.lostReason }] : []),
             { label: "Source", value: lead.source.replace(/_/g, " ").toLowerCase() },
             { label: "Assigned", value: lead.assignedTo?.name ?? "Unassigned" },
             { label: "Created", value: `${formatEATDate(lead.createdAt)}${lead.createdBy?.name ? ` · ${lead.createdBy.name}` : ""}` },

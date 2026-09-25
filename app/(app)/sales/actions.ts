@@ -287,6 +287,62 @@ export async function addLeadActivity(
   revalidatePath(`/sales/leads/${leadId}`);
 }
 
+/**
+ * Convert a WON lead into a customer, idempotently.
+ *
+ * Closes the CRM loop without re-typing: dedupes on the canonical
+ * phone+orgId (links the existing client when the number is known),
+ * otherwise creates the client from the lead's contact fields and stamps
+ * lead.clientId. Throws on anything but WON — conversion means won.
+ */
+export async function convertLeadToClient(leadId: string): Promise<{ clientId: string }> {
+  const { user, orgId, org } = await requireOrgSession();
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  if (!can.createLeads(user)) {
+    throw new Error("Unauthorized");
+  }
+
+  const lead = await prisma.lead.findFirst({
+    where: {
+      id: leadId,
+      orgId,
+      ...(!can.viewAllSales(user) ? { OR: [{ assignedToId: user.id }, { createdById: user.id }] } : {}),
+    },
+    select: { id: true, status: true, fullName: true, phone: true, email: true, organization: true, clientId: true },
+  });
+  if (!lead) throw new Error("Lead not found");
+  if (lead.clientId) return { clientId: lead.clientId };
+  if (lead.status !== "WON") throw new Error("Only WON leads can be converted to a customer.");
+
+  const existing = await prisma.client.findFirst({
+    where: { phone: lead.phone, orgId },
+    select: { id: true },
+  });
+
+  const clientId = existing?.id ?? (await prisma.client.create({
+    data: {
+      orgId,
+      fullName: lead.fullName,
+      phone: lead.phone,
+      email: lead.email,
+      organization: lead.organization,
+    },
+    select: { id: true },
+  })).id;
+
+  await prisma.lead.updateMany({
+    where: { id: leadId, orgId },
+    data: { clientId },
+  });
+  await prisma.leadActivity.create({
+    data: { leadId, userId: user.id, type: "CONVERSION", note: "Converted to customer" },
+  });
+
+  revalidatePath(`/sales/leads/${leadId}`);
+  revalidatePath("/clients");
+  return { clientId };
+}
+
 function quotationLineTotal(item: { quantity: number; unitPrice: number; discount: number }) {
   return item.quantity * item.unitPrice * (1 - item.discount / 100);
 }
