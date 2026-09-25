@@ -108,8 +108,7 @@
   neighbouring entries). Verified: health unit tests 9/9, `tsc` + `eslint`
   clean, production build compiles (proxy validated).
 
-## 2026-09-24 — Backup + restore features (user-requested)
-- Was: `backup-db.sh` only (DB snapshots, never run — no `backups/` dir), no
+## 2026-09-24 — Backup + restore features (user-requested)- Was: `backup-db.sh` only (DB snapshots, never run — no `backups/` dir), no
   restore path, no UI. File photos live externally (UploadThing/Blob), so the
   feature covers the SQLite database.
 - Built: dependency-free `lib/backups.ts` (strict `mrms-…​.db` naming shared by
@@ -126,3 +125,25 @@
 - `bun run check:links`: OK, no broken static hrefs. All `router.push` targets resolve to real pages.
 - ~20 button candidates without single-line handlers inspected (`rg --pcre2`): all false positives — every one carries onClick/submit/form action on following lines. No dead buttons found.
 - Dynamic href prefixes sampled (`/api/procurement/documents/*` → `[kind]/[id]` handles all 4 kinds; `/api/portal/assessment/*` → `[jobId]`; pages/queriestrings) — all resolve. Verdict: sound, no changes.
+
+## 2026-09-25 — Below-cost guard on quotes + POS (user-requested)
+- Gap: selling-price floors existed, but the floor itself could sit under cost
+  and discounts applied after it — certain-loss lines were sellable.
+- `lib/commercial/margin-guard.ts` (pure): effective price post-discount, UOM
+  cost scaling, below-cost predicate, line margin %. Part-linked lines only;
+  custom lines and unknown cost skip (gifts stay possible, missing data never blocks).
+- Wired into quotation creation + POS add/update with the existing error
+  channels (throw / posReject). Complimentary below-cost flows must use custom
+  lines — recorded here as the accepted trade-off.
+- Verification: unit 9/9, margin E2E (20%-off rejected 400, 10%-off 201),
+  full `test:unit` 1123/0 fail, `tsc` + `eslint` clean.
+
+## 2026-09-25 — Margin holes closed: FX-aware guard + job completion guard
+- Quotation guard is now base-currency aware (price × rate vs base cost/floor);
+  POS needs none (sales are always created in base currency).
+- Job COMPLETED now refuses a final bill under technician cost
+  (fee override wins, else submitted bill — the Repair Margin definition).
+  In-house jobs (no recorded tech cost) unaffected.
+- Fixed helper bug found by tests: null bill read as 0 (below-cost).
+- Verification: unit 11/11, margin E2E incl. USD cases 1/1, full unit
+  1125/0 fail, `tsc` + `eslint` clean.

@@ -29,6 +29,7 @@ import { shareSaleReceiptDocument } from "@/lib/notifications/share-document";
 import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { refundableCeiling } from "@/lib/commercial/refundable";
+import { isBelowCost } from "@/lib/commercial/margin-guard";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { nextDocumentNumber, createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
@@ -421,10 +422,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       // Same floor as addItemAction — without it, "add at the minimum, then
       // edit the line lower" would quietly bypass the rule.
       if (item.partId) {
-        const priced = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { name: true, sellingPrice: true } });
+        const priced = await tx.part.findFirst({ where: { id: item.partId, orgId }, select: { name: true, sellingPrice: true, unitCost: true } });
         if (priced?.sellingPrice != null && unitPrice < priced.sellingPrice) {
           const cur = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { currency: true } });
           posReject(saleId, `${priced.name} cannot be sold below its minimum of ${formatMoney(priced.sellingPrice, normalizeCurrency(cur?.currency, org.baseCurrency))}.`);
+        }
+        if (isBelowCost({ unitPrice, unitCost: priced?.unitCost ?? null, saleUomFactor: item.saleUomFactor })) {
+          posReject(saleId, `${priced?.name ?? "Item"} cannot be sold below its cost.`);
         }
       }
 
@@ -572,6 +576,9 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         // Enforced here, not just in the form, so it cannot be bypassed.
         if (part.sellingPrice != null && unitPrice < part.sellingPrice) {
           posReject(saleId, `${part.name} cannot be sold below its minimum of ${formatMoney(part.sellingPrice, lineCurrency)}.`);
+        }
+        if (isBelowCost({ unitPrice, unitCost: part.unitCost, saleUomFactor: saleFactor })) {
+          posReject(saleId, `${part.name} cannot be sold below its cost.`);
         }
 
         await tx.partStockTransaction.create({
