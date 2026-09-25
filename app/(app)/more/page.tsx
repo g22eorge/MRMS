@@ -251,6 +251,13 @@ export default async function MorePage() {
               />
             )}
 
+            {["ADMIN"].includes(user.role) && (
+              <NavRow href="/settings/backups" iconBg="bg-[var(--panel-strong)]"
+                description="Snapshots and recovery"
+                icon={<ItemIcon d={["M12 3v10m0 0l-3.5-3.5M12 13l3.5-3.5","M4 15v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
           </div>
         </>
       )}

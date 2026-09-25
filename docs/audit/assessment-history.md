@@ -74,6 +74,21 @@
   E2E 1/1 pass (first attempt caught only a cold-server 5s poll — hardened to 30s).
 - Verification: `tsc` + `eslint` clean. Needs owner confirmation on production data.
 
+## 2026-09-24 — CRM assessment + lead conversion (productivity)
+- Verdict: functional tracker, weak closer. WON went nowhere (manual client
+  re-entry), lostReason write-only on detail, score/clientId dead schema.
+  Fixed the two that cost daily keystrokes; campaigns/score recorded as
+  observations, untouched.
+- `convertLeadToClient` (`sales/actions.ts`): WON-only, phone+orgId dedupe,
+  stamps clientId, logs CONVERSION activity, idempotent.
+- Detail page: Customer card (view link / one-click convert), lostReason
+  select (list parity), rail rows for both.
+- Debug dividend: `destroyE2eOrg` never swept `LeadActivity` (no orgId) —
+  orphans with dead users threw inside `.catch(() => null)` and masked the
+  page as NOT FOUND. Sweeper now deletes orphaned activities; also fixed a
+  swallowed success `redirect()` (NEXT_REDIRECT) in the new convert action.
+- Verification: conversion E2E 1/1 twice in a row; `tsc` + `eslint` clean.
+
 ## 2026-09-24 — Commercial registration crash (P0-01 resolved)
 - Symptom: fresh app.* users hit the global error page on /onboarding. Loader
   was innocent (47 keys locally) — the crash was a client-bundle import:
@@ -92,6 +107,20 @@
 - Fix: added to `PUBLIC_PATHS` in `proxy.ts` (prefix match, same pattern as
   neighbouring entries). Verified: health unit tests 9/9, `tsc` + `eslint`
   clean, production build compiles (proxy validated).
+
+## 2026-09-24 — Backup + restore features (user-requested)
+- Was: `backup-db.sh` only (DB snapshots, never run — no `backups/` dir), no
+  restore path, no UI. File photos live externally (UploadThing/Blob), so the
+  feature covers the SQLite database.
+- Built: dependency-free `lib/backups.ts` (strict `mrms-…​.db` naming shared by
+  UI + scripts, keep-30 pruning); `settings/backups` admin page (create via
+  VACUUM INTO, list, download, delete; Turso shows platform-snapshot note);
+  `scripts/restore-db.sh` (name + magic-header checks, auto pre-restore
+  snapshot, refuses live handles without --force); nav entries (settings +
+  mobile hub). No live hot-swap restore button by design — documented on-page.
+- Verification: unit 6/6, full round-trip on scratch copy (backup → mutate →
+  restore → integrity ok, mutation gone), both refusal paths exit 1,
+  `tsc` + `eslint` clean.
 
 ## 2026-09-23 — Button/navigation audit (no findings)
 - `bun run check:links`: OK, no broken static hrefs. All `router.push` targets resolve to real pages.
