@@ -14,7 +14,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { prisma, ensureMoneySchema } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { postExpensePayment, reverseJournalEntry } from "@/lib/accounting/post";
-import { recordExpensePayment } from "@/lib/commercial/expense-payments";
+import { recordExpensePayment, postExpensePaymentToLedger } from "@/lib/commercial/expense-payments";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -374,8 +374,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
     // Double taps serialize inside the shared recorder (balance rechecked
     // beside the write); the loser gets the balance message, not a double pay.
     await ensureMoneySchema();
+    let ledgerPostData: Awaited<ReturnType<typeof recordExpensePayment>>["ledgerPostData"] | null = null;
     await prisma.$transaction(async (tx) => {
-      await recordExpensePayment(tx, {
+      const result = await recordExpensePayment(tx, {
         orgId,
         userId: user.id,
         expenseId,
@@ -383,11 +384,17 @@ export default async function ExpensesPage({ searchParams }: Props) {
         method: methodRaw || null,
         paidAt,
       });
+      ledgerPostData = result.ledgerPostData ?? null;
     }).catch((error: unknown) => {
       // NEXT_REDIRECT (from fail()) must propagate.
       if (error instanceof Error && "digest" in error) throw error;
       fail(error instanceof Error ? error.message : "Could not record the payment.");
     });
+
+    // Fire-and-forget ledger post — idempotent on reference, safe to retry.
+    if (ledgerPostData) {
+      postExpensePaymentToLedger(ledgerPostData).catch(() => {});
+    }
 
     revalidatePath("/finance/expenses");
     revalidatePath("/payables");
