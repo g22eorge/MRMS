@@ -32,7 +32,7 @@ function toSqliteAbsoluteUrl(url: string) {
 // closed" errors. Give the whole class more headroom centrally.
 const TRANSACTION_OPTIONS = {
   maxWait: 10_000,
-  timeout: 30_000,
+  timeout: 60_000,
 } as const;
 
 function createPrismaClient() {
