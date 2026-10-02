@@ -23,12 +23,14 @@ const PUBLIC_PATHS = [
   "/api/photos",           // Private repair photos — self-guarded (staff OR portal session)
 
   // Public forms & pages
+  // NOTE: /repair-request has no page (the form lives at /repair); it stays
+  // public so the next.config redirect to /repair works for logged-out users.
+  // NOTE: /profile has no page; it redirects to /settings/profile (auth-gated).
   "/repair-request",
   "/repair",
   "/address",
   "/app",
   "/company",
-  "/profile",
   "/terms",
   "/privacy",
   "/status",

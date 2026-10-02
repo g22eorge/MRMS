@@ -106,85 +106,78 @@ export const SUPER_GROUP_ORDER: readonly SuperGroup[] = ["service", "sales", "do
 export const PINNED_HREFS: readonly string[] = ["/dashboard", "/jobs", "/clients", "/pos"] as const;
 
 // ── role ordering ────────────────────────────────────────────────────────────────
+// Ranking reference for the visible NAV items above — every entry here must be
+// a NAV href. Hub leaves (/field, /technicians, /complaints, document, finance
+// and inventory leaves) are deliberately absent: they live in their hub tab
+// bars, not the sidebar (see the hub-only tests in sidebar-model.test.ts).
 
 const roleOrder: Partial<Record<Role, readonly string[]>> = {
   ADMIN: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
-    "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
-    "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
+    "/jobs", "/intake", "/warranty",
+    "/inventory",
     "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/targets", "/reports", "/ai-insights", "/payout-followups",
     "/settings",
   ],
   MANAGER: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
-    "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
-    "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
+    "/jobs", "/intake", "/warranty",
+    "/inventory",
     "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/finance/expenses", "/finance/tax-rates", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/targets", "/reports", "/ai-insights", "/payout-followups",
     "/settings",
   ],
   TECH_MANAGER: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
-    "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
-    "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
-    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/payout-followups",
+    "/jobs", "/intake", "/warranty",
+    "/inventory",
+    "/targets", "/payout-followups",
     "/settings",
   ],
   OPS: [
     "/dashboard",
-    "/jobs", "/intake", "/field", "/technicians", "/complaints", "/warranty",
-    "/inventory", "/inventory/locations", "/inventory/transfers", "/inventory/stock-counts",
-    "/inventory/suppliers", "/inventory/purchase-requests", "/inventory/purchase-orders", "/inventory/goods-received", "/inventory/supplier-bills",
+    "/jobs", "/intake", "/warranty",
+    "/inventory",
     "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/documents/receipts", "/documents/delivery-notes", "/documents/credit-notes", "/documents/refunds", "/documents/templates",
-    "/finance/expenses", "/finance/recurring", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/targets", "/reports", "/ai-insights", "/payout-followups",
     "/settings",
   ],
   FINANCE: [
     "/dashboard",
     "/clients",
-    "/documents/invoices", "/documents/credit-notes", "/documents/refunds",
-    "/finance/expenses", "/finance/recurring", "/finance/accounts", "/finance/journal", "/finance/bank", "/finance/reports/pl", "/finance/reports/balance-sheet", "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/targets", "/reports", "/ai-insights", "/payout-followups",
     "/settings",
   ],
   SALES: [
     "/dashboard",
     "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/documents/quotations", "/documents/receipts",
     "/settings",
   ],
   FRONT_DESK: [
     "/dashboard",
-    "/jobs", "/intake", "/technicians",
+    "/jobs", "/intake",
     "/clients", "/pos",
-    "/documents/job-cards", "/documents/receipts", "/documents/delivery-notes",
     "/settings",
   ],
   TECHNICIAN_INTERNAL: [
     "/dashboard",
-    "/jobs", "/intake", "/technicians",
+    "/jobs", "/intake",
     "/inventory",
-    "/documents/job-cards", "/documents/quotations",
     "/settings",
   ],
   TECHNICIAN_EXTERNAL: [
     "/dashboard",
-    "/jobs", "/technicians",
+    "/jobs",
     "/technicians/payouts",
     "/settings",
   ],
-  INTAKE: ["/dashboard", "/jobs", "/intake", "/technicians", "/clients", "/documents/job-cards", "/settings"],
-  SALES_MANAGER: ["/dashboard", "/jobs", "/intake", "/field", "/technicians", "/clients", "/sales", "/sales/campaigns", "/pos", "/documents/job-cards", "/documents/quotations", "/documents/invoices", "/targets", "/reports", "/ai-insights", "/payout-followups", "/settings"],
-  SALES_CORPORATE: ["/dashboard", "/jobs", "/clients", "/sales", "/documents/quotations", "/documents/invoices", "/settings"],
-  SALES_RETAIL: ["/dashboard", "/jobs", "/clients", "/sales", "/pos", "/documents/quotations", "/documents/receipts", "/settings"],
+  INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/settings"],
+  SALES_MANAGER: ["/dashboard", "/jobs", "/intake", "/clients", "/sales", "/sales/campaigns", "/pos", "/targets", "/reports", "/ai-insights", "/payout-followups", "/settings"],
+  SALES_CORPORATE: ["/dashboard", "/jobs", "/clients", "/sales", "/settings"],
+  SALES_RETAIL: ["/dashboard", "/jobs", "/clients", "/sales", "/pos", "/settings"],
   SALES_POS: ["/dashboard", "/pos", "/settings"],
-  TECH_FIELD: ["/dashboard", "/jobs", "/field", "/settings"],
+  TECH_FIELD: ["/dashboard", "/jobs", "/settings"],
 };
 
 // ── helpers ───────────────────────────────────────────────────────────────────────
