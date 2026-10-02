@@ -72,8 +72,13 @@ async function run() {
   try {
     if (!process.env.PERF_BASE_URL) {
       // Ensure a production build exists (qa:perf is often run standalone).
-      // `next start` hard-requires `.next/BUILD_ID`.
-      if (!fs.existsSync(".next/BUILD_ID")) {
+      // Honor the gate build dir: vercel-build.mjs isolates local builds to
+      // .next-gate so `next build` never cleans a running dev server's .next.
+      // Prefer an explicit NEXT_DIST_DIR, else whichever dir already has a build.
+      const distDir = process.env.NEXT_DIST_DIR
+        || (fs.existsSync(".next/BUILD_ID") ? ".next" : ".next-gate");
+      // `next start` hard-requires `<distDir>/BUILD_ID`.
+      if (!fs.existsSync(`${distDir}/BUILD_ID`)) {
         await runCmd("bun", ["run", "build"]);
       }
 
@@ -82,6 +87,7 @@ async function run() {
       serverProcess = spawn("bun", ["run", "start"], {
         env: {
           ...process.env,
+          NEXT_DIST_DIR: distDir,
           PORT: port,
           ALLOW_SQLITE_PRODUCTION: "1",
           DATABASE_URL: process.env.DATABASE_URL ?? "file:./dev.db",

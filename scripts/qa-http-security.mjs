@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 
 const base = process.env.QA_BASE_URL ?? "http://127.0.0.1:4030";
+
+// Honor the gate build dir (see qa-perf.mjs): local builds isolate to
+// .next-gate, so serve whichever dir the build actually landed in.
+const distDir = process.env.NEXT_DIST_DIR
+  || (fs.existsSync(".next/BUILD_ID") ? ".next" : ".next-gate");
 
 const checks = [
   { path: "/api/jobs", name: "jobs API unauth" },
@@ -43,6 +49,7 @@ try {
     serverProcess = spawn("bun", ["run", "start"], {
       env: {
         ...process.env,
+        NEXT_DIST_DIR: distDir,
         PORT: port,
         ALLOW_SQLITE_PRODUCTION: "1",
         DATABASE_URL: process.env.DATABASE_URL ?? "file:./dev.db",
