@@ -80,7 +80,17 @@ export function RowActionsMenu({ children, label = "Actions", size = "default" }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
-    function onScroll() { setOpen(false); }
+    function onScroll(event: Event) {
+      // The listener is on `window` with capture, so it sees scrolls of *any*
+      // descendant — including the panel's own inner scrollbar. Scrolling inside
+      // the panel is the user reaching its lower half (the receipts menu carries
+      // a whole edit form and is capped to the window, so it always scrolls).
+      // Treating that as "the page moved" closed the menu mid-use and put "Save
+      // Receipt" permanently out of reach.
+      const target = event.target as Node | null;
+      if (target && popupRef.current && (popupRef.current === target || popupRef.current.contains(target))) return;
+      setOpen(false);
+    }
     function onResize() { setOpen(false); }
     document.addEventListener("mousedown", onMouse);
     document.addEventListener("keydown", onKey);
@@ -110,27 +120,42 @@ export function RowActionsMenu({ children, label = "Actions", size = "default" }
 
   // Decide whether to open upward or downward based on available space
   const spaceBelow = rect ? window.innerHeight - rect.bottom : 0;
+  const spaceAbove = rect ? rect.top : 0;
   const openDown = spaceBelow > 260;
-  const popupTop = rect
-    ? openDown
-      ? rect.bottom + 6
-      : rect.top - 6  // will be offset upward via transform
-    : 0;
   const popupRight = rect ? Math.max(8, window.innerWidth - rect.right) : 0;
   const compact = size === "compact";
+
+  // A row menu can carry a full edit form — the receipts one does — so it is
+  // routinely taller than the trigger and than the room beside it. A cap of the
+  // whole window height was not enough: the panel opens flush against the
+  // button, so a window-tall panel overflows by exactly the button's offset from
+  // that edge, and its last rows are laid out off-screen where no scroll can
+  // reach them. The cap has to be the room actually left in the direction the
+  // panel opens.
+  const MARGIN = 8;
+  const GAP = 6;
+  const availableHeight = rect ? Math.max(120, (openDown ? spaceBelow : spaceAbove) - 24) : 0;
+
+  // Anchor by the top edge in both directions. Bottom-anchoring an upward panel
+  // fixes its bottom but lets its top escape the window — the same defect
+  // mirrored, and a short window is exactly when that happens.
+  const popupTop = rect
+    ? openDown
+      ? rect.bottom + GAP
+      : Math.max(MARGIN, rect.top - GAP - availableHeight)
+    : 0;
 
   const popupStyle: React.CSSProperties = rect
     ? {
         position: "fixed",
+        top: popupTop,
         right: popupRight,
-        ...(openDown
-          ? { top: popupTop }
-          : { bottom: window.innerHeight - rect.top + 6 }),
         zIndex: 9999,
         minWidth: compact ? 188 : 220,
         maxWidth: compact ? 236 : 300,
-        maxHeight: compact ? Math.min(360, Math.max(150, window.innerHeight - 24)) : Math.max(160, window.innerHeight - 24),
+        maxHeight: compact ? Math.min(360, availableHeight) : availableHeight,
         overflowY: "auto",
+        overscrollBehavior: "contain",
       }
     : {};
 

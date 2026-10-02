@@ -67,6 +67,85 @@ export const ACTIVE_STATUSES_EXPECTING_CONTACT = ACTIVE_JOB_STATUSES.filter(
 export type JobStatus = (typeof JOB_STATUSES)[number];
 export type UiJobStatus = (typeof UI_JOB_STATUSES)[number];
 
+import type { Role } from "@prisma/client";
+import { can } from "./permissions";
+
+/**
+ * Happy-path next step per status: what the primary CTA does. The raw
+ * transition lists lead with side branches, so this map keeps repeated
+ * presses walking toward completion. Alternates still list every option.
+ */
+export const PRIMARY_NEXT_STATUS: Partial<Record<JobStatus, JobStatus>> = {
+  RECEIVED: "DIAGNOSING",
+  DIAGNOSING: "IN_REPAIR",
+  REFERRED: "AWAITING_APPROVAL",
+  PENDING_EXTERNAL_ASSIGNMENT: "IN_EXTERNAL_REPAIR",
+  ASSIGNED_ONE_TIME_EXTERNAL: "IN_EXTERNAL_REPAIR",
+  IN_EXTERNAL_REPAIR: "AWAITING_APPROVAL",
+  WAITING_FOR_PARTS: "IN_REPAIR",
+  RETURNED_FROM_EXTERNAL: "IN_REPAIR",
+  AWAITING_APPROVAL: "IN_REPAIR",
+  IN_REPAIR: "READY_FOR_PICKUP",
+  READY_FOR_PICKUP: "COMPLETED",
+  DELIVERED: "COMPLETED",
+};
+
+/**
+ * The primary move from a status, restricted to steps the role may actually
+ * take (falls back to the first visible option, then null when terminal).
+ */
+export function primaryNextStatus(
+  fromStatus: JobStatus,
+  visibleNext: JobStatus[],
+): JobStatus | null {
+  const preferred = PRIMARY_NEXT_STATUS[fromStatus];
+  if (preferred && visibleNext.includes(preferred)) return preferred;
+  return visibleNext[0] ?? null;
+}
+/**
+ * Single source of truth for who may move a job TO a status. Used by the
+ * server action (enforcement) and the job page (which buttons to offer), so
+ * the two cannot drift: every offered button succeeds, every hidden one
+ * would have been rejected.
+ *
+ * Internal techs can submit for approval and record handover, matching what
+ * the UI offers; OPS runs the full chain below.
+ */
+export function canTransitionJobStatus(
+  user: { role: Role; permissions?: string[] },
+  nextStatus: JobStatus,
+): boolean {
+  if (user.role === "ADMIN") return true;
+  if (user.role === "TECHNICIAN_EXTERNAL") {
+    return (["AWAITING_APPROVAL", "RETURNED_FROM_EXTERNAL"] as JobStatus[]).includes(nextStatus);
+  }
+  if (user.role === "TECHNICIAN_INTERNAL" || can.editDiagnosis(user)) {
+    return (
+      [
+        "DIAGNOSING",
+        "REFERRED",
+        "PENDING_EXTERNAL_ASSIGNMENT",
+        "ASSIGNED_ONE_TIME_EXTERNAL",
+        "IN_EXTERNAL_REPAIR",
+        "RETURNED_FROM_EXTERNAL",
+        "AWAITING_APPROVAL",
+        "IN_REPAIR",
+        "WAITING_FOR_PARTS",
+        "READY_FOR_PICKUP",
+        "DELIVERED",
+        "COMPLETED",
+        "CLOSED",
+      ] as JobStatus[]
+    ).includes(nextStatus);
+  }
+  // OPS runs the shop floor: the full chain, so pressing a status always
+  // offers the next options until the job completes.
+  if (user.role === "OPS" || user.role === "OPERATIONS_MANAGER") {
+    return true;
+  }
+  return false;
+}
+
 export function normalizeJobStatus(status: JobStatus): UiJobStatus {
   // Legacy external assignment states now surface as a single UI stage.
   if (status === "PENDING_EXTERNAL_ASSIGNMENT" || status === "ASSIGNED_ONE_TIME_EXTERNAL") {
@@ -96,4 +175,39 @@ export function isOpenJobStatus(status: JobStatus | string) {
 
 export function isCompletedJobStatus(status: JobStatus | string) {
   return status === "COMPLETED" || status === "DELIVERED";
+}
+
+/**
+ * Progress-rail stage for a job status: 0 Intake, 1 Diagnosis, 2 Approval,
+ * 3 Repair, 4 Complete/Closed.
+ *
+ * Every status is mapped explicitly; unknown future statuses fail safe to
+ * Repair — a wrong "ongoing" understates, a wrong "complete" misleads.
+ */
+export function jobStageIndex(status: JobStatus | string): number {
+  switch (status) {
+    case "RECEIVED":
+      return 0;
+    case "DIAGNOSING":
+      return 1;
+    case "AWAITING_APPROVAL":
+      return 2;
+    case "REFERRED":
+    case "PENDING_EXTERNAL_ASSIGNMENT":
+    case "ASSIGNED_ONE_TIME_EXTERNAL":
+    case "IN_EXTERNAL_REPAIR":
+    case "RETURNED_FROM_EXTERNAL":
+    case "IN_REPAIR":
+    case "WAITING_FOR_PARTS":
+    case "READY_FOR_PICKUP":
+      return 3;
+    case "DELIVERED":
+    case "COMPLETED":
+    case "CLOSED":
+      return 4;
+    default:
+      // Unknown future status: show Repair (work ongoing) rather than
+      // Complete — a wrong "ongoing" understates, a wrong "complete" lies.
+      return 3;
+  }
 }

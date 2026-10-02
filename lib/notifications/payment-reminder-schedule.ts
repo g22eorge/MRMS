@@ -22,9 +22,16 @@
 const DAY_MS = 86_400_000;
 
 export function startOfDay(d: Date) {
-  const c = new Date(d);
-  c.setHours(0, 0, 0, 0);
-  return c;
+  // Start of the Kampala day, not the server day — the one-message-per-day
+  // dedupe must align with the hours the customer experiences.
+  const parts = new Intl.DateTimeFormat("en-UG", {
+    timeZone: "Africa/Kampala",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "01";
+  return new Date(Date.UTC(Number(get("year")), Number(get("month")) - 1, Number(get("day"))) - 3 * 3_600_000);
 }
 
 /** Days relative to the due date. Negative is before. */
@@ -105,7 +112,21 @@ export function stageDueNow(
   return latest;
 }
 
+export function eatHour(now: Date): number {
+  // Settings hours are Africa/Kampala wall-clock; the server runs UTC.
+  // Uganda is UTC+3 year-round (no DST), read off the date itself rather
+  // than trusting the server timezone.
+  const parts = new Intl.DateTimeFormat("en-UG", {
+    timeZone: "Africa/Kampala",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(now);
+  return Number(parts.find((p) => p.type === "hour")?.value ?? "0") % 24;
+}
+
 export function withinQuietHours(now: Date, startHour: number, endHour: number): boolean {
-  const h = now.getHours();
-  return h >= startHour && h < endHour;
+  const h = eatHour(now);
+  if (startHour === endHour) return true; // full-day window
+  // Overnight windows (e.g. 20→8) used to brick all reminders; wrap them.
+  return startHour < endHour ? h >= startHour && h < endHour : h >= startHour || h < endHour;
 }

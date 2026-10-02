@@ -94,8 +94,10 @@ export function ExternalTechJobView({
         <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">Accessories: {job.accessories ?? "-"}</p>
       </div>
 
-      <form
-        action={(formData) => {
+                  <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const formData = new FormData(event.currentTarget);
           formData.set("jobId", job.id);
           formData.set("expectedUpdatedAt", job.updatedAt);
           startTransition(async () => {
@@ -212,7 +214,8 @@ export function ExternalTechJobView({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button
+                    <button
+            type="submit"
             disabled={isPending}
             className="btn-premium w-full whitespace-nowrap rounded-lg px-3 py-1.5 text-[0.8125rem] sm:w-auto sm:py-2 sm:text-sm"
           >

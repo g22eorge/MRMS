@@ -1,6 +1,6 @@
 "use client";
 
-import { Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { can } from "@/lib/permissions";

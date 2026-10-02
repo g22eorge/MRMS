@@ -62,6 +62,18 @@ export async function postRepairMessageAction(formData: FormData): Promise<void>
   });
   if (!job) return;
 
+  // Flood guard: at most a few messages per minute per thread. Bots and
+  // double-taps otherwise fill staff inboxes faster than anyone can read.
+  const recentCount = await prisma.repairMessage.count({
+    where: {
+      orgId: org.id,
+      jobId: job.id,
+      clientId: client.id,
+      createdAt: { gte: new Date(Date.now() - 60_000) },
+    },
+  }).catch(() => 0);
+  if (recentCount >= 3) return;
+
   await prisma.repairMessage.create({
     data: {
       orgId: org.id,

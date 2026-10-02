@@ -11,7 +11,7 @@
  * add a CHECK to an existing table, so both columns are nullable and the
  * invariant is asserted in application code at the point of creation.
  */
-import { clientDisplayName } from "@/lib/client-name";
+import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
 
 export type ParentClient = {
   fullName: string;
@@ -23,6 +23,8 @@ export type ParentClient = {
 type SaleParent = {
   saleNumber: string;
   client?: ParentClient;
+  /** The sale's own customer label — a walk-in sale usually has no client row. */
+  name?: string | null;
 } | null;
 
 type InvoiceParent = {
@@ -69,9 +71,9 @@ export function creditNoteParent(creditNote: {
       reference: sale.saleNumber,
       label: `Sale: ${sale.saleNumber}`,
       client,
-      // POS sales are frequently anonymous, and "Walk-in" is what the rest of
-      // the app calls that customer.
-      clientName: clientDisplayName(client, "Walk-in"),
+      // POS sales are frequently anonymous; the till's own name for the buyer is
+      // what the rest of the app calls that customer.
+      clientName: saleCustomerName(sale, "Walk-in"),
     };
   }
 

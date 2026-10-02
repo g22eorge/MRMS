@@ -48,6 +48,9 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
       receivedAt: true, completedAt: true,
       warrantyMonths: true, warrantyExpiresAt: true,
       quotations: {
+        // Internal drafts never reach the client — only sent (or decided)
+        // quotes with their pricing.
+        where: { status: { not: "DRAFT" } },
         select: { id: true, quoteNumber: true, status: true, totalAmount: true, currency: true, validUntil: true, sentAt: true },
         orderBy: { createdAt: "desc" },
       },

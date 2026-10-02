@@ -39,6 +39,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       sale: {
         select: {
           saleNumber: true,
+          name: true,
           client: { select: { fullName: true, phone: true, email: true, organization: true } },
         },
       },

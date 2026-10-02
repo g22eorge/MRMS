@@ -9,9 +9,9 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 
 export async function POST(req: NextRequest) {
   const { user } = await getCurrentUserRole();
-  // Match the single-invoice void gate (was the broader approveInvoices, letting
-  // e.g. FRONT_DESK void in bulk what they can't void individually).
-  if (!(can.voidInvoices(user) || ["ADMIN", "OPS"].includes(user.role))) {
+  // Voiding destroys invoice records: canonical voidInvoices grant only
+  // (ADMIN/FINANCE + explicit grants), no role backdoor.
+  if (!can.voidInvoices(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -38,7 +38,11 @@ export async function POST(req: NextRequest) {
 
   for (const target of targets) {
     await prisma.$transaction(async (tx) => {
-      const inv = await tx.invoice.update({ where: { id: target.id }, data: { status: "VOID" } });
+      // Org-scoped write (see single-void): the candidate was verified
+      // in-org, but the write itself must carry orgId.
+      const voided = await tx.invoice.updateMany({ where: { id: target.id, orgId }, data: { status: "VOID" } });
+      if (!voided.count) throw new Error("Invoice not found");
+      const inv = { invoiceNumber: target.invoiceNumber };
       const partLines = await tx.invoiceLine.findMany({
         where: { invoiceId: target.id, orgId, sourceType: "Part", sourceId: { not: null } },
         select: { sourceId: true, quantity: true, description: true, saleUomFactor: true },
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
         if (qty <= 0) continue;
         const part = await tx.part.findFirst({ where: { id: line.sourceId, orgId }, select: { id: true } });
         if (!part) continue;
-        await tx.part.update({ where: { id: part.id }, data: { qtyOnHand: { increment: qty } } });
+        await tx.part.updateMany({ where: { id: part.id, orgId }, data: { qtyOnHand: { increment: qty } } });
         await tx.partStockTransaction.create({
           data: { partId: part.id, orgId, type: "IN", quantity: qty, reason: `Invoice ${inv.invoiceNumber} voided: ${line.description}`.slice(0, 500), createdById: user.id },
         });

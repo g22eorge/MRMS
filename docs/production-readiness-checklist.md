@@ -23,7 +23,7 @@ Use this checklist to validate that the system not only works, but also fails sa
 - [ ] Unauthenticated access to protected routes/API is denied or redirected.
 - [ ] External technician API responses never include client PII.
 - [ ] Unauthorized role cannot mutate protected fields (e.g., clientBill, status transitions outside role).
-- [ ] File upload route rejects unsupported types and >5MB files.
+- [ ] File upload route rejects unsupported types and >15MB files (job photos; logos 2MB — see lib/blob-storage.ts).
 
 ## 4) Stability and Concurrency
 

@@ -99,3 +99,20 @@ export function isPlatformAdminEmail(email?: string | null): boolean {
   if (!email) return false;
   return checkIsPlatformAdmin(email);
 }
+
+/**
+ * Deployment-aware gate for cross-cutting maintenance screens (Data Heal).
+ * Platform admins (allowlisted email + ADMIN role) pass everywhere. On
+ * single-tenant (care) deployments an org ADMIN also passes — there is no
+ * second tenant to leak into, so the owner can maintain their own database.
+ * Commercial multi-tenant stays platform-only.
+ */
+export async function checkCanRunOpsTools(user: {
+  email?: string | null;
+  role?: string | null;
+}): Promise<boolean> {
+  if (user.role !== "ADMIN") return false;
+  if (checkIsPlatformAdmin(user.email ?? "")) return true;
+  const ctx = await import("./deployment-context").then((m) => m.getDeploymentContext()).catch(() => null);
+  return ctx?.mode === "CARE_SINGLE_TENANT";
+}

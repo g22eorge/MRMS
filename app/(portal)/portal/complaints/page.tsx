@@ -43,9 +43,13 @@ export default async function PortalComplaintsPage({
       take: 100,
       select: { id: true, jobNumber: true, brand: true, model: true },
     }),
-    // Their complaints on this shop — scoped by tenant (orgId) + their phone.
+    // Their complaints on this shop — this client only. Legacy rows predate
+    // the client link, so they still match by phone; both sides stay in-org.
     prisma.complaint.findMany({
-      where: { orgId: org.id, clientPhone: client.phone },
+      where: {
+        orgId: org.id,
+        OR: [{ clientId: client.id }, { AND: [{ clientId: null }, { clientPhone: client.phone }] }],
+      },
       orderBy: { createdAt: "desc" },
       take: 30,
       select: {
@@ -89,6 +93,7 @@ export default async function PortalComplaintsPage({
         category,
         channel: COMPLAINT_CHANNEL_WEB,
         jobId: safeJobId,
+        clientId: c.id,
         clientName: c.fullName,
         clientPhone: c.phone,
         clientEmail: c.email || null,

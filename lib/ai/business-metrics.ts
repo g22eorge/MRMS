@@ -194,8 +194,8 @@ export async function buildBusinessDataPack(orgId: string, asOf: Date = new Date
     sales: {
       posCashReceived: cashCurrent.products,
       posCashReceivedPrev: cashPrevious.products,
-      invoiceCashReceived: cashCurrent.corporate + cashCurrent.unallocated,
-      invoiceCashReceivedPrev: cashPrevious.corporate + cashPrevious.unallocated,
+      invoiceCashReceived: cashCurrent.corporate + cashCurrent.merchandise + cashCurrent.service + cashCurrent.unallocated,
+      invoiceCashReceivedPrev: cashPrevious.corporate + cashPrevious.merchandise + cashPrevious.service + cashPrevious.unallocated,
       openLeads: leadsByStatus.filter((lead) => !["WON", "LOST"].includes(lead.status)).reduce((count, lead) => count + lead._count.status, 0),
       wonLeads: leadsByStatus.find((lead) => lead.status === "WON")?._count.status ?? 0,
       pipelineValue: sum(leadsByStatus.map((lead) => lead._sum.estimatedValue ?? 0)),
@@ -214,6 +214,8 @@ export async function buildBusinessDataPack(orgId: string, asOf: Date = new Date
       collectedByChannel: {
         repairs: cashToday.repairs,
         products: cashToday.products,
+        merchandise: cashToday.merchandise,
+        service: cashToday.service,
         corporate: cashToday.corporate,
         unallocated: cashToday.unallocated,
       },
@@ -229,6 +231,8 @@ export async function buildBusinessDataPack(orgId: string, asOf: Date = new Date
       cashReceivedByChannel: {
         repairs: cashCurrent.repairs,
         products: cashCurrent.products,
+        merchandise: cashCurrent.merchandise,
+        service: cashCurrent.service,
         corporate: cashCurrent.corporate,
         unallocated: cashCurrent.unallocated,
       },

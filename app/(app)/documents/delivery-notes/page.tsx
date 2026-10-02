@@ -1,3 +1,8 @@
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time — prerendering crashed the build here. Aligns with
+// the force-dynamic convention on every other document list page.
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
@@ -30,7 +35,7 @@ import {
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
 import {parsePage, paginationView, pageHrefBuilder, PAGE_SIZE, parsePageSize, sizeHrefBuilder} from "@/lib/pagination";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@/components/shared/Disclosure";
-import { clientDisplayName } from "@/lib/client-name";
+import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
@@ -42,6 +47,7 @@ export default async function DeliveryNotesPage({
   searchParams: Promise<{ q?: string; period?: string; method?: string; page?: string; size?: string; error?: string }>;
 }) {
   const { user, orgId, org } = await requireOrgSession();
+  const canVoid = can.voidInvoices(user);
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const periodFilter = sp.period ?? "all";
@@ -175,7 +181,8 @@ export default async function DeliveryNotesPage({
   async function deleteDeliveryNoteAction(formData: FormData) {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
-    if (!("ADMIN" === user.role || can.approveInvoices(user))) return;
+    // Numbered delivery records are append-only history: voidInvoices grant only.
+    if (!can.voidInvoices(user)) return;
     assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
 
     const deliveryNoteId = String(formData.get("deliveryNoteId") ?? "").trim();
@@ -354,7 +361,7 @@ export default async function DeliveryNotesPage({
       where: { orgId, status: { in: ["OPEN", "PAID", "PARTIALLY_RETURNED"] } },
       orderBy: { createdAt: "desc" },
       take: 80,
-      select: { id: true, saleNumber: true, totalAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
+      select: { id: true, saleNumber: true, name: true, totalAmount: true, currency: true, client: { select: { fullName: true, phone: true, organization: true } } },
     }).catch(() => []),
   ]);
   const hasDeliverySources = invoiceOptions.length > 0 || saleOptions.length > 0;
@@ -390,7 +397,7 @@ export default async function DeliveryNotesPage({
     {
       label: "Sales",
       options: saleOptions.map((sale) => {
-        const who = clientDisplayName(sale.client, "Walk-in");
+        const who = saleCustomerName(sale, "Walk-in");
         return {
           value: `sale:${sale.id}`,
           label: `${who} — ${sale.saleNumber}`,
@@ -498,7 +505,7 @@ export default async function DeliveryNotesPage({
                 <p className="text-[0.75rem] text-[var(--ink-muted)]">{n.deliveredByName} → {n.receivedByName}</p>
                 {/* Client + source visible on mobile (those columns hidden at md/lg) */}
                 <p className="mt-0.5 font-medium text-[var(--ink)] lg:hidden">
-                  {n.invoice?.job?.client ? clientDisplayName(n.invoice.job.client) : n.sale?.client ? clientDisplayName(n.sale.client) : ""}
+                  {clientDisplayName(n.invoice?.job?.client ?? n.invoice?.client ?? n.sale?.client, "")}
                 </p>
               </>
             ),
@@ -524,7 +531,7 @@ export default async function DeliveryNotesPage({
             header: "Client",
             headerClassName: "hidden lg:table-cell",
             className: "hidden text-[var(--ink-muted)] lg:table-cell",
-            cell: (n) => clientDisplayName(n.invoice?.job?.client ?? n.sale?.client, "-"),
+            cell: (n) => clientDisplayName(n.invoice?.job?.client ?? n.invoice?.client ?? n.sale?.client, "-"),
           },
           {
             key: "delivered",
@@ -598,12 +605,14 @@ export default async function DeliveryNotesPage({
                   <textarea name="note" defaultValue={n.note ?? ""} placeholder="Note" className="min-h-14 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                   <MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save Delivery Note</MenuActionButton>
                 </form>
-                <MenuDestructiveRow>
-                  <form action={deleteDeliveryNoteAction}>
-                    <input type="hidden" name="deliveryNoteId" value={n.id} />
-                    <ConfirmSubmitButton message="Delete this delivery note? This cannot be undone." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Delivery Note</ConfirmSubmitButton>
-                  </form>
-                </MenuDestructiveRow>
+                {canVoid ? (
+                  <MenuDestructiveRow>
+                    <form action={deleteDeliveryNoteAction}>
+                      <input type="hidden" name="deliveryNoteId" value={n.id} />
+                      <ConfirmSubmitButton message="Delete this delivery note? This cannot be undone." className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-semibold text-red-600 transition hover:bg-red-500/10 hover:text-red-700">Delete Delivery Note</ConfirmSubmitButton>
+                    </form>
+                  </MenuDestructiveRow>
+                ) : null}
               </RowActionsMenu>
             </>
           );

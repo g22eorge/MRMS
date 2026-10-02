@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 // The search params are carried across: this page is reached from old
 // bookmarks that may still carry filters, and dropping them silently returned
 // an unfiltered list that looked like the filter had failed.
+// Redirects read live search params, so never prerender this page.
+export const dynamic = "force-dynamic";
+
 export default async function CommunicationsOutboxRedirect({
   searchParams,
 }: {

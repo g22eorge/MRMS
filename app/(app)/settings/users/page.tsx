@@ -1,3 +1,8 @@
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time. Aligns with the force-dynamic convention used
+// across the app.
+export const dynamic = "force-dynamic";
+
 import { hashPassword } from "better-auth/crypto";
 import { Role } from "@prisma/client";
 import Link from "next/link";
@@ -86,6 +91,7 @@ const roleOptions: Array<{ value: Role; label: string; description: string }> = 
   { value: Role.SALES_RETAIL, label: "Retail Sales", description: "Handles walk-in retail sales, quotations, and handovers." },
   { value: Role.SALES_POS, label: "POS Operator", description: "Runs point-of-sale transactions and daily cashier sessions." },
   { value: Role.OPS, label: "Operations/Accounts", description: "Coordinates workflow, billing, settlement, and daily operations." },
+  { value: Role.OPERATIONS_MANAGER, label: "Operations Manager", description: "Full operational oversight — jobs, sales, finance, inventory, and staff coordination without admin privileges." },
   { value: Role.FRONT_DESK, label: "Front Desk", description: "Handles front desk intake, customer details, and handover documents." },
   { value: Role.TECH_FIELD, label: "Field Technician", description: "Handles on-site visits, collections, deliveries, and client sign-offs." },
   { value: Role.TECHNICIAN_INTERNAL, label: "Internal Technician", description: "Works diagnosis and in-house repair execution." },
@@ -190,6 +196,24 @@ const roleDefaults: Record<Role, Array<(typeof EXTRA_PERMISSIONS)[number]>> = {
     "can_review_external_bills",
     "can_view_accounts_summary",
     "can_approve_invoices",
+  ],
+  OPERATIONS_MANAGER: [
+    "can_manage_intake",
+    "can_search_jobs",
+    "can_generate_job_cards",
+    "can_assign_jobs",
+    "can_view_external_updates",
+    "can_view_external_quotes",
+    "can_review_external_bills",
+    "can_view_accounts_summary",
+    "can_approve_invoices",
+    "can_run_financial_reports",
+    "can_create_quotations",
+    "can_approve_quotations",
+    "can_create_invoices",
+    "can_open_pos_session",
+    "can_process_refunds",
+    "can_manage_inventory",
   ],
   FRONT_DESK: [
     "can_intake",
@@ -321,6 +345,22 @@ const roleCapabilities: Record<Role, string[]> = {
     "jobs_view",
   ],
   OPS: [
+    "dashboard_view",
+    "jobs_view",
+    "jobs_assign",
+    "jobs_create",
+    "intake_manage",
+    "device_records",
+    "client_records",
+    "tech_notes",
+    "parts_bills",
+    "invoices_view",
+    "invoices_approve",
+    "reports_export",
+    "approval_cost",
+    "download_docs",
+  ],
+  OPERATIONS_MANAGER: [
     "dashboard_view",
     "jobs_view",
     "jobs_assign",

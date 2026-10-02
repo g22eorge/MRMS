@@ -50,8 +50,8 @@ export async function ExternalTechDashboard({
     },
   });
 
-  const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id)).catch(() => new Map());
-  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(jobs.map((job) => job.id)).catch(() => new Map());
+  const payouts = await getJobPayoutsByIds(jobs.map((job) => job.id), orgId ?? undefined).catch(() => new Map());
+  const payoutTotals = await getTechnicianPayoutTotalsByJobIds(jobs.map((job) => job.id), orgId ?? undefined).catch(() => new Map());
 
   const currency = getAppCurrency();
   const openCount = jobs.filter((job) => isOpenJobStatus(job.status)).length;
@@ -129,26 +129,28 @@ export async function ExternalTechDashboard({
         ) : (
           <ul className="space-y-2 text-sm">
             {jobs.slice(0, 6).map((job) => (
-              <li key={job.id} className="flex flex-col items-start justify-between gap-2 border-b border-[var(--line)] py-2">
-                <div className="min-w-0">
-                  <p className="mono truncate font-bold text-[var(--accent)]">{job.jobNumber}</p>
-                  <p className="text-xs text-[var(--ink-muted)]">
-                    {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[var(--ink-muted)]">Fee</p>
-                  <p className="font-medium">{formatMoney(resolveTechCost(payouts.get(job.id)?.externalTechFee ?? job.externalTechFee, job.externalTechBill), currency)}</p>
-                  <p className="text-xs text-[var(--accent)]">
-                    {(() => {
-                      const cost = resolveTechCost(payouts.get(job.id)?.externalTechFee ?? job.externalTechFee, job.externalTechBill);
-                      const paid = paidForJob(job);
-                      if (cost > 0 && paid >= cost) return "Paid";
-                      if (paid > 0) return "Partially paid";
-                      return "Unpaid";
-                    })()}
-                  </p>
-                </div>
+              <li key={job.id} className="border-b border-[var(--line)] py-2 last:border-0 last:pb-0">
+                <Link href={`/jobs/${job.id}`} className="group flex flex-col items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="mono truncate font-bold text-[var(--accent)]">{job.jobNumber}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">
+                      {statusLabel[job.status as keyof typeof statusLabel] ?? job.status}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--ink-muted)]">Fee</p>
+                    <p className="font-medium group-hover:text-[var(--accent)] transition-colors">{formatMoney(resolveTechCost(payouts.get(job.id)?.externalTechFee ?? job.externalTechFee, job.externalTechBill), currency)}</p>
+                    <p className="text-xs text-[var(--accent)]">
+                      {(() => {
+                        const cost = resolveTechCost(payouts.get(job.id)?.externalTechFee ?? job.externalTechFee, job.externalTechBill);
+                        const paid = paidForJob(job);
+                        if (cost > 0 && paid >= cost) return "Paid";
+                        if (paid > 0) return "Partially paid";
+                        return "Unpaid";
+                      })()}
+                    </p>
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>

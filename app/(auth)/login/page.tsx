@@ -1,3 +1,6 @@
+// Reads the live session and the DB; never prerender.
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/app/(auth)/login/login-form";

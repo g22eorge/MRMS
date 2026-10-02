@@ -1,0 +1,163 @@
+# Assessment History
+
+## 2026-09-23 — SDLC Baseline (formal)
+- Scope: repo structure, architecture, DB, workflows, tests, security, ops. No code changed.
+- Evidence: 130 `page.tsx`, 86 `route.ts` under `app/api`, 119 Prisma models / 59 enums, 51 SQLite migrations + PG baseline, 92 unit tests, 10 E2E specs / 29 tests.
+- Prior claims rechecked: 127→130 pages, 71→86 APIs, 115→119 models. Direction of prior assessment confirmed (retail closer than repair; repair-parts gap real).
+- Outputs: `docs/audit/findings.md`, `docs/audit/issue-register.md`, `docs/audit/traceability-matrix.md`, `docs/decisions/ADR-001..003` (all PROPOSED).
+- Gate verdict: DISCOVERY/REQUIREMENTS NOT READY; ARCHITECTURE/IMPLEMENTATION/INTEGRATION PARTIAL; VERIFICATION NOT READY; RELEASE NOT READY.
+
+## 2026-09-23 — Architecture Baseline (Gate 3, partial)
+- Added `docs/architecture/system-overview.md` (DRAFT, evidence-backed). No code changed.
+- Gates 1–2 still need owner-approved scope/requirements before any implementation.
+
+## 2026-09-23 — P2-02 resolved (upload-limit drift)
+- Finding: test + checklist mirrored stale 5MB/3-type rule; code is deliberately 15MB/5-type (phone photos, HEIC→JPEG).
+- Change: new `lib/upload-limits.ts` (ALLOWED_TYPES, MAX_BYTES, LOGO_MAX_BYTES, hasValidImageSignature, isHeicType); `lib/blob-storage.ts` imports + re-exports (behaviour identical); `tests/unit/09-upload-security.test.ts` imports real logic; checklist corrected.
+- Verification: `bun test 09-upload-security + blob-storage-routing` 21 pass; `tsc --noEmit` clean; `eslint` on touched files clean.
+
+## 2026-09-23 — Verification gate (unit, full)
+- `bun run test:unit`: **1100 pass, 4 skip, 0 fail across 92 files** (isolated runner, test DB reprovisioned). Includes rewritten `09-upload-security` (real 15MB/5-type limits).
+
+## 2026-09-23 — QA evidence gates (read-only)
+- `bun run qa:data-integrity` (dev.db, 33 jobs): PASS — audit coverage, completed-job billing, client counts, no orphaned jobs.
+- `bun run qa:http-security`: PASS — unauthenticated API/page access redirected (307) across jobs, reports export, clients.
+
+## 2026-09-23 — QA evidence gates, continued (script-reported)
+- `bun run qa:concurrency`: PASS — concurrent job updates + audit writes sane (writes one marked `technicianNotes` + audit rows on dev.db by design).
+- `bun run qa:perf`: PASS — /login avg 5.9ms p95 8.4ms (<900ms); /jobs + /api/jobs unauth avg <1ms (<250ms). Note: unauth paths return redirects, so this is a smoke check, not a loaded-page benchmark.
+
+## 2026-09-23 — QA evidence gates, continued II (script-reported)
+- `bun run qa:pdf-smoke`: PASS — invoice, quotation, job card, sale receipt, payment receipt all valid PDFs (delivery-note skipped: none in DB).
+- `bun run qa:rate-limit`: PASS — 10×401 then 429 on sign-in endpoint; limiting active.
+
+## 2026-09-23 — Predeploy gate (script-reported)
+- `bun run predeploy:check`: PASS — typecheck, lint, audit, production build, QA subset re-run green. E2E skipped inside (`REQUIRE_E2E` unset); covered separately by 29/29 E2E run.
+
+## 2026-09-23 — ADRs approved; ADR-003 UI distinction implemented
+- Owner approved ADR-001/002/003. Register updated (P1-01 IN PROGRESS, P1-02/03 OPEN).
+- `components/jobs/JobDetailTabs.tsx`: `partsNeeded` + `partsReplaced` now labelled "(notes only)" with hints that only the parts panel moves inventory (ADR-003 Option 2).
+- Verification: `tsc` clean, `eslint` 0 errors. No behaviour change (display text only).
+
+## 2026-09-23 — ADR-001 tests (helper verified, sums follow-up open)
+- `roundMoney`/`toBaseAmount` already existed in `lib/currency.ts` and are used across document-workflow, VAT, invoicing, POS — no new helper needed.
+- Added `tests/unit/money-rounding.test.ts` (8 tests): decimals, UGX/USD rounding, 0.1+0.2 trap, non-finite→0, FX netting (two- and three-way splits net once rounded).
+- Evidence: raw FX sums must never face `===` (same expression exact under FMA, off-by-ulp elsewhere — found live between Bun/V8). `payment-sync.ts` compares raw sums today → follow-up recorded on P1-02.
+- Verification: file 8/8 pass; `tsc` clean; `eslint` clean.
+
+## 2026-09-23 — ADR-001 follow-up implemented (P1-02 resolved)
+- `lib/commercial/payment-sync.ts`: `toDocumentBase` all returns + `sumInvoicePaidAmount` / `sumSalePaidAmount` now return `roundMoney(..., baseCurrency)`. Paid/total comparisons meet on rounded values; stored `paidAmount` is rounded.
+- Verification: `tsc` clean, `eslint` clean, full `bun run test:unit` **1108 pass, 4 skip, 0 fail across 93 files**.
+
+## 2026-09-23 — ADR-003 E2E (P1-01 resolved)
+- New `tests/e2e/repair-parts.spec.ts`: own `e2e-repair-parts` org, part + location fixture; UI reserves 2 (RESERVED, qtyReserved 2) then marks fitted (CONSUMED, qtyOnHand/location 10→8, ledger row); diagnosis + repair boxes assert notes-only labels; free-text columns stay null.
+- Verification: spec 1/1 pass; `tsc` + `eslint` clean. Follows `document-lifecycle` fixture/cleanup pattern.
+
+## 2026-09-23 — ADR-002 FK migration (P1-03 resolved)
+- 4 models (`Receipt`, `InvoiceLine`, `PaymentAllocation`, `PartLocationStock`) + `Organization` back-fields; Cascade per Invoice/Payment precedent; PG variant regenerated.
+- Found 9 orphan location-stock rows (deleted E2E orgs) blocking FKs — deleted after backup; dev.db/prisma/test.db had zero orphans.
+- Learned: every local path resolves to `prisma/dev.db` (`lib/prisma.ts`, `prisma.config.ts`); repo-root `dev.db` is stale, untouched. `migrate dev` needs reset from pre-existing push-drift — not acted on.
+- Verification: push OK, fresh test.db carries FKs, `test:unit` 1108/0 fail, drift-check OK, `tsc` clean, repair-parts E2E 1/1.
+
+## 2026-09-23 — Full E2E re-validation after all P1 changes
+- `bun run qa:e2e` (with `NEXT_DIST_DIR=.next` per known config quirk): **30 passed, 0 failed (3.7m)** across 11 files, incl. new `repair-parts` spec.
+
+## 2026-09-23 — Expense payment button (user-reported, fixed)
+- Symptom: row-menu "Record payment" appeared to do nothing. Causes: plain submit
+  gave zero feedback during slow action round-trips, and native min/max/step
+  could refuse submit without visible feedback.
+- Fix (`finance/expenses/page.tsx`): `SubmitButton bare` with "Recording…"
+  pending state (double-submit guard); amount input keeps `required` only —
+  server remains the validator (balance cap + error banner).
+- New `tests/e2e/expense-payment.spec.ts`: menu → fill 40000 → submit →
+  ExpensePayment row + paidAmount 40000, paidAt stays null (part payment).
+  E2E 1/1 pass (first attempt caught only a cold-server 5s poll — hardened to 30s).
+- Verification: `tsc` + `eslint` clean. Needs owner confirmation on production data.
+
+## 2026-09-24 — CRM assessment + lead conversion (productivity)
+- Verdict: functional tracker, weak closer. WON went nowhere (manual client
+  re-entry), lostReason write-only on detail, score/clientId dead schema.
+  Fixed the two that cost daily keystrokes; campaigns/score recorded as
+  observations, untouched.
+- `convertLeadToClient` (`sales/actions.ts`): WON-only, phone+orgId dedupe,
+  stamps clientId, logs CONVERSION activity, idempotent.
+- Detail page: Customer card (view link / one-click convert), lostReason
+  select (list parity), rail rows for both.
+- Debug dividend: `destroyE2eOrg` never swept `LeadActivity` (no orgId) —
+  orphans with dead users threw inside `.catch(() => null)` and masked the
+  page as NOT FOUND. Sweeper now deletes orphaned activities; also fixed a
+  swallowed success `redirect()` (NEXT_REDIRECT) in the new convert action.
+- Verification: conversion E2E 1/1 twice in a row; `tsc` + `eslint` clean.
+
+## 2026-09-24 — Commercial registration crash (P0-01 resolved)
+- Symptom: fresh app.* users hit the global error page on /onboarding. Loader
+  was innocent (47 keys locally) — the crash was a client-bundle import:
+  `OnboardingForm` → `module-catalog` (runtime Prisma enum + re-export) →
+  `@prisma/client` browser stub missing `.prisma/client` entry. Same disease in
+  `ModuleIcon` and `plan-prices` → `platform-settings` → `prisma` chains.
+- Fix: `module-catalog` type-only + static ALL_MODULES (runtime enum stays on
+  server-only `module-access`); new dependency-free `plan-price-table.ts`;
+  `ModuleIcon` + 8 more client files to `import type`.
+- Proof: new `onboarding-flow` E2E (register → workspace → dashboard, no error
+  page) 1/1; full `test:unit` 1108/0 fail; full E2E **32/32**.
+
+## 2026-09-24 — Public /api/health for uptime monitors
+- `/api/health` was auth-gated by the proxy (307 without session), unusable for
+  external monitoring. Response carries no PII (`ok`/`db`/`uptime` only).
+- Fix: added to `PUBLIC_PATHS` in `proxy.ts` (prefix match, same pattern as
+  neighbouring entries). Verified: health unit tests 9/9, `tsc` + `eslint`
+  clean, production build compiles (proxy validated).
+
+## 2026-09-24 — Backup + restore features (user-requested)- Was: `backup-db.sh` only (DB snapshots, never run — no `backups/` dir), no
+  restore path, no UI. File photos live externally (UploadThing/Blob), so the
+  feature covers the SQLite database.
+- Built: dependency-free `lib/backups.ts` (strict `mrms-…​.db` naming shared by
+  UI + scripts, keep-30 pruning); `settings/backups` admin page (create via
+  VACUUM INTO, list, download, delete; Turso shows platform-snapshot note);
+  `scripts/restore-db.sh` (name + magic-header checks, auto pre-restore
+  snapshot, refuses live handles without --force); nav entries (settings +
+  mobile hub). No live hot-swap restore button by design — documented on-page.
+- Verification: unit 6/6, full round-trip on scratch copy (backup → mutate →
+  restore → integrity ok, mutation gone), both refusal paths exit 1,
+  `tsc` + `eslint` clean.
+
+## 2026-09-23 — Button/navigation audit (no findings)
+- `bun run check:links`: OK, no broken static hrefs. All `router.push` targets resolve to real pages.
+- ~20 button candidates without single-line handlers inspected (`rg --pcre2`): all false positives — every one carries onClick/submit/form action on following lines. No dead buttons found.
+- Dynamic href prefixes sampled (`/api/procurement/documents/*` → `[kind]/[id]` handles all 4 kinds; `/api/portal/assessment/*` → `[jobId]`; pages/queriestrings) — all resolve. Verdict: sound, no changes.
+
+## 2026-09-25 — Below-cost guard on quotes + POS (user-requested)
+- Gap: selling-price floors existed, but the floor itself could sit under cost
+  and discounts applied after it — certain-loss lines were sellable.
+- `lib/commercial/margin-guard.ts` (pure): effective price post-discount, UOM
+  cost scaling, below-cost predicate, line margin %. Part-linked lines only;
+  custom lines and unknown cost skip (gifts stay possible, missing data never blocks).
+- Wired into quotation creation + POS add/update with the existing error
+  channels (throw / posReject). Complimentary below-cost flows must use custom
+  lines — recorded here as the accepted trade-off.
+- Verification: unit 9/9, margin E2E (20%-off rejected 400, 10%-off 201),
+  full `test:unit` 1123/0 fail, `tsc` + `eslint` clean.
+
+## 2026-09-25 — Margin holes closed: FX-aware guard + job completion guard
+- Quotation guard is now base-currency aware (price × rate vs base cost/floor);
+  POS needs none (sales are always created in base currency).
+- Job COMPLETED now refuses a final bill under technician cost
+  (fee override wins, else submitted bill — the Repair Margin definition).
+  In-house jobs (no recorded tech cost) unaffected.
+- Fixed helper bug found by tests: null bill read as 0 (below-cost).
+- Verification: unit 11/11, margin E2E incl. USD cases 1/1, full unit
+  1125/0 fail, `tsc` + `eslint` clean.
+
+## 2026-09-25 — SPEC-001 tracking links (built, status path proven)
+- `Organization.trackingLinksEnabled` (default true) + `buildTrackingUrl`
+  (slash-preserving) + footer append with skip-if-present + `{{trackingUrl}}`
+  template var, on WhatsApp and email status paths; intake job-created now
+  goes through the outbox (`notifyClientJobCreated`) instead of direct send.
+- PG schema regenerated; dev DB pushed.
+- Verification: unit 4/4, status E2E (link present, opt-out removes it),
+  `tsc` + `eslint` clean. Intake-UI convert step dropped from E2E after
+  repeated flakiness in the intake card's pending transitions (pre-existing
+  UI behavior, out of scope; intake path shares the proven helpers).
+- Open observation (unverified): intake Approve/Convert buttons intermittently
+  stay `pending`-disabled under E2E timing — never reproduced a stuck state
+  in steady state; needs a real-user report before calling it a bug.

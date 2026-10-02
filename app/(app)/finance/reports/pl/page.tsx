@@ -64,14 +64,23 @@ export default async function PLPage({
   const trendWindowStart = new Date(year, month - 7, 1);
   const trendWindowEnd = new Date(year, month, 0, 23, 59, 59);
 
-  const [lines, priorLines, trendLines] = await Promise.all([
-    prisma.journalLine.findMany({
+  // Per-account GROUP BY sums for the two statement periods (slim rows, not
+  // full line history) plus one slim 6-month window scan for the trend.
+  // Account metadata joins from a single lookup.
+  const [curSums, priorSums, accounts, trendLines] = await Promise.all([
+    prisma.journalLine.groupBy({
+      by: ["accountId"],
       where: { journalEntry: { orgId, status: "POSTED", date: { gte: from, lte: to } } },
-      include: { account: true, journalEntry: { select: { date: true } } },
+      _sum: { debit: true, credit: true },
     }),
-    prisma.journalLine.findMany({
+    prisma.journalLine.groupBy({
+      by: ["accountId"],
       where: { journalEntry: { orgId, status: "POSTED", date: { gte: priorFrom, lte: priorTo } } },
-      include: { account: true },
+      _sum: { debit: true, credit: true },
+    }),
+    prisma.chartOfAccount.findMany({
+      where: { orgId },
+      select: { id: true, code: true, name: true, type: true },
     }),
     prisma.journalLine.findMany({
       where: {
@@ -81,9 +90,17 @@ export default async function PLPage({
           date: { gte: trendWindowStart, lte: trendWindowEnd },
         },
       },
-      include: { account: true, journalEntry: { select: { date: true } } },
+      select: { debit: true, credit: true, account: { select: { type: true } }, journalEntry: { select: { date: true } } },
     }),
   ]);
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
+  const toLine = (s: { accountId: string; _sum: { debit: number | null; credit: number | null } }) => {
+    const account = accountById.get(s.accountId);
+    if (!account) return null;
+    return { accountId: s.accountId, debit: s._sum.debit ?? 0, credit: s._sum.credit ?? 0, account };
+  };
+  const lines = curSums.map(toLine).filter((l): l is NonNullable<typeof l> => l !== null);
+  const priorLines = priorSums.map(toLine).filter((l): l is NonNullable<typeof l> => l !== null);
 
   type AccountRow = {
     code: string;

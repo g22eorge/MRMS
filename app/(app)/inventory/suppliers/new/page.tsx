@@ -21,43 +21,61 @@ export default function NewSupplierPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-lg">
-      <div className="dc-card overflow-hidden">
-        <div className="px-4 py-3">
-          <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Inventory</p>
-          <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New supplier</p>
+    <div className="space-y-4">
+      <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Inventory · Supplier</p>
+            <h1 className="text-base font-bold text-[var(--ink)]">New supplier</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <p className="hidden text-xs text-[var(--ink-muted)] sm:block">Prices and orders come after.</p>
+            <Link href="/inventory/suppliers" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]">All suppliers</Link>
+          </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-4">
-        <Field name="name" label="Supplier Name" required />
-        <Field name="contactName" label="Contact Person" />
-        <Field name="email" label="Email" type="email" />
-        <Field name="phone" label="Phone" />
-        <div>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)] mb-1">Address</label>
-          <textarea
-            name="address"
-            rows={2}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
-          />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
+          <p className="border-b border-[var(--line)] px-3 py-2 text-sm font-bold text-[var(--ink)]">Supplier</p>
+          <div className="grid gap-3 p-3 sm:grid-cols-2">
+            <Field name="name" label="Supplier Name" required />
+            <Field name="contactName" label="Contact Person" />
+          </div>
         </div>
-        <div>
-          <label className="block text-xs font-semibold text-[var(--ink-muted)] mb-1">Notes</label>
-          <textarea
-            name="notes"
-            rows={2}
-            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
-          />
+
+        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
+          <p className="border-b border-[var(--line)] px-3 py-2 text-sm font-bold text-[var(--ink)]">Contact</p>
+          <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Field name="email" label="Email" type="email" />
+            <Field name="phone" label="Phone" />
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label className="block text-xs font-semibold text-[var(--ink-muted)] mb-1">Address</label>
+              <textarea
+                name="address"
+                rows={2}
+                className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
+              />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-3">
+              <label className="block text-xs font-semibold text-[var(--ink-muted)] mb-1">Notes</label>
+              <textarea
+                name="notes"
+                rows={2}
+                className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 resize-none"
+              />
+            </div>
+          </div>
         </div>
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        <div className="flex gap-3">
-          <button type="submit" disabled={pending} className="btn-premium rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
-            {pending ? "Saving…" : "Save Supplier"}
-          </button>
-          <Link href="/inventory/suppliers" className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--accent)]/5">
+
+        {error && <p className="rounded-md border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-600">{error}</p>}
+        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] bg-[var(--bg)]/95 py-2 backdrop-blur">
+          <Link href="/inventory/suppliers" className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]">
             Cancel
           </Link>
+          <button type="submit" disabled={pending} className="btn-premium rounded-md px-4 py-2 text-sm font-bold disabled:opacity-50">
+            {pending ? "Saving…" : "Save Supplier"}
+          </button>
         </div>
       </form>
     </div>

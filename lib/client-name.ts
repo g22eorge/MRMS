@@ -18,18 +18,13 @@ export type NameableClient = {
 } | null | undefined;
 
 /**
- * A POS sale's customer label. Sales have no dedicated name field — the
- * "Sale note" saved on the sale page is the name — so it leads over the
- * linked client, which counter sales usually don't have (hence "Walk-in").
+ * Anything that can name the customer of a POS sale: the linked client, and the
+ * sale's own `name`.
  */
-export function saleCustomerName(
-  sale: { notes?: string | null; client: NameableClient },
-  fallback = "Walk-in",
-): string {
-  const note = (sale.notes ?? "").trim();
-  if (note) return note;
-  return clientDisplayName(sale.client, fallback);
-}
+export type NameableSale = {
+  name?: string | null;
+  client?: NameableClient;
+} | null | undefined;
 
 /**
  * The primary label: the organisation when there is one, otherwise the person.
@@ -41,6 +36,25 @@ export function clientDisplayName(client: NameableClient, fallback = "—"): str
   const org = (client?.organization ?? "").trim();
   if (org) return org;
   const name = (client?.fullName ?? "").trim();
+  return name || fallback;
+}
+
+/**
+ * What to call the customer of a POS sale.
+ *
+ * A POS sale is usually anonymous — there is no Client row and no client picker
+ * at the till — so every screen and every printed receipt said "Walk-in" even
+ * after the cashier typed who was buying. `Sale.name` is that label, so it
+ * stands in for the customer whenever no client is linked. A linked client
+ * always wins: it is the real account, and its organisation leads.
+ *
+ * `fallback` is for the genuinely nameless walk-in. Pass the wording the caller
+ * already used ("Walk-in", "Walk-in Customer") so the copy stays put.
+ */
+export function saleCustomerName(sale: NameableSale, fallback = "Walk-in"): string {
+  const linked = clientDisplayName(sale?.client, "");
+  if (linked) return linked;
+  const name = (sale?.name ?? "").trim();
   return name || fallback;
 }
 

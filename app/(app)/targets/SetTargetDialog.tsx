@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { TargetEntityType, TargetMetric, TargetPeriod } from "@prisma/client";
+import type { TargetEntityType, TargetMetric, TargetPeriod } from "@prisma/client";
 
 import { Modal } from "@/components/ui/Modal";
 

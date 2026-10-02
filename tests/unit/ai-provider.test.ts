@@ -54,29 +54,51 @@ describe("there is one AI provider", () => {
     expect(COPILOT_MODEL_SRC).toContain('from "@anthropic-ai/sdk"');
   });
 
-  it("reads one key, so there is one thing to configure and one to fail", () => {
-    expect(guideConfigured()).toBe(Boolean(process.env.ANTHROPIC_API_KEY));
-    expect(copilotConfigured()).toBe(Boolean(process.env.ANTHROPIC_API_KEY));
+  it("reads one key, so there is one thing to configure and one to fail", async () => {
+    // Key/model lookups go through platform settings (DB, then env), so the
+    // accessors are async — the tests have to await them like the routes do.
+    const withStored = async (key: string, value: string | null, fn: () => Promise<boolean>) => {
+      const { getPlatformSetting, setPlatformSetting, deletePlatformSetting } = await import("@/lib/platform-settings");
+      // Save the real prior row (setPlatformSetting returns void, so the only
+      // honest restore is to read before writing).
+      const previous = await getPlatformSetting(key);
+      if (value === null) await deletePlatformSetting(key);
+      else await setPlatformSetting(key, value);
+      try {
+        return await fn();
+      } finally {
+        if (previous === null) await deletePlatformSetting(key);
+        else await setPlatformSetting(key, previous);
+      }
+    };
+    expect(await withStored("ANTHROPIC_API_KEY", null, guideConfigured)).toBe(Boolean(process.env.ANTHROPIC_API_KEY));
+    expect(await withStored("ANTHROPIC_API_KEY", null, copilotConfigured)).toBe(Boolean(process.env.ANTHROPIC_API_KEY));
+    // A stored key configures both surfaces even with no env var — the
+    // commercial deployment's original failure was exactly this gap.
+    if (!process.env.ANTHROPIC_API_KEY) {
+      expect(await withStored("ANTHROPIC_API_KEY", "sk-test-stored", guideConfigured)).toBe(true);
+      expect(await withStored("ANTHROPIC_API_KEY", "sk-test-stored", copilotConfigured)).toBe(true);
+    }
   });
 });
 
 describe("the model is a deliberate, overridable choice", () => {
-  it("defaults to Haiku for both surfaces", () => {
+  it("defaults to Haiku for both surfaces", async () => {
     // Grounded question-answering over supplied context. The corpus and the
     // metric definitions do the hard part; this is not a reasoning task, and
     // the entry subscription tier is small.
-    expect(guideModel()).toBe("claude-haiku-4-5");
-    expect(copilotModel()).toBe("claude-haiku-4-5");
+    expect(await guideModel()).toBe("claude-haiku-4-5");
+    expect(await copilotModel()).toBe("claude-haiku-4-5");
   });
 
-  it("can be raised per surface without touching code", () => {
+  it("can be raised per surface without touching code", async () => {
     const prevGuide = process.env.ANTHROPIC_GUIDE_MODEL;
     const prevCopilot = process.env.ANTHROPIC_COPILOT_MODEL;
     try {
       process.env.ANTHROPIC_GUIDE_MODEL = "claude-opus-5";
       process.env.ANTHROPIC_COPILOT_MODEL = "claude-opus-5";
-      expect(guideModel()).toBe("claude-opus-5");
-      expect(copilotModel()).toBe("claude-opus-5");
+      expect(await guideModel()).toBe("claude-opus-5");
+      expect(await copilotModel()).toBe("claude-opus-5");
     } finally {
       if (prevGuide === undefined) delete process.env.ANTHROPIC_GUIDE_MODEL;
       else process.env.ANTHROPIC_GUIDE_MODEL = prevGuide;

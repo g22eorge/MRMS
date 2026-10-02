@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FieldVisitStatus } from "@prisma/client";
+import type { FieldVisitStatus } from "@prisma/client";
 
 import { updateVisitStatus, recordSignoff } from "../actions";
 

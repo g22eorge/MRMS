@@ -94,9 +94,24 @@ export default async function BalanceSheetPage({
 
   const asOf = new Date(year, month, 0, 23, 59, 59);
 
-  const lines = await prisma.journalLine.findMany({
-    where: { journalEntry: { orgId, status: "POSTED", date: { lte: asOf } } },
-    include: { account: true },
+  // Per-account totals via GROUP BY — one slim row per account instead of
+  // the entire posted history. Account metadata joins from a single lookup.
+  const [lineSums, accounts] = await Promise.all([
+    prisma.journalLine.groupBy({
+      by: ["accountId"],
+      where: { journalEntry: { orgId, status: "POSTED", date: { lte: asOf } } },
+      _sum: { debit: true, credit: true },
+    }),
+    prisma.chartOfAccount.findMany({
+      where: { orgId },
+      select: { id: true, code: true, name: true, type: true },
+    }),
+  ]);
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
+  const lines = lineSums.flatMap((s) => {
+    const account = accountById.get(s.accountId);
+    if (!account) return [];
+    return [{ accountId: s.accountId, debit: s._sum.debit ?? 0, credit: s._sum.credit ?? 0, account }];
   });
 
   function summarise(

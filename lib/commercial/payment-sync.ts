@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 
-import { toBaseAmount } from "@/lib/currency";
+import { roundMoney, toBaseAmount } from "@/lib/currency";
 
 type Tx = Prisma.TransactionClient;
 
@@ -37,14 +37,18 @@ async function toDocumentBase(
   },
 ): Promise<number> {
   const cur = params.docCurrency ?? params.baseCurrency;
-  if (cur === params.baseCurrency) return params.amount;
+  // Round every return: the paid/total comparison must meet on rounded values,
+  // never on raw float products (ADR-001 — same expression can differ by an ulp
+  // across engines, stranding a fully-paid document one dust below its total).
+  if (cur === params.baseCurrency) return roundMoney(params.amount, params.baseCurrency);
 
   // The document's own rate first. Deriving it from a payment is circular — it
   // makes what the invoice is worth depend on how it happened to be settled —
   // and it cannot work at all before the first payment exists, which is exactly
   // when the paid/total comparison is most likely to be wrong. The payment
   // lookup below stays only for rows written before documents carried a rate.
-  if (params.docRate && params.docRate > 0) return params.amount * params.docRate;
+  if (params.docRate && params.docRate > 0)
+    return roundMoney(params.amount * params.docRate, params.baseCurrency);
 
   const fx = await tx.payment.findFirst({
     where: {
@@ -62,7 +66,9 @@ async function toDocumentBase(
   // unconverted overstates nothing in base terms but understates the total, so
   // the document can flip to PAID early. It is preserved as the historical
   // behaviour for legacy rows; new documents always carry a rate.
-  return rate && rate > 0 ? params.amount * rate : params.amount;
+  return rate && rate > 0
+    ? roundMoney(params.amount * rate, params.baseCurrency)
+    : roundMoney(params.amount, params.baseCurrency);
 }
 
 /** Sum invoice-linked payments in org base currency; REFUND rows net off when enabled. */
@@ -110,7 +116,7 @@ export async function sumInvoicePaidAmount(
     exchangeRateToBase: refund.exchangeRateToBase,
   }), 0);
 
-  return paymentsTotal - refundsTotal;
+  return roundMoney(paymentsTotal - refundsTotal, params.baseCurrency);
 }
 
 /**
@@ -220,7 +226,7 @@ export async function sumSalePaidAmount(
     exchangeRateToBase: refund.exchangeRateToBase,
   }), 0);
 
-  return paymentsTotal - refundsTotal;
+  return roundMoney(paymentsTotal - refundsTotal, params.baseCurrency);
 }
 
 /** Recompute sale paidAmount/status from linked payments (FX-converted, refunds netted). */

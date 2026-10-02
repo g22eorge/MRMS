@@ -180,7 +180,10 @@ test.describe("Mobile bottom navigation at 390×844", () => {
     const actionBar = page.locator(".mobile-job-action-bar");
     await expect(actionBar).toBeVisible();
 
-    await expect(page.locator("textarea[name='diagnosisNotes'], textarea[name='externalDiagnosis']").first()).toBeVisible();
+    // Admins see both diagnosis boxes but only the one matching the live
+    // repair path is visible (the other carries `hidden`). Assert the visible
+    // one, not `.first()` which may be the hidden box on EXTERNAL jobs.
+    await expect(page.locator("textarea[name='diagnosisNotes']:visible, textarea[name='externalDiagnosis']:visible").first()).toBeVisible();
     const activeTag = await page.evaluate(() => {
       const controls = Array.from(
         document.querySelectorAll<HTMLTextAreaElement | HTMLInputElement | HTMLSelectElement>(

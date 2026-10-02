@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserRole } from "@/lib/session";
+import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
 import { can } from "@/lib/permissions";
+import { icontains } from "@/lib/db/search";
 import { DataTable } from "@/components/ui/DataTable";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
 import { HubTabs } from "@/components/shared/HubTabs";
@@ -35,19 +37,39 @@ export default async function StockCountsPage({
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const page = parsePage(params.page);
   const pageSize = parsePageSize(params.size);
+  const q = String(params.q ?? "").trim();
+  const statusFilter = String(params.status ?? "all").trim().toLowerCase();
+  const sort = params.sort === "oldest" ? "oldest" : "newest";
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  const where: Prisma.StockCountWhereInput = {
+    ...(statusFilter === "open"
+      ? { status: { in: ["DRAFT", "SUBMITTED"] } }
+      : statusFilter !== "all" && ["draft", "submitted", "approved", "rejected", "cancelled"].includes(statusFilter)
+        ? { status: statusFilter.toUpperCase() as never }
+        : {}),
+    ...(q
+      ? {
+          OR: [
+            { countNumber: icontains(q) },
+            { location: { name: icontains(q) } },
+          ],
+        }
+      : {}),
+  };
+  const orderBy = sort === "oldest" ? { countedAt: "asc" as const } : { countedAt: "desc" as const };
+
   const [counts, countsTotal, inProgressCount, completedThisMonth, varianceItems] = await Promise.all([
     db.stockCount.findMany({
-      where: {},
+      where,
       include: { location: { select: { name: true, code: true } }, createdBy: { select: { name: true, email: true } }, _count: { select: { items: true } } },
-      orderBy: { countedAt: "desc" },
+      orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }).catch(() => []),
-    db.stockCount.count({ where: {} }).catch(() => 0),
+    db.stockCount.count({ where }).catch(() => 0),
     db.stockCount.count({ where: { status: { in: ["DRAFT", "SUBMITTED"] } } }).catch(() => 0),
     db.stockCount.count({ where: { status: "APPROVED", countedAt: { gte: monthStart } } }).catch(() => 0),
     // StockCountItem has no orgId of its own — scope through its parent count.
@@ -56,7 +78,7 @@ export default async function StockCountsPage({
 
   const varianceCount = varianceItems;
   const pageView = paginationView(page, countsTotal, pageSize);
-  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPageFilters = { q: q || "", status: statusFilter !== "all" ? statusFilter : "", sort: sort !== "newest" ? sort : "", size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const hrefForPage = pageHrefBuilder("/inventory/stock-counts", hrefForPageFilters);
   const hrefForPageSize = sizeHrefBuilder("/inventory/stock-counts", hrefForPageFilters);
 
@@ -80,12 +102,61 @@ export default async function StockCountsPage({
           { label: "Variance Items", value: varianceCount, sub: "counted ≠ expected", tone: varianceCount > 0 ? "warn" as const : "good" as const, muted: varianceCount === 0 },
         ],
       }}
+      filters={
+        <form method="GET" action="/inventory/stock-counts" className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { key: "all", label: "All" },
+              { key: "open", label: "In progress" },
+              { key: "approved", label: "Approved" },
+              { key: "cancelled", label: "Cancelled" },
+            ].map((s) => (
+              <Link
+                key={s.key}
+                href={`/inventory/stock-counts?status=${s.key}${q ? `&q=${encodeURIComponent(q)}` : ""}${sort !== "newest" ? `&sort=${sort}` : ""}`}
+                className={`rounded-full px-3 py-1 text-[0.75rem] font-semibold transition ${
+                  statusFilter === s.key
+                    ? "border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
+                    : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+                }`}
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+          <input type="hidden" name="status" value={statusFilter} />
+          <label className="sr-only" htmlFor="count-search">Search counts</label>
+          <input
+            id="count-search"
+            name="q"
+            defaultValue={q}
+            placeholder="Count #, location…"
+            className="ml-auto h-8 w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+          />
+          <select name="sort" defaultValue={sort} className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem] text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+          </select>
+          <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+            Filter
+          </button>
+          {q || statusFilter !== "all" || sort !== "newest" ? (
+            <Link href="/inventory/stock-counts" className="h-8 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Reset</Link>
+          ) : null}
+        </form>
+      }
     >
       <DataTable
         rows={counts}
         getRowKey={(count) => count.id}
         pagination={{ page: pageView.page, pageSize, total: countsTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "counts" }}
-        empty="No stock counts yet."
+        empty={
+          q || statusFilter !== "all" ? (
+            <>No counts match these filters. <Link href="/inventory/stock-counts" className="text-[var(--accent)] hover:underline">Clear filters</Link></>
+          ) : (
+            "No stock counts yet."
+          )
+        }
         columns={[
           {
             key: "count",

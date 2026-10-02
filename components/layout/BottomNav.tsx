@@ -94,6 +94,8 @@ const ITEMS = {
   accounts:       { href: "/finance/accounts",          label: sl("/finance/accounts"),         icon: reportsIcon   },
   journal:        { href: "/finance/journal",           label: sl("/finance/journal"),          icon: reportsIcon   },
   docTemplates:   { href: "/documents/templates",      label: sl("/documents/templates"),      icon: quoteIcon     },
+  recurringExpenses: { href: "/finance/recurring-expenses", label: sl("/finance/recurring-expenses"), icon: recurringIcon },
+  payables:       { href: "/payables",                  label: sl("/payables"),                 icon: payoutsIcon   },
 } satisfies Record<string, NavItem>;
 
 /** Hrefs shown in the primary bottom bar for a role — exported so the Header
@@ -136,7 +138,8 @@ function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): N
       case ITEMS.creditNotes.href:
       case ITEMS.refunds.href:
       case ITEMS.expenses.href:
-      case ITEMS.recurring.href:      return can.viewFinancials(perm);
+      case ITEMS.recurring.href:
+      case ITEMS.recurringExpenses.href: return can.viewFinancials(perm);
       case ITEMS.quotations.href:     return can.viewFinancials(perm) || role === "TECHNICIAN_INTERNAL";
       case ITEMS.jobCards.href:       return can.generateJobCards(perm);
       case ITEMS.deliveryNotes.href:  return can.viewFinancials(perm) || ["OPS","FRONT_DESK","ADMIN"].includes(role);
@@ -149,7 +152,8 @@ function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): N
       case ITEMS.docTemplates.href:    return ["ADMIN","MANAGER","OPS"].includes(role);
       case ITEMS.service.href:         return ["ADMIN","MANAGER","TECH_MANAGER","OPS","FRONT_DESK"].includes(role);
       case ITEMS.warranty.href:        return can.approveWork(perm);
-      case ITEMS.payoutFollowups.href:return can.reviewExternalBills(perm) || can.approveInvoices(perm);
+      case ITEMS.payoutFollowups.href:
+      case ITEMS.payables.href:         return can.reviewExternalBills(perm) || can.approveInvoices(perm);
       // Inventory page guard: ADMIN, MANAGER, TECH_MANAGER, OPS, TECHNICIAN_INTERNAL
       case ITEMS.inventory.href:      return ["ADMIN","OPS","TECHNICIAN_INTERNAL","MANAGER","TECH_MANAGER"].includes(role);
       case ITEMS.sales.href:          return can.createLeads(perm);
@@ -166,9 +170,9 @@ function getMoreGroups(role: Role, permissions: string[], mods?: Set<string>): N
   const groups: NavGroup[] = [
     { title: "Customers",  items: [ITEMS.clients, ITEMS.sales, ITEMS.complaints] },
     { title: "Documents",  items: [ITEMS.jobCards, ITEMS.quotations, ITEMS.invoiceDocs, ITEMS.deliveryNotes, ITEMS.receipts, ITEMS.creditNotes, ITEMS.refunds, ITEMS.docTemplates] },
-    { title: "Operations", items: [ITEMS.intake, ITEMS.service, ITEMS.inventory, ITEMS.field, ITEMS.warranty, ITEMS.payoutFollowups, ITEMS.board] },
+    { title: "Operations", items: [ITEMS.intake, ITEMS.service, ITEMS.inventory, ITEMS.field, ITEMS.warranty, ITEMS.payoutFollowups, ITEMS.payables, ITEMS.board] },
     { title: "Sales",      items: [ITEMS.pos, ITEMS.targets] },
-    { title: "Finance",    items: [ITEMS.financeHome, ITEMS.expenses, ITEMS.bank, ITEMS.recurring, ITEMS.finReports, ITEMS.taxRates, ITEMS.accounts, ITEMS.journal] },
+    { title: "Finance",    items: [ITEMS.financeHome, ITEMS.expenses, ITEMS.bank, ITEMS.recurring, ITEMS.recurringExpenses, ITEMS.finReports, ITEMS.taxRates, ITEMS.accounts, ITEMS.journal] },
     { title: "Analytics",  items: [ITEMS.reports, ITEMS.aiInsights] },
   ];
 

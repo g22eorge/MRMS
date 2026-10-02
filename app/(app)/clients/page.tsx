@@ -489,8 +489,8 @@ export default async function ClientsPage({
                     {formatPhoneDisplay(client.phone)}
                     {/* The organisation is the label above, so the sub-line
                         carries the contact instead of repeating it. */}
-                    {clientContactName(client) ? <> · <span className="opacity-80">{clientContactName(client)}</span></> : null}
-                    {client.address ? <> · <span className="opacity-80">{client.address}</span></> : null}
+                    {clientContactName(client) ? <> · <span>{clientContactName(client)}</span></> : null}
+                    {client.address ? <> · <span>{client.address}</span></> : null}
                     {client._count.jobs > 0
                       ? <> · <span className={client._count.jobs >= 3 ? "text-[var(--accent)] font-semibold" : ""}>{client._count.jobs} {client._count.jobs === 1 ? "job" : "jobs"}</span></>
                       : null}
@@ -543,8 +543,8 @@ export default async function ClientsPage({
                       </Link>
                       <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">
                         {formatPhoneDisplay(client.phone)}
-                        {clientContactName(client) ? <> · <span className="opacity-80">{clientContactName(client)}</span></> : null}
-                        {client.address ? <> · <span className="opacity-80">{client.address}</span></> : null}
+                        {clientContactName(client) ? <> · <span>{clientContactName(client)}</span></> : null}
+                        {client.address ? <> · <span>{client.address}</span></> : null}
                       </p>
                     </div>
                   </div>
@@ -565,7 +565,7 @@ export default async function ClientsPage({
                     <Link href={`/jobs?client=${client.id}`}
                       className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[0.75rem] font-semibold transition hover:opacity-80 ${
                         client._count.jobs >= 3
-                          ? "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#9A7A00]"
+                          ? "border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[#665214] dark:text-[var(--accent)]"
                           : "border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-400"
                       }`}>
                       {client._count.jobs} {client._count.jobs === 1 ? "job" : "jobs"}

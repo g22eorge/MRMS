@@ -18,9 +18,9 @@ type Branding = {
 
 type Sale = {
   saleNumber: string; status: string; createdAt: Date; currency?: string | null;
+  name?: string | null;
   branch: { name: string } | null;
   client: { fullName: string; phone: string | null; organization?: string | null } | null;
-  notes?: string | null;
   subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number; paidAmount: number;
   items: Array<{ id: string; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
   payments: Array<{ id: string; amount: number; method: string; reference: string | null; receivedAt: Date }>;

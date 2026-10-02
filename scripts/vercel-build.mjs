@@ -114,6 +114,15 @@ const buildEnv = {
   ...process.env,
   DATABASE_URL: buildDatabaseUrl,
   TURSO_DATABASE_URL: "",
+  // `bun run` loads .env, and this repo's .env sets NODE_ENV=development for the
+  // dev server. Next.js sets NODE_ENV itself (production for `next build`) and
+  // crashes prerendering the auto-generated /_global-error when a foreign value
+  // leaks in ("TypeError: Cannot read properties of null (reading
+  // 'useContext')"), with a warning about the non-standard value. Vercel does
+  // not load .env, which is why the same commit built there but died on the
+  // local gate. lib/prisma.ts already expects production + the
+  // phase-production-build NEXT_PHASE during a build, so nothing else changes.
+  NODE_ENV: "production",
   ...(IS_POSTGRES ? { PRISMA_SCHEMA_PATH: PG_SCHEMA } : {}),
   // scripts/generate-prisma-clean.mjs does `rm -rf .next` when this is "1".
   // Off Vercel that would wipe the running dev server's cache and defeat the

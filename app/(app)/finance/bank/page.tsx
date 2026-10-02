@@ -350,6 +350,11 @@ export default async function BankPage({
                 >
                   <p className="text-sm font-semibold text-[var(--ink)]">{acc.name}</p>
                   <p className="text-xs text-[var(--ink-muted)]">{acc.bankName}</p>
+                  {acc.ledgerCode === "1010" || acc.ledgerCode === "1020" || acc.ledgerCode === "1030" ? (
+                    <p className="mt-1 inline-block rounded-full bg-[var(--accent)]/10 px-2 py-0.5 text-[0.6875rem] font-bold text-[var(--accent)]">
+                      Tracks {acc.ledgerCode === "1010" ? "Till" : acc.ledgerCode === "1020" ? "Mobile Money" : "Bank"} postings
+                    </p>
+                  ) : null}
                   {acc.accountNumber && (
                     <p className="mono text-xs text-[var(--ink-muted)]">{acc.accountNumber}</p>
                   )}

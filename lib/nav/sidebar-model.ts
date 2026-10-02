@@ -65,6 +65,7 @@ export const NAV: readonly NavItem[] = [
   // AR/AP worklist (collect client payments, pay techs, track supplier bills).
   // Guarded by reviewExternalBills|ADMIN on the page — ADMIN static here, the rest via ensureItem below.
   { href: "/payout-followups", label: routeLabel("/payout-followups"), group: "finance", roles: ["ADMIN"] },
+  { href: "/payables", label: routeLabel("/payables"), group: "finance", roles: ["ADMIN"] },
   { href: "/technicians/payouts", label: routeLabel("/technicians/payouts"), group: "finance", roles: ["TECHNICIAN_EXTERNAL"] },
 
   // Insights — analytics/targets, previously reachable only from dashboards or (mobile) /more.
@@ -117,7 +118,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/jobs", "/intake", "/warranty",
     "/inventory",
     "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables",
     "/settings",
   ],
   MANAGER: [
@@ -125,14 +126,14 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/jobs", "/intake", "/warranty",
     "/inventory",
     "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables",
     "/settings",
   ],
   TECH_MANAGER: [
     "/dashboard",
     "/jobs", "/intake", "/warranty",
     "/inventory",
-    "/targets", "/payout-followups",
+    "/targets", "/payout-followups", "/payables",
     "/settings",
   ],
   OPS: [
@@ -140,13 +141,13 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/jobs", "/intake", "/warranty",
     "/inventory",
     "/clients", "/sales", "/sales/campaigns", "/pos",
-    "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables",
     "/settings",
   ],
   FINANCE: [
     "/dashboard",
     "/clients",
-    "/targets", "/reports", "/ai-insights", "/payout-followups",
+    "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables",
     "/settings",
   ],
   SALES: [
@@ -173,7 +174,7 @@ const roleOrder: Partial<Record<Role, readonly string[]>> = {
     "/settings",
   ],
   INTAKE: ["/dashboard", "/jobs", "/intake", "/clients", "/settings"],
-  SALES_MANAGER: ["/dashboard", "/jobs", "/intake", "/clients", "/sales", "/sales/campaigns", "/pos", "/targets", "/reports", "/ai-insights", "/payout-followups", "/settings"],
+  SALES_MANAGER: ["/dashboard", "/jobs", "/intake", "/clients", "/sales", "/sales/campaigns", "/pos", "/targets", "/reports", "/ai-insights", "/payout-followups", "/payables", "/settings"],
   SALES_CORPORATE: ["/dashboard", "/jobs", "/clients", "/sales", "/settings"],
   SALES_RETAIL: ["/dashboard", "/jobs", "/clients", "/sales", "/pos", "/settings"],
   SALES_POS: ["/dashboard", "/pos", "/settings"],
@@ -226,8 +227,9 @@ export function orderedNavForRole(role: Role, permissions: string[], enabledModu
   }
   if (can.setTargets(permissionUser) || can.viewTeamTargets(permissionUser)) ensureItem("/targets");
   if (can.viewFinancials(permissionUser)) ensureItem("/documents");
-  // Matches the /payout-followups page guard (reviewExternalBills || ADMIN); ADMIN is a static NAV role.
+  // Matches the /payout-followups + /payables page guards (reviewExternalBills || ADMIN); ADMIN is a static NAV role.
   if (can.reviewExternalBills(permissionUser)) ensureItem("/payout-followups");
+  if (can.reviewExternalBills(permissionUser)) ensureItem("/payables");
   if (can.generateJobCards(permissionUser)) ensureItem("/documents");
 
   const ordered = roleOrder[role] ?? visible.map((item) => item.href);

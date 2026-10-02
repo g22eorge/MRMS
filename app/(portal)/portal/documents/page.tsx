@@ -33,6 +33,8 @@ export default async function PortalDocumentsPage() {
         },
       },
       quotations: {
+        // Internal drafts never reach the client.
+        where: { status: { not: "DRAFT" } },
         orderBy: { createdAt: "desc" },
         select: { id: true, quoteNumber: true, totalAmount: true, currency: true, status: true, validUntil: true },
       },

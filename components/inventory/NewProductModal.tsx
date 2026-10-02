@@ -100,6 +100,11 @@ export function NewProductModal({
           </div>
 
           <div className="mt-3">
+            <label className={label}>Short line (table view)</label>
+            <input name="shortDescription" placeholder="One line for tables — e.g. Genuine 65W USB-C" className={input} />
+          </div>
+
+          <div className="mt-3">
             <label className={label}>Description</label>
             <textarea name="description" rows={3} placeholder="Optional notes about this product…" className={`${input} resize-y`} />
           </div>

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
@@ -11,6 +12,7 @@ import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { RowActionsMenu, MenuSection, MenuActionButton } from "@/components/shared/RowActionsMenu";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
+import { icontains } from "@/lib/db/search";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
   approveStockTransferAction,
@@ -51,16 +53,37 @@ export default async function StockTransfersPage({
   const error = typeof params.error === "string" ? params.error : "";
   const page = parsePage(params.page);
   const pageSize = parsePageSize(params.size);
+  const q = String(params.q ?? "").trim();
+  const statusFilter = String(params.status ?? "all").trim().toLowerCase();
+  const sort = params.sort === "oldest" ? "oldest" : "newest";
+
+  const where = {
+    orgId,
+    ...(statusFilter === "open"
+      ? { status: { in: ["REQUESTED", "APPROVED", "DISPATCHED"] as never } }
+      : statusFilter !== "all" && ["requested", "approved", "dispatched", "received", "cancelled"].includes(statusFilter)
+        ? { status: statusFilter.toUpperCase() as never }
+        : {}),
+    ...(q
+      ? {
+          OR: [
+            { transferNumber: icontains(q) },
+            { note: icontains(q) },
+          ],
+        }
+      : {}),
+  };
+  const orderBy = sort === "oldest" ? { createdAt: "asc" as const } : { createdAt: "desc" as const };
 
   const [transfers, transfersTotal, locations, parts] = await Promise.all([
     prisma.stockTransfer.findMany({
-      where: { orgId },
-      orderBy: { createdAt: "desc" },
+      where,
+      orderBy,
       include: { items: { include: { part: { select: { sku: true, name: true } } } } },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }).catch(() => []),
-    prisma.stockTransfer.count({ where: { orgId } }).catch(() => 0),
+    prisma.stockTransfer.count({ where }).catch(() => 0),
     prisma.stockLocation.findMany({ where: { orgId, isActive: true }, orderBy: { name: "asc" } }).catch(() => []),
     prisma.part.findMany({ where: { orgId, isActive: true }, orderBy: { name: "asc" }, select: { id: true, sku: true, name: true } }),
   ]);
@@ -70,7 +93,7 @@ export default async function StockTransfersPage({
   ]);
   const locationName = new Map(locations.map((location) => [location.id, location.name]));
   const pageView = paginationView(page, transfersTotal, pageSize);
-  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPageFilters = { q: q || "", status: statusFilter !== "all" ? statusFilter : "", sort: sort !== "newest" ? sort : "", size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const hrefForPage = pageHrefBuilder("/inventory/transfers", hrefForPageFilters);
   const hrefForPageSize = sizeHrefBuilder("/inventory/transfers", hrefForPageFilters);
 
@@ -129,6 +152,49 @@ export default async function StockTransfersPage({
           {locationCreated ? <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600">Location added. Add one more, then you can move stock between them.</div> : null}
           {error ? <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</div> : null}
 
+          <form method="GET" action="/inventory/transfers" className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { key: "all", label: "All" },
+                { key: "open", label: "Open" },
+                { key: "dispatched", label: "In transit" },
+                { key: "received", label: "Received" },
+                { key: "cancelled", label: "Cancelled" },
+              ].map((s) => (
+                <Link
+                  key={s.key}
+                  href={`/inventory/transfers?status=${s.key}${q ? `&q=${encodeURIComponent(q)}` : ""}${sort !== "newest" ? `&sort=${sort}` : ""}`}
+                  className={`rounded-full px-3 py-1 text-[0.75rem] font-semibold transition ${
+                    statusFilter === s.key
+                      ? "border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
+                      : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+                  }`}
+                >
+                  {s.label}
+                </Link>
+              ))}
+            </div>
+            <input type="hidden" name="status" value={statusFilter} />
+            <label className="sr-only" htmlFor="transfer-search">Search transfers</label>
+            <input
+              id="transfer-search"
+              name="q"
+              defaultValue={q}
+              placeholder="Transfer #, note…"
+              className="ml-auto h-8 w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+            />
+            <select name="sort" defaultValue={sort} className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem] text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+            </select>
+            <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+              Filter
+            </button>
+            {q || statusFilter !== "all" || sort !== "newest" ? (
+              <Link href="/inventory/transfers" className="h-8 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Reset</Link>
+            ) : null}
+          </form>
+
           {locations.length < 2 ? (
             <div className="dc-card px-3 py-2.5">
               <p className="mb-1 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add a location</p>
@@ -170,7 +236,13 @@ export default async function StockTransfersPage({
         rows={transfers}
         getRowKey={(transfer) => transfer.id}
         pagination={{ page: pageView.page, pageSize, total: transfersTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "transfers" }}
-        empty="No transfer requests yet."
+        empty={
+          q || statusFilter !== "all" ? (
+            <>No transfers match these filters. <Link href="/inventory/transfers" className="text-[var(--accent)] hover:underline">Clear filters</Link></>
+          ) : (
+            "No transfer requests yet."
+          )
+        }
         columns={[
           {
             key: "transfer",

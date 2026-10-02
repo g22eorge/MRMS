@@ -1,22 +1,27 @@
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time. Aligns with the force-dynamic convention used
+// across the app.
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { runDataHeal } from "@/lib/data-heal";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
-import { checkIsPlatformAdmin } from "@/lib/platform-admin";
+import { checkCanRunOpsTools } from "@/lib/platform-admin";
 import { DataTable } from "@/components/ui/DataTable";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 export default async function DataHealPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string; at?: string; stockMissing?: string; stockFixed?: string }>;
+  searchParams: Promise<{ mode?: string; fixed?: string; pending?: string; checked?: string; dry?: string; at?: string; stockMissing?: string; stockFixed?: string; resynced?: string }>;
 }) {
   const { user } = await getCurrentUserRole();
-  // runDataHeal operates ACROSS ALL orgs (it's a system maintenance job, also run
-  // by cron) — so restrict it to the platform operator, not every tenant admin.
-  if (!checkIsPlatformAdmin(user.email)) {
+  // Platform operators everywhere; org ADMINs additionally on the
+  // single-tenant care deployment (no second tenant exists to leak into).
+  if (!(await checkCanRunOpsTools(user))) {
     redirect("/dashboard");
   }
 
@@ -37,20 +42,20 @@ export default async function DataHealPage({
   async function runDry() {
     "use server";
     const { user: actor } = await getCurrentUserRole();
-    if (!checkIsPlatformAdmin(actor.email)) return;
+    if (!(await checkCanRunOpsTools(actor))) return;
     const result = await runDataHeal(prisma, { dryRun: true, actorUserId: actor.id });
     redirect(
-      `/settings/data-heal?mode=dry&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&stockMissing=${result.stockTxnMissingOrgId ?? 0}&stockFixed=${result.stockTxnOrgIdFixed ?? 0}&at=${Date.now()}`,
+      `/settings/data-heal?mode=dry&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&stockMissing=${result.stockTxnMissingOrgId ?? 0}&stockFixed=${result.stockTxnOrgIdFixed ?? 0}&resynced=${result.invoicesResynced ?? 0}&at=${Date.now()}`,
     );
   }
 
   async function runApply() {
     "use server";
     const { user: actor } = await getCurrentUserRole();
-    if (!checkIsPlatformAdmin(actor.email)) return;
+    if (!(await checkCanRunOpsTools(actor))) return;
     const result = await runDataHeal(prisma, { dryRun: false, actorUserId: actor.id });
     redirect(
-      `/settings/data-heal?mode=apply&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&stockMissing=${result.stockTxnMissingOrgId ?? 0}&stockFixed=${result.stockTxnOrgIdFixed ?? 0}&at=${Date.now()}`,
+      `/settings/data-heal?mode=apply&checked=${result.checked}&fixed=${result.fixed}&pending=${result.pending}&stockMissing=${result.stockTxnMissingOrgId ?? 0}&stockFixed=${result.stockTxnOrgIdFixed ?? 0}&resynced=${result.invoicesResynced ?? 0}&at=${Date.now()}`,
     );
   }
 
@@ -79,6 +84,7 @@ export default async function DataHealPage({
             fixable {feedback.fixed ?? "0"}, pending {feedback.pending ?? "0"}
             {" · "}stock movements missing orgId {feedback.stockMissing ?? "0"}
             {feedback.mode === "dry" ? "" : `, backfilled ${feedback.stockFixed ?? "0"}`}
+            {` · invoices resynced to paid: ${feedback.resynced ?? "0"}`}
             {feedback.at ? ` (run ${new Date(Number(feedback.at)).toLocaleTimeString()})` : ""}.
           </div>
         ) : null}
@@ -97,6 +103,17 @@ export default async function DataHealPage({
           <p className="text-sm font-semibold text-[var(--ink)]">Dry-run Preview</p>
           <p className="text-xs text-[var(--ink-muted)]">Showing up to 25 rows that can be healed right now.</p>
         </div>
+        {(preview.resyncedInvoiceNumbers ?? []).length > 0 ? (
+          <div className="border-b border-[var(--line)] px-4 py-3">
+            <p className="text-[0.75rem] font-bold uppercase tracking-wide text-emerald-600">
+              Paid-in-full invoices stranded as collectable ({preview.resyncedInvoiceNumbers.length})
+            </p>
+            <p className="mt-1 text-[0.8125rem] text-[var(--ink)]">
+              {(preview.resyncedInvoiceNumbers ?? []).join(", ")}
+            </p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Run Heal Now flips these to paid and drops them from Collections.</p>
+          </div>
+        ) : null}
         <DataTable
           frameless
           dense

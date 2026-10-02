@@ -1,3 +1,8 @@
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time. Aligns with the force-dynamic convention used
+// across the app.
+export const dynamic = "force-dynamic";
+
 import { notFound } from "next/navigation";
 import { Role } from "@prisma/client";
 import { Prisma } from "@prisma/client";
@@ -248,14 +253,14 @@ export default async function JobDetailPage({
 
     if (deviceId) {
       deviceHistory = await prisma.job.findMany({
-        where: { deviceId, id: { not: job.id } },
+        where: { orgId, deviceId, id: { not: job.id } },
         orderBy: { receivedAt: "desc" },
         take: 10,
         select: { id: true, jobNumber: true, status: true, receivedAt: true, completedAt: true, updatedAt: true },
       });
     } else if (serialOrImei) {
       deviceHistory = await prisma.job.findMany({
-        where: { clientId: job.clientId, serialOrImei, id: { not: job.id } },
+        where: { orgId, clientId: job.clientId, serialOrImei, id: { not: job.id } },
         orderBy: { receivedAt: "desc" },
         take: 10,
         select: { id: true, jobNumber: true, status: true, receivedAt: true, completedAt: true, updatedAt: true },
@@ -267,7 +272,9 @@ export default async function JobDetailPage({
 
   type OutboundRow = {
     id: string; to: string; body: string; type: string;
+    status: string;
     sentAt: Date | null; createdAt: Date; providerDeliveryStatus: string | null;
+    lastError: string | null;
   };
   type InboundRow = {
     id: string; from: string; body: string | null; mediaType: string | null;
@@ -280,18 +287,20 @@ export default async function JobDetailPage({
   if (canSeeMessages) {
     const msgSelect = {
       id: true, to: true, body: true, type: true,
+      status: true,
       sentAt: true, createdAt: true, providerDeliveryStatus: true,
+      lastError: true,
     } as const;
 
     // Messages linked directly to the job
     const [jobOutbound, linkedRequest] = await Promise.all([
       prisma.outboundMessage.findMany({
-        where: { jobId: job.id },
+        where: { orgId, jobId: job.id },
         orderBy: { createdAt: "asc" },
         select: msgSelect,
       }),
       prisma.repairRequest.findFirst({
-        where: { linkedJobId: job.id },
+        where: { orgId, linkedJobId: job.id },
         select: { id: true },
       }).catch(() => null),
     ]);
@@ -299,7 +308,7 @@ export default async function JobDetailPage({
     // Messages sent during the repair request phase (before job creation)
     const requestOutbound = linkedRequest
       ? await prisma.outboundMessage.findMany({
-          where: { repairRequestId: linkedRequest.id },
+          where: { orgId, repairRequestId: linkedRequest.id },
           orderBy: { createdAt: "asc" },
           select: msgSelect,
         })
@@ -312,7 +321,7 @@ export default async function JobDetailPage({
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     inboundMessages = await prisma.inboundMessage.findMany({
-      where: { jobId: job.id },
+      where: { orgId, jobId: job.id },
       orderBy: { timestamp: "asc" },
       select: {
         id: true, from: true, body: true, mediaType: true,
@@ -402,10 +411,11 @@ export default async function JobDetailPage({
     prisma.part.findMany({
       where: { orgId, isActive: true },
       orderBy: { name: "asc" },
+      take: 500,
       select: { id: true, sku: true, name: true, qtyOnHand: true, qtyReserved: true },
     }),
     prisma.partReservation.findMany({
-      where: { jobId: job.id, status: { in: ["RESERVED", "CONSUMED"] } },
+      where: { jobId: job.id, job: { orgId }, status: { in: ["RESERVED", "CONSUMED"] } },
       orderBy: { reservedAt: "asc" },
       select: {
         id: true, partId: true, quantity: true, status: true,

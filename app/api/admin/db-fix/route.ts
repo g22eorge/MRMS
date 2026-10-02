@@ -951,6 +951,7 @@ async function runDbFix() {
         "clientId" TEXT,
         "status" TEXT NOT NULL DEFAULT 'OPEN',
         "saleNumber" TEXT NOT NULL UNIQUE,
+        "name" TEXT,
         "billingMode" TEXT NOT NULL DEFAULT 'CASH',
         "invoiceNumber" TEXT,
         "invoicedAt" DATETIME,
@@ -990,6 +991,7 @@ async function runDbFix() {
     await addSaleColumn("clientId", "TEXT");
     await addSaleColumn("status", "TEXT", "'OPEN'");
     await addSaleColumn("saleNumber", "TEXT");
+    await addSaleColumn("name", "TEXT");
     await addSaleColumn("billingMode", "TEXT", "'CASH'");
     await addSaleColumn("invoiceNumber", "TEXT");
     await addSaleColumn("invoicedAt", "DATETIME");
@@ -2213,6 +2215,7 @@ async function runDbFix() {
       "currency"           TEXT     NOT NULL DEFAULT 'UGX',
       "exchangeRateToBase" REAL,
       "paidAt"             DATETIME,
+      "dueAt"              DATETIME,
       "method"             TEXT,
       "supplierId"         TEXT,
       "branchId"           TEXT,
@@ -2227,9 +2230,74 @@ async function runDbFix() {
     )`);
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Expense_expenseNumber_key" ON "Expense"("expenseNumber")`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Expense_orgId_paidAt_idx"   ON "Expense"("orgId","paidAt")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Expense_orgId_dueAt_idx"   ON "Expense"("orgId","dueAt")`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Expense_orgId_category_idx" ON "Expense"("orgId","category")`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Expense_supplierId_idx"     ON "Expense"("supplierId")`);
     changes.push({ kind: "create_table", detail: "Created Expense" });
+  } else {
+    const expenseCols = await tableColumns("Expense");
+    if (!expenseCols.has("dueAt")) {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Expense" ADD COLUMN "dueAt" DATETIME`);
+      expenseCols.add("dueAt");
+      changes.push({ kind: "alter_table", detail: "Added Expense.dueAt" });
+    }
+    if (!expenseCols.has("paidAmount")) {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Expense" ADD COLUMN "paidAmount" REAL NOT NULL DEFAULT 0`);
+      expenseCols.add("paidAmount");
+      changes.push({ kind: "alter_table", detail: "Added Expense.paidAmount" });
+    }
+    // Already-paid rows carry their full amount so balances read right.
+    await prisma.$executeRawUnsafe(`UPDATE "Expense" SET "paidAmount" = "amount" WHERE "paidAt" IS NOT NULL AND "paidAmount" < "amount"`);
+    await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Expense_orgId_dueAt_idx" ON "Expense"("orgId","dueAt")');
+  }
+
+  // ExpensePayment — expense part-payments (creditors program)
+  if (!(await tableExists("ExpensePayment"))) {
+    await prisma.$executeRawUnsafe(`CREATE TABLE "ExpensePayment" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "orgId" TEXT NOT NULL,
+      "expenseId" TEXT NOT NULL,
+      "currency" TEXT NOT NULL DEFAULT 'UGX',
+      "amount" REAL NOT NULL,
+      "method" TEXT NOT NULL DEFAULT 'CASH',
+      "reference" TEXT,
+      "paidAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "note" TEXT,
+      "createdById" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "ExpensePayment_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "ExpensePayment_expenseId_fkey" FOREIGN KEY ("expenseId") REFERENCES "Expense" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "ExpensePayment_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    )`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ExpensePayment_orgId_paidAt_idx" ON "ExpensePayment"("orgId","paidAt")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ExpensePayment_expenseId_idx" ON "ExpensePayment"("expenseId")`);
+    changes.push({ kind: "create_table", detail: "Created ExpensePayment" });
+  }
+  if (!(await tableExists("RecurringExpense"))) {
+    await prisma.$executeRawUnsafe(`CREATE TABLE "RecurringExpense" (
+      "id"           TEXT     NOT NULL PRIMARY KEY,
+      "orgId"        TEXT     NOT NULL,
+      "description"  TEXT     NOT NULL,
+      "category"     TEXT     NOT NULL DEFAULT 'OTHER',
+      "amount"       REAL     NOT NULL,
+      "currency"     TEXT     NOT NULL DEFAULT 'UGX',
+      "supplierId"   TEXT,
+      "frequency"    TEXT     NOT NULL,
+      "nextDueAt"    DATETIME NOT NULL,
+      "lastIssuedAt" DATETIME,
+      "isActive"     BOOLEAN  NOT NULL DEFAULT true,
+      "autoIssue"    BOOLEAN  NOT NULL DEFAULT true,
+      "notes"        TEXT,
+      "createdById"  TEXT     NOT NULL,
+      "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "RecurringExpense_orgId_fkey"       FOREIGN KEY ("orgId")       REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "RecurringExpense_supplierId_fkey"  FOREIGN KEY ("supplierId")  REFERENCES "Supplier"     ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+      CONSTRAINT "RecurringExpense_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"         ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    )`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RecurringExpense_orgId_isActive_nextDueAt_idx" ON "RecurringExpense"("orgId","isActive","nextDueAt")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RecurringExpense_supplierId_idx" ON "RecurringExpense"("supplierId")`);
+    changes.push({ kind: "create_table", detail: "Created RecurringExpense" });
   }
 
   // RecurringInvoice
@@ -2349,13 +2417,23 @@ async function runDbFix() {
       "currency" TEXT NOT NULL DEFAULT 'UGX',
       "openingBalance" REAL NOT NULL DEFAULT 0,
       "currentBalance" REAL NOT NULL DEFAULT 0,
+      "ledgerCode" TEXT,
       "isActive" INTEGER NOT NULL DEFAULT 1,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" DATETIME NOT NULL,
       CONSTRAINT "BankAccount_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
     )`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "BankAccount_orgId_idx" ON "BankAccount"("orgId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "BankAccount_orgId_ledgerCode_idx" ON "BankAccount"("orgId","ledgerCode")`);
     changes.push({ kind: "create_table", detail: "Created BankAccount" });
+  } else {
+    const bankCols = await tableColumns("BankAccount");
+    if (!bankCols.has("ledgerCode")) {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "BankAccount" ADD COLUMN "ledgerCode" TEXT`);
+      bankCols.add("ledgerCode");
+      changes.push({ kind: "alter_table", detail: "Added BankAccount.ledgerCode" });
+    }
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "BankAccount_orgId_ledgerCode_idx" ON "BankAccount"("orgId","ledgerCode")`);
   }
 
   // BankTransaction

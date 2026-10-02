@@ -21,6 +21,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/payables",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/cron/fx-rates",
       "schedule": "0 5 * * *"
     }

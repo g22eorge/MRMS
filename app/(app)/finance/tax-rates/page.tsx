@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { CreateTaxRateDialog, type TaxRateFormState } from "./CreateTaxRateDialog";
 export const dynamic = "force-dynamic";
 
 export default async function TaxRatesPage({
@@ -35,7 +36,7 @@ export default async function TaxRatesPage({
   const activeRates = taxRates.filter((r) => r.isActive).length;
   const defaultRate = taxRates.find((r) => r.isDefault);
 
-  async function createTaxRateAction(formData: FormData) {
+  async function createTaxRateAction(_prev: TaxRateFormState, formData: FormData): Promise<TaxRateFormState> {
     "use server";
     const { user, orgId, org } = await requireOrgSession();
     if (!["ADMIN", "MANAGER"].includes(user.role)) redirect("/dashboard");
@@ -49,14 +50,17 @@ export default async function TaxRatesPage({
     const appliesToPurchases = formData.get("appliesToPurchases") === "on";
 
     if (!name || !code) {
-      redirect(`/finance/tax-rates?error=${encodeURIComponent("A tax rate needs a name and a code.")}`);
+      return { error: "A tax rate needs a name and a code." };
     }
     if (!Number.isFinite(rateRaw) || rateRaw < 0) {
-      redirect(`/finance/tax-rates?error=${encodeURIComponent("Enter a rate of zero or more.")}`);
+      return { error: "Enter a rate of zero or more." };
     }
 
     const existing = await prisma.taxRate.findFirst({ where: { orgId, code } });
-    if (existing) return;
+    if (existing) {
+      // The old inline form silently did nothing on a duplicate.
+      return { error: `A tax rate with code ${code} already exists.` };
+    }
 
     if (isDefault) {
       await prisma.taxRate.updateMany({ where: { orgId, isDefault: true }, data: { isDefault: false } });
@@ -76,6 +80,7 @@ export default async function TaxRatesPage({
     });
 
     revalidatePath("/finance/tax-rates");
+    return null;
   }
 
   async function toggleTaxRateAction(formData: FormData) {
@@ -176,47 +181,7 @@ export default async function TaxRatesPage({
           { label: "Default", value: defaultRate ? `${defaultRate.rate}%` : "—", sub: defaultRate ? defaultRate.code : "none set", tone: defaultRate ? "accent" : "neutral", muted: !defaultRate },
         ]}
         actions={
-        <details className="group relative">
-          <summary className="btn-premium cursor-pointer list-none rounded-lg px-3 py-1.5 text-[0.75rem]">
-            + Add Tax Rate
-          </summary>
-          <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 shadow-xl">
-            <p className="mb-3 text-[0.75rem] font-bold text-[var(--ink)]">New Tax Rate</p>
-            <form action={createTaxRateAction} className="space-y-3">
-              <div>
-                <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Name *</label>
-                <input name="name" required placeholder="e.g. Value Added Tax" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Code *</label>
-                  <input name="code" required placeholder="VAT" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem] uppercase" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Rate % *</label>
-                  <input name="rate" type="number" min="0" max="100" step="0.01" required placeholder="18" className="input-base w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.75rem]" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink)]">
-                  <input type="checkbox" name="appliesToSales" defaultChecked className="rounded" />
-                  Applies to sales / invoices
-                </label>
-                <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink)]">
-                  <input type="checkbox" name="appliesToPurchases" className="rounded" />
-                  Applies to purchases
-                </label>
-                <label className="flex items-center gap-2 text-[0.75rem] text-[var(--ink)]">
-                  <input type="checkbox" name="isDefault" className="rounded" />
-                  Set as default rate
-                </label>
-              </div>
-              <SubmitButton bare className="btn-premium w-full rounded-lg py-2 text-[0.75rem] font-semibold">
-                Create Tax Rate
-              </SubmitButton>
-            </form>
-          </div>
-        </details>
+        <CreateTaxRateDialog action={createTaxRateAction} />
         }
       />
 

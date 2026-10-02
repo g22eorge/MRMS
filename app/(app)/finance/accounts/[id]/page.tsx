@@ -67,7 +67,11 @@ export default async function AccountLedgerPage({
         ...(dateFilter ? { date: dateFilter } : {}),
       },
     },
-    include: {
+    select: {
+      id: true,
+      description: true,
+      debit: true,
+      credit: true,
       journalEntry: {
         select: {
           entryNumber: true,
@@ -78,17 +82,28 @@ export default async function AccountLedgerPage({
       },
     },
     orderBy: { journalEntry: { date: "asc" } },
+    // Safety valve for decade-old accounts on the All-Time view; the
+    // opening balance and totals below always cover the full history.
+    take: 2000,
   });
 
-  // Also fetch all-time lines for running balance from beginning
-  const allLines = await prisma.journalLine.findMany({
-    where: {
-      accountId: id,
-      journalEntry: { status: "POSTED" },
-    },
-    include: { journalEntry: { select: { date: true } } },
-    orderBy: { journalEntry: { date: "asc" } },
-  });
+  // Opening + all-time balances as aggregates — the old code loaded every
+  // all-time line twice (once here, once above) just to sum them.
+  const [openingAgg, allTimeAgg, allTimeCount] = await Promise.all([
+    dateFilter?.gte
+      ? prisma.journalLine.aggregate({
+          where: { accountId: id, journalEntry: { status: "POSTED", date: { lt: dateFilter.gte } } },
+          _sum: { debit: true, credit: true },
+        })
+      : null,
+    prisma.journalLine.aggregate({
+      where: { accountId: id, journalEntry: { status: "POSTED" } },
+      _sum: { debit: true, credit: true },
+    }),
+    prisma.journalLine.count({
+      where: { accountId: id, journalEntry: { status: "POSTED" } },
+    }),
+  ]);
 
   // The organisation's own currency, not a literal. A tenant whose books are
   // kept in KES was shown every figure on this page labelled UGX.
@@ -100,14 +115,12 @@ export default async function AccountLedgerPage({
   const isDebitNormal = account.type === "ASSET" || account.type === "EXPENSE";
 
   // Running balance from start up to filter start (opening balance for period)
-  let openingBalance = 0;
-  if (dateFilter?.gte) {
-    for (const l of allLines) {
-      if (l.journalEntry.date < dateFilter.gte) {
-        openingBalance += isDebitNormal ? l.debit - l.credit : l.credit - l.debit;
-      }
-    }
-  }
+  const openingSums = openingAgg?._sum ?? { debit: null, credit: null };
+  const openingBalance = dateFilter?.gte
+    ? isDebitNormal
+      ? (openingSums.debit ?? 0) - (openingSums.credit ?? 0)
+      : (openingSums.credit ?? 0) - (openingSums.debit ?? 0)
+    : 0;
 
   // Build rows with running balance
   const rows = lines.reduce<Array<(typeof lines)[number] & { net: number; runningBalance: number }>>((acc, l) => {
@@ -126,10 +139,10 @@ export default async function AccountLedgerPage({
   const closingBalance = openingBalance + rows.reduce((s, r) => s + r.net, 0);
 
   // All-time balance
-  const allTimeBalance = allLines.reduce(
-    (s, l) => s + (isDebitNormal ? l.debit - l.credit : l.credit - l.debit),
-    0,
-  );
+  const allTimeSums = allTimeAgg._sum;
+  const allTimeBalance = isDebitNormal
+    ? (allTimeSums.debit ?? 0) - (allTimeSums.credit ?? 0)
+    : (allTimeSums.credit ?? 0) - (allTimeSums.debit ?? 0);
 
   // Period label
   const periodLabel =
@@ -257,7 +270,7 @@ export default async function AccountLedgerPage({
             {allTimeBalance < 0 ? "−" : ""}
             {formatMoneyCompact(Math.abs(allTimeBalance), currency)}
           </p>
-          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">{allLines.length} postings</p>
+          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">{allTimeCount} postings</p>
         </div>
 
         <div className="dc-card px-3 py-2.5">
@@ -420,7 +433,7 @@ export default async function AccountLedgerPage({
             { label: "Code", value: <span className="mono">{account.code}</span> },
             { label: "Type", value: account.type },
             { label: "Normal balance", value: isDebitNormal ? "Debit" : "Credit" },
-            { label: "Postings", value: allLines.length },
+            { label: "Postings", value: allTimeCount },
             ...(account.parent
               ? [{ label: "Parent", value: `${account.parent.code} · ${account.parent.name}` }]
               : []),

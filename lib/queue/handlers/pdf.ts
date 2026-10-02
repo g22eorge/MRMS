@@ -97,7 +97,7 @@ export async function handlePdfJob(data: unknown): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = prisma as any;
     if (db.generatedDocument) {
-      const seq = `DOC-${Date.now()}`;
+      const seq = `DOC-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       await db.generatedDocument.create({
         data: {
           documentNumber: seq,

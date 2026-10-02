@@ -9,6 +9,9 @@ import { getSession } from "@/lib/session";
 import { RepairRequestForm } from "@/components/public/RepairRequestForm";
 import { AppLogoDark } from "@/components/ui/AppLogo";
 
+// Reads the live session and request headers; never prerender.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const host = (await headers()).get("host")?.toLowerCase() ?? "";
   if (host.startsWith("app.eagleinfosolutions.com")) {

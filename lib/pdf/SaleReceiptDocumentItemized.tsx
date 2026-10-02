@@ -36,12 +36,12 @@ type Branding = {
 
 type Sale = {
   saleNumber: string;
+  name?: string | null;
   status: string;
   createdAt: Date;
   currency?: string | null;
   branch: { name: string } | null;
   client: { fullName: string; phone: string | null; organization?: string | null } | null;
-  notes?: string | null;
   subtotal: number;
   discountAmount: number;
   vatAmount: number;

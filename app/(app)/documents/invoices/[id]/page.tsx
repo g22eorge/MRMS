@@ -665,7 +665,7 @@ export default async function InvoiceDetailPage({
             const editTaxParts = editPartIds.length
               ? await prisma.part.findMany({
                   where: { id: { in: editPartIds }, orgId },
-                  select: { id: true, taxable: true, taxRate: true },
+                  select: { id: true, taxable: true, taxRate: true, saleUomFactor: true, name: true, qtyOnHand: true },
                 })
               : [];
             const editTaxByPart = new Map(editTaxParts.map((p) => [p.id, p]));
@@ -678,6 +678,29 @@ export default async function InvoiceDetailPage({
             const newSubtotal = roundMoney(items.reduce((s, i) => s + i.lineTotal, 0), currency);
             const newTax = roundMoney(lineTaxes.reduce((sum, tax) => sum + tax, 0), currency);
             const totalAmount = roundMoney(newSubtotal + newTax, currency);
+            // Stock check up front (friendly message); the in-txn guarded
+            // write below covers the race. Old lines are read before the
+            // transaction — they only change inside an edit save.
+            const oldLinesForStock = await prisma.invoiceLine.findMany({
+              where: { invoiceId: fdId, orgId },
+              select: { sourceId: true, quantity: true, saleUomFactor: true },
+            });
+            const takeByPart = new Map<string, number>();
+            for (const item of items) {
+              if (!item.partId) continue;
+              const factor = editTaxParts.find((p) => p.id === item.partId)?.saleUomFactor ?? 1;
+              takeByPart.set(item.partId, (takeByPart.get(item.partId) ?? 0) + item.quantity * factor);
+            }
+            for (const [partId, baseQty] of takeByPart) {
+              const available = editTaxParts.find((p) => p.id === partId)?.qtyOnHand ?? 0;
+              const returning = oldLinesForStock
+                .filter((l) => l.sourceId === partId)
+                .reduce((s, l) => s + Math.abs(l.quantity) * (l.saleUomFactor ?? 1), 0);
+              if (available + returning < baseQty) {
+                const part = editTaxParts.find((p) => p.id === partId);
+                redirect(`/documents/invoices/${fdId}?error=${encodeURIComponent(`Not enough stock for ${part?.name ?? "item"} — only ${available + returning} on hand after returns.`)}`);
+              }
+            }
             // Only re-point the invoice at a client that belongs to this org — a
             // forged clientId must not surface another tenant's name/phone on the PDF.
             const requestedClientId = String(fd.get("clientId") ?? "").trim() || null;
@@ -686,6 +709,31 @@ export default async function InvoiceDetailPage({
               : null;
 
             await prisma.$transaction(async (tx) => {
+              // Stock must follow the edit: return the old part lines, then
+              // take the new ones (guarded, org-scoped). Deleting lines
+              // without this drifted qtyOnHand on every quantity change.
+              const oldLines = oldLinesForStock;
+              const uomByPart = new Map<string, number>();
+              for (const line of oldLines) {
+                if (!line.sourceId) continue;
+                const factor = line.saleUomFactor ?? 1;
+                const baseQty = Math.abs(line.quantity) * factor;
+                uomByPart.set(line.sourceId, factor);
+                await tx.part.updateMany({
+                  where: { id: line.sourceId, orgId },
+                  data: { qtyOnHand: { increment: baseQty } },
+                });
+                await tx.partStockTransaction.create({
+                  data: {
+                    partId: line.sourceId,
+                    orgId,
+                    type: "IN",
+                    quantity: baseQty,
+                    reason: `Invoice edited (${invoice.invoiceNumber}): line removed`,
+                    createdById: user.id,
+                  },
+                });
+              }
               await tx.invoiceLine.deleteMany({ where: { invoiceId: fdId, orgId: orgId } });
               await tx.invoice.update({
                 where: { id: fdId },
@@ -715,6 +763,32 @@ export default async function InvoiceDetailPage({
                   },
                 },
               });
+              // Take the new part lines (guarded: never below zero, org-scoped).
+              const takeByPart = new Map<string, number>();
+              for (const item of items) {
+                if (!item.partId) continue;
+                const factor = editTaxParts.find((p) => p.id === item.partId)?.saleUomFactor ?? 1;
+                takeByPart.set(item.partId, (takeByPart.get(item.partId) ?? 0) + item.quantity * factor);
+              }
+              for (const [partId, baseQty] of takeByPart) {
+                const moved = await tx.part.updateMany({
+                  where: { id: partId, orgId, qtyOnHand: { gte: baseQty } },
+                  data: { qtyOnHand: { decrement: baseQty } },
+                });
+                if (!moved.count) {
+                  redirect(`/documents/invoices/${fdId}?error=${encodeURIComponent("Stock moved while saving — review quantities and try again.")}`);
+                }
+                await tx.partStockTransaction.create({
+                  data: {
+                    partId,
+                    orgId,
+                    type: "OUT",
+                    quantity: baseQty,
+                    reason: `Invoice edited (${invoice.invoiceNumber}): line added`,
+                    createdById: user.id,
+                  },
+                });
+              }
               await syncInvoicePaymentState(tx, { orgId: orgId, invoiceId: fdId, baseCurrency: currency, actorUserId: user.id });
             });
 

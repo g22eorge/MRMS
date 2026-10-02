@@ -3,6 +3,11 @@
  * Replaces the old bottom-sheet drawer. Opens like a native screen.
  * Desktop: renders the same content but inside the normal sidebar layout.
  */
+// Reads the live session and org-scoped DB rows, so it must never be
+// prerendered at build time. Aligns with the force-dynamic convention used
+// across the app.
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 
 import { can } from "@/lib/permissions";
@@ -250,6 +255,13 @@ export default async function MorePage() {
             )}
 
             {canFinance && (
+              <NavRow href="/finance/recurring-expenses" iconBg="bg-[var(--panel-strong)]"
+                description="Scheduled expense templates"
+                icon={<ItemIcon d={["M17 1l4 4-4 4","M3 11V9a4 4 0 0 1 4-4h14","M7 23l-4-4 4-4","M21 13v2a4 4 0 0 1-4 4H3"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canFinance && (
               <NavRow href="/finance/reports" iconBg="bg-[var(--panel-strong)]"
                 description="P&L, balance sheet, cash flow and VAT"
                 icon={<ItemIcon d={["M3 3v18h18","m19 9-5 5-4-4-3 3"]} color="text-[var(--ink-muted)]" />}
@@ -279,7 +291,14 @@ export default async function MorePage() {
 
             {canCollect && (
               <NavRow href="/payout-followups" iconBg="bg-[var(--panel-strong)]"
-                description="Collect client payments and pay techs"
+                description="Collect client payments"
+                icon={<ItemIcon d={["M12 2v20","M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canCollect && (
+              <NavRow href="/payables" iconBg="bg-[var(--panel-strong)]"
+                description="Supplier bills and tech payouts"
                 icon={<ItemIcon d={["M12 2v20","M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]} color="text-[var(--ink-muted)]" />}
               />
             )}
@@ -352,6 +371,13 @@ export default async function MorePage() {
               <NavRow href="/settings/data-heal" iconBg="bg-[var(--panel-strong)]"
                 description="Database diagnostics and repair"
                 icon={<ItemIcon d={["M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z","M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {["ADMIN"].includes(user.role) && (
+              <NavRow href="/settings/backups" iconBg="bg-[var(--panel-strong)]"
+                description="Snapshots and recovery"
+                icon={<ItemIcon d={["M12 3v10m0 0l-3.5-3.5M12 13l3.5-3.5","M4 15v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"]} color="text-[var(--ink-muted)]" />}
               />
             )}
 

@@ -1,57 +1,23 @@
 /**
  * Group 9 — Upload security (tests 101–110)
  *
- * Tests the MIME type allowlist, magic byte validation, and file size limit
- * by exercising the logic extracted from app/api/upload/route.ts directly.
- * No HTTP server needed.
+ * Exercises the real validators from lib/blob-storage.ts directly.
+ * No HTTP server needed. Imports (not mirrors) so the test cannot drift
+ * from the route logic (see P2-02: mirror previously asserted stale 5MB/3-type).
  */
 
 import { test, expect } from "bun:test";
 
-// ── Mirror the upload route's security logic ──────────────────────────────────
-
-const MAX_SIZE = 5 * 1024 * 1024;
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-function hasValidImageSignature(contentType: string, bytes: Uint8Array): boolean {
-  if (contentType === "image/jpeg") {
-    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  }
-  if (contentType === "image/png") {
-    return (
-      bytes.length >= 8 &&
-      bytes[0] === 0x89 &&
-      bytes[1] === 0x50 &&
-      bytes[2] === 0x4e &&
-      bytes[3] === 0x47 &&
-      bytes[4] === 0x0d &&
-      bytes[5] === 0x0a &&
-      bytes[6] === 0x1a &&
-      bytes[7] === 0x0a
-    );
-  }
-  if (contentType === "image/webp") {
-    return (
-      bytes.length >= 12 &&
-      bytes[0] === 0x52 &&
-      bytes[1] === 0x49 &&
-      bytes[2] === 0x46 &&
-      bytes[3] === 0x46 &&
-      bytes[8] === 0x57 &&
-      bytes[9] === 0x45 &&
-      bytes[10] === 0x42 &&
-      bytes[11] === 0x50
-    );
-  }
-  return false;
-}
+import { ALLOWED_TYPES, MAX_BYTES, hasValidImageSignature } from "../../lib/upload-limits";
 
 // ── MIME type allowlist ───────────────────────────────────────────────────────
 
-test("101: ALLOWED_TYPES accepts image/jpeg, image/png, image/webp", () => {
+test("101: ALLOWED_TYPES accepts image/jpeg, image/png, image/webp, image/heic, image/heif", () => {
   expect(ALLOWED_TYPES.has("image/jpeg")).toBe(true);
   expect(ALLOWED_TYPES.has("image/png")).toBe(true);
   expect(ALLOWED_TYPES.has("image/webp")).toBe(true);
+  expect(ALLOWED_TYPES.has("image/heic")).toBe(true);
+  expect(ALLOWED_TYPES.has("image/heif")).toBe(true);
 });
 
 test("102: ALLOWED_TYPES rejects image/gif, application/pdf, text/html", () => {
@@ -65,17 +31,17 @@ test("103: ALLOWED_TYPES rejects empty string and wildcard", () => {
   expect(ALLOWED_TYPES.has("*/*")).toBe(false);
 });
 
-// ── MAX_SIZE ──────────────────────────────────────────────────────────────────
+// ── MAX_BYTES ─────────────────────────────────────────────────────────────────
 
-test("104: MAX_SIZE is exactly 5 MB (5 * 1024 * 1024)", () => {
-  expect(MAX_SIZE).toBe(5242880);
+test("104: MAX_BYTES is exactly 15 MB (15 * 1024 * 1024)", () => {
+  expect(MAX_BYTES).toBe(15728640);
 });
 
-test("105: a 5 MB buffer is within limit; a 5 MB + 1 byte buffer is not", () => {
-  const exactlyMax = MAX_SIZE;
-  const overLimit = MAX_SIZE + 1;
-  expect(exactlyMax <= MAX_SIZE).toBe(true);
-  expect(overLimit <= MAX_SIZE).toBe(false);
+test("105: a 15 MB buffer is within limit; a 15 MB + 1 byte buffer is not", () => {
+  const exactlyMax = MAX_BYTES;
+  const overLimit = MAX_BYTES + 1;
+  expect(exactlyMax <= MAX_BYTES).toBe(true);
+  expect(overLimit <= MAX_BYTES).toBe(false);
 });
 
 // ── Magic byte validation — JPEG ──────────────────────────────────────────────

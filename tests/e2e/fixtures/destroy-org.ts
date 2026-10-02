@@ -57,6 +57,15 @@ export async function destroyE2eOrg(prisma: PrismaClient, slug: string): Promise
       await prisma.$executeRawUnsafe(`DELETE FROM "${name}" WHERE orgId = ?`, org.id);
     }
 
+    // LeadActivity carries no orgId (it hangs off Lead), so the sweep above
+    // never touches it — and with FKs suspended its rows survive the lead and
+    // user deletes. A stale row whose user is gone makes the lead query throw
+    // ("Field user is required ..., got null"), which the page masks as NOT
+    // FOUND. Sweep orphans explicitly.
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM "LeadActivity" WHERE leadId NOT IN (SELECT id FROM "Lead") OR userId NOT IN (SELECT id FROM "User")`,
+    );
+
     await prisma.$executeRawUnsafe(`DELETE FROM "Organization" WHERE id = ?`, org.id);
   } finally {
     await prisma.$executeRawUnsafe("PRAGMA foreign_keys=ON");

@@ -12,6 +12,7 @@ import { INVENTORY_TABS } from "@/lib/inventory/routes";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { RowActionsMenu, MenuActionLink, MenuSection } from "@/components/shared/RowActionsMenu";
 import { PAGE_SIZE, parsePage, paginationView, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/lib/pagination";
+import { icontains } from "@/lib/db/search";
 
 export const dynamic = "force-dynamic";
 
@@ -27,25 +28,41 @@ export default async function SuppliersPage({
   const params = (((await searchParams?.catch(() => ({}))) ?? {}) as Record<string, string | string[] | undefined>);
   const page = parsePage(params.page);
   const pageSize = parsePageSize(params.size);
+  const q = String(params.q ?? "").trim();
+  const statusFilter = String(params.status ?? "all").trim().toLowerCase();
+  const sort = params.sort === "newest" ? "newest" : "name";
 
   const now = new Date();
 
+  const where = {
+    ...(statusFilter === "active" ? { isActive: true } : statusFilter === "inactive" ? { isActive: false } : {}),
+    ...(q
+      ? {
+          OR: [
+            { name: icontains(q) },
+            { contactName: icontains(q) },
+            { phone: icontains(q) },
+          ],
+        }
+      : {}),
+  };
+
   const [suppliers, suppliersTotal, totalActive, outstandingBills, overdueBills] = await Promise.all([
     db.supplier.findMany({
-      where: {},
-      orderBy: { name: "asc" },
+      where,
+      orderBy: sort === "newest" ? { createdAt: "desc" as const } : { name: "asc" as const },
       include: { _count: { select: { purchaseOrders: true } } },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    db.supplier.count({ where: {} }).catch(() => 0),
+    db.supplier.count({ where }).catch(() => 0),
     db.supplier.count({ where: { isActive: true } }).catch(() => 0),
     db.supplierBill.count({ where: { status: { in: ["POSTED", "PART_PAID"] } } }).catch(() => 0),
     db.supplierBill.count({ where: { dueAt: { lt: now }, status: { notIn: ["PAID", "CANCELLED"] } } }).catch(() => 0),
   ]);
 
   const pageView = paginationView(page, suppliersTotal, pageSize);
-  const hrefForPageFilters = {  size: pageSize !== PAGE_SIZE ? pageSize : "" };
+  const hrefForPageFilters = { q: q || "", status: statusFilter !== "all" ? statusFilter : "", sort: sort !== "name" ? sort : "", size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const hrefForPage = pageHrefBuilder("/inventory/suppliers", hrefForPageFilters);
   const hrefForPageSize = sizeHrefBuilder("/inventory/suppliers", hrefForPageFilters);
 
@@ -70,6 +87,47 @@ export default async function SuppliersPage({
         ],
       }}
       filters={
+        <div className="space-y-2.5">
+        <form method="GET" action="/inventory/suppliers" className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { key: "all", label: "All" },
+              { key: "active", label: "Active" },
+              { key: "inactive", label: "Inactive" },
+            ].map((s) => (
+              <Link
+                key={s.key}
+                href={`/inventory/suppliers?status=${s.key}${q ? `&q=${encodeURIComponent(q)}` : ""}${sort !== "name" ? `&sort=${sort}` : ""}`}
+                className={`rounded-full px-3 py-1 text-[0.75rem] font-semibold transition ${
+                  statusFilter === s.key
+                    ? "border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
+                    : "border border-transparent text-[var(--ink-muted)] hover:border-[var(--line)] hover:text-[var(--ink)]"
+                }`}
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+          <input type="hidden" name="status" value={statusFilter} />
+          <label className="sr-only" htmlFor="supplier-search">Search suppliers</label>
+          <input
+            id="supplier-search"
+            name="q"
+            defaultValue={q}
+            placeholder="Name, contact, phone…"
+            className="ml-auto h-8 w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
+          />
+          <select name="sort" defaultValue={sort} className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem] text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]/50">
+            <option value="name">Name A–Z</option>
+            <option value="newest">Newest</option>
+          </select>
+          <button type="submit" className="h-8 rounded-lg border border-[var(--line)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]">
+            Filter
+          </button>
+          {q || statusFilter !== "all" || sort !== "name" ? (
+            <Link href="/inventory/suppliers" className="h-8 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--ink-muted)] transition hover:text-[var(--ink)]">Reset</Link>
+          ) : null}
+        </form>
         <div className="dc-card px-3 py-2.5">
           <p className="mb-2.5 text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Add Supplier</p>
           <form
@@ -90,13 +148,20 @@ export default async function SuppliersPage({
             <button type="submit" className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Add</button>
           </form>
         </div>
+        </div>
       }
     >
       <DataTable
         rows={suppliers}
         getRowKey={(s) => s.id}
         pagination={{ page: pageView.page, pageSize, total: suppliersTotal, hrefForPage, hrefForSize: hrefForPageSize, unit: "suppliers" }}
-        empty="No suppliers yet. Add your first supplier to start raising purchase orders."
+        empty={
+          q || statusFilter !== "all" ? (
+            <>No suppliers match these filters. <Link href="/inventory/suppliers" className="text-[var(--accent)] hover:underline">Clear filters</Link></>
+          ) : (
+            "No suppliers yet. Add your first supplier to start raising purchase orders."
+          )
+        }
         columns={[
           {
             key: "name",

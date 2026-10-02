@@ -19,8 +19,13 @@ export type SettingsNavGroup = {
   items: SettingsNavItem[];
 };
 
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+export function isActive(pathname: string, href: string) {
+  // Exact match only. The notifications entry (/settings/notifications) is a
+  // real page with sibling pages beneath its path (whatsapp, templates,
+  // outbox). Prefix matching lit BOTH up at once — choosing WhatsApp always
+  // also highlighted Notifications. Every rail item here is a leaf page, so
+  // there is nobody whose children should keep it lit.
+  return pathname === href;
 }
 
 export function SettingsShell({

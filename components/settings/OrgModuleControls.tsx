@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { OrgModule } from "@prisma/client";
+import type { OrgModule } from "@prisma/client";
 
 import { setOrgModuleAction, type ModuleChangeResult } from "@/app/(app)/settings/billing/module-actions";
 import { ALL_MODULES, MODULE_LABELS, MODULE_DESCRIPTIONS } from "@/lib/module-catalog";

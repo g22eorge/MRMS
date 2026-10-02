@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { tableColumns } from "@/lib/db/introspect";
 
 export interface OrgWhatsAppConfig {
@@ -99,7 +100,7 @@ export async function saveOrgWhatsAppConfig(
   await ensureTable();
   await prisma.$executeRaw`
     INSERT INTO "OrgWhatsAppConfig" (orgId, businessNumber, phoneNumberId, accessToken, businessAccountId, provider, atApiKey, atUsername, atSenderId, smsFallback, updatedAt)
-    VALUES (${orgId}, ${config.businessNumber}, ${config.phoneNumberId}, ${config.accessToken}, ${config.businessAccountId || null}, ${config.provider}, ${config.atApiKey ?? null}, ${config.atUsername ?? null}, ${config.atSenderId ?? null}, ${config.smsFallback ? 1 : 0}, CURRENT_TIMESTAMP)
+    VALUES (${orgId}, ${config.businessNumber}, ${config.phoneNumberId}, ${config.accessToken}, ${config.businessAccountId || null}, ${config.provider}, ${config.atApiKey ?? null}, ${config.atUsername ?? null}, ${config.atSenderId ?? null}, ${config.smsFallback ? Prisma.sql`TRUE` : Prisma.sql`FALSE`}, CURRENT_TIMESTAMP)
     ON CONFLICT(orgId) DO UPDATE SET
       businessNumber = excluded.businessNumber,
       phoneNumberId = excluded.phoneNumberId,

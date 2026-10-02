@@ -42,6 +42,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       invoice: {
         select: {
           invoiceNumber: true,
+          // invoice.client as well as invoice.job.client: an invoice raised
+          // without a job — a straight sale of goods — carries its customer
+          // directly, and reading only the job's prints "Delivered To —"
+          // for every one of them.
+          client: { select: { fullName: true, organization: true } },
           job: { select: { jobNumber: true, client: { select: { fullName: true, organization: true } } } },
         },
       },
@@ -86,7 +91,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const sourceRef = note.invoice?.invoiceNumber
     ? `${note.invoice.invoiceNumber}${note.invoice.job ? ` / ${note.invoice.job.jobNumber}` : ""}`
     : (note.sale?.invoiceNumber ?? note.sale?.saleNumber ?? "-");
-  const clientName = clientDisplayName(note.invoice?.job?.client ?? note.sale?.client, "-");
+  const clientName = clientDisplayName(note.invoice?.job?.client ?? note.invoice?.client ?? note.sale?.client, "-");
   const element = createElement(DeliveryNoteDocument as never, {
     branding: { ...branding, companyLogoUrl: logoUrl ?? null },
     deliveryNoteNumber: note.deliveryNoteNumber,

@@ -21,7 +21,14 @@ const ACTIVE_CLIENT_COOKIE = "portal-active-client";
 const TTL_MS = 8 * 60 * 60 * 1000; // 8h
 
 function secret() {
-  return process.env.BETTER_AUTH_SECRET || "portal-dev-secret-change-me";
+  const configured = process.env.BETTER_AUTH_SECRET;
+  // Fail closed in production: a predictable fallback makes portal session
+  // HMAC forgeable. Local dev keeps the fallback so the portal runs without
+  // production secrets on a laptop.
+  if (!configured && process.env.NODE_ENV === "production") {
+    throw new Error("BETTER_AUTH_SECRET is required in production.");
+  }
+  return configured || "portal-dev-secret-change-me";
 }
 
 /** URL-safe HMAC so the cookie value never carries `/`, `+`, or `=`. */
