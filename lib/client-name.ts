@@ -18,6 +18,20 @@ export type NameableClient = {
 } | null | undefined;
 
 /**
+ * A POS sale's customer label. Sales have no dedicated name field — the
+ * "Sale note" saved on the sale page is the name — so it leads over the
+ * linked client, which counter sales usually don't have (hence "Walk-in").
+ */
+export function saleCustomerName(
+  sale: { notes?: string | null; client: NameableClient },
+  fallback = "Walk-in",
+): string {
+  const note = (sale.notes ?? "").trim();
+  if (note) return note;
+  return clientDisplayName(sale.client, fallback);
+}
+
+/**
  * The primary label: the organisation when there is one, otherwise the person.
  *
  * `fallback` covers a genuinely absent client — a POS walk-in with no record at

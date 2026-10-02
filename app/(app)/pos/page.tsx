@@ -24,7 +24,7 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
-import { clientDisplayName } from "@/lib/client-name";
+import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
@@ -32,6 +32,14 @@ function saleStatusTone(status: string): BadgeTone {
   if (status === "PAID") return "success";
   if (status === "VOID") return "danger";
   return "warning";
+}
+
+/**
+ * What the POS list shows as the sale's name — the saved sale note if there
+ * is one, else the client (see `saleCustomerName`).
+ */
+function saleDisplayName(s: { notes: string | null; client: { fullName: string; organization: string | null } | null }) {
+  return saleCustomerName(s, "Walk-in");
 }
 
 function monthKey(d: Date) {
@@ -216,6 +224,7 @@ export default async function PosPage({
     paidAmount: number;
     invoicedAt: Date | null;
     createdAt: Date;
+    notes: string | null;
     client: { id: string; fullName: string; organization: string | null } | null;
     createdBy: { id: string; name: string } | null;
     _count: { payments: number; creditNotes: number; refunds: number };
@@ -238,6 +247,7 @@ export default async function PosPage({
         paidAmount: true,
         invoicedAt: true,
         createdAt: true,
+        notes: true,
         client: { select: { id: true, fullName: true, organization: true } },
         createdBy: { select: { id: true, name: true } },
         _count: { select: { payments: true, creditNotes: true, refunds: true } },
@@ -507,6 +517,7 @@ export default async function PosPage({
             renderMobileCard={(s) => {
               const cur = normalizeCurrency(s.currency, "UGX");
               const balance = Math.max(0, s.totalAmount - s.paidAmount);
+              const displayName = saleDisplayName(s);
               return (
                 <div className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -516,11 +527,11 @@ export default async function PosPage({
                       : s.status === "VOID" ? "bg-red-500/15 text-red-600"
                       : "bg-[var(--accent)]/15 text-[var(--accent)]"
                     }`}>
-                      {(s.client?.fullName?.[0] ?? "W").toUpperCase()}
+                      {(displayName[0] ?? "W").toUpperCase()}
                     </div>
                   </Link>
                   <Link href={`/pos/${s.id}`} className="min-w-0 flex-1 active:opacity-70">
-                    <p className="truncate font-bold text-[var(--ink)]">{clientDisplayName(s.client, "Walk-in")}</p>
+                    <p className="truncate font-bold text-[var(--ink)]">{displayName}</p>
                     <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                       <span className="mono">{s.saleNumber}</span>
                       {" · "}{formatEATDate(s.createdAt)}
@@ -557,10 +568,24 @@ export default async function PosPage({
               {
                 key: "client",
                 header: "Client",
-                cell: (s) =>
-                  s.client
-                    ? <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(s.client)}</Link>
-                    : <span className="text-[var(--ink-muted)]">Walk-in</span>,
+                cell: (s) => {
+                  const note = s.notes?.trim();
+                  if (s.client) {
+                    return (
+                      <div className="min-w-0">
+                        <Link href={`/clients/${s.client.id}`} className="block truncate font-medium text-[var(--ink)] hover:underline">
+                          {note ?? clientDisplayName(s.client)}
+                        </Link>
+                        {note ? (
+                          <p className="truncate text-[0.75rem] text-[var(--ink-muted)]">{clientDisplayName(s.client)}</p>
+                        ) : null}
+                      </div>
+                    );
+                  }
+                  return note
+                    ? <span className="block truncate font-medium text-[var(--ink)]">{note}</span>
+                    : <span className="text-[var(--ink-muted)]">Walk-in</span>;
+                },
               },
               {
                 key: "createdBy",

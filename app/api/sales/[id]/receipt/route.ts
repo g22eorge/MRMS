@@ -37,9 +37,10 @@ export async function GET(
         totalAmount: true,
         paidAmount: true,
         createdAt: true,
-      branch: { select: { name: true } },
-      client: { select: { fullName: true, phone: true, organization: true } },
-      items: { select: { id: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
+        branch: { select: { name: true } },
+        client: { select: { fullName: true, phone: true, organization: true } },
+        notes: true,
+        items: { select: { id: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
       payments: { select: { id: true, amount: true, method: true, reference: true, receivedAt: true }, orderBy: { receivedAt: "asc" } },
     },
   });

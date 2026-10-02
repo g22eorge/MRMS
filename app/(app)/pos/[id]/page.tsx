@@ -29,7 +29,9 @@ import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { computeLinesVat } from "@/lib/commercial/vat";
-import { clientDisplayName } from "@/lib/client-name";
+import { saleCustomerName } from "@/lib/client-name";
+import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
+import { PosCustomerFields } from "@/components/pos/PosCustomerFields";
 
 import { flash } from "@/lib/flash";
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
@@ -148,6 +150,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     notes: string | null;
     branchId: string | null;
     branch: { name: string } | null;
+    clientId: string | null;
     client: { fullName: string; phone: string | null; email: string | null; organization: string | null } | null;
     items: Array<{ id: string; partId: string | null; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
     payments: Array<{ id: string; amount: number; method: PaymentMethod; reference: string | null; receivedAt: Date; currency: string | null }>;
@@ -201,6 +204,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         notes: true,
         branchId: true,
         branch: { select: { name: true } },
+        clientId: true,
         client: { select: { fullName: true, phone: true, email: true, organization: true } },
         items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
         payments: { select: { id: true, amount: true, method: true, reference: true, receivedAt: true, currency: true }, orderBy: { receivedAt: "desc" } },
@@ -225,6 +229,13 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     where: { orgId, isActive: true },
     orderBy: [{ isDefault: "desc" }, { name: "asc" }],
     select: { id: true, name: true },
+  }).catch(() => []);
+
+  const pickerClients = await prisma.client.findMany({
+    where: { orgId },
+    orderBy: { fullName: "asc" },
+    take: 300,
+    select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true },
   }).catch(() => []);
 
   // Credit notes / refunds are optional features; keep page working if tables are missing.
@@ -295,6 +306,54 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       data: { branchId, notes: notes || null },
     });
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: saleId, action: "POS_SALE_UPDATED", summary: "POS sale metadata updated" });
+
+    revalidatePath(`/pos/${saleId}`);
+    revalidatePath("/pos");
+  }
+
+  async function setSaleClientAction(formData: FormData) {
+    "use server";
+    const { user, orgId, org } = await requireOrgSession();
+    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+
+    const saleId = String(formData.get("saleId") ?? "").trim();
+    if (!saleId) return;
+    const saleRow = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true } });
+    if (!saleRow) return;
+
+    const pickedClientId = String(formData.get("clientId") ?? "").trim() || null;
+    const clientMode = String(formData.get("clientMode") ?? "existing");
+    let clientId: string | null = null;
+
+    if (pickedClientId) {
+      const client = await prisma.client.findFirst({ where: { id: pickedClientId, orgId }, select: { id: true } });
+      if (!client) posReject(saleId, "That customer no longer exists — pick another one.");
+      clientId = client.id;
+    } else if (clientMode === "new") {
+      // Same rule as quotations: a new customer needs a name and a phone.
+      const fullName = sanitizeText(String(formData.get("newClientFullName") ?? ""));
+      const phone = sanitizeText(String(formData.get("newClientPhone") ?? ""));
+      const email = sanitizeOptionalText(formData.get("newClientEmail") as string | null);
+      const organization = sanitizeOptionalText(formData.get("newClientOrganization") as string | null);
+      const address = sanitizeOptionalText(formData.get("newClientAddress") as string | null);
+      if (fullName.length < 2 || phone.length < 3) {
+        posReject(saleId, "A new customer needs a name and a phone number.");
+      }
+      const existing = await prisma.client.findFirst({ where: { phone, orgId }, select: { id: true } });
+      if (existing) {
+        clientId = existing.id;
+      } else {
+        const created = await prisma.client.create({
+          data: { orgId, fullName, phone, email, organization, address },
+          select: { id: true },
+        });
+        clientId = created.id;
+      }
+    }
+
+    await prisma.sale.updateMany({ where: { id: saleId, orgId }, data: { clientId } });
+    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: saleId, action: "POS_SALE_UPDATED", summary: clientId ? "POS sale customer attached" : "POS sale customer removed" });
 
     revalidatePath(`/pos/${saleId}`);
     revalidatePath("/pos");
@@ -1083,6 +1142,15 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             </form>
           </section>
 
+          {/* -- Customer: attach a client record, or clear back to walk-in -- */}
+          <section className="dc-card space-y-2 p-3">
+            <form action={setSaleClientAction} className="space-y-2">
+              <input type="hidden" name="saleId" value={sale.id} />
+              <PosCustomerFields initialClientId={sale.clientId ?? ""} clients={pickerClients} />
+              <SubmitButton variant="secondary" size="sm" pendingLabel="Saving…">Save customer</SubmitButton>
+            </form>
+          </section>
+
       {/* -- Items -- */}
       <section className="dc-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
@@ -1465,7 +1533,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             ...(sale.paidAt ? [{ label: "Paid at", value: formatEATDateTime(sale.paidAt) }] : []),
             ...(sale.invoiceNumber ? [{ label: "Invoice", value: sale.invoiceNumber }] : []),
           ] as SummaryRow[]}
-          party={{ title: "Customer", name: clientDisplayName(sale.client, "Walk-in") }}
+          party={{ title: "Customer", name: saleCustomerName(sale, "Walk-in") }}
         />
       </div>
     </div>
