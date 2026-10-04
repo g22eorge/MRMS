@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import type { Db } from "@/lib/prisma";
 
 type RunDataHealOptions = {
   dryRun?: boolean;
@@ -6,7 +6,7 @@ type RunDataHealOptions = {
   limit?: number;
 };
 
-export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOptions = {}) {
+export async function runDataHeal(prisma: Db, options: RunDataHealOptions = {}) {
   const dryRun = options.dryRun === true;
   const limit = options.limit ?? 250;
 
@@ -82,7 +82,7 @@ export async function runDataHeal(prisma: PrismaClient, options: RunDataHealOpti
   // unscoped. Derive orgId from the owning Part — the authoritative parent — so
   // org-scoped ledger queries see a complete picture. Idempotent; safe to repeat.
   // (Mirrors scripts/backfill-stock-txn-org.ts, but runnable in production via
-  // the admin data-heal endpoint, where the Turso env exists.)
+  // the admin data-heal endpoint.)
   // NB: runs BEFORE the no-job-candidates early return below, otherwise it would
   // be skipped on any org whose jobs need no device-field healing.
   let stockTxnOrgIdFixed = 0;

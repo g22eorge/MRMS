@@ -48,6 +48,7 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 import { plural } from "@/lib/plural";
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
+import { isMissingTableError } from "@/lib/db-errors";
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
 
 export const dynamic = "force-dynamic";
@@ -421,8 +422,7 @@ export default async function InvoicesPage({
     });
     invoices = raw.map((inv) => ({ ...inv, invoiceType: inv.invoiceType ?? "REPAIR" }));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Invoice")) dbNeedsFix = true;
+    if (isMissingTableError(err)) dbNeedsFix = true;
     invoices = [];
   }
 

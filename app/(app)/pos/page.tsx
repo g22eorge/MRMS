@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { Prisma } from "@prisma/client";
 import { orgDb } from "@/lib/db";
+import { isMissingTableError } from "@/lib/db-errors";
 import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
@@ -257,8 +258,10 @@ export default async function PosPage({
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
+    // Postgres says `relation "Sale" does not exist`, never SQLite's wording,
+    // so the old string match could not fire here. isMissingTableError keys off
+    // the Prisma error code and knows both dialects.
+    if (isMissingTableError(err)) dbNeedsFix = true;
     sales = [];
   }
 

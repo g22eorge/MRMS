@@ -1,116 +1,85 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, afterEach } from "bun:test";
+import { readFileSync } from "node:fs";
 
 /**
- * What the Prisma CLI is pointed at, per engine.
+ * What the Prisma CLI is pointed at.
  *
- * This config decides three things from one environment variable: the
- * connection URL, which schema file to read, and which migration directory to
- * replay. Getting any of them wrong is quiet in a way that hurts — a Postgres
- * URL used to be rewritten into `file:/repo/postgresql://...`, and Prisma then
- * reported that the *schema* had a bad URL, which sends you to the wrong file.
+ * This file used to cover a config that chose a URL shape, a schema file and a
+ * migration directory from one environment variable, because the repo carried
+ * two schemas — `sqlite` for the source of truth and a generated `postgresql`
+ * copy. There is one schema now, so the interesting property inverted: the
+ * config must do as little as possible.
  *
- * The migrations pair matters most. The 49 migrations under prisma/migrations
- * are SQLite DDL; replaying them against PostgreSQL fails partway and leaves a
- * half-built database.
+ * The rewriting it used to do was not harmless. It redirected an explicit
+ * `DATABASE_URL=... bunx prisma ...` to `prisma/dev.db`, so `test:unit` operated
+ * on the development database while reporting that it used a throwaway one. A
+ * test that only checked the happy path would not have caught that, so what is
+ * pinned here is that an explicitly supplied URL survives untouched.
  */
+const CONFIG_SRC = readFileSync("prisma.config.ts", "utf8");
 
-/**
- * defineConfig does not expose `datasource` on the object it returns, so the
- * resolved URL is read where Prisma itself reads it: the config assigns
- * process.env.DATABASE_URL on load, and that assignment is the contract.
- */
-async function configFor(url: string) {
-  const prev = process.env.DATABASE_URL;
-  const prevTurso = process.env.TURSO_DATABASE_URL;
-  process.env.DATABASE_URL = url;
-  delete process.env.TURSO_DATABASE_URL;
-  const mod = await import(`../../prisma.config?v=${Math.random().toString(36).slice(2)}`);
-  const resolvedUrl = process.env.DATABASE_URL;
-  process.env.DATABASE_URL = prev;
-  if (prevTurso) process.env.TURSO_DATABASE_URL = prevTurso;
-  const cfg = mod.default as { schema: string; migrations: { path: string } };
-  return { ...cfg, resolvedUrl };
+const saved = process.env.DATABASE_URL;
+afterEach(() => {
+  if (saved === undefined) delete process.env.DATABASE_URL;
+  else process.env.DATABASE_URL = saved;
+});
+
+async function loadConfig() {
+  const mod = await import(`../../prisma.config.ts?v=${Math.random().toString(36).slice(2)}`);
+  return mod.default as { schema: string; migrations?: { path?: string } };
 }
 
-describe("the URL is handed to Prisma in the shape that engine expects", () => {
-  it("passes a PostgreSQL URL through untouched", async () => {
-    // Was the bug: this fell into the SQLite branch and came back as a file path.
-    const c = await configFor("postgresql://user:pw@db.example.com:5432/mrms");
-    expect(c.resolvedUrl).toBe("postgresql://user:pw@db.example.com:5432/mrms");
+describe("the config points at the one schema and its migrations", () => {
+  it("uses prisma/schema.prisma and prisma/migrations", async () => {
+    const config = await loadConfig();
+    expect(config.schema).toBe("prisma/schema.prisma");
+    expect(config.migrations?.path).toBe("prisma/migrations");
   });
 
-  it("accepts the postgres:// spelling too, which is equally valid", async () => {
-    const c = await configFor("postgres://user:pw@db.example.com:5432/mrms");
-    expect(c.resolvedUrl).toBe("postgres://user:pw@db.example.com:5432/mrms");
-  });
-
-  it("still resolves a relative SQLite path to an absolute one", async () => {
-    const c = await configFor("file:./dev.db");
-    expect(c.resolvedUrl).toMatch(/^file:\/.*prisma\/dev\.db$/);
-  });
-
-  it("leaves libsql alone, which is what production connects with", async () => {
-    const c = await configFor("libsql://mrms-prod.turso.io");
-    expect(c.resolvedUrl).toBe("libsql://mrms-prod.turso.io");
+  it("names no second schema and no archived migration directory", () => {
+    // The SQLite migrations are kept for reference but must never be replayed:
+    // they contain PRAGMA statements Postgres cannot parse.
+    expect(CONFIG_SRC).not.toContain("schema.postgresql.prisma");
+    expect(CONFIG_SRC).not.toContain("migrations-sqlite-archive");
+    expect(CONFIG_SRC).not.toContain("migrations-postgresql");
   });
 });
 
-describe("schema and migrations are chosen together, by dialect", () => {
-  it("uses the generated Postgres schema and its own baseline on PostgreSQL", async () => {
-    const c = await configFor("postgresql://u:p@h:5432/d");
-    expect(c.schema).toBe("prisma/schema.postgresql.prisma");
-    expect(c.migrations.path).toBe("prisma/migrations-postgresql");
+describe("an explicitly supplied DATABASE_URL survives", () => {
+  it("is not rewritten, reshaped, or redirected to a file", async () => {
+    const url = "postgresql://mrms:pw@localhost:5434/mrms_scratch?schema=public";
+    process.env.DATABASE_URL = url;
+    await loadConfig();
+    expect(process.env.DATABASE_URL).toBe(url);
   });
 
-  it("uses the source schema and the SQLite migrations everywhere else", async () => {
-    for (const url of ["file:./dev.db", "libsql://mrms-prod.turso.io"]) {
-      const c = await configFor(url);
-      expect(c.schema).toBe("prisma/schema.prisma");
-      expect(c.migrations.path).toBe("prisma/migrations");
-    }
+  it("takes precedence over anything in .env, which is only a fallback", async () => {
+    process.env.DATABASE_URL = "postgresql://explicit:pw@host:5432/explicit";
+    await loadConfig();
+    expect(process.env.DATABASE_URL).toBe("postgresql://explicit:pw@host:5432/explicit");
   });
 
-  it("never pairs a Postgres schema with SQLite migrations, or the reverse", async () => {
-    // The pairing is the point: a mismatch here builds a database from DDL the
-    // running schema does not describe.
-    for (const url of ["postgresql://u:p@h:5432/d", "file:./dev.db", "libsql://x.turso.io"]) {
-      const c = await configFor(url);
-      const schemaIsPg = c.schema.includes("postgresql");
-      const migrationsArePg = c.migrations.path.includes("postgresql");
-      expect(schemaIsPg).toBe(migrationsArePg);
-    }
+  it("does no file: coercion at all", () => {
+    // "file:" survives in two innocent places: the comment recording why the
+    // coercion went away (in backticks, so a bare quote check is not enough),
+    // and `loadEnvFile(file: string)`. Strip the comments, then look for the
+    // string literal — a URL the config builds or prefixes itself.
+    const code = CONFIG_SRC.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(code).not.toMatch(/["'`]file:/);
   });
 });
 
-describe("the generated Postgres schema stays in step with its source", () => {
-  it("is exactly the source with the provider swapped", async () => {
-    // A generated file nobody regenerates is worse than no file: it looks
-    // authoritative while describing an older database. This fails the moment
-    // someone adds a model to schema.prisma and does not run `bun run pg:schema`.
-    const { readFileSync } = await import("node:fs");
-    const source = readFileSync("prisma/schema.prisma", "utf8");
-    const generated = readFileSync("prisma/schema.postgresql.prisma", "utf8");
-
-    const body = generated.slice(generated.indexOf("// This is your Prisma schema file"));
-    // Provider and url both. The source must name a file: literal (vercel-build
-    // hands Prisma a libsql:// URL and the sqlite provider rejects it), while
-    // Postgres has no such constraint and reads the environment.
-    expect(body).toBe(
-      source
-        .replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"')
-        .replace(/url\s*=\s*"file:[^"]*"/, 'url      = env("DATABASE_URL")'),
-    );
-    expect(generated).toContain("GENERATED FILE");
+describe("the env loader", () => {
+  it("reads .env.local before .env, the precedence Next.js uses", () => {
+    const local = CONFIG_SRC.indexOf('loadEnvFile(".env.local")');
+    const base = CONFIG_SRC.indexOf('loadEnvFile(".env")');
+    expect(local).toBeGreaterThan(-1);
+    expect(base).toBeGreaterThan(local);
   });
 
-  it("keeps the source free of features a provider swap cannot translate", async () => {
-    // The one-line translation only holds while the schema stays on plain
-    // scalars. A @db. attribute or a Json column silently makes the two
-    // schemas describe different databases.
-    const { readFileSync } = await import("node:fs");
-    const source = readFileSync("prisma/schema.prisma", "utf8");
-    expect(source).not.toMatch(/@db\./);
-    expect(source).not.toMatch(/dbgenerated\s*\(/);
-    expect(source).not.toMatch(/^\s*\w+\s+(Json|Bytes|Decimal)(\?|\[\])?\s/m);
+  it("never overwrites a variable that is already set", () => {
+    // Prisma stops loading dotenv once a config file exists, so this file does
+    // it — but a value from the environment must still win over a file.
+    expect(CONFIG_SRC).toContain("if (process.env[key] !== undefined) continue;");
   });
 });

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { roundMoney } from "@/lib/currency";
+import type { TxClient } from "@/lib/prisma";
 
 /**
  * Turn a repair job into invoice lines.
@@ -90,7 +91,7 @@ type PartUsage = {
  * their own — so an OUT movement tagged with the job is the source of truth.
  */
 export async function partsUsedOnJob(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   params: { orgId: string; jobId: string },
 ): Promise<PartUsage[]> {
   const movements = await tx.partStockTransaction
@@ -214,7 +215,7 @@ export function buildJobInvoiceLines(params: {
  * deadlocks an open interactive transaction on Turso.
  */
 export async function syncJobInvoiceLines(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   params: { orgId: string; invoiceId: string; job: JobForLines & { vatApplicable?: boolean | null }; clientBill: number; currency: string },
 ): Promise<number> {
   const { orgId, invoiceId, job, clientBill, currency } = params;

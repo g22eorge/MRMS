@@ -13,7 +13,7 @@ import { SearchToggle } from "@/components/shared/SearchToggle";
 import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBadge";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { prisma, type Row } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
 import { shareStatementDocument } from "@/lib/notifications/share-document";
@@ -138,7 +138,7 @@ export default async function ClientDetailPage({
     }
   }
 
-  type ClientDetail = Prisma.ClientGetPayload<{
+  type ClientDetail = Row<typeof prisma.client, {
     include: {
       jobs: true;
       notesEntries: { include: { author: { select: { name: true } } } };

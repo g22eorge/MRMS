@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { TxClient } from "@/lib/prisma";
 
 import { currencyDecimals, normalizeCurrency, roundMoney } from "@/lib/currency";
 import { composeUniversalNumber, getOrgNumberConfig } from "@/lib/commercial/org-number";
@@ -17,7 +17,7 @@ import { composeUniversalNumber, getOrgNumberConfig } from "@/lib/commercial/org
  * retries and one-off backfills safe.
  */
 
-type Tx = Prisma.TransactionClient;
+type Tx = TxClient;
 
 // Standard cash-basis chart of accounts. Seeded per-org on first post.
 const CORE_ACCOUNTS = [

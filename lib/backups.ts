@@ -4,30 +4,57 @@ import path from "node:path";
  * Backup naming + safety helpers. Dependency-free on purpose so unit tests
  * import this without server modules.
  *
- * Restore is deliberately NOT an in-app operation: swapping the live SQLite
- * file under a connected Prisma client risks corruption. Restores run via
- * scripts/restore-db.sh (verified file, auto pre-restore snapshot) with the
- * app stopped. The admin UI offers create/list/download/prune only.
+ * Backups are `pg_dump -Fc` files. Nothing in the app makes them: the `backup`
+ * service (scripts/pg-backup.sh) writes one every BACKUP_INTERVAL into the
+ * `backups` volume, and `scripts/backup-db.sh` asks it for one on demand. The
+ * app image has no pg_dump, so a "create backup" button would have nothing to
+ * run — the page lists, downloads and deletes what the service produced.
+ *
+ * Restore is deliberately NOT an in-app operation: it drops and recreates the
+ * live database, which cannot happen under a connected Prisma client. Restores
+ * run via scripts/restore-db.sh (verified file, automatic pre-restore dump,
+ * services stopped around it).
  */
 
-export const BACKUP_PREFIX = "mrms-";
-export const BACKUP_SUFFIX = ".db";
-export const BACKUP_KEEP_DAYS = 30;
+/**
+ * The three kinds of file this page will touch, and nothing else:
+ *
+ *   mrms-20261004T020000Z.dump             the backup service (UTC)
+ *   mrms-dev-20261004-020000.dump          `bun run pg:export` in development
+ *   mrms-prerestore-20261004T020000Z.dump  written by restore-db.sh before it
+ *                                          replaces anything
+ *
+ * scripts/restore-db.sh carries the same pattern; change both together. The
+ * pattern is the path-traversal defence — a name that does not match is
+ * rejected before it is ever joined to a directory.
+ */
+const BACKUP_NAME = /^mrms-(\d{8}T\d{6}Z|dev-\d{8}-\d{6}|prerestore-\d{8}T\d{6}Z)\.dump$/;
 
-/** Strict backup filename: mrms-YYYY-MM-DD_HH-MM-SS.db — nothing else restores. */
+export const BACKUP_SUFFIX = ".dump";
+
+/** Retention is the backup service's, not the page's; shown for reference. */
+export const BACKUP_KEEP_DAYS = Number(process.env.BACKUP_KEEP_DAYS) || 14;
+
 export function isValidBackupName(name: string): boolean {
-  return /^mrms-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.db$/.test(name);
+  return BACKUP_NAME.test(name);
 }
 
+/** The backup service's own naming, UTC. Kept here so there is one definition. */
 export function backupFileName(now: Date = new Date()): string {
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${BACKUP_PREFIX}${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}_${p(now.getHours())}-${p(now.getMinutes())}-${p(now.getSeconds())}${BACKUP_SUFFIX}`;
+  return (
+    `mrms-${now.getUTCFullYear()}${p(now.getUTCMonth() + 1)}${p(now.getUTCDate())}` +
+    `T${p(now.getUTCHours())}${p(now.getUTCMinutes())}${p(now.getUTCSeconds())}Z${BACKUP_SUFFIX}`
+  );
 }
 
+/**
+ * Where the dumps are. Production mounts the `backups` volume at /backups and
+ * sets BACKUP_DIR; development falls back to ./backups, which the app container
+ * sees through its bind mount and where `pg:export` writes.
+ */
 export function resolveBackupDir(): string {
   if (process.env.BACKUP_DIR) return path.resolve(process.env.BACKUP_DIR);
-  // Render persists /var/data; uploads live beside the DB there too.
-  if (process.env.UPLOADS_DIR) return path.resolve(path.dirname(process.env.UPLOADS_DIR), "backups");
   return path.join(process.cwd(), "backups");
 }
 

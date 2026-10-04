@@ -15,6 +15,7 @@ import { extractTemplateVariables } from "@/lib/notifications/templates";
 import { UI_JOB_STATUSES, normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
 import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { revalidateCommunicationsTemplates } from "@/lib/communications/revalidate";
+import { isMissingColumnError } from "@/lib/db-errors";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 function supportsCommsTemplates() {
@@ -86,10 +87,10 @@ export default async function NotificationTemplatesPage({
       where: {
         orgId: replaceOrgId,
         OR: [
-          { body: { contains: "Eagle Info Solutions" } },
-          { body: { contains: "Your Repair Team" } },
-          { subject: { contains: "Eagle Info Solutions" } },
-          { subject: { contains: "Your Repair Team" } },
+          { body: { contains: "Eagle Info Solutions" , mode: "insensitive" as const} },
+          { body: { contains: "Your Repair Team" , mode: "insensitive" as const} },
+          { subject: { contains: "Eagle Info Solutions" , mode: "insensitive" as const} },
+          { subject: { contains: "Your Repair Team" , mode: "insensitive" as const} },
         ],
       },
       select: { id: true, body: true, subject: true },
@@ -258,7 +259,7 @@ export default async function NotificationTemplatesPage({
       saved = true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      const isMissingColumn = msg.includes("no such column") || msg.includes("unknown column") || msg.includes("has no column");
+      const isMissingColumn = isMissingColumnError(error) || msg.includes("unknown column") || msg.includes("has no column");
       if (isMissingColumn) {
         // Schema not migrated yet — update without meta fields, flag that migration is needed.
         try {
@@ -292,40 +293,6 @@ export default async function NotificationTemplatesPage({
     }
   }
 
-  async function applyMetaMigration() {
-    "use server";
-    const { user: actor } = await requireOrgSession();
-    if (actor.role !== "ADMIN") redirect("/dashboard");
-
-    const statements = [
-      `ALTER TABLE "CommunicationTemplate" ADD COLUMN "metaTemplateName" TEXT`,
-      `ALTER TABLE "CommunicationTemplate" ADD COLUMN "metaLanguageCode" TEXT`,
-      `ALTER TABLE "OutboundMessage" ADD COLUMN "metaTemplateName" TEXT`,
-      `ALTER TABLE "OutboundMessage" ADD COLUMN "metaTemplateLanguage" TEXT`,
-      `ALTER TABLE "OutboundMessage" ADD COLUMN "metaTemplateVars" TEXT`,
-    ];
-
-    let applied = 0;
-    const errors: string[] = [];
-    for (const sql of statements) {
-      try {
-        await prisma.$executeRawUnsafe(sql);
-        applied++;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        // "duplicate column" means it already exists — that's fine.
-        if (!msg.includes("duplicate column") && !msg.includes("already exists")) {
-          errors.push(msg.slice(0, 80));
-        }
-      }
-    }
-
-    revalidateCommunicationsTemplates();
-    if (errors.length > 0) {
-      redirect(`${COMMUNICATIONS_ROUTES.templates}?error=${encodeURIComponent("Migration partial: " + errors.join("; "))}`);
-    }
-    redirect(`${COMMUNICATIONS_ROUTES.templates}?saved=Migration+applied+(${applied}+columns+added)`);
-  }
 
   async function deleteTemplate(formData: FormData) {
     "use server";
@@ -533,11 +500,6 @@ export default async function NotificationTemplatesPage({
               <form action={deduplicateTemplates}>
                 <SubmitButton bare className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-red-400/40 hover:text-red-600 dark:hover:text-red-400">
                   Remove duplicates
-                </SubmitButton>
-              </form>
-              <form action={applyMetaMigration}>
-                <SubmitButton bare className="inline-flex h-9 items-center rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--ink)]">
-                  Apply migration
                 </SubmitButton>
               </form>
             </div>

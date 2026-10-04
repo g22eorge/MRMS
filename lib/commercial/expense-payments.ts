@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import type { TxClient } from "@/lib/prisma";
 
 import { postExpensePayment } from "@/lib/accounting/post";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
@@ -36,7 +36,7 @@ export type RecordExpensePaymentResult = {
  * Returns data needed for async ledger posting (caller handles ledger post separately).
  */
 export async function recordExpensePayment(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   params: {
     orgId: string;
     userId: string;
