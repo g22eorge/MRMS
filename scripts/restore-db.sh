@@ -4,7 +4,7 @@
 # Usage, from the repository root:
 #   ./scripts/restore-db.sh <file.dump> --force
 #
-#   Production:  docker compose cp backup:/backups/<name> .   then restore that file
+#   Production:  $DOCKER compose cp backup:/backups/<name> .   then restore that file
 #   Development: COMPOSE_FILE=docker-compose.dev.yml ./scripts/restore-db.sh backups/<name> --force
 #
 # The file is a host path. It can be one copied out of the backups volume, one
@@ -27,6 +27,11 @@
 #      matters.)
 
 set -euo pipefail
+
+# On the shared server the deploy user runs Docker through a sudoers rule
+# rather than the docker group (the same arrangement eaglestays uses), so the
+# binary is overridable:  DOCKER="sudo -n /usr/bin/docker" ./scripts/restore-db.sh ...
+DOCKER="${DOCKER:-docker}"
 
 FORCE=0
 FILE=""
@@ -61,7 +66,7 @@ fi
 
 # Inside the container, the image's own POSTGRES_USER / POSTGRES_DB say which
 # database this is — the same in development and production, no .env parsing.
-pg() { docker compose exec -T postgres sh -c "$1"; }
+pg() { $DOCKER compose exec -T postgres sh -c "$1"; }
 
 if ! pg 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null'; then
   echo "ERROR: the postgres service is not running in this compose project" >&2
@@ -78,7 +83,7 @@ if [ "$(head -c 5 "$SNAPSHOT")" != "PGDMP" ]; then
 fi
 echo "OK: pre-restore dump → $SNAPSHOT ($(du -h "$SNAPSHOT" | cut -f1))"
 
-docker compose stop app worker scheduler >/dev/null 2>&1 || true
+$DOCKER compose stop app worker scheduler >/dev/null 2>&1 || true
 echo "OK: app, worker and scheduler stopped"
 
 pg 'dropdb -U "$POSTGRES_USER" --if-exists --force "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
@@ -90,12 +95,12 @@ echo "OK: restored from $BASE"
 # twelve-minute one in testing — with the database already replaced and the
 # app down for all of it. If an image is genuinely missing, this fails loudly
 # and the database is still restored; build separately and start it.
-if ! docker compose up -d --no-build >/dev/null; then
+if ! $DOCKER compose up -d --no-build >/dev/null; then
   # The database is already restored at this point. Saying only "error" here
   # invites a second restore, which would take a pre-restore dump of the
   # backup just restored and replace the real one in the operator's head.
   echo "WARN: database restored from $BASE, but the services did not start." >&2
-  echo "      Fix the images, then: docker compose up -d" >&2
+  echo "      Fix the images, then: $DOCKER compose up -d" >&2
   echo "      To undo the restore instead: ./scripts/restore-db.sh $SNAPSHOT --force" >&2
   exit 2
 fi

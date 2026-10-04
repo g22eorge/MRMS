@@ -18,9 +18,14 @@
 
 set -euo pipefail
 
-if ! docker compose ps --status running --services 2>/dev/null | grep -qx backup; then
+# On the shared server the deploy user runs Docker through a sudoers rule
+# rather than the docker group (the same arrangement eaglestays uses), so the
+# binary is overridable:  DOCKER="sudo -n /usr/bin/docker" ./scripts/backup-db.sh
+DOCKER="${DOCKER:-docker}"
+
+if ! $DOCKER compose ps --status running --services 2>/dev/null | grep -qx backup; then
   echo "ERROR: the 'backup' service is not running in this compose project." >&2
-  echo "       On a server: docker compose up -d backup" >&2
+  echo "       On a server: $DOCKER compose up -d backup" >&2
   echo "       In development there is no backup service — use: bun run pg:export" >&2
   exit 1
 fi
@@ -28,7 +33,7 @@ fi
 # Same naming and write-then-rename as pg-backup.sh, so an interrupted dump can
 # never be mistaken for a usable one. Runs inside the container, where PG* are
 # already set and /backups is the volume.
-docker compose exec -T backup sh -euc '
+$DOCKER compose exec -T backup sh -euc '
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
   target="/backups/mrms-${stamp}.dump"
   pg_dump -Fc -f "${target}.partial"

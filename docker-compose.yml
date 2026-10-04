@@ -7,6 +7,18 @@
 # Everything runs in a container, database included. The database lives in the
 # named volume `pgdata`; losing that volume loses the data, which is why the
 # `backup` service is part of the default stack rather than an optional extra.
+#
+# Two ways to run it, one file. Each built service carries both `build:` and an
+# `image:` name, so:
+#
+#   build here        docker compose up -d --build
+#   pull prebuilt     IMAGE_PREFIX=ghcr.io/<owner>/mrms IMAGE_TAG=<sha> \
+#                       docker compose pull && docker compose up -d --no-build
+#
+# The second is what .github/workflows/deploy.yml does on the server: images are
+# built on GitHub's runners, not on a 1-vCPU box that is also serving another
+# site. `--no-build` matters there — without it a failed pull falls back to a
+# build on the server, which is the thing this arrangement exists to avoid.
 
 name: mrms
 
@@ -87,6 +99,7 @@ services:
   # failed migration keeps the old container serving instead of starting a new
   # one against a schema it does not match.
   migrate:
+    image: ${IMAGE_PREFIX:-mrms}-migrate:${IMAGE_TAG:-latest}
     build:
       context: .
       target: migrator
@@ -107,6 +120,7 @@ services:
           memory: 64M
 
   app:
+    image: ${IMAGE_PREFIX:-mrms}-app:${IMAGE_TAG:-latest}
     build:
       context: .
       target: runner
@@ -158,6 +172,7 @@ services:
           memory: 32M
 
   worker:
+    image: ${IMAGE_PREFIX:-mrms}-worker:${IMAGE_TAG:-latest}
     build:
       context: .
       target: worker
@@ -186,6 +201,7 @@ services:
   # subscriptions stop advancing, data healing stops and audit logs grow without
   # bound — all silently.
   scheduler:
+    image: ${IMAGE_PREFIX:-mrms}-scheduler:${IMAGE_TAG:-latest}
     build:
       context: .
       target: scheduler
@@ -210,6 +226,7 @@ services:
           memory: 32M
 
   backup:
+    image: ${IMAGE_PREFIX:-mrms}-backup:${IMAGE_TAG:-latest}
     build:
       context: .
       target: backup

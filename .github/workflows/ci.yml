@@ -11,22 +11,26 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgresql://mrms:mrms_ci@localhost:5432/mrms_ci?schema=public
+      DATABASE_URL: postgresql://mrms:mrms_dev_password@localhost:5434/mrms_scratch?schema=public
       BETTER_AUTH_SECRET: "test-only-not-a-real-secret-for-ci-builds-only"
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       BETTER_AUTH_URL: http://127.0.0.1:3000
 
+    # Matches what `bun run test:unit` hard-codes (port 5434, mrms_scratch, the
+    # dev password). This service used to be 5432 / mrms_ci, so the unit-test
+    # step below could never reach a database — invisible only because Actions
+    # has not run on this repository since 2026-05-29.
     services:
       postgres:
         image: postgres:18-alpine
         env:
           POSTGRES_USER: mrms
-          POSTGRES_PASSWORD: mrms_ci
-          POSTGRES_DB: mrms_ci
+          POSTGRES_PASSWORD: mrms_dev_password
+          POSTGRES_DB: mrms_scratch
         ports:
-          - 5432:5432
+          - 5434:5432
         options: >-
-          --health-cmd "pg_isready -U mrms -d mrms_ci"
+          --health-cmd "pg_isready -U mrms -d mrms_scratch"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
