@@ -16,6 +16,7 @@
  */
 
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { applyQaEnv } from "./qa-env.mjs";
 
@@ -23,6 +24,11 @@ import { applyQaEnv } from "./qa-env.mjs";
 applyQaEnv();
 
 const BASE_URL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:4041";
+
+// Honor the gate build dir (see qa-perf.mjs): local builds isolate to
+// .next-gate, so serve whichever dir the build actually landed in.
+const distDir = process.env.NEXT_DIST_DIR
+  || (fs.existsSync(".next/BUILD_ID") ? ".next" : ".next-gate");
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? process.env.E2E_ADMIN_EMAIL ?? "admin@eagle.local";
 const ADMIN_PASSWORD = process.env.SEED_PASSWORD ?? process.env.E2E_PASSWORD ?? "Admin123!";
 
@@ -70,6 +76,7 @@ async function startServerIfNeeded() {
   serverProcess = spawn("bun", ["run", "start"], {
     env: {
       ...process.env,
+      NEXT_DIST_DIR: distDir,
       PORT: port,
       DATABASE_URL: process.env.DATABASE_URL,
       BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "qa-local-better-auth-secret-at-least-32-chars",

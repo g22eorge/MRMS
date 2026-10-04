@@ -1,4 +1,4 @@
-import { OrgModule } from "@prisma/client";
+import type { OrgModule } from "@prisma/client";
 
 import { MODULE_ICON_PATHS } from "@/lib/module-catalog";
 

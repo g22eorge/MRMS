@@ -16,6 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { isMissingTableError } from "@/lib/db-errors";
 import { resolveTechCost } from "@/lib/billing";
+import { jobBillBelowCost } from "@/lib/commercial/margin-guard";
 import { can } from "@/lib/permissions";
 import { hasJobPayoutColumns } from "@/lib/payouts";
 import { sanitizeOptionalText } from "@/lib/sanitize";
@@ -406,6 +407,24 @@ export async function updateJobAction(formData: FormData) {
         error:
           "Cannot complete job yet. Our bill to client must be set by Admin first.",
       };
+    }
+
+    // Margin guard: a completed job must not bill below its technician cost
+    // (fee override wins, else the submitted bill — the Repair Margin basis).
+    // In-house jobs record no tech cost and are unaffected.
+    const finalBill = incomingClientBill ?? existingClientBill;
+    if (typeof finalBill === "number") {
+      const techBillRow = await prisma.job
+        .findUnique({ where: { id: existing.id }, select: { externalTechFee: true, externalTechBill: true } })
+        .catch(() => null);
+      const fee = typeof payload.externalTechFee === "number" ? payload.externalTechFee : techBillRow?.externalTechFee;
+      const submitted = techBillRow?.externalTechBill;
+      if (jobBillBelowCost({ clientBill: finalBill, externalTechFee: fee, externalTechBill: submitted })) {
+        const cost = typeof fee === "number" && fee > 0 ? fee : submitted;
+        return {
+          error: `Cannot complete job below cost. The bill of ${finalBill.toLocaleString()} is under the technician cost of ${Number(cost).toLocaleString()}.`,
+        };
+      }
     }
   }
 

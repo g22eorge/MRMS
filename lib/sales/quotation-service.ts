@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 
 import { computeLinesVat } from "@/lib/commercial/vat";
+import { isBelowCost } from "@/lib/commercial/margin-guard";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { can } from "@/lib/permissions";
 import { normalizeCurrency, readCurrencyAndRate, roundMoney } from "@/lib/currency";
@@ -111,20 +112,28 @@ export async function createQuotationRecord(data: CreateQuotationInput) {
   if (partIds.length) {
     const validParts = await prisma.part.findMany({
       where: { id: { in: partIds }, orgId, isActive: true },
-      select: { id: true, name: true, taxable: true, taxRate: true, sellingPrice: true },
+      select: { id: true, name: true, taxable: true, taxRate: true, sellingPrice: true, unitCost: true },
     });
     if (validParts.length !== partIds.length) throw new Error("One or more quoted products are inactive or not found");
     for (const part of validParts) taxByPart.set(part.id, { taxable: part.taxable, taxRate: part.taxRate });
 
     // A product's selling price is its minimum: a quotation may be negotiated
     // up, never below the floor. Same rule as the POS till, enforced here so it
-    // holds regardless of what the form sent.
+    // holds regardless of what the form sent. Compared in base currency: the
+    // floor and the cost are base-denominated while the line may be foreign.
+    const rate = currency === baseCurrency ? 1 : (money.exchangeRateToBase ?? 1);
     const floors = new Map(validParts.map((part) => [part.id, part]));
     for (const item of items) {
       if (!item.partId) continue;
       const part = floors.get(item.partId);
-      if (part?.sellingPrice != null && item.unitPrice < part.sellingPrice) {
+      const basePrice = item.unitPrice * rate;
+      if (part?.sellingPrice != null && basePrice < part.sellingPrice) {
         throw new Error(`${part.name} cannot be quoted below its minimum of ${part.sellingPrice}`);
+      }
+      // A price below cost is a certain loss — rejected even where the
+      // selling-price floor would allow it (e.g. deep line discounts).
+      if (isBelowCost({ unitPrice: basePrice, discountPct: item.discount, unitCost: part?.unitCost ?? null })) {
+        throw new Error(`${part?.name ?? "Item"} cannot be quoted below its cost`);
       }
     }
   }

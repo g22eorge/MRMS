@@ -7,6 +7,10 @@ import { requireOrgSession } from "@/lib/org-context";
 import { ALL_MODULES } from "@/lib/module-catalog";
 
 export * from "@/lib/module-catalog";
+// Runtime enum for server consumers (module-catalog is client-safe and no
+// longer re-exports it — see its header). This module is server-only
+// (next/cache, next/navigation, prisma), so the value import is safe here.
+export { OrgModule };
 
 /** Cache tag for an org's module grants — revalidate this on any grant change. */
 export const orgModulesTag = (orgId: string) => `org-modules:${orgId}`;

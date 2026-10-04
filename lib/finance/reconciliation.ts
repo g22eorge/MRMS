@@ -254,7 +254,7 @@ export async function loadOverdueInvoiceTotals(params: {
     SELECT currency, "exchangeRateToBase" AS rate,
       SUM(CASE WHEN "totalAmount" > "paidAmount" THEN "totalAmount" - "paidAmount" ELSE 0 END) AS balance, COUNT(*) AS n
     FROM "Invoice"
-    WHERE "orgId" = ${params.orgId} AND "status" = 'ISSUED' AND "dueAt" < ${params.now}
+    WHERE "orgId" = ${params.orgId} AND "status" = 'ISSUED' AND "dueDate" < ${params.now}
     GROUP BY currency, "exchangeRateToBase"`;
   return {
     total: toBaseGroups(rows, params.baseCurrency),

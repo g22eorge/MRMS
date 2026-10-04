@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { PLAN_PRICES } from "@/lib/plan-prices";
+import { PLAN_PRICES } from "@/lib/plan-price-table";
 import { useFormStatus } from "react-dom";
-import { OrgModule } from "@prisma/client";
+import type { OrgModule } from "@prisma/client";
 
 import {
   MODULE_LABELS,

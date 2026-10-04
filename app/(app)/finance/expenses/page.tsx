@@ -14,7 +14,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { postExpensePayment, reverseJournalEntry } from "@/lib/accounting/post";
-import { recordExpensePayment } from "@/lib/commercial/expense-payments";
+import { recordExpensePayment, postExpensePaymentToLedger } from "@/lib/commercial/expense-payments";
 import { formatMoneyCompact } from "@/lib/currency";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -372,8 +372,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
     // Double taps serialize inside the shared recorder (balance rechecked
     // beside the write); the loser gets the balance message, not a double pay.
+    let ledgerPostData: Awaited<ReturnType<typeof recordExpensePayment>>["ledgerPostData"] | null = null;
     await prisma.$transaction(async (tx) => {
-      await recordExpensePayment(tx, {
+      const result = await recordExpensePayment(tx, {
         orgId,
         userId: user.id,
         expenseId,
@@ -381,11 +382,17 @@ export default async function ExpensesPage({ searchParams }: Props) {
         method: methodRaw || null,
         paidAt,
       });
+      ledgerPostData = result.ledgerPostData ?? null;
     }).catch((error: unknown) => {
       // NEXT_REDIRECT (from fail()) must propagate.
       if (error instanceof Error && "digest" in error) throw error;
       fail(error instanceof Error ? error.message : "Could not record the payment.");
     });
+
+    // Fire-and-forget ledger post — idempotent on reference, safe to retry.
+    if (ledgerPostData) {
+      postExpensePaymentToLedger(ledgerPostData).catch(() => {});
+    }
 
     revalidatePath("/finance/expenses");
     revalidatePath("/payables");
@@ -540,12 +547,14 @@ export default async function ExpensesPage({ searchParams }: Props) {
                 </p>
                 <label className="block text-[0.75rem] font-medium text-[var(--ink-muted)]">
                   Amount
+                  {/* No min/max/step: native constraints can refuse to submit
+                      with no visible feedback (fractional dues, float dust),
+                      and the server already rejects non-positive and
+                      over-balance amounts with an error banner. */}
                   <input
                     name="amount"
                     type="number"
-                    min="0.01"
-                    step="0.01"
-                    max={expense.amount - expense.paidAmount}
+                    step="any"
                     required
                     defaultValue={expense.amount - expense.paidAmount}
                     className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 py-1.5 text-[0.75rem]"
@@ -574,12 +583,13 @@ export default async function ExpensesPage({ searchParams }: Props) {
                     ))}
                   </select>
                 </label>
-                <button
-                  type="submit"
-                  className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black"
+                <SubmitButton
+                  bare
+                  className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-[0.75rem] font-bold text-black disabled:opacity-60"
+                  pendingLabel="Recording…"
                 >
                   Record payment
-                </button>
+                </SubmitButton>
               </form>
             ) : null}
             {canDelete ? (

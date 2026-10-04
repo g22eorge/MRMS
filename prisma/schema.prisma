@@ -62,6 +62,11 @@ model Organization {
   baseCurrency        String @default("UGX")
   supportedCurrencies String @default("UGX") // comma-separated ISO currency codes
 
+  // Client comms: append the public job-tracking link (/status/[jobNumber])
+  // to intake + status-change WhatsApp messages. Default ON; an org opts out
+  // rather than every org opting in (SPEC-001).
+  trackingLinksEnabled Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -117,6 +122,12 @@ model Organization {
   portalUsers             PortalUser[]              @relation("OrgPortalUsers")
   warrantyClaims          WarrantyClaim[]
   paymentReminderSettings PaymentReminderSettings?
+  // ADR-002 critical subset: financial/inventory rows with required orgId get a
+  // real DB FK (Cascade, matching Invoice/Payment/Sale) instead of app-only scoping.
+  receipts                Receipt[]
+  invoiceLines            InvoiceLine[]
+  paymentAllocations      PaymentAllocation[]
+  partLocationStocks      PartLocationStock[]
 
   @@index([slug])
   @@index([isActive])
@@ -2345,13 +2356,14 @@ model StockLocation {
 }
 
 model PartLocationStock {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   partId      String
   locationId  String
-  qtyOnHand   Int      @default(0)
-  qtyReserved Int      @default(0)
-  updatedAt   DateTime @updatedAt
+  qtyOnHand   Int          @default(0)
+  qtyReserved Int          @default(0)
+  updatedAt   DateTime     @updatedAt
 
   part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
 
@@ -2451,10 +2463,11 @@ model ReorderRule {
 }
 
 model InvoiceLine {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   orgId          String
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   invoiceId      String
-  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   sourceType     String?
   sourceId       String?
   description    String
@@ -2493,11 +2506,11 @@ model TaxRate {
 }
 
 model Expense {
-  id                 String          @id @default(cuid())
+  id                 String           @id @default(cuid())
   orgId              String
-  org                Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  expenseNumber      String          @unique
-  category           ExpenseCategory @default(OTHER)
+  org                Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  expenseNumber      String           @unique
+  category           ExpenseCategory  @default(OTHER)
   description        String
   amount             Decimal @db.Decimal(18, 2)
   currency           String          @default("UGX")
@@ -2512,14 +2525,14 @@ model Expense {
   paidAmount         Decimal @db.Decimal(18, 2) @default(0)
   method             PaymentMethod?
   supplierId         String?
-  supplier           Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  supplier           Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   branchId           String?
-  branch             Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branch             Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
   reference          String?
   notes              String?
   createdById        String
-  createdBy          User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  createdAt          DateTime        @default(now())
+  createdBy          User             @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime         @default(now())
   payments           ExpensePayment[]
 
   @@index([orgId, paidAt])
@@ -2589,13 +2602,13 @@ model RecurringExpense {
   frequency   String // WEEKLY | MONTHLY | MONTH_END | QUARTERLY | ANNUAL
   nextDueAt   DateTime
   lastIssuedAt DateTime?
-  isActive    Boolean         @default(true)
-  autoIssue   Boolean         @default(true)
-  notes       String?
-  createdById String
-  createdBy   User            @relation("RecurringExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  isActive     Boolean         @default(true)
+  autoIssue    Boolean         @default(true)
+  notes        String?
+  createdById  String
+  createdBy    User            @relation("RecurringExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   @@index([orgId, isActive, nextDueAt])
   @@index([supplierId])
@@ -2639,17 +2652,18 @@ model DocumentTaxLine {
 }
 
 model Receipt {
-  id                 String    @id @default(cuid())
+  id                 String       @id @default(cuid())
   orgId              String
-  receiptNumber      String    @unique
+  org                Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  receiptNumber      String       @unique
   paymentId          String?
-  payment            Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  payment            Payment?     @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   saleId             String?
-  sale               Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  sale               Sale?        @relation(fields: [saleId], references: [id], onDelete: SetNull)
   invoiceId          String?
-  invoice            Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  invoice            Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   branchId           String?
-  branch             Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branch             Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   clientId           String?
   client             Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   amount             Decimal @db.Decimal(18, 2)
@@ -2661,7 +2675,7 @@ model Receipt {
   exchangeRateToBase Decimal? @db.Decimal(12, 6)
   issuedAt           DateTime  @default(now())
   issuedById         String?
-  issuedBy           User?     @relation("ReceiptIssuedBy", fields: [issuedById], references: [id], onDelete: SetNull)
+  issuedBy           User?        @relation("ReceiptIssuedBy", fields: [issuedById], references: [id], onDelete: SetNull)
   voidedAt           DateTime?
   voidReason         String?
 
@@ -2674,12 +2688,13 @@ model Receipt {
 }
 
 model PaymentAllocation {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   paymentId   String
   // L10: real FK so allocations die with their payment instead of orphaning.
   // (targetType/targetId stays polymorphic by design.)
-  payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment     Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   targetType  String
   targetId    String
   amount      Decimal @db.Decimal(18, 2)

@@ -19,6 +19,12 @@ BACKUP_INTERVAL="${BACKUP_INTERVAL:-86400}"
 BACKUP_KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 
 mkdir -p "$BACKUP_DIR"
+# The app container mounts this volume too (Settings → Backups) and runs as the
+# unprivileged `node` user, while this service runs as root. Deleting a file
+# needs write on the directory, not the file, so without this the page can list
+# and download dumps but every delete fails. The volume is private to these two
+# services; the dumps themselves stay 0644.
+chmod 0777 "$BACKUP_DIR"
 
 log() { echo "[backup] $(date -u '+%Y-%m-%dT%H:%M:%SZ') $*"; }
 

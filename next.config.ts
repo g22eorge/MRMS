@@ -79,6 +79,10 @@ const nextConfig: NextConfig = {
       { source: "/outbox", destination: "/settings/notifications/outbox", permanent: false },
       // Sales targets consolidated into the single /targets editor.
       { source: "/settings/targets", destination: "/targets", permanent: false },
+      // Legacy public intake URL — the form lives at /repair.
+      { source: "/repair-request", destination: "/repair", permanent: false },
+      // No top-level /profile page — user profile lives under Settings.
+      { source: "/profile", destination: "/settings/profile", permanent: false },
     ];
   },
   async headers() {

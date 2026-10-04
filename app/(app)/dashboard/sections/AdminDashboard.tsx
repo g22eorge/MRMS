@@ -282,7 +282,7 @@ export async function AdminDashboard({
                 <Link
                   key={n.label}
                   href={n.href}
-                  className={`flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-[var(--dc-panel-2)] ${n.count === 0 ? "opacity-45" : ""}`}
+                  className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-[var(--dc-panel-2)]"
                 >
                   <span className={`h-9 w-[3px] shrink-0 rounded-full ${n.count === 0 ? "bg-[var(--dc-line)]" : sevMark[n.sev]}`} />
                   <div className="min-w-0">

@@ -86,6 +86,7 @@ async function run() {
       serverProcess = spawn("bun", ["run", "start"], {
         env: {
           ...process.env,
+          NEXT_DIST_DIR: QA_DIST,
           PORT: port,
           DATABASE_URL: process.env.DATABASE_URL,
           BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "qa-local-better-auth-secret-at-least-32-chars",

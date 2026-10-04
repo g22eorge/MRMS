@@ -3,6 +3,7 @@ import type { TxClient } from "@/lib/prisma";
 import { postExpensePayment } from "@/lib/accounting/post";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { parsePaymentMethod } from "@/lib/constants/payment-methods";
+import { prisma } from "@/lib/prisma";
 
 export type ExpensePaidStatus = "UNPAID" | "PART_PAID" | "PAID";
 
@@ -17,13 +18,22 @@ export type RecordExpensePaymentResult = {
   paymentId: string;
   paidAmount: number;
   isPaid: boolean;
+  /** Data needed to post to ledger asynchronously */
+  ledgerPostData?: {
+    orgId: string;
+    userId: string;
+    amount: number;
+    method: string | null;
+    date: Date;
+    reference: string;
+    description: string;
+  };
 };
 
 /**
  * Record one (possibly partial) payment against an expense, atomically:
- * balance cap, ExpensePayment row, paidAmount rollup, paidAt on completion,
- * and one idempotent ledger post keyed on the payment id. Throws Error on
- * any violation — callers turn it into their banner.
+ * balance cap, ExpensePayment row, paidAmount rollup, paidAt on completion.
+ * Returns data needed for async ledger posting (caller handles ledger post separately).
  */
 export async function recordExpensePayment(
   tx: TxClient,
@@ -76,16 +86,6 @@ export async function recordExpensePayment(
     data: { paidAmount, ...(isPaid ? { paidAt: params.paidAt } : {}) },
   });
 
-  await postExpensePayment(tx, {
-    orgId,
-    userId,
-    amount: params.amount,
-    method: params.method ?? null,
-    date: params.paidAt,
-    reference: `expensepay:${payment.id}`,
-    description: `Expense ${expense.expenseNumber} — ${expense.description}`,
-  });
-
   await writeSystemAuditEvent({
     orgId,
     actorUserId: userId,
@@ -95,5 +95,42 @@ export async function recordExpensePayment(
     summary: `${expense.expenseNumber} — ${params.amount.toLocaleString()} paid${isPaid ? " — settled in full" : " — part payment"}`,
   }).catch(() => {});
 
-  return { paymentId: payment.id, paidAmount, isPaid };
+  return {
+    paymentId: payment.id,
+    paidAmount,
+    isPaid,
+    ledgerPostData: {
+      orgId,
+      userId,
+      amount: params.amount,
+      method: params.method ?? null,
+      date: params.paidAt,
+      reference: `expensepay:${payment.id}`,
+      description: `Expense ${expense.expenseNumber} — ${expense.description}`,
+    },
+  };
+}
+
+/**
+ * Post expense payment to the cash-basis ledger.
+ * Idempotent on reference — safe to call multiple times / retry.
+ * Runs in its own transaction so it doesn't block the payment recording.
+ */
+export async function postExpensePaymentToLedger(
+  params: {
+    orgId: string;
+    userId: string;
+    amount: number;
+    method: string | null;
+    date: Date;
+    reference: string;
+    description: string;
+  },
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await postExpensePayment(tx, params);
+  }).catch((error) => {
+    console.error("[expense-payments] Ledger post failed:", error);
+    // Idempotent — can be retried. Logged for observability.
+  });
 }

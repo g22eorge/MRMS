@@ -115,6 +115,33 @@ services:
       timeout: 5s
       retries: 5
 
+  # One-shot: brings the shared node_modules volume in line with bun.lock, then
+  # exits. Everything that mounts the volume waits for it.
+  #
+  # The image installs dependencies at build time, but node_modules lives in a
+  # named volume, and Docker copies the image's copy into a volume only when the
+  # volume is empty — the first `dev:up` on a machine and never again. So a
+  # dependency change reached new clones and nobody else: when main bumped Next
+  # to 16.3.8 for an RCE advisory, every existing dev container kept running
+  # 16.3.5, with nothing to say so. `bun install --frozen-lockfile` against the
+  # volume is a no-op when nothing changed and installs exactly the lockfile
+  # when something did.
+  #
+  # It is also now the only thing that writes to the volume, which closes the
+  # first-run race the worker/app ordering below was papering over.
+  deps:
+    build:
+      context: .
+      target: dev
+    container_name: mrms-deps-dev
+    restart: "no"
+    command: ["bun", "install", "--frozen-lockfile"]
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    healthcheck:
+      disable: true
+
   app:
     build:
       context: .
@@ -124,6 +151,8 @@ services:
     env_file: *dev-env-file
     environment: *dev-env
     depends_on:
+      deps:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -155,15 +184,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      # Not an ordering preference — a race. app, worker and scheduler all mount
-      # the same `node_modules` volume, and on a machine that has never run this
-      # before it is empty, so Docker populates it from the image at first mount.
-      # Started together, two containers copy into it at once and one of them
-      # dies with `mkdir .../node_modules/_data/<pkg>: file exists`. Only the
-      # first `dev:up` on a new clone can hit it, which is the worst possible
-      # audience for it. app goes first, populates the volume, these two attach
-      # to a volume that is already there. scheduler already waited; worker did
-      # not, and that is the one that failed.
+      # Through app, this also waits on `deps`, which fills and updates the
+      # shared node_modules volume before anything else mounts it. Two
+      # containers populating that volume at once was a real first-run failure
+      # (`mkdir .../node_modules/_data/<pkg>: file exists`); `deps` being the
+      # only writer is what rules it out.
       app:
         condition: service_started
     volumes:

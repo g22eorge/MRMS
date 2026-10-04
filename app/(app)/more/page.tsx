@@ -91,6 +91,15 @@ export default async function MorePage() {
   // Derive app version from package.json
   const APP_VERSION = "2.6.0";
 
+  // Finance + collections visibility — mirrors the page guards so /more never
+  // links somewhere that bounces straight back to /dashboard.
+  const canFinance = can.viewFinancials(perm) && ok("INVOICING");
+  const canAccountantFinance = canFinance && ["ADMIN", "MANAGER", "FINANCE"].includes(user.role);
+  const canCollect = (can.reviewExternalBills(perm) || can.approveInvoices(perm)) && ok("JOBS");
+  const showFinance = canFinance || canCollect;
+  const showPos = ["ADMIN","OPS","FRONT_DESK","MANAGER"].includes(user.role) && ok("POS");
+  const showTargets = (can.setTargets(perm) || can.viewTeamTargets(perm)) && ok("TARGETS");
+
   return (
     <div className="pb-6">
 
@@ -154,6 +163,20 @@ export default async function MorePage() {
           />
         )}
 
+        {["ADMIN","MANAGER","TECH_MANAGER","OPS","FRONT_DESK"].includes(user.role) && (
+          <NavRow href="/service" iconBg="bg-[var(--panel-strong)]"
+            description="Service overview, field, technicians and complaints"
+            icon={<ItemIcon d={["M4 4h4v4H4z","M12 4h4v4h-4z","M4 12h4v4H4z","M12 12h4v4h-4z"]} color="text-[var(--ink-muted)]" />}
+          />
+        )}
+
+        {can.approveWork(perm) && (
+          <NavRow href="/warranty" iconBg="bg-[var(--panel-strong)]"
+            description="Warranty claims and approvals"
+            icon={<ItemIcon d={["M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"]} color="text-[var(--ink-muted)]" />}
+          />
+        )}
+
       </div>
 
       {/* ── DOCUMENTS ───────────────────────────────────────────────── */}
@@ -185,6 +208,11 @@ export default async function MorePage() {
                 <NavRow href="/documents/refunds" iconBg="bg-[var(--panel-strong)]"
                   icon={<ItemIcon d={["M12 2v20","M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6","M6 12h12"]} color="text-[var(--ink-muted)]" />}
                 />
+                {["ADMIN","MANAGER","OPS"].includes(user.role) && (
+                  <NavRow href="/documents/templates" iconBg="bg-[var(--panel-strong)]"
+                    icon={<ItemIcon d={["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M8 13h8","M8 17h5","M8 9h2"]} color="text-[var(--ink-muted)]" />}
+                  />
+                )}
               </>
             )}
 
@@ -192,15 +220,110 @@ export default async function MorePage() {
         </>
       )}
 
+      {/* ── FINANCE ──────────────────────────────────────────────────── */}
+      {showFinance && (
+        <>
+          <SectionHeader title="Finance" />
+          <div className="divide-y divide-[var(--line)]/50 rounded-2xl border border-[var(--line)] bg-[var(--panel)] mx-2 overflow-hidden">
+
+            {canFinance && (
+              <NavRow href="/finance" iconBg="bg-[var(--panel-strong)]"
+                description="Finance overview, reports and accounts"
+                icon={<ItemIcon d={["M3 3v18h18","m19 9-5 5-4-4-3 3"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canFinance && (
+              <NavRow href="/finance/expenses" iconBg="bg-[var(--panel-strong)]"
+                description="Log and track business expenses"
+                icon={<ItemIcon d={["M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm-8 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canFinance && (
+              <NavRow href="/finance/bank" iconBg="bg-[var(--panel-strong)]"
+                description="Bank accounts and balances"
+                icon={<ItemIcon d={["M3 9l9-6 9 6","M4 9v10","M20 9v10","M8 13v3","M12 13v3","M16 13v3","M2 21h20"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canFinance && (
+              <NavRow href="/finance/recurring" iconBg="bg-[var(--panel-strong)]"
+                description="Recurring income and expenses"
+                icon={<ItemIcon d={["M17 1l4 4-4 4","M3 11V9a4 4 0 0 1 4-4h14","M7 23l-4-4 4-4","M21 13v2a4 4 0 0 1-4 4H3"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canFinance && (
+              <NavRow href="/finance/recurring-expenses" iconBg="bg-[var(--panel-strong)]"
+                description="Scheduled expense templates"
+                icon={<ItemIcon d={["M17 1l4 4-4 4","M3 11V9a4 4 0 0 1 4-4h14","M7 23l-4-4 4-4","M21 13v2a4 4 0 0 1-4 4H3"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canFinance && (
+              <NavRow href="/finance/reports" iconBg="bg-[var(--panel-strong)]"
+                description="P&L, balance sheet, cash flow and VAT"
+                icon={<ItemIcon d={["M3 3v18h18","m19 9-5 5-4-4-3 3"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {["ADMIN","MANAGER"].includes(user.role) && ok("INVOICING") && (
+              <NavRow href="/finance/tax-rates" iconBg="bg-[var(--panel-strong)]"
+                description="Tax rates for sales and documents"
+                icon={<ItemIcon d={["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M9 13l6 0"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canAccountantFinance && (
+              <NavRow href="/finance/accounts" iconBg="bg-[var(--panel-strong)]"
+                description="Chart of accounts"
+                icon={<ItemIcon d={["M4 19h16","M6 19V9","M10 19V5","M14 19v-8","M18 19v-5"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canAccountantFinance && (
+              <NavRow href="/finance/journal" iconBg="bg-[var(--panel-strong)]"
+                description="Double-entry journal"
+                icon={<ItemIcon d={["M5 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z","M8 8h8","M8 12h8","M8 16h5"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canCollect && (
+              <NavRow href="/payout-followups" iconBg="bg-[var(--panel-strong)]"
+                description="Collect client payments"
+                icon={<ItemIcon d={["M12 2v20","M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {canCollect && (
+              <NavRow href="/payables" iconBg="bg-[var(--panel-strong)]"
+                description="Supplier bills and tech payouts"
+                icon={<ItemIcon d={["M12 2v20","M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+          </div>
+        </>
+      )}
+
       {/* ── POS ──────────────────────────────────────────────────────── */}
-      {["ADMIN","OPS","FRONT_DESK","MANAGER"].includes(user.role) && ok("POS") && (
+      {(showPos || showTargets) && (
         <>
           <SectionHeader title="Sales" />
           <div className="divide-y divide-[var(--line)]/50 rounded-2xl border border-[var(--line)] bg-[var(--panel)] mx-2 overflow-hidden">
-            <NavRow href="/pos" iconBg="bg-[var(--panel-strong)]"
-              description="Walk-in sales and product checkout"
-              icon={<ItemIcon d={["M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"]} color="text-[var(--ink-muted)]" />}
-            />
+            {showPos && (
+              <NavRow href="/pos" iconBg="bg-[var(--panel-strong)]"
+                description="Walk-in sales and product checkout"
+                icon={<ItemIcon d={["M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+            {showTargets && (
+              <NavRow href="/targets" iconBg="bg-[var(--panel-strong)]"
+                description="Team and personal sales targets"
+                icon={<ItemIcon d={["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z","M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
           </div>
         </>
       )}
@@ -248,6 +371,13 @@ export default async function MorePage() {
               <NavRow href="/settings/data-heal" iconBg="bg-[var(--panel-strong)]"
                 description="Database diagnostics and repair"
                 icon={<ItemIcon d={["M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z","M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"]} color="text-[var(--ink-muted)]" />}
+              />
+            )}
+
+            {["ADMIN"].includes(user.role) && (
+              <NavRow href="/settings/backups" iconBg="bg-[var(--panel-strong)]"
+                description="Snapshots and recovery"
+                icon={<ItemIcon d={["M12 3v10m0 0l-3.5-3.5M12 13l3.5-3.5","M4 15v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"]} color="text-[var(--ink-muted)]" />}
               />
             )}
 

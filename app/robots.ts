@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/repair", "/address", "/company", "/profile"],
+        allow: ["/", "/repair", "/address", "/company"],
         // Merged from the former public/robots.txt, which covered finance,
         // inventory, sales, pos and documents that this list had missed. Both
         // files existed, and Next 500s on /robots.txt when they do — masked
@@ -15,7 +15,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/api/", "/dashboard", "/jobs", "/clients", "/finance", "/inventory",
           "/reports", "/settings", "/technicians", "/intake", "/sales", "/pos",
-          "/documents",
+          "/documents", "/profile",
         ],
       },
     ],

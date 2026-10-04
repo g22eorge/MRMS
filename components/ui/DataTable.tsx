@@ -211,7 +211,7 @@ export function DataTable<T>({
                 return (
                   <div key={c.key} className="flex items-start justify-between gap-3 text-[0.8125rem]">
                     {c.header ? (
-                      <span className="shrink-0 pt-0.5 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-[var(--ink-muted)]/70">
+                      <span className="shrink-0 pt-0.5 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-[var(--ink-muted)]">
                         {c.header}
                       </span>
                     ) : null}
@@ -232,7 +232,7 @@ export function DataTable<T>({
             <thead>
               {/* One header treatment for every table in the app — do not
                   override per call site. */}
-              <tr className="border-b border-[var(--line)]/70 bg-[var(--panel-strong)]/60 text-[0.6875rem] uppercase tracking-[0.12em] text-[var(--ink-muted)]/70">
+              <tr className="border-b border-[var(--line)]/70 bg-[var(--panel-strong)]/60 text-[0.6875rem] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
                 {columns.map((c) => (
                   <th key={c.key} className={`${cell} font-semibold ${alignClass(c.align)} ${c.headerClassName ?? ""}`}>
                     {c.header}

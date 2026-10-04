@@ -3,7 +3,7 @@
 import { useActionState, useMemo, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
-import { Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
 import { type InviteState } from "@/lib/invites";
 

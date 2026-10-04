@@ -24,7 +24,7 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
  */
 const TRANSACTION_OPTIONS = {
   maxWait: 10_000,
-  timeout: 30_000,
+  timeout: 60_000,
 } as const;
 
 function isDecimal(value: unknown): value is Prisma.Decimal {

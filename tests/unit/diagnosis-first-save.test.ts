@@ -1,19 +1,17 @@
-import { describe, it, expect, mock } from "bun:test";
+import { beforeAll, describe, it, expect, mock } from "bun:test";
 
 /**
  * Reproduction harness for the "external notes only save on the second try"
  * report. updateJobAction is a real server action that reads the session
  * through requireOrgSession(); for an in-process test we mock the session
- * layer, point Prisma at the local dev DB, and drive the action exactly the
- * way the diagnosis form does — one FormData, one call, no retry.
+ * layer and drive the action exactly the way the diagnosis form does — one
+ * FormData, one call, no retry.
+ *
+ * Runs against the runner-provisioned test DB (never dev.db) and seeds its
+ * own org, users, client and jobs, so it passes however the shared test.db
+ * happens to look.
  */
 
-// Came over from main pinned to `file:./dev.db`. The datasource is postgresql
-// now and rejects a `file:` URL outright, so the five tests below failed before
-// they reached anything they were written to check. `test:unit` provisions the
-// scratch database and passes DATABASE_URL; the fallback keeps a bare
-// `bun test <this file>` working on the same database.
-process.env.DATABASE_URL ??= "postgresql://mrms:mrms_dev_password@localhost:5434/mrms_scratch?schema=public";
 process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "test-secret";
 
 const ADMIN = {
@@ -42,13 +40,10 @@ mock.module("@/lib/platform-admin", () => ({
 let asRole: "ADMIN" | "TECHNICIAN_EXTERNAL" = "ADMIN";
 
 function sessionFor() {
-  // Both ids come from the seeded rows, not from constants: the action writes
-  // audit and timeline rows keyed to the acting user, so an id that is not in
-  // this database fails the foreign key rather than the assertion.
   const user =
     asRole === "ADMIN"
-      ? { ...ADMIN, id: FIXTURES?.adminId ?? ADMIN.id }
-      : { ...ADMIN, id: FIXTURES?.techId ?? "", email: "exttech@eagle.test", name: "Abdu External Tech", role: "TECHNICIAN_EXTERNAL" as const };
+      ? ADMIN
+      : { ...ADMIN, id: "cmtegkn41000p2lxezd6r8o61", email: "exttech@eagle.test", name: "Abdu External Tech", role: "TECHNICIAN_EXTERNAL" as const };
   return {
     session: { id: "sess-test", userId: user.id, user, expiresAt: new Date(Date.now() + 3_600_000) },
     user,
@@ -66,51 +61,68 @@ async function loadPrisma() {
   return import("@/lib/prisma").then((m) => m.prisma);
 }
 
-/**
- * This file drives a real server action against real rows, so it needs a
- * database with seed data in it. It arrived hard-coded to one external
- * technician's cuid, which existed on the machine it was written on and
- * nowhere else — not in prisma/seed.ts, not in the imported production data.
- * Resolved from the seeded email instead, and skipped rather than failed when
- * the target database has no seed in it at all.
- */
-const FIXTURES = await (async () => {
-  try {
-    const prisma = await loadPrisma();
-    const tech = await prisma.user.findFirst({
-      where: { email: "exttech@eagle.test" },
-      select: { id: true },
-    });
-    const admin = await prisma.user.findFirst({
-      where: { email: "admin@eagle.test" },
-      select: { id: true },
-    });
-    if (!tech || !admin) return null;
-    const job = await prisma.job.findFirst({
-      where: { orgId: "org_eis_01", assignedToId: tech.id },
-      select: { id: true },
-    });
-    return job ? { techId: tech.id, adminId: admin.id } : null;
-  } catch {
-    return null;
-  }
-})();
+const ORG_ID = "org_eis_01";
+const ADMIN_ID = "cmtegkmuc00012lxeb69ll102";
+const EXT_TECH_ID = "cmtegkn41000p2lxezd6r8o61";
 
-if (!FIXTURES) {
-  console.warn(
-    "[diagnosis-first-save] skipped: no seeded job assigned to exttech@eagle.test in org_eis_01. Run `bun run seed` against this database to exercise it.",
-  );
+let seedClientId = "";
+
+// Seed the exact rows the mocked sessions and the action need. Upserts by the
+// fixed ids the session mocks carry, so reruns are idempotent however many
+// suites share test.db. Each test then mints its own job, so the five
+// mutating saves can never trip each other's optimistic-locking guard.
+beforeAll(async () => {
+  const prisma = await loadPrisma();
+  await prisma.organization.upsert({
+    where: { id: ORG_ID },
+    update: {},
+    create: { id: ORG_ID, name: "EIS Test Org", slug: "org-eis-01-test" },
+  });
+  await prisma.user.upsert({
+    where: { id: ADMIN_ID },
+    update: { orgId: ORG_ID, role: "ADMIN", isActive: true },
+    create: { id: ADMIN_ID, name: "E2E Admin", email: "admin@eagle.test", orgId: ORG_ID, role: "ADMIN" },
+  });
+  await prisma.user.upsert({
+    where: { id: EXT_TECH_ID },
+    update: { orgId: ORG_ID, role: "TECHNICIAN_EXTERNAL", isActive: true },
+    create: { id: EXT_TECH_ID, name: "Abdu External Tech", email: "exttech@eagle.test", orgId: ORG_ID, role: "TECHNICIAN_EXTERNAL" },
+  });
+  const client = await prisma.client.create({
+    data: {
+      fullName: "Diagnosis Test Client",
+      phone: `+256700${String(Math.floor(Math.random() * 1e6)).padStart(6, "0")}`,
+      orgId: ORG_ID,
+    },
+  });
+  seedClientId = client.id;
+});
+
+async function createDiagnosingJob() {
+  const prisma = await loadPrisma();
+  return prisma.job.create({
+    data: {
+      jobNumber: `T-DIAG-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      orgId: ORG_ID,
+      clientId: seedClientId,
+      createdById: ADMIN_ID,
+      assignedToId: EXT_TECH_ID,
+      brand: "Samsung",
+      model: "Galaxy S23",
+      deviceType: "PHONE_ANDROID",
+      issueDescription: "Screen replacement",
+      status: "DIAGNOSING",
+    },
+    select: { id: true, updatedAt: true, assignedToId: true },
+  });
 }
 
-describe.skipIf(!FIXTURES)("diagnosis save persists external notes on the first attempt", () => {
+describe("diagnosis save persists external notes on the first attempt", () => {
   it("saves externalDiagnosis in one updateJobAction call (admin)", async () => {
     asRole = "ADMIN";
     const stamp = `repro-admin-${Date.now()}`;
     const prisma = await loadPrisma();
-    const job = await prisma.job.findFirst({
-      where: { orgId: "org_eis_01", status: "DIAGNOSING" },
-      select: { id: true, updatedAt: true },
-    });
+    const job = await createDiagnosingJob();
     expect(job).toBeTruthy();
 
     const fd = new FormData();
@@ -129,11 +141,8 @@ describe.skipIf(!FIXTURES)("diagnosis save persists external notes on the first 
     asRole = "TECHNICIAN_EXTERNAL";
     const stamp = `repro-ext-${Date.now()}`;
     const prisma = await loadPrisma();
-    // Use the job actually assigned to this external technician.
-    const job = await prisma.job.findFirst({
-      where: { orgId: "org_eis_01", assignedToId: FIXTURES!.techId },
-      select: { id: true, updatedAt: true },
-    });
+    // The job the harness mints is assigned to this external technician.
+    const job = await createDiagnosingJob();
     expect(job).toBeTruthy();
 
     const fd = new FormData();
@@ -155,11 +164,8 @@ describe.skipIf(!FIXTURES)("diagnosis save persists external notes on the first 
     // Shape the payload exactly like the diagnosis form does: every named
     // input on the form is present, including empty strings for optional
     // numerics — the classic trigger for a schema reject that silently eats
-    // the notes with it.
-    const job = await prisma.job.findFirst({
-      where: { orgId: "org_eis_01", status: "DIAGNOSING", assignedToId: { not: null } },
-      select: { id: true, updatedAt: true, assignedToId: true },
-    });
+    // the notes with it. The minted job is DIAGNOSING with an assignee.
+    const job = await createDiagnosingJob();
     expect(job).toBeTruthy();
 
     const fd = new FormData();
@@ -198,10 +204,7 @@ describe.skipIf(!FIXTURES)("diagnosis save persists external notes on the first 
     asRole = "TECHNICIAN_EXTERNAL";
     const stamp = `repro-extview-${Date.now()}`;
     const prisma = await loadPrisma();
-    const job = await prisma.job.findFirst({
-      where: { orgId: "org_eis_01", assignedToId: FIXTURES!.techId },
-      select: { id: true, updatedAt: true, status: true },
-    });
+    const job = await createDiagnosingJob();
     expect(job).toBeTruthy();
 
     // Field-for-field what ExternalTechJobView submits on a plain Save:
@@ -231,10 +234,7 @@ describe.skipIf(!FIXTURES)("diagnosis save persists external notes on the first 
     asRole = "TECHNICIAN_EXTERNAL";
     const stamp = `repro-emptytl-${Date.now()}`;
     const prisma = await loadPrisma();
-    const job = await prisma.job.findFirst({
-      where: { orgId: "org_eis_01", assignedToId: FIXTURES!.techId },
-      select: { id: true, updatedAt: true, timelineMinMinutes: true },
-    });
+    const job = await createDiagnosingJob();
     expect(job).toBeTruthy();
 
     // What ExternalTechJobView submits when the tech has NOT touched the

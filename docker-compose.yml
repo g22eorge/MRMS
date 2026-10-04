@@ -36,6 +36,9 @@ x-app-env: &app-env
   NODE_ENV: production
   DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
   UPLOADS_DIR: /data/uploads
+  # Settings → Backups lists, downloads and deletes the dumps the `backup`
+  # service writes. Only `app` mounts the volume; the others ignore this.
+  BACKUP_DIR: /backups
   REDIS_URL: ${REDIS_URL:-redis://redis:6379}
   NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?set NEXT_PUBLIC_APP_URL in .env}
   BETTER_AUTH_URL: ${BETTER_AUTH_URL:-${NEXT_PUBLIC_APP_URL}}
@@ -119,6 +122,9 @@ services:
       - "${APP_PORT:-3000}:3000"
     volumes:
       - uploads:/data/uploads
+      # Shared with the `backup` service, which writes the dumps. Read-write
+      # because the page can delete one; the service's retention prunes the rest.
+      - backups:/backups
     deploy:
       resources:
         limits:

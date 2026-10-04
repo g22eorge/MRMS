@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   // API
   "/api/auth",
   "/api/login",
+  "/api/health",          // Uptime monitors (returns only ok/db/uptime, no PII)
   "/api/webhooks",
   "/api/repair-requests",
   "/api/billing/callback", // Pesapal payment redirect (arrives without session)
@@ -26,12 +27,14 @@ const PUBLIC_PATHS = [
   "/api/photos",           // Private repair photos — self-guarded (staff OR portal session)
 
   // Public forms & pages
+  // NOTE: /repair-request has no page (the form lives at /repair); it stays
+  // public so the next.config redirect to /repair works for logged-out users.
+  // NOTE: /profile has no page; it redirects to /settings/profile (auth-gated).
   "/repair-request",
   "/repair",
   "/address",
   "/app",
   "/company",
-  "/profile",
   "/terms",
   "/privacy",
   "/status",

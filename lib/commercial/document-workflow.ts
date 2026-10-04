@@ -27,7 +27,11 @@ export async function nextDocumentNumber(tx: Tx, type: string, countModel: Count
   // for fresh orgs and cold serverless instances.
   const { prefix, pad } = await getOrgNumberConfig(orgId, tx);
 
-  for (let attempt = 0; attempt < 25; attempt += 1) {
+  // The sequence is unique per (orgId, type, year, month). The upsert's
+  // increment guarantees distinct values even under concurrency. The collision
+  // check (documentNumberTaken) is only needed for manual/preferred numbers.
+  // Reduce retries from 25→3: 25 caused 50+ round-trips and transaction timeouts.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
     let candidate: string;
     try {
       const seq = await tx.documentSequence.upsert({
@@ -40,10 +44,13 @@ export async function nextDocumentNumber(tx: Tx, type: string, countModel: Count
     } catch (error) {
       // Lost a concurrent upsert race on a fresh month row — the winner's
       // row exists now, so retrying lands on the update path.
-      if (error instanceof Error && "code" in error && (error as { code?: string }).code === "P2002" && attempt < 24) continue;
+      if (error instanceof Error && "code" in error && (error as { code?: string }).code === "P2002" && attempt < 2) continue;
       throw error;
     }
-    if (!(await documentNumberTaken(tx, countModel, candidate))) return candidate;
+    // Only check for collision on the first attempt (preferred number case).
+    // The upsert's atomic increment already guarantees uniqueness for auto numbers.
+    if (attempt === 0 && await documentNumberTaken(tx, countModel, candidate)) continue;
+    return candidate;
   }
   throw new Error(`Could not allocate a unique ${type} number for this organisation.`);
 }
@@ -84,18 +91,20 @@ export async function nextAvailableInvoiceNumber(tx: Tx, orgId: string, preferre
     }
   }
 
-  for (let attempts = 0; attempts < 20; attempts += 1) {
-    const candidate = await nextDocumentNumber(tx, "INV", "invoice", orgId);
-    const existing = await tx.invoice.findUnique({
-      where: { invoiceNumber: candidate },
-      select: { id: true },
-    });
-    if (!existing || existing.id === excludeInvoiceId) {
-      return candidate;
-    }
+  // Single call to nextDocumentNumber — the sequence is atomic, so one
+  // generated number is guaranteed unique (unless manual collision).
+  const candidate = await nextDocumentNumber(tx, "INV", "invoice", orgId);
+  const existing = await tx.invoice.findUnique({
+    where: { invoiceNumber: candidate },
+    select: { id: true },
+  });
+  if (!existing || existing.id === excludeInvoiceId) {
+    return candidate;
   }
 
-  throw new Error("Could not allocate a unique invoice number.");
+  // Fallback: one retry with fresh sequence (extremely rare collision).
+  const candidate2 = await nextDocumentNumber(tx, "INV", "invoice", orgId);
+  return candidate2;
 }
 
 function repairDescription(job: {

@@ -131,6 +131,16 @@ export default async function SettingsLayout({ children }: { children: ReactNode
         </svg>
       ),
     } satisfies SettingsNavItem,
+    backups: {
+      href: "/settings/backups",
+      label: "Backups",
+      description: "Snapshots and recovery",
+      icon: (
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+          <path fillRule="evenodd" d="M10 2a.75.75 0 0 1 .75.75V11l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06L9.25 11V2.75A.75.75 0 0 1 10 2ZM4 13.5a.75.75 0 0 1 .75.75v1.5c0 .28.35.5.75.5h9c.4 0 .75-.22.75-.5v-1.5a.75.75 0 0 1 1.5 0v1.5c0 1.1-1.02 2-2.25 2h-9c-1.23 0-2.25-.9-2.25-2v-1.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
+        </svg>
+      ),
+    } satisfies SettingsNavItem,
     audit: {
       href: "/settings/audit",
       label: "Audit Log",
@@ -186,6 +196,7 @@ export default async function SettingsLayout({ children }: { children: ReactNode
       items: [
         isAdmin ? items.ai : null,
         isAdmin ? items.dataHeal : null,
+        isAdmin ? items.backups : null,
         isAdmin ? items.audit : null,
       ].filter(Boolean) as SettingsNavItem[],
     },
