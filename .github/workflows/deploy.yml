@@ -52,6 +52,10 @@ jobs:
       BETTER_AUTH_SECRET: "test-only-not-a-real-secret-for-ci-builds-only"
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       BETTER_AUTH_URL: http://127.0.0.1:3000
+      # Next collects page data at build time and lib/prisma.ts throws if this
+      # is unset. Same string as ci.yml / the unit-test service below. The
+      # Docker image build uses a dummy URL; this job already has Postgres.
+      DATABASE_URL: postgresql://mrms:mrms_dev_password@localhost:5434/mrms_scratch?schema=public
     services:
       # Exactly what `bun run test:unit` hard-codes — port 5434, mrms_scratch,
       # the dev password — so the script runs here unmodified. ci.yml's service
