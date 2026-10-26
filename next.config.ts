@@ -45,7 +45,11 @@ const CSP = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  "upgrade-insecure-requests",
+  // Do not set upgrade-insecure-requests here. The first deploy is plain HTTP
+  // on APP_PORT (http://<ip>:3010). That directive rewrites every /_next
+  // asset to https on the same port, which does not speak TLS, so the page
+  // renders as unstyled HTML. Add it back when the reverse proxy terminates
+  // HTTPS and NEXT_PUBLIC_APP_URL is https://.
 ].join("; ");
 
 const nextConfig: NextConfig = {
