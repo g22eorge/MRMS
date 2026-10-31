@@ -210,9 +210,7 @@ export function buildJobInvoiceLines(params: {
  * correctly. It never touches `Invoice.totalAmount` — the lines are derived
  * from that figure, not the other way round.
  *
- * Reads the org's VAT rate off branding the same minimal way the numbering path
- * does, rather than through getDocumentBrandingSettings, which runs DDL and
- * deadlocks an open interactive transaction on Turso.
+ * Reads the org's VAT rate off branding on this transaction.
  */
 export async function syncJobInvoiceLines(
   tx: TxClient,
@@ -222,20 +220,14 @@ export async function syncJobInvoiceLines(
 
   let vatRatePercent = 18;
   let vatDefaultApplicable = false;
-  try {
-    const rows = await tx.$queryRaw<Array<{ vatRatePercent: unknown; vatDefaultApplicable: unknown }>>`
-      SELECT "vatRatePercent", "vatDefaultApplicable"
-      FROM "DocumentBrandingSettings"
-      WHERE id = ${orgId} OR orgId = ${orgId}
-      LIMIT 1`;
-    const row = rows?.[0];
-    if (row) {
-      const rate = Number(row.vatRatePercent);
-      if (Number.isFinite(rate)) vatRatePercent = rate;
-      vatDefaultApplicable = Boolean(row.vatDefaultApplicable);
-    }
-  } catch {
-    // Drifted or missing branding — the defaults keep invoicing working.
+  const branding = await tx.documentBrandingSettings.findFirst({
+    where: { OR: [{ id: orgId }, { orgId }] },
+    select: { vatRatePercent: true, vatDefaultApplicable: true },
+  });
+  if (branding) {
+    const rate = Number(branding.vatRatePercent);
+    if (Number.isFinite(rate)) vatRatePercent = rate;
+    vatDefaultApplicable = Boolean(branding.vatDefaultApplicable);
   }
 
   const parts = await partsUsedOnJob(tx, { orgId, jobId: job.id });

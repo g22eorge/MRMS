@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, type Db } from "@/lib/prisma";
 
 /**
  * Org-scoped document numbering (Option A: org-prefixed, globally unique).
@@ -31,29 +31,25 @@ export function orgNumberTag(slug: string | null | undefined) {
 export async function documentCodeTakenByAnotherOrg(orgId: string, code: string): Promise<boolean> {
   const wanted = code.trim().toUpperCase();
   if (!wanted) return false;
-  try {
-    const rows = await prisma.$queryRaw<Array<{ orgId: unknown; id: unknown; quotePrefix: unknown }>>`
-      SELECT orgId, id, "quotePrefix" FROM "DocumentBrandingSettings"`;
+  const rows = await prisma.documentBrandingSettings.findMany({
+    select: { orgId: true, id: true, quotePrefix: true },
+  });
 
-    const ownerOf = (r: { orgId: unknown; id: unknown }) => (r.orgId ? String(r.orgId) : String(r.id));
-    const codeOf = (r: { quotePrefix: unknown }) => String(r.quotePrefix ?? "").trim().toUpperCase();
+  const ownerOf = (r: { orgId: string | null; id: string }) => r.orgId ?? r.id;
+  const codeOf = (r: { quotePrefix: string | null }) => String(r.quotePrefix ?? "").trim().toUpperCase();
 
-    // Keeping the code you already have is always allowed. Several orgs share
-    // "EIS" today from the old shared default; enforcing uniqueness against them
-    // retroactively would lock every one of them out of saving Branding at all.
-    // So this grandfathers what exists and only blocks NEW collisions.
-    const own = rows.find((r) => ownerOf(r) === orgId);
-    if (own && codeOf(own) === wanted) return false;
+  // Keeping the code you already have is always allowed. Several orgs share
+  // "EIS" today from the old shared default; enforcing uniqueness against them
+  // retroactively would lock every one of them out of saving Branding at all.
+  // So this grandfathers what exists and only blocks NEW collisions.
+  const own = rows.find((r) => ownerOf(r) === orgId);
+  if (own && codeOf(own) === wanted) return false;
 
-    return rows.some((r) => {
-      const owner = ownerOf(r);
-      // The shared 'singleton' row belongs to nobody, so it never blocks a claim.
-      return owner !== orgId && owner !== "singleton" && codeOf(r) === wanted;
-    });
-  } catch {
-    // Branding table unreadable — don't block the save on a check we can't run.
-    return false;
-  }
+  return rows.some((r) => {
+    const owner = ownerOf(r);
+    // The shared 'singleton' row belongs to nobody, so it never blocks a claim.
+    return owner !== orgId && owner !== "singleton" && codeOf(r) === wanted;
+  });
 }
 
 /**
@@ -91,12 +87,18 @@ export function maxNumberSequence(inner: string, numbers: string[]) {
  * every allocation. Branding rarely changes; a short TTL is plenty.
  */
 type OrgNumberConfig = { prefix: string; pad: number };
-// The narrow slice of a Prisma client we need — satisfied by both the global
-// client and a transaction client (tx). Threading `tx` in is what keeps the read
-// on the transaction's own connection (see below).
-type NumberConfigDb = Pick<typeof prisma, "$queryRaw">;
+// Satisfied by both the global client and a transaction client. The read must
+// run on the caller's connection so it does not sit outside an open write tx.
+type NumberConfigDb = Pick<Db, "documentBrandingSettings" | "organization">;
 const numberConfigCache = new Map<string, { value: OrgNumberConfig; expires: number }>();
 const NUMBER_CONFIG_TTL_MS = 60_000;
+
+function configFromRow(row: { quotePrefix: string | null; sequencePadLength: number | null } | null): OrgNumberConfig | null {
+  if (!row) return null;
+  const prefix = String(row.quotePrefix ?? "EIS").trim().toUpperCase() || "EIS";
+  const padNum = Number(row.sequencePadLength);
+  return { prefix, pad: Number.isFinite(padNum) && padNum > 0 ? padNum : 4 };
+}
 
 export async function getOrgNumberConfig(orgId?: string, db: NumberConfigDb = prisma): Promise<OrgNumberConfig> {
   const key = orgId ?? "__default__";
@@ -105,54 +107,40 @@ export async function getOrgNumberConfig(orgId?: string, db: NumberConfigDb = pr
   if (cached && cached.expires > now) return cached.value;
 
   let value: OrgNumberConfig = { prefix: "EIS", pad: 4 };
-  try {
-    // Deliberately a minimal read of only the two columns we need — NOT
-    // getDocumentBrandingSettings(), which runs ensureRawTable() (CREATE/ALTER
-    // TABLE DDL). This function runs inside interactive write-transactions during
-    // document-number allocation, and on Turso/libSQL a DDL statement issued
-    // while such a transaction is open can deadlock it until it times out. Both
-    // columns are original, so this SELECT never needs a migration.
-    //
-    // Just as important: run the read on the caller's `db` (the transaction
-    // client when called from nextDocumentNumber). On Turso/libSQL the interactive
-    // transaction holds the single connection, so issuing this SELECT on the GLOBAL
-    // client instead would wait for a connection the open tx never releases —
-    // a deadlock that only surfaces on a cache miss (a fresh org's first payment,
-    // or any org on a cold serverless instance) and never locally (SQLite WAL).
-    // Only the org's OWN row decides its code. The shared 'singleton' row is
-    // consulted for padding alone: falling back to it for the prefix gave every
-    // org without branding the same "EIS", and because the document-number
-    // columns are globally unique, that made a second tenant's writes collide.
-    const rows = orgId
-      ? await db.$queryRaw<Array<{ quotePrefix: unknown; sequencePadLength: unknown }>>`
-          SELECT "quotePrefix", "sequencePadLength"
-          FROM "DocumentBrandingSettings"
-          WHERE id = ${orgId} OR orgId = ${orgId}
-          LIMIT 1`
-      : await db.$queryRaw<Array<{ quotePrefix: unknown; sequencePadLength: unknown }>>`
-          SELECT "quotePrefix", "sequencePadLength"
-          FROM "DocumentBrandingSettings" WHERE id = 'singleton' LIMIT 1`;
-    const row = rows?.[0];
-    if (row) {
-      const prefix = String(row.quotePrefix ?? "EIS").trim().toUpperCase() || "EIS";
-      const padNum = Number(row.sequencePadLength);
-      const pad = Number.isFinite(padNum) && padNum > 0 ? padNum : 4;
-      value = { prefix, pad };
-    } else if (orgId) {
-      // No branding of its own — derive a unique code from the org's slug, which
-      // is itself globally unique. The admin can set a shorter one in Branding.
-      const slugRows = await db.$queryRaw<Array<{ slug: unknown }>>`
-        SELECT slug FROM "Organization" WHERE id = ${orgId} LIMIT 1`;
-      const padRows = await db.$queryRaw<Array<{ sequencePadLength: unknown }>>`
-        SELECT "sequencePadLength" FROM "DocumentBrandingSettings" WHERE id = 'singleton' LIMIT 1`;
-      const padNum = Number(padRows?.[0]?.sequencePadLength);
+  // Prisma, not $queryRaw: unquoted `orgId` is a valid SQLite identifier and a
+  // missing column on Postgres. A failed SELECT inside the numbering transaction
+  // aborts the whole block (25P02); the catch that used to swallow it left the
+  // following documentSequence.upsert looking like the failure.
+  // Only the org's OWN row decides its code. The shared 'singleton' row is
+  // consulted for padding alone: falling back to it for the prefix gave every
+  // org without branding the same "EIS", and because the document-number
+  // columns are globally unique, that made a second tenant's writes collide.
+  if (orgId) {
+    const row = await db.documentBrandingSettings.findFirst({
+      where: { OR: [{ id: orgId }, { orgId }] },
+      select: { quotePrefix: true, sequencePadLength: true },
+    });
+    const fromRow = configFromRow(row);
+    if (fromRow) {
+      value = fromRow;
+    } else {
+      const org = await db.organization.findUnique({ where: { id: orgId }, select: { slug: true } });
+      const padRow = await db.documentBrandingSettings.findFirst({
+        where: { id: "singleton" },
+        select: { sequencePadLength: true },
+      });
+      const padNum = Number(padRow?.sequencePadLength);
       value = {
-        prefix: orgNumberTag(slugRows?.[0]?.slug ? String(slugRows[0].slug) : null),
+        prefix: orgNumberTag(org?.slug ?? null),
         pad: Number.isFinite(padNum) && padNum > 0 ? padNum : 4,
       };
     }
-  } catch {
-    // Branding table missing/unreadable — fall back to the EIS default.
+  } else {
+    const row = await db.documentBrandingSettings.findFirst({
+      where: { id: "singleton" },
+      select: { quotePrefix: true, sequencePadLength: true },
+    });
+    value = configFromRow(row) ?? value;
   }
   numberConfigCache.set(key, { value, expires: now + NUMBER_CONFIG_TTL_MS });
   return value;
