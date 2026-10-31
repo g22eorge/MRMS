@@ -1,5 +1,19 @@
-import { prisma } from "@/lib/prisma";
 import { createHash, randomUUID } from "node:crypto";
+
+import { prisma } from "@/lib/prisma";
+
+/**
+ * Subscription billing events from the payment provider.
+ *
+ * `BillingEvent` is now a real model rather than a table this module created on
+ * demand, so all access goes through Prisma. Two behaviours are deliberate:
+ *
+ *  - Organisation names are fetched in a second query rather than by a join.
+ *    The production table carries no foreign key to Organization and inventing
+ *    one would also invent cascade semantics for financial history.
+ *  - The month boundary is computed in JS. The previous SQL used SQLite's
+ *    `date('now', 'start of month')`, which does not exist in Postgres.
+ */
 
 export interface BillingEvent {
   id: string;
@@ -9,33 +23,15 @@ export interface BillingEvent {
   amount: number;
   currency: string;
   status: string;
-  /** Pesapal confirmation_code — stored in legacy flwTxId column */
+  /** Pesapal confirmation_code — stored in the legacy flwTxId column. */
   confirmationCode: string | null;
   txRef: string | null;
   plan: string | null;
   createdAt: Date;
 }
 
-let tableEnsured = false;
-
-async function ensureTable() {
-  if (tableEnsured) return;
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "BillingEvent" (
-      id TEXT PRIMARY KEY,
-      orgId TEXT NOT NULL,
-      event TEXT NOT NULL,
-      amount REAL NOT NULL DEFAULT 0,
-      currency TEXT NOT NULL DEFAULT 'UGX',
-      status TEXT NOT NULL,
-      flwTxId TEXT,
-      txRef TEXT,
-      plan TEXT,
-      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  tableEnsured = true;
-}
+/** Only completed charges count as revenue. */
+const REVENUE_WHERE = { status: "successful", event: "charge.completed" } as const;
 
 export async function recordBillingEvent(params: {
   orgId: string;
@@ -49,30 +45,74 @@ export async function recordBillingEvent(params: {
   /** If provided, ensures repeated webhook deliveries don't duplicate events. */
   idempotencyKey?: string | null;
 }): Promise<void> {
-  await ensureTable();
   const id = params.idempotencyKey
     ? createHash("sha256").update(params.idempotencyKey).digest("hex").slice(0, 32)
     : randomUUID().replace(/-/g, "");
-  await prisma.$executeRaw`
-    INSERT INTO "BillingEvent" (id, orgId, event, amount, currency, status, flwTxId, txRef, plan)
-    VALUES (${id}, ${params.orgId}, ${params.event}, ${params.amount}, ${params.currency},
-            ${params.status}, ${params.confirmationCode ?? null}, ${params.txRef ?? null}, ${params.plan ?? null})
-  `;
+
+  // The id doubles as the idempotency key, so a redelivered webhook is a no-op
+  // rather than a duplicate charge record.
+  await prisma.billingEvent.upsert({
+    where: { id },
+    create: {
+      id,
+      orgId: params.orgId,
+      event: params.event,
+      amount: params.amount,
+      currency: params.currency,
+      status: params.status,
+      flwTxId: params.confirmationCode ?? null,
+      txRef: params.txRef ?? null,
+      plan: params.plan ?? null,
+    },
+    update: {},
+  });
+}
+
+type BillingEventRow = {
+  id: string;
+  orgId: string;
+  event: string;
+  amount: number;
+  currency: string;
+  status: string;
+  flwTxId: string | null;
+  txRef: string | null;
+  plan: string | null;
+  createdAt: Date;
+};
+
+async function withOrgNames(rows: BillingEventRow[]): Promise<BillingEvent[]> {
+  const orgIds = [...new Set(rows.map((r) => r.orgId))];
+  const orgs = orgIds.length
+    ? await prisma.organization.findMany({
+        where: { id: { in: orgIds } },
+        select: { id: true, name: true },
+      })
+    : [];
+  const names = new Map(orgs.map((o) => [o.id, o.name]));
+
+  return rows.map((r) => ({
+    id: r.id,
+    orgId: r.orgId,
+    orgName: names.get(r.orgId),
+    event: r.event,
+    amount: Number(r.amount),
+    currency: r.currency,
+    status: r.status,
+    confirmationCode: r.flwTxId,
+    txRef: r.txRef,
+    plan: r.plan,
+    createdAt: r.createdAt,
+  }));
 }
 
 export async function getRecentBillingEvents(limit = 100): Promise<BillingEvent[]> {
   try {
-    await ensureTable();
-    const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-      SELECT be.id, be.orgId, be.event, be.amount, be.currency, be.status,
-             be.flwTxId, be.txRef, be.plan, be.createdAt,
-             o.name as orgName
-      FROM "BillingEvent" be
-      LEFT JOIN "Organization" o ON o.id = be.orgId
-      ORDER BY be.createdAt DESC
-      LIMIT ${limit}
-    `;
-    return rows.map(rowToBillingEvent);
+    const rows = await prisma.billingEvent.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+    return withOrgNames(rows);
   } catch {
     return [];
   }
@@ -80,11 +120,12 @@ export async function getRecentBillingEvents(limit = 100): Promise<BillingEvent[
 
 export async function getBillingEventsByOrg(orgId: string): Promise<BillingEvent[]> {
   try {
-    await ensureTable();
-    const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-      SELECT * FROM "BillingEvent" WHERE orgId = ${orgId} ORDER BY createdAt DESC LIMIT 30
-    `;
-    return rows.map(rowToBillingEvent);
+    const rows = await prisma.billingEvent.findMany({
+      where: { orgId },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    });
+    return withOrgNames(rows);
   } catch {
     return [];
   }
@@ -92,13 +133,11 @@ export async function getBillingEventsByOrg(orgId: string): Promise<BillingEvent
 
 export async function getTotalRevenue(): Promise<number> {
   try {
-    await ensureTable();
-    const rows = await prisma.$queryRaw<Array<{ total: number }>>`
-      SELECT COALESCE(SUM(amount), 0) as total
-      FROM "BillingEvent"
-      WHERE status = 'successful' AND event = 'charge.completed'
-    `;
-    return Number(rows[0]?.total ?? 0);
+    const agg = await prisma.billingEvent.aggregate({
+      where: REVENUE_WHERE,
+      _sum: { amount: true },
+    });
+    return Number(agg._sum.amount ?? 0);
   } catch {
     return 0;
   }
@@ -106,32 +145,14 @@ export async function getTotalRevenue(): Promise<number> {
 
 export async function getMonthlyRevenue(): Promise<number> {
   try {
-    await ensureTable();
-    const rows = await prisma.$queryRaw<Array<{ total: number }>>`
-      SELECT COALESCE(SUM(amount), 0) as total
-      FROM "BillingEvent"
-      WHERE status = 'successful'
-        AND event = 'charge.completed'
-        AND createdAt >= date('now', 'start of month')
-    `;
-    return Number(rows[0]?.total ?? 0);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const agg = await prisma.billingEvent.aggregate({
+      where: { ...REVENUE_WHERE, createdAt: { gte: startOfMonth } },
+      _sum: { amount: true },
+    });
+    return Number(agg._sum.amount ?? 0);
   } catch {
     return 0;
   }
-}
-
-function rowToBillingEvent(r: Record<string, unknown>): BillingEvent {
-  return {
-    id: String(r.id),
-    orgId: String(r.orgId),
-    orgName: r.orgName ? String(r.orgName) : undefined,
-    event: String(r.event),
-    amount: Number(r.amount),
-    currency: String(r.currency),
-    status: String(r.status),
-    confirmationCode: r.flwTxId ? String(r.flwTxId) : null,
-    txRef: r.txRef ? String(r.txRef) : null,
-    plan: r.plan ? String(r.plan) : null,
-    createdAt: new Date(String(r.createdAt)),
-  };
 }

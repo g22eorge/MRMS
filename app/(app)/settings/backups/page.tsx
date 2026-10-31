@@ -7,16 +7,12 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { redirect } from "next/navigation";
 
-import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { checkCanRunOpsTools } from "@/lib/platform-admin";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
-import { SubmitButton } from "@/components/ui/SubmitButton";
 import {
   BACKUP_KEEP_DAYS,
-  backupFileName,
   isValidBackupName,
-  pruneCandidates,
   resolveBackupDir,
   sortBackupsNewestFirst,
   type BackupEntry,
@@ -61,34 +57,11 @@ export default async function BackupsPage({
     redirect("/dashboard");
   }
   const feedback = await searchParams;
-  const isTurso = Boolean(process.env.TURSO_DATABASE_URL);
-  const entries = isTurso ? [] : await listBackups();
-
-  async function createBackupAction() {
-    "use server";
-    const { user: actor } = await getCurrentUserRole();
-    if (!(await checkCanRunOpsTools(actor))) return;
-    if (process.env.TURSO_DATABASE_URL) {
-      redirect("/settings/backups?error=Turso+databases+use+platform+snapshots");
-    }
-    const dir = resolveBackupDir();
-    await fs.mkdir(dir, { recursive: true });
-    const name = backupFileName();
-    const dest = path.join(dir, name);
-    // Absolute path: SQLite resolves VACUUM INTO relative to the database
-    // file, not the process cwd — an absolute path removes the ambiguity.
-    // Both segments are server-generated (no user input reaches this SQL).
-    const safe = dest.replace(/'/g, "''");
-    await prisma.$executeRawUnsafe(`VACUUM INTO '${safe}'`);
-    const kept = pruneCandidates(
-      [...entries, { name, bytes: 0, createdAt: new Date() }],
-      BACKUP_KEEP_DAYS,
-    );
-    await Promise.all(
-      kept.map((n) => fs.unlink(path.join(dir, n)).catch(() => undefined)),
-    );
-    redirect(`/settings/backups?created=${encodeURIComponent(name)}`);
-  }
+  const entries = await listBackups();
+  // There is no "create backup" action. It used VACUUM INTO, which is SQLite
+  // and does not exist in Postgres, and its replacement — pg_dump — is not in
+  // the app image. The backup service makes them; scripts/backup-db.sh asks it
+  // for one on demand.
 
   async function deleteBackupAction(formData: FormData) {
     "use server";
@@ -98,7 +71,15 @@ export default async function BackupsPage({
     if (!isValidBackupName(name)) {
       redirect("/settings/backups?error=Invalid+backup+name");
     }
-    await fs.unlink(path.join(resolveBackupDir(), name)).catch(() => undefined);
+    // Not `.catch(() => undefined)`: that reported "Deleted" whether or not the
+    // file went, which is how a permissions problem on the shared volume would
+    // have stayed invisible. Say what happened.
+    try {
+      await fs.unlink(path.join(resolveBackupDir(), name));
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code ?? "unknown error";
+      redirect(`/settings/backups?error=${encodeURIComponent(`Could not delete ${name} (${code})`)}`);
+    }
     redirect(`/settings/backups?deleted=${encodeURIComponent(name)}`);
   }
 
@@ -109,9 +90,7 @@ export default async function BackupsPage({
           <div>
             <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Backups</p>
             <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">
-              {isTurso
-                ? "Turso database — point-in-time recovery lives in platform snapshots."
-                : `SQLite snapshots in ${resolveBackupDir()} · kept ${BACKUP_KEEP_DAYS} days`}
+              {`pg_dump snapshots in ${resolveBackupDir()} · kept ${BACKUP_KEEP_DAYS} days`}
             </p>
           </div>
           <span className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-0.5 text-[0.8125rem] text-[var(--ink-muted)]">
@@ -136,19 +115,15 @@ export default async function BackupsPage({
         </p>
       ) : null}
 
-      {!isTurso ? (
-        <section className="dc-card px-3 py-2.5">
-          <form action={createBackupAction}>
-            <SubmitButton bare className="btn-premium rounded-lg px-3 py-2 text-sm font-semibold text-white">
-              Create backup now
-            </SubmitButton>
-          </form>
-          <p className="mt-2 text-[0.75rem] text-[var(--ink-muted)]">
-            Consistent snapshot via SQLite VACUUM INTO (safe under live writes).
-            For scheduled copies: <code>0 2 * * * ./scripts/backup-db.sh</code>
-          </p>
-        </section>
-      ) : null}
+      <section className="dc-card px-4 py-3">
+        <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">Taking a backup</p>
+        <p className="mt-1.5 text-[0.8125rem] text-[var(--ink-muted)]">
+          The <code>backup</code> service takes one automatically every{" "}
+          <code>BACKUP_INTERVAL</code> (daily by default) and prunes anything older than {BACKUP_KEEP_DAYS} days.
+          To take one now, on the server: <code>./scripts/backup-db.sh</code>. There is no button here:
+          dumps are made by <code>pg_dump</code>, which runs beside the database, not in the app.
+        </p>
+      </section>
 
       <section className="dc-card overflow-hidden">
         <div className="border-b border-[var(--line)] px-4 py-2.5">
@@ -190,10 +165,11 @@ export default async function BackupsPage({
       <section className="dc-card px-4 py-3">
         <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]">Restore</p>
         <p className="mt-1.5 text-[0.8125rem] text-[var(--ink-muted)]">
-          Restores run from <code>scripts/restore-db.sh</code> with the app stopped — swapping the
-          live database file from a web request risks corruption, so there is deliberately no
-          restore button. The script verifies the snapshot, takes a pre-restore copy of the
-          current database, then replaces it.
+          Restores run from <code>scripts/restore-db.sh &lt;file&gt; --force</code> on the server. Restoring
+          drops and recreates the live database, which cannot happen from a request the app itself is
+          serving, so there is deliberately no restore button. The script checks the file is a
+          <code> pg_dump</code> archive, takes a pre-restore dump of the current database, stops the app,
+          restores, and starts it again — migrations then bring an older dump up to date.
         </p>
       </section>
     </div>

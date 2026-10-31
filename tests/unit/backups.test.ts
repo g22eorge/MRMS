@@ -15,29 +15,49 @@ import {
 } from "../../lib/backups";
 
 describe("isValidBackupName()", () => {
-  it("accepts generated names", () => {
-    expect(isValidBackupName("mrms-2026-09-24_08-15-00.db")).toBe(true);
+  it("accepts the three names this project produces", () => {
+    expect(isValidBackupName("mrms-20261004T020000Z.dump")).toBe(true); // backup service
+    expect(isValidBackupName("mrms-dev-20261004-020000.dump")).toBe(true); // pg:export
+    expect(isValidBackupName("mrms-prerestore-20261004T020000Z.dump")).toBe(true); // restore-db.sh
   });
 
-  it("rejects traversal, wrong prefix, wrong extension", () => {
+  it("rejects the SQLite-era names — those files cannot be restored any more", () => {
+    expect(isValidBackupName("mrms-2026-09-24_08-15-00.db")).toBe(false);
+  });
+
+  it("rejects traversal, wrong prefix, wrong extension, padding", () => {
     expect(isValidBackupName("../prisma/dev.db")).toBe(false);
-    expect(isValidBackupName("mrms-2026-09-24_08-15-00.db ")).toBe(false);
-    expect(isValidBackupName("backup.db")).toBe(false);
-    expect(isValidBackupName("mrms-2026-09-24.db")).toBe(false);
+    expect(isValidBackupName("../../etc/passwd")).toBe(false);
+    expect(isValidBackupName("mrms-20261004T020000Z.dump ")).toBe(false);
+    expect(isValidBackupName(" mrms-20261004T020000Z.dump")).toBe(false);
+    expect(isValidBackupName("mrms-20261004T020000Z.dump.partial")).toBe(false);
+    expect(isValidBackupName("backups/mrms-20261004T020000Z.dump")).toBe(false);
+    expect(isValidBackupName("mrms-20261004T020000Z.sql")).toBe(false);
+    expect(isValidBackupName("other-20261004T020000Z.dump")).toBe(false);
     expect(isValidBackupName("")).toBe(false);
   });
 });
 
 describe("backupFileName()", () => {
-  it("round-trips through the validator", () => {
-    expect(isValidBackupName(backupFileName(new Date(2026, 8, 24, 8, 15, 0)))).toBe(true);
-    expect(backupFileName(new Date(2026, 8, 24, 8, 15, 0))).toBe("mrms-2026-09-24_08-15-00.db");
+  it("matches the backup service's UTC naming, and round-trips the validator", () => {
+    const at = new Date(Date.UTC(2026, 9, 4, 2, 0, 0));
+    expect(backupFileName(at)).toBe("mrms-20261004T020000Z.dump");
+    expect(isValidBackupName(backupFileName(at))).toBe(true);
   });
 });
 
 describe("resolveBackupDir()", () => {
-  it("prefers BACKUP_DIR, then uploads-adjacent, then ./backups", () => {
-    expect(resolveBackupDir()).toContain("backups");
+  it("prefers BACKUP_DIR, else ./backups", () => {
+    const saved = process.env.BACKUP_DIR;
+    try {
+      process.env.BACKUP_DIR = "/backups";
+      expect(resolveBackupDir()).toBe("/backups");
+      delete process.env.BACKUP_DIR;
+      expect(resolveBackupDir().endsWith("/backups")).toBe(true);
+    } finally {
+      if (saved === undefined) delete process.env.BACKUP_DIR;
+      else process.env.BACKUP_DIR = saved;
+    }
   });
 });
 
@@ -46,8 +66,10 @@ describe("sortBackupsNewestFirst()", () => {
     const a = { name: "a", bytes: 1, createdAt: new Date(2026, 0, 1) };
     const b = { name: "b", bytes: 1, createdAt: new Date(2026, 0, 3) };
     const c = { name: "c", bytes: 1, createdAt: new Date(2026, 0, 2) };
-    const out = sortBackupsNewestFirst([a, b, c]);
+    const input = [a, b, c];
+    const out = sortBackupsNewestFirst(input);
     expect(out.map((e) => e.name)).toEqual(["b", "c", "a"]);
+    expect(input.map((e) => e.name)).toEqual(["a", "b", "c"]);
   });
 });
 

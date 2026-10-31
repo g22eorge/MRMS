@@ -11,7 +11,7 @@ import { Prisma } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { formatEATDateTime } from "@/lib/date-eat";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma, type TxClient } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -41,6 +41,7 @@ import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { PosCustomerFields } from "@/components/pos/PosCustomerFields";
 
 import { flash } from "@/lib/flash";
+import { isMissingTableError } from "@/lib/db-errors";
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
 /**
@@ -53,7 +54,7 @@ function posReject(saleId: string, message: string): never {
 }
 
 async function recalcSaleTotals(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   saleId: string,
   orgId: string,
   overrideTaxApplicable?: boolean,
@@ -62,30 +63,25 @@ async function recalcSaleTotals(
   const subtotal = items.reduce((sum, it) => sum + (it.lineTotal ?? 0), 0);
   const current = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
   const currency = normalizeCurrency(current?.currency, "UGX");
-  // VAT config: read the three fields we need on the SAME transaction connection
-  // with a minimal SELECT. Do NOT use getDocumentBrandingSettings() here — it runs
-  // ensureRawTable() (CREATE/ALTER TABLE DDL) which, issued while this libSQL write
-  // transaction is open, can deadlock checkout on cold start. Falls back to safe
-  // defaults (VAT off, exclusive, 18%) if the row/columns aren't present.
+  // VAT config on the same transaction connection. Missing branding keeps
+  // checkout on VAT off / exclusive / 18%.
   let vatDefaultApplicable = false;
   let vatRatePercent = 18;
   let vatInclusive = false;
-  try {
-    const rows = await tx.$queryRaw<Array<{ vatDefaultApplicable: unknown; vatRatePercent: unknown; vatInclusive: unknown }>>`
-      SELECT "vatDefaultApplicable", "vatRatePercent", "vatInclusive"
-      FROM "DocumentBrandingSettings"
-      WHERE id = ${orgId} OR orgId = ${orgId} OR id = 'singleton'
-      ORDER BY CASE WHEN id = ${orgId} OR orgId = ${orgId} THEN 0 ELSE 1 END
-      LIMIT 1`;
-    const row = rows?.[0];
-    if (row) {
-      vatDefaultApplicable = Boolean(row.vatDefaultApplicable);
-      const rate = Number(row.vatRatePercent);
-      if (Number.isFinite(rate)) vatRatePercent = rate;
-      vatInclusive = Boolean(row.vatInclusive);
-    }
-  } catch {
-    // Drifted DB (missing table/column) — safe defaults keep checkout working.
+  const branding =
+    (await tx.documentBrandingSettings.findFirst({
+      where: { OR: [{ id: orgId }, { orgId }] },
+      select: { vatDefaultApplicable: true, vatRatePercent: true, vatInclusive: true },
+    })) ??
+    (await tx.documentBrandingSettings.findFirst({
+      where: { id: "singleton" },
+      select: { vatDefaultApplicable: true, vatRatePercent: true, vatInclusive: true },
+    }));
+  if (branding) {
+    vatDefaultApplicable = Boolean(branding.vatDefaultApplicable);
+    const rate = Number(branding.vatRatePercent);
+    if (Number.isFinite(rate)) vatRatePercent = rate;
+    vatInclusive = Boolean(branding.vatInclusive);
   }
   const taxApplicable = overrideTaxApplicable ?? current?.taxApplicable ?? vatDefaultApplicable;
   const discountAmount = Math.max(0, Math.min(current?.discountAmount ?? 0, subtotal));
@@ -222,8 +218,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
+    if (isMissingTableError(err)) dbNeedsFix = true;
     sale = null;
   }
 
@@ -717,7 +712,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       : "OTHER" as PaymentMethod;
 
     // Receipt + C5 ledger post run inside the txn; ensure their schema exists first.
-    await ensureMoneySchema();
 
     await prisma.$transaction(async (tx) => {
       // Re-read inside the txn: status, items and paid total must be true at
@@ -1073,7 +1067,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
     // Refund write + C5 ledger post + sale paid-state recompute must be atomic;
     // ensure the ledger/FX schema exists before opening the txn.
-    await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
       // Ceiling and dedupe rechecked inside the txn, against the rows written
       // beside — the outside reads race.

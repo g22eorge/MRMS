@@ -9,46 +9,40 @@ export const SMS_PLAN_QUOTAS: Record<OrgPlan, number> = {
   ENTERPRISE: 5000,
 };
 
-let tableEnsured = false;
-
-async function ensureTable() {
-  if (tableEnsured) return;
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "SmsUsage" (
-      orgId TEXT NOT NULL,
-      year  INTEGER NOT NULL,
-      month INTEGER NOT NULL,
-      count INTEGER NOT NULL DEFAULT 0,
-      PRIMARY KEY (orgId, year, month)
-    )
-  `);
-  tableEnsured = true;
+/**
+ * SmsUsage is a model now. It used to be created here at runtime with
+ * `CREATE TABLE IF NOT EXISTS` and addressed through raw SQL, which put a
+ * live table outside migrations, the drift report and /api/admin/db-health —
+ * and the unquoted column names meant Postgres folded them to lowercase, so the
+ * one query that selected them by name read back `undefined` for every row.
+ */
+function thisMonth() {
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
 }
 
 export async function getSmsUsage(orgId: string, year?: number, month?: number): Promise<number> {
-  const now = new Date();
-  const y = year ?? now.getFullYear();
-  const m = month ?? now.getMonth() + 1;
+  const period = thisMonth();
+  const y = year ?? period.year;
+  const m = month ?? period.month;
   try {
-    await ensureTable();
-    const rows = await prisma.$queryRaw<Array<{ count: number }>>`
-      SELECT count FROM "SmsUsage" WHERE orgId = ${orgId} AND year = ${y} AND month = ${m}
-    `;
-    return Number(rows[0]?.count ?? 0);
+    const row = await prisma.smsUsage.findUnique({
+      where: { orgId_year_month: { orgId, year: y, month: m } },
+      select: { count: true },
+    });
+    return row?.count ?? 0;
   } catch {
     return 0;
   }
 }
 
 export async function incrementSmsUsage(orgId: string): Promise<void> {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  await ensureTable();
-  await prisma.$executeRaw`
-    INSERT INTO "SmsUsage" (orgId, year, month, count) VALUES (${orgId}, ${year}, ${month}, 1)
-    ON CONFLICT(orgId, year, month) DO UPDATE SET count = count + 1
-  `;
+  const { year, month } = thisMonth();
+  await prisma.smsUsage.upsert({
+    where: { orgId_year_month: { orgId, year, month } },
+    create: { orgId, year, month, count: 1 },
+    update: { count: { increment: 1 } },
+  });
 }
 
 export interface SmsQuota {
@@ -87,24 +81,28 @@ export async function getAllOrgsSmsBudgetThisMonth(): Promise<
   Array<{ orgId: string; orgName: string; plan: string; count: number; limit: number }>
 > {
   try {
-    await ensureTable();
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-      SELECT su.orgId, su.count, o.name as orgName, o.plan
-      FROM "SmsUsage" su
-      LEFT JOIN "Organization" o ON o.id = su.orgId
-      WHERE su.year = ${year} AND su.month = ${month}
-      ORDER BY su.count DESC
-    `;
-    return rows.map((r) => ({
-      orgId: String(r.orgId),
-      orgName: r.orgName ? String(r.orgName) : "Unknown",
-      plan: r.plan ? String(r.plan) : "STARTER",
-      count: Number(r.count),
-      limit: SMS_PLAN_QUOTAS[(r.plan as OrgPlan) ?? "STARTER"] ?? 200,
-    }));
+    const { year, month } = thisMonth();
+    const rows = await prisma.smsUsage.findMany({
+      where: { year, month },
+      orderBy: { count: "desc" },
+    });
+    if (!rows.length) return [];
+    const orgs = await prisma.organization.findMany({
+      where: { id: { in: rows.map((r) => r.orgId) } },
+      select: { id: true, name: true, plan: true },
+    });
+    const byId = new Map(orgs.map((o) => [o.id, o]));
+    return rows.map((r) => {
+      const org = byId.get(r.orgId);
+      const plan = org?.plan ?? "STARTER";
+      return {
+        orgId: r.orgId,
+        orgName: org?.name ?? "Unknown",
+        plan,
+        count: r.count,
+        limit: SMS_PLAN_QUOTAS[plan as OrgPlan] ?? 200,
+      };
+    });
   } catch {
     return [];
   }

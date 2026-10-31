@@ -7,7 +7,7 @@ import { postTechnicianPayout, postSupplierPayment } from "@/lib/accounting/post
 import { resolveTechCost } from "@/lib/billing";
 import { formatMoney, getAppCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
@@ -45,7 +45,6 @@ export async function markExternalTechPaid(formData: FormData) {
   const remaining = Math.max(0, payoutDue - alreadyPaid);
 
   // Ledger post inside the txn depends on the C5 accounting tables.
-  await ensureMoneySchema();
   await prisma.$transaction(async (tx) => {
     if (remaining > 0) {
       const payout = await tx.technicianPayout.create({
@@ -134,7 +133,6 @@ export async function receiveInvoicePaymentAction(formData: FormData) {
   const baseCurrency = org.baseCurrency;
 
   // Payment + receipt + ledger post run inside the txn; ensure schema first.
-  await ensureMoneySchema();
   await prisma.$transaction(async (tx) => {
     // Inside the transaction, so the second of two racing requests sees the
     // first one's committed row rather than writing a second payment against
@@ -186,7 +184,6 @@ export async function paySupplierBillAction(formData: FormData) {
   if (!Number.isFinite(amountRaw) || amountRaw <= 0) fail("Enter a payment amount greater than zero.");
   const method = parsePaymentMethod(methodRaw, "OTHER");
 
-  await ensureMoneySchema();
   const paid = await prisma.$transaction(async (tx) => {
     const bill = await tx.supplierBill.findFirst({
       where: { id: billId, orgId, status: { not: "CANCELLED" } },
@@ -264,7 +261,6 @@ export async function payExpenseAction(formData: FormData) {
   const paidAt = paidAtRaw ? new Date(`${paidAtRaw}T12:00:00.000Z`) : new Date();
   if (Number.isNaN(paidAt.getTime())) fail("Enter a valid payment date.");
 
-  await ensureMoneySchema();
   await prisma.$transaction(async (tx) => {
     await recordExpensePayment(tx, {
       orgId,
@@ -318,7 +314,6 @@ export async function payBucketAction(formData: FormData) {
   };
   const bucketOf = (age: number) => (age <= 0 ? "current" : age <= 30 ? "d30" : age <= 60 ? "d60" : "d61");
 
-  await ensureMoneySchema();
   const [bills, expenses, techJobs] = await Promise.all([
     prisma.supplierBill.findMany({
       where: { orgId, status: { in: ["POSTED", "PART_PAID"] } },

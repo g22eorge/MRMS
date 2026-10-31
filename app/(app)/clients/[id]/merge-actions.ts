@@ -7,6 +7,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { hashPortalPassword } from "@/lib/portal-auth";
+import { isMissingSchemaError } from "@/lib/db-errors";
 
 /**
  * Every table that carries a `clientId` foreign key. A merge reassigns each of
@@ -33,8 +34,7 @@ function delegate(client: unknown, model: string): Delegate {
 }
 
 function isMissingTable(e: unknown): boolean {
-  const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
-  return m.includes("no such table") || m.includes("does not exist") || m.includes("no such column");
+  return isMissingSchemaError(e);
 }
 
 export type ClientMergePreview = {

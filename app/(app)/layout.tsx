@@ -111,7 +111,7 @@ export default async function AppLayout({
     // Prisma count() can't express) — done in SQL so we return one number, not rows.
     prisma.$queryRaw<Array<{ c: number | bigint }>>`
       SELECT COUNT(*) AS c FROM "Part"
-      WHERE "orgId" = ${orgId} AND "isActive" = 1 AND "qtyOnHand" <= "reorderLevel"
+      WHERE "orgId" = ${orgId} AND "isActive" = TRUE AND "qtyOnHand" <= "reorderLevel"
     `.then((rows) => Number(rows?.[0]?.c ?? 0)).catch(() => 0),
     (can.reviewExternalBills(user) || can.approveInvoices(user)) ? prisma.job.count({ where: paymentWhere }) : Promise.resolve(0),
     prisma.job.count({ where: receivedWhere }),

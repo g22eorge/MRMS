@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { roundMoney } from "@/lib/currency";
+import type { TxClient } from "@/lib/prisma";
 
 /**
  * Turn a repair job into invoice lines.
@@ -90,7 +91,7 @@ type PartUsage = {
  * their own — so an OUT movement tagged with the job is the source of truth.
  */
 export async function partsUsedOnJob(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   params: { orgId: string; jobId: string },
 ): Promise<PartUsage[]> {
   const movements = await tx.partStockTransaction
@@ -209,32 +210,24 @@ export function buildJobInvoiceLines(params: {
  * correctly. It never touches `Invoice.totalAmount` — the lines are derived
  * from that figure, not the other way round.
  *
- * Reads the org's VAT rate off branding the same minimal way the numbering path
- * does, rather than through getDocumentBrandingSettings, which runs DDL and
- * deadlocks an open interactive transaction on Turso.
+ * Reads the org's VAT rate off branding on this transaction.
  */
 export async function syncJobInvoiceLines(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   params: { orgId: string; invoiceId: string; job: JobForLines & { vatApplicable?: boolean | null }; clientBill: number; currency: string },
 ): Promise<number> {
   const { orgId, invoiceId, job, clientBill, currency } = params;
 
   let vatRatePercent = 18;
   let vatDefaultApplicable = false;
-  try {
-    const rows = await tx.$queryRaw<Array<{ vatRatePercent: unknown; vatDefaultApplicable: unknown }>>`
-      SELECT "vatRatePercent", "vatDefaultApplicable"
-      FROM "DocumentBrandingSettings"
-      WHERE id = ${orgId} OR orgId = ${orgId}
-      LIMIT 1`;
-    const row = rows?.[0];
-    if (row) {
-      const rate = Number(row.vatRatePercent);
-      if (Number.isFinite(rate)) vatRatePercent = rate;
-      vatDefaultApplicable = Boolean(row.vatDefaultApplicable);
-    }
-  } catch {
-    // Drifted or missing branding — the defaults keep invoicing working.
+  const branding = await tx.documentBrandingSettings.findFirst({
+    where: { OR: [{ id: orgId }, { orgId }] },
+    select: { vatRatePercent: true, vatDefaultApplicable: true },
+  });
+  if (branding) {
+    const rate = Number(branding.vatRatePercent);
+    if (Number.isFinite(rate)) vatRatePercent = rate;
+    vatDefaultApplicable = Boolean(branding.vatDefaultApplicable);
   }
 
   const parts = await partsUsedOnJob(tx, { orgId, jobId: job.id });

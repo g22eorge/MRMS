@@ -11,9 +11,11 @@
  *       CDN access logs, referrer headers, and browser history.  We only accept
  *       the secret via the `Authorization: Bearer <secret>` request header.
  *
- * Vercel Cron automatically injects `Authorization: Bearer <CRON_SECRET>` when
- * `CRON_SECRET` is set as an environment variable in the project settings — no
- * extra vercel.json changes needed.
+ * The caller is the `scheduler` service (`scripts/scheduler.mjs`), which sends
+ * `Authorization: Bearer <CRON_SECRET>` and refuses to start without the secret,
+ * so a misconfigured deployment fails at boot rather than having every scheduled
+ * job quietly rejected. This used to be Vercel Cron, which injected the same
+ * header from the project's `CRON_SECRET`; the header contract is unchanged.
  *
  * Usage:
  *   import { assertCronAuthorized } from "@/lib/cron-auth";

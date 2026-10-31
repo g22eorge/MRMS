@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
 import fs from "node:fs";
+import { applyQaEnv } from "./qa-env.mjs";
+
+// Build directory and database, shared with the other QA scripts.
+const { distDir: QA_DIST } = applyQaEnv();
 
 function runCmd(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
@@ -72,13 +76,8 @@ async function run() {
   try {
     if (!process.env.PERF_BASE_URL) {
       // Ensure a production build exists (qa:perf is often run standalone).
-      // Honor the gate build dir: vercel-build.mjs isolates local builds to
-      // .next-gate so `next build` never cleans a running dev server's .next.
-      // Prefer an explicit NEXT_DIST_DIR, else whichever dir already has a build.
-      const distDir = process.env.NEXT_DIST_DIR
-        || (fs.existsSync(".next/BUILD_ID") ? ".next" : ".next-gate");
-      // `next start` hard-requires `<distDir>/BUILD_ID`.
-      if (!fs.existsSync(`${distDir}/BUILD_ID`)) {
+      // `next start` hard-requires a BUILD_ID in whichever dist dir is in use.
+      if (!fs.existsSync(`${QA_DIST}/BUILD_ID`)) {
         await runCmd("bun", ["run", "build"]);
       }
 
@@ -87,12 +86,9 @@ async function run() {
       serverProcess = spawn("bun", ["run", "start"], {
         env: {
           ...process.env,
-          NEXT_DIST_DIR: distDir,
+          NEXT_DIST_DIR: QA_DIST,
           PORT: port,
-          ALLOW_SQLITE_PRODUCTION: "1",
-          DATABASE_URL: process.env.DATABASE_URL ?? "file:./dev.db",
-          TURSO_DATABASE_URL: "",
-          TURSO_AUTH_TOKEN: "",
+          DATABASE_URL: process.env.DATABASE_URL,
           BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "qa-local-better-auth-secret-at-least-32-chars",
           BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? baseUrl,
           NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? baseUrl,

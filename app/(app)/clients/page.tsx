@@ -31,6 +31,7 @@ import {
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
+import { prisma, type Row } from "@/lib/prisma";
 const createClientSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(3),
@@ -124,7 +125,7 @@ export default async function ClientsPage({
     db.client.count({ where: { organization: { not: null } } }).catch(() => 0),
   ]);
 
-  type ClientRow = Prisma.ClientGetPayload<{
+  type ClientRow = Row<typeof prisma.client, {
     include: { _count: { select: { jobs: true } } };
   }>;
 

@@ -27,7 +27,7 @@ export async function consumeRepairPartsForJob(params: {
     // Org-scoped idempotency: the unscoped check could match another tenant's
     // row and skip a real consume, or collide with reservation-consume rows.
     const already = await tx.partStockTransaction.findFirst({
-      where: { orgId, jobId, reason: { startsWith: "REPAIR_CONSUME" } },
+      where: { orgId, jobId, reason: { startsWith: "REPAIR_CONSUME" , mode: "insensitive" as const} },
       select: { id: true },
     });
     if (already) return;

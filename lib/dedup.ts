@@ -5,7 +5,7 @@
  * The client <SubmitButton> greys out on the first click, but a fast or laggy
  * double-tap can still land two requests. This is the server backstop: run it
  * INSIDE the same transaction as the create, just before inserting. Because
- * writes are serialized (SQLite/Turso), the second request sees the first
+ * writes are serialized, the second request sees the first
  * request's already-committed row and reuses it instead of inserting a duplicate.
  *
  * The `where` must capture the identity of the thing being created (org + the

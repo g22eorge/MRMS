@@ -253,6 +253,12 @@
 }
 
 @theme inline {
+  /* Public repair landing only (app/page.tsx). Barlow Condensed carries the
+     signage-weight headings, Barlow the body copy. The app itself stays on
+     Inter — see app/layout.tsx, where both are registered with preload:false. */
+  --font-cond: var(--font-barlow-condensed), "Barlow Condensed", Impact, sans-serif;
+  --font-body: var(--font-barlow), Barlow, -apple-system, BlinkMacSystemFont, sans-serif;
+
   --color-background: var(--page-bg);
   --color-foreground: var(--ink);
   /* Raise text-xs from 12px → 13px globally so badges/labels stay readable
@@ -315,6 +321,66 @@ code,
 pre,
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+/* Public repair landing (app/page.tsx): signage-weight headings.
+   Declared here, unlayered, rather than as Tailwind utilities on the elements —
+   the `:where(h1..h4)` rule above is unlayered too, and unlayered CSS beats
+   anything in `@layer utilities` no matter its specificity, so `font-cond` and
+   a tracking utility would both silently lose on a heading. Condensed uppercase
+   also wants positive tracking, not the -0.02em set above. */
+.landing-shopfront :where(h1, h2) {
+  font-family: var(--font-barlow-condensed), "Barlow Condensed", Impact, sans-serif;
+  letter-spacing: 0.004em;
+}
+/* Booking-slip inputs (app/page.tsx, components/public/RepairRequestForm.tsx).
+   Declared here, unlayered, because the `:where(input, select, textarea)` rules
+   further down are unlayered too: anything in `@layer utilities` loses to them
+   regardless of specificity, and their dark form chrome inside a bone-coloured
+   slip renders white text on a near-white ground.
+
+   Every colour is measured against its own surface rather than picked by eye,
+   because three earlier attempts failed exactly there:
+
+     #C4B99F rule on #EDE6D6 paper   1.5:1  — the fields were invisible
+     a tinted fill to force contrast        — every field looked disabled
+     #8F8571 placeholder on paper    2.9:1  — below the 4.5:1 text minimum
+
+   Inputs now sit on white, where a placeholder can be legible without being
+   mistaken for a value: #6E6656 on #FFFFFF is 5.7:1. The border carries 4.0:1
+   against the input and 3.2:1 against the card, so the field reads as a field
+   from either side. */
+.landing-shopfront :where(input:not([type="radio"]), textarea) {
+  border: 1px solid #8A7E64;
+  border-radius: 0.625rem;
+  background: #FFFFFF;
+  color: #1B1813;
+  font-size: 1rem;
+  line-height: 1.45;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.75rem;
+  box-shadow: none;
+  background-image: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.landing-shopfront :where(input:not([type="radio"]), textarea)::placeholder {
+  color: #6E6656;
+  font-size: 1rem;
+}
+.landing-shopfront :where(input:not([type="radio"]), textarea):hover {
+  border-color: #5F574A;
+}
+.landing-shopfront :where(input:not([type="radio"]), textarea):focus,
+.landing-shopfront :where(input:not([type="radio"]), textarea):focus-visible {
+  outline: none;
+  border-color: #221E17;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(34, 30, 23, 0.16);
+}
+.landing-shopfront textarea {
+  min-height: 5.25rem;
+  resize: none;
+  background-image: none;
 }
 
 /* ── Glass & Shadows ─────────────────────────────────────────────────────── */

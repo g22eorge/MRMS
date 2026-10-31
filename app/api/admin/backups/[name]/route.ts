@@ -19,7 +19,7 @@ export async function GET(
 
   const { name } = await params;
   // Strict allowlist — traversal impossible: anything but a generated
-  // mrms-YYYY-MM-DD_HH-MM-SS.db name is rejected before touching the disk.
+  // backup name (see lib/backups.ts) is rejected before touching the disk.
   if (!isValidBackupName(name)) {
     return NextResponse.json({ error: "Unknown backup" }, { status: 404 });
   }
@@ -31,7 +31,7 @@ export async function GET(
     const stream = createReadStream(filePath);
     return new NextResponse(stream as unknown as ReadableStream, {
       headers: {
-        "content-type": "application/x-sqlite3",
+        "content-type": "application/octet-stream",
         "content-length": String(stat.size),
         "content-disposition": `attachment; filename="${name}"`,
       },

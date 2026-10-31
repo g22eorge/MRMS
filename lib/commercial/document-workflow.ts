@@ -1,10 +1,10 @@
-import type { Prisma } from "@prisma/client";
+import type { TxClient } from "@/lib/prisma";
 
 import { postSalePayment } from "@/lib/accounting/post";
 import { getOrgNumberConfig, composeUniversalNumber } from "@/lib/commercial/org-number";
 import { roundMoney, toBaseAmount } from "@/lib/currency";
 
-type Tx = Prisma.TransactionClient;
+type Tx = TxClient;
 type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote" | "complaint";
 
 /**
