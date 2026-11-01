@@ -18,7 +18,7 @@
   --mobile-radius: 0.9rem;
   --mobile-shell-top: 0.75rem;
   --mobile-shell-bottom: 5.25rem;
-  --mobile-header-height: 3.75rem;
+  --mobile-header-height: 3.5rem;
   --mobile-quick-actions-height: 3.15rem;
   --mobile-stack-offset: var(--mobile-header-height);
 }
@@ -983,7 +983,7 @@ tr:has(details[open]) {
     --mobile-radius: 0.82rem;
     --mobile-shell-top: 0.6rem;
     --mobile-shell-bottom: 5.25rem;
-    --mobile-header-height: 3.6rem;
+    --mobile-header-height: 3.5rem;
     --mobile-quick-actions-height: 3rem;
     --mobile-stack-offset: var(--mobile-header-height);
   }
