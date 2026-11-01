@@ -15,7 +15,7 @@ import { extractTemplateVariables } from "@/lib/notifications/templates";
 import { UI_JOB_STATUSES, normalizeJobStatus, type JobStatus as LegacyJobStatus } from "@/lib/job-status";
 import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
 import { revalidateCommunicationsTemplates } from "@/lib/communications/revalidate";
-import { isMissingColumnError } from "@/lib/db-errors";
+
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 function supportsCommsTemplates() {
@@ -239,7 +239,6 @@ export default async function NotificationTemplatesPage({
       redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+not+found`);
     }
 
-    // Try full update first; if meta columns are missing in DB, fall back to updating without them.
     let saved = false;
     try {
       await prisma.communicationTemplate.update({
@@ -258,29 +257,11 @@ export default async function NotificationTemplatesPage({
       });
       saved = true;
     } catch (e) {
+      // There is no schema fallback: the meta columns arrive with the
+      // migrations, so a "column does not exist" here means the database has
+      // drifted and the error should surface, not be papered over by silently
+      // dropping the meta fields.
       const msg = e instanceof Error ? e.message : String(e);
-      const isMissingColumn = isMissingColumnError(error) || msg.includes("unknown column") || msg.includes("has no column");
-      if (isMissingColumn) {
-        // Schema not migrated yet — update without meta fields, flag that migration is needed.
-        try {
-          await prisma.communicationTemplate.update({
-            where: { id: parsed.data.id },
-            data: {
-              key: parsed.data.key,
-              channel: parsed.data.channel,
-              label: parsed.data.label,
-              subject: parsed.data.subject ? parsed.data.subject : null,
-              body: parsed.data.body,
-              variables: vars.length ? JSON.stringify(vars) : null,
-              isActive: Boolean(parsed.data.isActive),
-            },
-          });
-        } catch {
-          redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Failed+to+update+template`);
-        }
-        revalidateCommunicationsTemplates();
-        redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+saved+but+meta+fields+need+DB+migration+-+click+Apply+Migration`);
-      }
       if (msg.includes("Unique constraint") || msg.includes("P2002")) {
         redirect(`${COMMUNICATIONS_ROUTES.templates}?error=Template+key+already+exists+for+that+channel`);
       }

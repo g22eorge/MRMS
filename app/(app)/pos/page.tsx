@@ -14,7 +14,6 @@ import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { Prisma } from "@prisma/client";
 import { orgDb } from "@/lib/db";
-import { isMissingTableError } from "@/lib/db-errors";
 import { nextUniversalNumber } from "@/lib/commercial/org-number";
 import { can } from "@/lib/permissions";
 import { requireOrgSession } from "@/lib/org-context";
@@ -22,7 +21,6 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { Button } from "@/components/ui/Button";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
@@ -111,8 +109,6 @@ export default async function PosPage({
   const kpiTodayTotal = kpiTodayCollections.products ?? 0;
   const kpiMonthTotal = kpiMonthCollections.products ?? 0;
   const kpiAvgSale = kpiMonthCount > 0 ? kpiMonthTotal / kpiMonthCount : 0;
-
-  let dbNeedsFix = false;
 
   async function createSaleAction(_formData: FormData) {
     "use server";
@@ -235,35 +231,30 @@ export default async function PosPage({
   }> = [];
   const salesWhere = { ...segmentFilter(segment), ...searchFilter };
   let salesTotal = 0;
-  try {
-    salesTotal = await db.sale.count({ where: salesWhere });
-    sales = await db.sale.findMany({
-      where: salesWhere,
-      orderBy: sort === "oldest" ? { createdAt: "asc" } : sort === "highest" ? { totalAmount: "desc" } : { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        saleNumber: true,
-        name: true,
-        status: true,
-        currency: true,
-        totalAmount: true,
-        paidAmount: true,
-        invoicedAt: true,
-        createdAt: true,
-        client: { select: { id: true, fullName: true, organization: true } },
-        createdBy: { select: { id: true, name: true } },
-        _count: { select: { payments: true, creditNotes: true, refunds: true } },
-      },
-    });
-  } catch (err) {
-    // Postgres says `relation "Sale" does not exist`, never SQLite's wording,
-    // so the old string match could not fire here. isMissingTableError keys off
-    // the Prisma error code and knows both dialects.
-    if (isMissingTableError(err)) dbNeedsFix = true;
-    sales = [];
-  }
+  salesTotal = await db.sale.count({ where: salesWhere });
+  sales = await db.sale.findMany({
+    where: salesWhere,
+    orderBy: sort === "oldest" ? { createdAt: "asc" } : sort === "highest" ? { totalAmount: "desc" } : { createdAt: "desc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    select: {
+      id: true,
+      saleNumber: true,
+      name: true,
+      status: true,
+      currency: true,
+      totalAmount: true,
+      paidAmount: true,
+      invoicedAt: true,
+      createdAt: true,
+      client: { select: { id: true, fullName: true, organization: true } },
+      createdBy: { select: { id: true, name: true } },
+      _count: { select: { payments: true, creditNotes: true, refunds: true } },
+    },
+  });
+  // A missing table is not an empty list: the schema reaches the database only
+  // through prisma migrate deploy, so failing here means the deployment is
+  // broken and the route's error boundary should say so.
 
   const salesPage = paginationView(page, salesTotal, pageSize);
   const salesHrefFilters = { ...{ period: segment !== "all" ? segment : "", q, sort: sort !== "newest" ? sort : "" }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
@@ -333,17 +324,6 @@ export default async function PosPage({
       headerNode={
         <>
           <FormErrorBanner message={posListError} />
-          {dbNeedsFix ? (
-            <section className="panel-shadow rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              <p className="font-semibold text-amber-50">POS database tables are missing.</p>
-              <p className="mt-1 text-amber-100/90">
-                Run <span className="mono">/api/admin/db-fix</span> as the platform admin to create <span className="mono">Sale</span> tables.
-              </p>
-              <Button href="/api/admin/db-fix" external target="_blank" rel="noreferrer" variant="secondary" size="sm" className="mt-3">
-                Open DB Fix
-              </Button>
-            </section>
-          ) : null}
 
           {/* ══ MOBILE HEADER ══ */}
           <div className="space-y-3 lg:hidden">

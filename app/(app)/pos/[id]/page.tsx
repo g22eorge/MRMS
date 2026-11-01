@@ -7,7 +7,6 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import type { PaymentMethod } from "@prisma/client";
-import { Prisma } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { formatEATDateTime } from "@/lib/date-eat";
@@ -41,7 +40,6 @@ import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { PosCustomerFields } from "@/components/pos/PosCustomerFields";
 
 import { flash } from "@/lib/flash";
-import { isMissingTableError } from "@/lib/db-errors";
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
 
 /**
@@ -136,7 +134,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   const { id } = await params;
   const errorMessage = (await searchParams)?.error?.trim() || null;
 
-  let dbNeedsFix = false;
   let sale: {
     id: string;
     saleNumber: string;
@@ -187,46 +184,41 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     creditNoteId: string | null;
   }> = [];
 
-  try {
-    sale = await prisma.sale.findFirst({
-      where: { id, orgId },
-      select: {
-        id: true,
-        saleNumber: true,
-        name: true,
-        status: true,
-        billingMode: true,
-        invoiceNumber: true,
-        invoicedAt: true,
-        currency: true,
-        subtotal: true,
-        discountAmount: true,
-        vatAmount: true,
-        taxApplicable: true,
-        totalAmount: true,
-        paidAmount: true,
-        paidAt: true,
-        createdAt: true,
-        notes: true,
-        branchId: true,
-        branch: { select: { name: true } },
-        clientId: true,
-        client: { select: { fullName: true, phone: true, email: true, organization: true } },
-        items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
-        payments: { select: { id: true, amount: true, method: true, reference: true, receivedAt: true, currency: true }, orderBy: { receivedAt: "desc" } },
-        _count: { select: { payments: true, creditNotes: true, refunds: true } },
-      },
-    });
-  } catch (err) {
-    if (isMissingTableError(err)) dbNeedsFix = true;
-    sale = null;
-  }
+  sale = await prisma.sale.findFirst({
+    where: { id, orgId },
+    select: {
+      id: true,
+      saleNumber: true,
+      name: true,
+      status: true,
+      billingMode: true,
+      invoiceNumber: true,
+      invoicedAt: true,
+      currency: true,
+      subtotal: true,
+      discountAmount: true,
+      vatAmount: true,
+      taxApplicable: true,
+      totalAmount: true,
+      paidAmount: true,
+      paidAt: true,
+      createdAt: true,
+      notes: true,
+      branchId: true,
+      branch: { select: { name: true } },
+      clientId: true,
+      client: { select: { fullName: true, phone: true, email: true, organization: true } },
+      items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
+      payments: { select: { id: true, amount: true, method: true, reference: true, receivedAt: true, currency: true }, orderBy: { receivedAt: "desc" } },
+      _count: { select: { payments: true, creditNotes: true, refunds: true } },
+    },
+  });
+  // A missing table is not an empty sale: the schema reaches the database only
+  // through prisma migrate deploy, so failing here means the deployment is
+  // broken and the route's error boundary should say so.
 
   if (!sale) {
-    if (dbNeedsFix) redirect("/pos"); // schema not yet migrated — redirect to list
-    {
-      notFound();
-    }
+    notFound();
   }
 
   const saleCurrency = normalizeCurrency(sale.currency, org.baseCurrency);
