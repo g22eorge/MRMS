@@ -82,12 +82,17 @@ export default async function QuotationDetailPage({
 
   const currency = quotation.currency;
   const canSend = can.createQuotations(user) && quotation.status === "DRAFT";
-  const canAccept = can.approveQuotations(user) && quotation.status === "SENT";
+  // Reachable from any live status: an approval must never be blocked by a
+  // past expiry, rejection, or the quote still sitting in draft.
+  const canAccept = can.approveQuotations(user) && ["DRAFT", "SENT", "REJECTED", "EXPIRED"].includes(quotation.status);
   const canReject = can.createQuotations(user) && quotation.status === "SENT";
   const canEditDraft = can.createQuotations(user) && quotation.status === "DRAFT" && !quotation.convertedToInvoiceId;
-  const canConvert = can.createInvoices(user) && quotation.status === "ACCEPTED" && !quotation.convertedToInvoiceId;
-  // One-click from SENT: accept and raise the invoice in a single step (the
-  // manual "Mark accepted" in between is redundant when you're invoicing anyway).
+  // Convertible whenever the client approves, at any time (VOID is the only
+  // dead end) — the converter itself, not this gate, is the status rule.
+  const canConvert = can.createInvoices(user) && quotation.status !== "VOID" && !quotation.convertedToInvoiceId;
+  // One-click from any live status: accept and raise the invoice in a single
+  // step (the manual "Mark accepted" in between is redundant when you're
+  // invoicing anyway).
   const canAcceptAndInvoice = canAccept && can.createInvoices(user) && !quotation.convertedToInvoiceId;
   const canOverrideDiscount = can.overrideDiscount(user);
   const recipientName = (quotation.client ? clientDisplayName(quotation.client) : null) ?? quotation.lead?.fullName ?? null;

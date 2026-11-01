@@ -305,7 +305,7 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
           <MenuActionLink href={`/documents/quotations/${row.id}?edit=1`} icon="save">Edit</MenuActionLink>
           {/* Quotation PDF is served by the [id] route's GET — there is no /pdf subroute. */}
           <MenuActionLink href={`/api/quotations/${row.id}`} external icon="download">Print / PDF</MenuActionLink>
-          {["ACCEPTED", "SENT"].includes(row.status) && (
+          {row.status !== "VOID" && (
             <form action={convertToInvoiceAction}>
               <input type="hidden" name="id" value={row.id} />
               <MenuActionButton icon="save" tone="success">Convert to Invoice</MenuActionButton>

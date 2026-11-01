@@ -116,7 +116,9 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
   const sent = typeof sp?.sent === "string" ? sp.sent : undefined;
   const canDelete = ["ADMIN", "OPS"].includes(user.role);
   const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
-  const canConvert = can.createInvoices(user) && !convertedInvoice && !isVoid && ["DRAFT", "SENT", "ACCEPTED"].includes(quotation.status);
+  // Convertible at any time (VOID is the only dead end) — the converter itself,
+  // not this gate, is the single status rule.
+  const canConvert = can.createInvoices(user) && !convertedInvoice && !isVoid && quotation.status !== "VOID";
 
   async function sendQuotationWhatsAppAction() {
     "use server";
