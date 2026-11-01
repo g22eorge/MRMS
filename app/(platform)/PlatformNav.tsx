@@ -16,7 +16,7 @@ const NAV = [
 export function PlatformNav() {
   const path = usePathname();
   return (
-    <nav className="flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1">
+    <nav className="flex-1 min-w-0 flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1">
       {NAV.map((n) => {
         const active = n.exact ? path === n.href : path.startsWith(n.href);
         return (
