@@ -14,8 +14,8 @@ import {
 
 const s = StyleSheet.create({
   colNum:  { width: 22 },
-  colDesc: { flex: 1, paddingRight: 10 },
-  colQty:  { width: 60, textAlign: "right" },
+  colDesc: { flex: 1, minWidth: 0, paddingRight: 10 },
+  colQty:  { width: "15%", textAlign: "right" },
 
   noteBlock: { marginBottom: SP.md },
   noteText: { fontSize: 8.5, color: INK, lineHeight: 1.45 },
