@@ -581,7 +581,7 @@ export default async function JobDetailPage({
       permissions={user.permissions}
       orgBaseCurrency={org.baseCurrency}
       supportedCurrencies={org.supportedCurrencies}
-      job={{ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments: clientLedger, technicianPayouts }}
+      job={JSON.parse(JSON.stringify({ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments: clientLedger, technicianPayouts }))}
       technicians={technicians}
       deviceHistory={deviceHistory}
       returnTo={safeReturnTo}
