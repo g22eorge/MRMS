@@ -14,8 +14,6 @@
  * `checkRateLimit` is async; every call site must `await` it.
  */
 
-import { prisma } from "@/lib/prisma";
-
 type Entry = { count: number; resetAt: number };
 type Result = { allowed: boolean; retryAfterMs: number };
 
@@ -41,6 +39,9 @@ export async function checkRateLimit(
 ): Promise<Result> {
   const now = new Date();
   const resetNew = new Date(now.getTime() + opts.windowMs);
+
+  // Import prisma lazily to avoid build-time initialization
+  const { prisma } = await import("@/lib/prisma");
 
   try {
     // One atomic statement: start a new window if the old one has expired,

@@ -19,7 +19,7 @@ import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { canViewJobDocumentTimeline } from "@/lib/documents/routes";
 import { loadJobDocumentTimeline } from "@/lib/jobs/job-document-timeline";
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { prisma, toClientSafe } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { getWhatsAppReadiness } from "@/lib/notifications/whatsapp-readiness";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
@@ -430,7 +430,7 @@ export default async function JobDetailPage({
       jobId={job.id}
       locationId={stockLocation?.id ?? null}
       locationName={stockLocation?.name ?? null}
-      parts={availableParts}
+      parts={toClientSafe(availableParts)}
       lines={jobPartLines.map((line) => ({
         id: line.id,
         partId: line.partId,

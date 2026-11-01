@@ -13,6 +13,7 @@ import { RowActionsMenu, MenuActionLink, MenuActionButton, MenuDestructiveRow, M
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { ensureInvoiceFromQuotation } from "@/lib/commercial/document-workflow";
 import { prisma } from "@/lib/prisma";
+import { toClientSafe } from "@/lib/prisma";
 import { shareQuotationDocument } from "@/lib/notifications/share-document";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { QuotationPreviewProvider } from "./QuotationPreviewProvider";
@@ -389,11 +390,11 @@ canCreate && <QuotationNewButton className="btn-premium rounded-lg px-4 py-2 tex
       <QuotationCreateDialog
         currency={orgCurrency}
         canOverrideDiscount={can.overrideDiscount(user)}
-        clients={clients}
-        leads={leads}
-        jobs={jobs}
-        parts={parts}
-        taxRates={taxRates}
+        clients={toClientSafe(clients)}
+        leads={toClientSafe(leads)}
+        jobs={toClientSafe(jobs)}
+        parts={toClientSafe(parts)}
+        taxRates={toClientSafe(taxRates)}
         defaultTaxApplicable={branding.vatDefaultApplicable ?? false}
         defaultTaxRate={defaultTaxRateObj?.rate ?? branding.vatRatePercent ?? 0}
         defaultTaxLabel={defaultTaxRateObj?.code ?? branding.vatLabel ?? "Tax"}

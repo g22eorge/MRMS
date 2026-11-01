@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-
-import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getCurrentUserRoleOptional } from "@/lib/session";
 
 const VALID_RATINGS = new Set(["HELPFUL", "NOT_HELPFUL"]);
 
 export async function POST(request: NextRequest) {
+  // Import prisma inside the handler to avoid build-time initialization
+  const { prisma } = await import("@/lib/prisma");
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const rl = await checkRateLimit(`ai-feedback:${ip}`, { limit: 30, windowMs: 60_000 });
   if (!rl.allowed) return Response.json({ error: "Rate limit exceeded." }, { status: 429 });

@@ -32,7 +32,8 @@ function isDecimal(value: unknown): value is Prisma.Decimal {
 }
 
 /**
- * Converts every `Decimal` in a query result to a plain number, in place.
+ * Converts every `Decimal` in a query result to a plain number, and strips the
+ * symbol tags from Prisma's result proxies by rebuilding every object it walks.
  *
  * Money is stored as exact `numeric` in Postgres, but the application reads it
  * as `number`. That boundary is deliberate. Prisma hands back `Prisma.Decimal`
@@ -48,34 +49,58 @@ function isDecimal(value: unknown): value is Prisma.Decimal {
  * that is precise; computed fractions (VAT, percentage discounts) are rounded
  * for display anyway.
  *
- * Mutates rather than rebuilding: query results are freshly allocated per call
- * and owned by the caller, so there is nothing to preserve.
+ * Prisma's $extends runtime wraps result rows in a proxy used for lazy
+ * computed fields (the decimal extension below triggers it). That proxy tags
+ * every row with an own Symbol(nodejs.util.inspect.custom) purely so
+ * console.log prints computed fields nicely. React's server-component
+ * serializer refuses objects carrying symbol-keyed properties — every page
+ * passing Prisma rows straight into a client component raised
+ * "objects with symbol properties ... are not supported", one per row.
+ * Deleting the tag is not possible: the proxy's ownKeys trap re-adds it from a
+ * Set that survives `delete` (the runtime's proxy builder assigns
+ * the inspect handler and never removes it from that Set). So the walker
+ * REBUILDS every plain object and array through Object.entries (string keys
+ * only), keeping numbers, strings, nulls, Dates and ByteArrays as-is.
  */
 function decimalsToNumbers(value: unknown, depth = 0): unknown {
   // Guards against a pathological cycle; Prisma results are trees in practice.
   if (value === null || value === undefined || depth > 12) return value;
   if (isDecimal(value)) return value.toNumber();
   if (typeof value !== "object") return value;
-  // Leave the opaque types alone.
+  // Rebuilt as-is (and never carry symbol tags of their own).
   if (value instanceof Date || value instanceof Uint8Array) return value;
 
   if (Array.isArray(value)) {
+    const out = new Array<unknown>(value.length);
     for (let i = 0; i < value.length; i += 1) {
-      value[i] = decimalsToNumbers(value[i], depth + 1);
+      out[i] = decimalsToNumbers(value[i], depth + 1);
     }
-    return value;
+    return out;
   }
 
-  const record = value as Record<string, unknown>;
-  for (const key of Object.keys(record)) {
-    record[key] = decimalsToNumbers(record[key], depth + 1);
+  const out: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(value)) {
+    // Object.entries hands back string keys only — exactly the RSC-safe set.
+    // Sourcing the values through the entry accessors also materialises the
+    // computed fields the proxy exposes.
+    out[key] = decimalsToNumbers(nested, depth + 1);
   }
-  return record;
+  return out;
 }
 
 function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) {
+    // During build (phase-production-build), Next.js evaluates modules but
+    // doesn't have a database connection. Return a mock client that will
+    // throw only when actually used at runtime without a connection.
+    if (process.env.NEXT_PHASE === "phase-production-build" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true") {
+      return new PrismaClient({
+        log: ["error", "warn"],
+        transactionOptions: TRANSACTION_OPTIONS,
+        datasources: { db: { url: "postgresql://build:build@localhost:5432/build" } },
+      });
+    }
     // Prefer a clear message over Prisma's generic initialisation error.
     throw new Error("Missing DATABASE_URL (set the Postgres connection string)");
   }
@@ -170,3 +195,43 @@ export type Row<
   Args,
   Op extends Operation = "findFirstOrThrow",
 > = Prisma.Result<Delegate, Args, Op>;
+
+/**
+ * Deep-copies a query result into RSC-plain objects before it crosses into a
+ * client component.
+ *
+ * Every row returned by an $extends-ed client is a proxy that carries an own
+ * Symbol(nodejs.util.inspect.custom) (computed-fields machinery), and React's
+ * server-component serializer refuses objects with symbol-keyed properties.
+ * Because the proxy is (re)applied for the caller itself, no query extension
+ * can see the tagged object — it has to be rebuilt at the boundary that
+ * passes rows into a client component. Object.entries clones string keys
+ * only, so the tag (and any other symbol key) cannot survive.
+ *
+ * Scalars pass through untouched; prisma rows are plain trees so a bounded
+ * like-for-like rebuild is safe. Cheap at page-data sizes.
+ */
+export function toClientSafe<T>(value: T): T {
+  return plainRebuild(value as unknown, 0) as T;
+}
+
+function plainRebuild(value: unknown, depth = 0): unknown {
+  if (value === null || value === undefined || depth > 12) return value;
+  if (isDecimal(value)) return value.toNumber();
+  if (typeof value !== "object") return value;
+  if (value instanceof Date || value instanceof Uint8Array) return value;
+
+  if (Array.isArray(value)) {
+    const out = new Array<unknown>(value.length);
+    for (let i = 0; i < value.length; i += 1) {
+      out[i] = plainRebuild(value[i], depth + 1);
+    }
+    return out;
+  }
+
+  const out: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(value)) {
+    out[key] = plainRebuild(nested, depth + 1);
+  }
+  return out;
+}

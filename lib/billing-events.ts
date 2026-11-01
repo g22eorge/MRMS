@@ -1,7 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
 
-import { prisma } from "@/lib/prisma";
-
 /**
  * Subscription billing events from the payment provider.
  *
@@ -14,6 +12,11 @@ import { prisma } from "@/lib/prisma";
  *  - The month boundary is computed in JS. The previous SQL used SQLite's
  *    `date('now', 'start of month')`, which does not exist in Postgres.
  */
+
+async function getPrisma() {
+  const { prisma } = await import("@/lib/prisma");
+  return prisma;
+}
 
 export interface BillingEvent {
   id: string;
@@ -51,6 +54,7 @@ export async function recordBillingEvent(params: {
 
   // The id doubles as the idempotency key, so a redelivered webhook is a no-op
   // rather than a duplicate charge record.
+  const prisma = await getPrisma();
   await prisma.billingEvent.upsert({
     where: { id },
     create: {
@@ -83,6 +87,7 @@ type BillingEventRow = {
 
 async function withOrgNames(rows: BillingEventRow[]): Promise<BillingEvent[]> {
   const orgIds = [...new Set(rows.map((r) => r.orgId))];
+  const prisma = await getPrisma();
   const orgs = orgIds.length
     ? await prisma.organization.findMany({
         where: { id: { in: orgIds } },
@@ -108,6 +113,7 @@ async function withOrgNames(rows: BillingEventRow[]): Promise<BillingEvent[]> {
 
 export async function getRecentBillingEvents(limit = 100): Promise<BillingEvent[]> {
   try {
+    const prisma = await getPrisma();
     const rows = await prisma.billingEvent.findMany({
       orderBy: { createdAt: "desc" },
       take: limit,
@@ -120,6 +126,7 @@ export async function getRecentBillingEvents(limit = 100): Promise<BillingEvent[
 
 export async function getBillingEventsByOrg(orgId: string): Promise<BillingEvent[]> {
   try {
+    const prisma = await getPrisma();
     const rows = await prisma.billingEvent.findMany({
       where: { orgId },
       orderBy: { createdAt: "desc" },
@@ -133,6 +140,7 @@ export async function getBillingEventsByOrg(orgId: string): Promise<BillingEvent
 
 export async function getTotalRevenue(): Promise<number> {
   try {
+    const prisma = await getPrisma();
     const agg = await prisma.billingEvent.aggregate({
       where: REVENUE_WHERE,
       _sum: { amount: true },
@@ -145,6 +153,7 @@ export async function getTotalRevenue(): Promise<number> {
 
 export async function getMonthlyRevenue(): Promise<number> {
   try {
+    const prisma = await getPrisma();
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const agg = await prisma.billingEvent.aggregate({

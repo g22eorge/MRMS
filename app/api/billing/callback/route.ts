@@ -9,7 +9,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getTransactionStatus, parseMerchantRef } from "@/lib/pesapal";
 import { OrgPlan } from "@prisma/client";
 import { sendPaymentConfirmation } from "@/lib/email";
@@ -49,6 +48,8 @@ async function refuse(base: string, reason: string, ctx: {
 }
 
 export async function GET(req: NextRequest) {
+  // Import prisma inside the handler to avoid build-time initialization
+  const { prisma } = await import("@/lib/prisma");
   const { searchParams } = req.nextUrl;
   const orderTrackingId = searchParams.get("OrderTrackingId");
   const merchantReference = searchParams.get("OrderMerchantReference");

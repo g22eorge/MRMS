@@ -13,7 +13,7 @@ import {
 } from "@/lib/currency";
 import { JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { prisma, toClientSafe } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
@@ -850,16 +850,16 @@ export default async function InvoicesPage({
 <InvoiceCreateDialog
   currency={orgCurrency}
   canOverrideDiscount={canOverrideDiscount}
-  clients={clients}
-  leads={leads}
-  jobs={jobs}
-  parts={invoiceParts}
-  taxRates={invoiceTaxRates}
+  clients={toClientSafe(clients)}
+  leads={toClientSafe(leads)}
+  jobs={toClientSafe(jobs)}
+  parts={toClientSafe(invoiceParts)}
+  taxRates={toClientSafe(invoiceTaxRates)}
   defaultTaxApplicable={branding.vatDefaultApplicable ?? false}
   defaultTaxRate={defaultInvoiceTaxRate?.rate ?? branding.vatRatePercent ?? 0}
   defaultTaxLabel={defaultInvoiceTaxRate?.code ?? branding.vatLabel ?? "Tax"}
   action={createStandaloneInvoiceAction}
-/>
+ />
 </InvoicePreviewProvider>
   );
 }

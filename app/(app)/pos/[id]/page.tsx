@@ -10,7 +10,7 @@ import type { PaymentMethod } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { formatEATDateTime } from "@/lib/date-eat";
-import { prisma, type TxClient } from "@/lib/prisma";
+import { prisma, type TxClient, toClientSafe } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -1307,7 +1307,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         {isOpen ? (
           <form action={addItemAction} className={`grid gap-2 md:grid-cols-[1.3fr_1.7fr_72px_120px_auto] ${barClass}`}>
             <input type="hidden" name="saleId" value={sale.id} />
-            <PosAddItemFields parts={parts} currency={saleCurrency} fieldClass={field} />
+            <PosAddItemFields parts={toClientSafe(parts)} currency={saleCurrency} fieldClass={field} />
             <SubmitButton size="sm" className="px-4" pendingLabel="Adding…">Add</SubmitButton>
           </form>
         ) : null}

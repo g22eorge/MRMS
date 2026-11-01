@@ -1,5 +1,3 @@
-import { prisma } from "@/lib/prisma";
-
 /**
  * Platform-wide operator settings (payment credentials, plan prices, SMS
  * config, audit retention).
@@ -11,8 +9,14 @@ import { prisma } from "@/lib/prisma";
  * — but they no longer swallow a missing table as a normal condition.
  */
 
+async function getPrisma() {
+  const { prisma } = await import("@/lib/prisma");
+  return prisma;
+}
+
 export async function getPlatformSetting(key: string): Promise<string | null> {
   try {
+    const prisma = await getPrisma();
     const row = await prisma.platformSetting.findUnique({
       where: { key },
       select: { value: true },
@@ -24,6 +28,7 @@ export async function getPlatformSetting(key: string): Promise<string | null> {
 }
 
 export async function setPlatformSetting(key: string, value: string): Promise<void> {
+  const prisma = await getPrisma();
   await prisma.platformSetting.upsert({
     where: { key },
     create: { key, value },
@@ -32,6 +37,7 @@ export async function setPlatformSetting(key: string, value: string): Promise<vo
 }
 
 export async function deletePlatformSetting(key: string): Promise<void> {
+  const prisma = await getPrisma();
   await prisma.platformSetting.deleteMany({ where: { key } });
 }
 
@@ -57,6 +63,7 @@ export async function probePlatformSettingStore(): Promise<{
   error: string | null;
 }> {
   try {
+    const prisma = await getPrisma();
     const rows = await prisma.$queryRaw<Array<{ key: string }>>`
       SELECT key FROM "PlatformSetting" ORDER BY key
     `;
@@ -73,6 +80,7 @@ export async function probePlatformSettingStore(): Promise<{
 export async function getPlatformSettings(keys: string[]): Promise<Record<string, string>> {
   if (keys.length === 0) return {};
   try {
+    const prisma = await getPrisma();
     // One query instead of the previous loop of one query per key.
     const rows = await prisma.platformSetting.findMany({
       where: { key: { in: keys } },
