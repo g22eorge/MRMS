@@ -249,6 +249,11 @@ jobs:
           script: |
             cd "$DEPLOY_PATH"
             DOCKER="sudo -n /usr/bin/docker"
+            # /api/health only proves the database is reachable, not that its
+            # schema matches the running code. The migrator image has the CLI
+            # to assert it: this fails on pending migrations and on a database
+            # the app would otherwise serve against while drifted.
+            $DOCKER compose run --rm migrate bunx prisma migrate status
             $DOCKER compose ps
             port="$(grep -E '^APP_PORT=' .env | cut -d= -f2 | sed 's/[[:space:]].*//')"
             curl -fsS "http://127.0.0.1:${port:-3000}/api/health" && echo
