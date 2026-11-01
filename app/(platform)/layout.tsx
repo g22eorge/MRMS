@@ -21,7 +21,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
             <span className="hidden text-xs text-[var(--ink-muted)] sm:block">{user!.email}</span>
             <Link
               href="/dashboard"
-              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--ink)]"
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--ink)] sm:py-1.5"
             >
               ← App
             </Link>
