@@ -114,6 +114,21 @@ export async function handleLandedCostRecalc(data: unknown): Promise<void> {
 
   const allocationMap = allocate(totalLandedCost, poItems, allocationMethod);
 
+  // Batch-fetch all parts referenced by line items (avoids N+1 findUnique).
+  const partIds = [...new Set(
+    [...allocationMap.entries()].map(([lineId]) => poItems.find((l) => l.id === lineId)?.partId).filter(Boolean),
+  )] as string[];
+  const partsById = new Map<string, { unitCost: number | null; qtyOnHand: number }>();
+  if (partIds.length > 0) {
+    const parts = await prisma.part.findMany({
+      where: { id: { in: partIds } },
+      select: { id: true, unitCost: true, qtyOnHand: true },
+    });
+    for (const p of parts) {
+      partsById.set(p.id, { unitCost: p.unitCost, qtyOnHand: p.qtyOnHand });
+    }
+  }
+
   // Update each PO line and the associated Part's average cost.
   for (const [lineId, landedPerUnit] of allocationMap.entries()) {
     const line = poItems.find((l) => l.id === lineId);
@@ -131,21 +146,17 @@ export async function handleLandedCostRecalc(data: unknown): Promise<void> {
 
     // Update Part's average cost using weighted average.
     if (line.partId) {
-      try {
-        const part = await prisma.part.findUnique({
-          where: { id: line.partId },
-          select: { id: true, unitCost: true, qtyOnHand: true },
-        });
-
-        if (part && part.qtyOnHand > 0) {
-          const newAvgCost = (part.unitCost ?? 0) + landedPerUnit;
+      const part = partsById.get(line.partId);
+      if (part && part.qtyOnHand > 0) {
+        const newAvgCost = (part.unitCost ?? 0) + landedPerUnit;
+        try {
           await prisma.part.update({
-            where: { id: part.id },
+            where: { id: line.partId },
             data: { unitCost: newAvgCost },
           });
+        } catch {
+          // Non-fatal.
         }
-      } catch {
-        // Non-fatal.
       }
     }
   }

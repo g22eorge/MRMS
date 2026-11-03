@@ -96,17 +96,15 @@ export async function runDataHeal(prisma: Db, options: RunDataHealOptions = {}) 
     stockTxnMissingOrgId = unscoped.length;
 
     if (!dryRun && unscoped.length > 0) {
-      const partOrg = new Map<string, string | null>();
+      const partIds = [...new Set(unscoped.map((row) => row.partId))];
+      const parts = await prisma.part.findMany({
+        where: { id: { in: partIds } },
+        select: { id: true, orgId: true },
+      });
+      const partOrg = new Map(parts.map((p) => [p.id, p.orgId ?? null]));
       for (const row of unscoped) {
-        if (!partOrg.has(row.partId)) {
-          const part = await prisma.part.findUnique({
-            where: { id: row.partId },
-            select: { orgId: true },
-          });
-          partOrg.set(row.partId, part?.orgId ?? null);
-        }
         const orgId = partOrg.get(row.partId);
-        if (!orgId) continue; // orphan or org-less part — leave it for inspection
+        if (!orgId) continue;
         await prisma.partStockTransaction.update({ where: { id: row.id }, data: { orgId } });
         stockTxnOrgIdFixed++;
       }
@@ -127,15 +125,15 @@ export async function runDataHeal(prisma: Db, options: RunDataHealOptions = {}) 
     take: limit,
   });
   const { toBaseAmount } = await import("@/lib/currency");
-  const orgBase = new Map<string, string>();
-  async function baseCurrencyOf(orgId: string | null) {
+  const orgIds = [...new Set(stuckCandidates.map((c) => c.orgId).filter(Boolean))];
+  const orgs = await prisma.organization.findMany({
+    where: { id: { in: orgIds } },
+    select: { id: true, baseCurrency: true },
+  });
+  const orgBase = new Map(orgs.map((o) => [o.id, o.baseCurrency ?? "UGX"]));
+  function baseCurrencyOf(orgId: string | null) {
     if (!orgId) return "UGX";
-    const hit = orgBase.get(orgId);
-    if (hit) return hit;
-    const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { baseCurrency: true } }).catch(() => null);
-    const base = org?.baseCurrency ?? "UGX";
-    orgBase.set(orgId, base);
-    return base;
+    return orgBase.get(orgId) ?? "UGX";
   }
   const stuckPayments = stuckCandidates.length > 0
     ? await prisma.payment.findMany({
@@ -195,17 +193,35 @@ export async function runDataHeal(prisma: Db, options: RunDataHealOptions = {}) 
       take: limit,
     });
     const owners = new Map<string, string | null>();
+    // Batch client lookups by orgId instead of one query per (orgId, phone) pair.
+    const phonesByOrg = new Map<string, Set<string>>();
     for (const row of unlinked) {
       const key = `${row.orgId}::${row.clientPhone}`;
       if (!owners.has(key)) {
-        const matches = await prisma.client.findMany({
-          where: { orgId: row.orgId, phone: row.clientPhone },
-          select: { id: true },
-          take: 2,
-        });
-        owners.set(key, matches.length === 1 ? matches[0].id : null);
-        if (matches.length !== 1) complaintsAmbiguous += 1;
+        if (!phonesByOrg.has(row.orgId)) phonesByOrg.set(row.orgId, new Set());
+        phonesByOrg.get(row.orgId)!.add(row.clientPhone);
       }
+    }
+    for (const [orgId, phones] of phonesByOrg) {
+      const clients = await prisma.client.findMany({
+        where: { orgId, phone: { in: [...phones] } },
+        select: { id: true, phone: true },
+      });
+      const byPhone = new Map<string, string[]>();
+      for (const c of clients) {
+        const list = byPhone.get(c.phone) ?? [];
+        list.push(c.id);
+        byPhone.set(c.phone, list);
+      }
+      for (const phone of phones) {
+        const key = `${orgId}::${phone}`;
+        const ids = byPhone.get(phone) ?? [];
+        owners.set(key, ids.length === 1 ? ids[0] : null);
+        if (ids.length !== 1) complaintsAmbiguous += 1;
+      }
+    }
+    for (const row of unlinked) {
+      const key = `${row.orgId}::${row.clientPhone}`;
       const ownerId = owners.get(key);
       if (!ownerId) continue;
       complaintsLinked += 1;
