@@ -12,6 +12,7 @@ import { CopyButton } from "@/components/shared/CopyButton";
 import { MenuActionButton, MenuActionLink, MenuSection, RowActionsMenu } from "@/components/shared/RowActionsMenu";
 import { Button } from "@/components/ui/Button";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { ShareButton } from "@/components/shared/ShareButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge, toneFor, type BadgeTone } from "@/components/ui/StatusBadge";
 import { QuotationStages } from "@/components/documents/QuotationStages";
@@ -324,6 +325,7 @@ export default async function QuotationDetailPage({
         secondary={
           <>
             <Button href={pdfHref} external target="_blank" rel="noreferrer" variant="secondary" size="sm">PDF</Button>
+            <ShareButton url={pdfHref} />
             {canEditDraft ? (
               <Button
                 href={showEdit ? `/sales/quotations/${quotation.id}` : `/sales/quotations/${quotation.id}?edit=1`}
@@ -356,6 +358,7 @@ export default async function QuotationDetailPage({
                   Send via WhatsApp
                 </MenuActionLink>
               ) : null}
+              <ShareButton url={pdfHref} />
               <div className="px-3 py-1.5">
                 <CopyButton
                   text={pdfUrl}
