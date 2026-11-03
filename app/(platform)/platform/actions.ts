@@ -157,31 +157,6 @@ export async function extendTrialAction(formData: FormData) {
   revalidatePlatformHome();
 }
 
-export async function runCommercialSeedAction() {
-  const admin = await requirePlatformAdmin();
-  let ok = true;
-  let message: string | null = null;
-  try {
-    const { seedCommercialData } = await import("@/prisma/seed-commercial");
-    await seedCommercialData();
-  } catch (err) {
-    ok = false;
-    message = err instanceof Error ? err.message : String(err);
-    console.error("[seed:commercial]", err);
-  }
-  // Writes demo data across the platform, so it is recorded either way — a
-  // failed run that left rows behind is exactly the case worth being able to date.
-  await writeSystemAuditEvent({
-    actorUserId: admin.id,
-    entityType: "Platform",
-    entityId: "commercial-seed",
-    action: "PLATFORM_COMMERCIAL_SEED_RUN",
-    summary: ok ? "Commercial demo seed ran" : `Commercial demo seed failed: ${message}`,
-    after: { ok, error: message },
-  });
-  revalidatePlatformHome();
-}
-
 export async function setOrgSmsSenderAction(formData: FormData) {
   const admin = await requirePlatformAdmin();
   const orgId = formData.get("orgId") as string;

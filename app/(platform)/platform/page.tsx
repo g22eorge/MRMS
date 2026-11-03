@@ -2,11 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { getTotalRevenue, getMonthlyRevenue } from "@/lib/billing-events";
 import { formatMoney } from "@/lib/currency";
 import { PLATFORM_PLAN_CHIP } from "@/lib/platform/routes";
-import { runCommercialSeedAction } from "./actions";
 import { OrgTable } from "./OrgTable";
 import type { OrgRow } from "./OrgTable";
 
-import { SubmitButton } from "@/components/ui/SubmitButton";
 import AlertsBanner from "./AlertsBanner";
 const PLAN_CHIP = PLATFORM_PLAN_CHIP;
 
@@ -76,11 +74,6 @@ export default async function PlatformPage() {
           <h1 className="text-xl font-bold text-[var(--ink)]">Organisations</h1>
           <p className="mt-0.5 text-sm text-[var(--ink-muted)]">{orgs.length} registered</p>
         </div>
-        <form action={runCommercialSeedAction}>
-          <SubmitButton bare className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--ink)]">
-            + Seed Demo Data
-          </SubmitButton>
-        </form>
       </div>
 
       {/* ── KPI row ── */}
