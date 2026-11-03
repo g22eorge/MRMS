@@ -118,9 +118,8 @@ export default async function JobDetailPage({
   const canSeeMessages = ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
 
   const includeBase = {
-    client: true,
+    client: { select: { id: true, fullName: true, organization: true, phone: true, email: true } },
     assignedTo: true,
-    photos: true,
     auditLogs: {
       include: { user: { select: { name: true } } },
       orderBy: { createdAt: "desc" as const },
