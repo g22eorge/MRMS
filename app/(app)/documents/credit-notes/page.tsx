@@ -690,13 +690,16 @@ export default async function CreditNotesPage({
       : {}),
   };
 
-  const [creditNotesTotal, statsRows, creditNotes, eligibleSales, eligibleInvoices] = await Promise.all([
+  const [creditNotesTotal, totalValueResult, pendingReturnResult, creditNotes, eligibleSales, eligibleInvoices] = await Promise.all([
     prisma.creditNote.count({ where: creditNotesWhere }).catch(() => 0),
-    // Whole-dataset KPIs (value/pending/refunded) computed from every matching row.
-    prisma.creditNote.findMany({
+    // Whole-dataset KPIs (value/pending/refunded) via aggregate — no contact rows loaded.
+    prisma.creditNote.aggregate({
       where: creditNotesWhere,
-      select: { totalAmount: true, itemsReceivedBackAt: true, refunds: { select: { amount: true } } },
-    }).catch(() => []),
+      _sum: { totalAmount: true },
+    }).catch(() => ({ _sum: { totalAmount: null } })),
+    prisma.creditNote.count({
+      where: { ...creditNotesWhere, itemsReceivedBackAt: null },
+    }).catch(() => 0),
     prisma.creditNote.findMany({
       where: creditNotesWhere,
       include: {
@@ -754,8 +757,8 @@ export default async function CreditNotesPage({
     }).catch(() => []),
   ]);
 
-  const totalValue = statsRows.reduce((s, cn) => s + cn.totalAmount, 0);
-  const pendingReturn = statsRows.filter((cn) => !cn.itemsReceivedBackAt).length;
+  const totalValue = Number(totalValueResult._sum.totalAmount ?? 0);
+  const pendingReturn = pendingReturnResult;
   const currency = org.baseCurrency;
   const pageView = paginationView(page, creditNotesTotal, pageSize);
   const creditNotesHrefFilters = {
