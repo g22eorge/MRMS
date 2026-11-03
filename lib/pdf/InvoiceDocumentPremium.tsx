@@ -36,6 +36,9 @@ const s = StyleSheet.create({
   docType:   { fontSize: 26, fontWeight: 700, color: WHITE, letterSpacing: 2, marginBottom: 4 },
   docBadge:  { backgroundColor: PUR, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 2 },
   docBadgeTxt: { fontSize: 8.5, color: WHITE, fontWeight: 700 },
+  paidBadge: { backgroundColor: "#15803d", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 2 },
+  unpaidBadge: { backgroundColor: "#b91c1c", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 2 },
+  badgeText: { fontSize: 8.5, color: WHITE, fontWeight: 700 },
 
   // ── purple summary band ─────────────────────────────────────────────────────
   band: {
@@ -92,6 +95,7 @@ type Props = {
   amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  isPaid?: boolean;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
   lineItems?:     PdfLineItem[];
@@ -144,7 +148,7 @@ export function InvoiceDocumentPremium(props: Props) {
           <View style={s.bandItem}><Text style={s.bandLbl}>Valid Until</Text><Text style={s.bandVal}>{props.validUntil}</Text></View>
           <View style={s.bandItem}><Text style={s.bandLbl}>Repair ID</Text><Text style={s.bandVal}>{props.repairId}</Text></View>
           <View style={s.bandItem}><Text style={s.bandLbl}>Total Payable</Text><Text style={s.bandValLg}>{props.totalAmountPayable}</Text></View>
-          <View style={s.bandItem}><Text style={s.bandLbl}>Status</Text><Text style={s.bandVal}>{props.status}</Text></View>
+          <View style={s.bandItem}><Text style={s.bandLbl}>Status</Text><Text style={s.bandVal}>{props.status}</Text>{props.isPaid ? <View style={s.paidBadge}><Text style={s.badgeText}>PAID</Text></View> : null}</View>
         </View>
 
         <View style={s.body}>

@@ -56,6 +56,9 @@ const s = StyleSheet.create({
 
   // ── terms ─────────────────────────────────────────────────────────────────────
   termItem:   { fontSize: 8.2, color: MID, marginBottom: 3 },
+  paidBadge: { backgroundColor: "#15803d", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 2 },
+  unpaidBadge: { backgroundColor: "#b91c1c", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 2 },
+  badgeText: { fontSize: 7.5, fontWeight: 700, color: WHITE },
 
   // ── signatures ───────────────────────────────────────────────────────────────
   sigRow:     { flexDirection: "row", gap: 30, marginTop: 20 },
@@ -80,6 +83,7 @@ type Props = {
   amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  isPaid?: boolean;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
   lineItems?:     PdfLineItem[];
@@ -157,6 +161,7 @@ export function InvoiceDocumentMinimal(props: Props) {
             <View style={s.colSep} />
             <Text style={s.colLabel}>Status</Text>
             <Text style={s.colValBold}>{props.status}</Text>
+            {props.isPaid ? <View style={s.paidBadge}><Text style={s.badgeText}>PAID</Text></View> : null}
           </View>
         </View>
 

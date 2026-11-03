@@ -75,6 +75,9 @@ const s = StyleSheet.create({
   totalVal: { fontSize: 14, fontWeight: 700, color: GOLD },
 
   termItem: { fontSize: 8.2, color: MID, marginBottom: 3 },
+  paidBadge: { backgroundColor: "#15803d", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  unpaidBadge: { backgroundColor: "#b91c1c", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  badgeText: { fontSize: 8.5, color: WHITE, fontWeight: 700 },
 
   sigRow:  { flexDirection: "row", gap: 16, marginTop: 16 },
   sigCol:  { flex: 1, border: `1 solid ${LINE_L}`, borderRadius: 4, padding: 10, backgroundColor: WHITE, borderTop: `2 solid ${GOLD}` },
@@ -98,6 +101,7 @@ type Props = {
   amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  isPaid?: boolean;
   promo?: QuotationPromo | null;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
@@ -156,7 +160,7 @@ export function InvoiceDocumentExecutive(props: Props) {
           <View style={s.metaItem}><Text style={s.metaLbl}>Valid Until</Text><Text style={s.metaVal}>{props.validUntil}</Text></View>
           <View style={s.metaItem}><Text style={s.metaLbl}>Repair ID</Text><Text style={s.metaVal}>{props.repairId}</Text></View>
           <View style={s.metaItem}><Text style={s.metaLbl}>Total Payable</Text><Text style={s.metaValGold}>{props.totalAmountPayable}</Text></View>
-          <View style={s.metaItem}><Text style={s.metaLbl}>Status</Text><Text style={s.metaVal}>{props.status}</Text></View>
+          <View style={s.metaItem}><Text style={s.metaLbl}>Status</Text><Text style={s.metaVal}>{props.status}</Text>{props.isPaid ? <View style={s.paidBadge}><Text style={s.badgeText}>PAID</Text></View> : null}</View>
         </View>
 
         <View style={s.body}>

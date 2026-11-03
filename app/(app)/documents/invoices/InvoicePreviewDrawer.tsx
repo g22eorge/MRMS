@@ -19,7 +19,7 @@ export function InvoicePreviewDrawer() {
   }, [previewInvoiceId]);
 
   if (!previewInvoiceId || typeof document === "undefined") return null;
-  const pdfUrl = `/api/invoices/${previewInvoiceId}/pdf`;
+  const pdfUrl = `/api/invoices/${previewInvoiceId}/pdf?inline=1`;
 
   async function handleDownload() {
     try {
