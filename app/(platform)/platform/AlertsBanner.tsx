@@ -46,7 +46,7 @@ export default function AlertsBanner({ pastDueOrgs, expiringOrgs, now }: AlertsB
             </a>
             <button
               onClick={() => dismiss(org.id)}
-              className="text-red-500 hover:text-red-700"
+              className="ml-2 flex h-6 w-6 items-center justify-center rounded bg-red-500/20 text-red-600 hover:bg-red-500 hover:text-red-800 text-xs font-bold leading-none"
               aria-label="Dismiss past due alert"
             >
               ×
@@ -71,7 +71,7 @@ export default function AlertsBanner({ pastDueOrgs, expiringOrgs, now }: AlertsB
               </a>
               <button
                 onClick={() => dismiss(org.id)}
-                className="text-amber-500 hover:text-amber-700"
+                className="ml-2 flex h-6 w-6 items-center justify-center rounded bg-amber-500/20 text-amber-600 hover:bg-amber-500 hover:text-amber-800 text-xs font-bold leading-none"
                 aria-label="Dismiss trial expiry alert"
               >
                 ×
