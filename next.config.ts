@@ -66,7 +66,6 @@ const nextConfig: NextConfig = {
   // (scripts/build.mjs, off-CI) sets NEXT_DIST_DIR to a separate dir so
   // `next build` never cleans the running dev server's .next out from under it.
   distDir: process.env.NEXT_DIST_DIR || ".next",
-  turbopack: { root: process.cwd() },
   experimental: {
     // Turbopack's on-disk dev cache (.next/dev/cache/turbopack/*.sst) is what
     // corrupts when the .next dir is disturbed mid-session, surfacing as
