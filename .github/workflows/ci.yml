@@ -280,6 +280,8 @@ jobs:
         run: bun run seed
 
       - name: Build
+        env:
+          NEXT_DIST_DIR: .next-e2e
         run: bun run build
 
       - name: QA E2E role smoke
