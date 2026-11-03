@@ -41,4 +41,4 @@ const env = {
 
 run("bunx", ["prisma", "generate"], { env });
 run("node", ["scripts/assert-prisma-models.mjs"], { env });
-run("next", ["build"], { env });
+run("next", ["build", "--webpack"], { env });
