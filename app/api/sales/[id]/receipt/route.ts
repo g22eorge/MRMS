@@ -16,7 +16,7 @@ export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const inline = req.nextUrl.searchParams.get("inline") === "1";
+  const inline = req.nextUrl.searchParams.get("inline") !== "0";
   const { id } = await context.params;
   const { user, orgId } = await requireOrgSession();
 

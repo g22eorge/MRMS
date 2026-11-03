@@ -16,8 +16,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  // `?inline=1` renders in the in-app preview iframe; default downloads.
-  const inline = _req.nextUrl.searchParams.get("inline") === "1";
+  // `?inline=0` forces download; default renders inline (mobile share options).
+  const inline = _req.nextUrl.searchParams.get("inline") !== "0";
   const { user, orgId } = await requireOrgSession();
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
