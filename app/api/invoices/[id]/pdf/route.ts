@@ -85,6 +85,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const dueDateVal = invoice.dueDate ?? new Date(issuedAtDate.getTime() + 14 * 86400000);
   const client = invoice.client;
   const isPaid = invoice.status === "PAID";
+  const paidAmount = Number(invoice.paidAmount ?? 0);
+  const balanceDue = Math.max(Number(invoice.totalAmount) - paidAmount, 0);
 
   const element = createElement(InvoiceDoc as never, {
     companyName: branding.companyName,
@@ -127,6 +129,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     notes: invoice.notes ?? "",
     status: invoice.status,
     isPaid,
+    paymentMade: formatMoney(paidAmount, currency),
+    balanceDue: formatMoney(balanceDue, currency),
     currency,
     termsText: pickDocumentTerms(branding.termsText, invoice.jobId ? "REPAIR" : "SALE"),
     footerText: branding.footerText ?? "",
