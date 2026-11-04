@@ -38,7 +38,6 @@
     "seed:local-users": "node prisma/seed-local-users.mjs",
     "seed:base": "bunx prisma migrate deploy && bunx prisma generate && bun run prisma/seed-base.ts",
     "seed:demo": "bunx prisma migrate deploy && bunx prisma generate && bun run prisma/seed.ts",
-    "seed:commercial": "bunx prisma migrate deploy && bunx prisma generate && bun run prisma/seed-commercial.ts",
     "test:setup": "DATABASE_URL=\"postgresql://mrms:mrms_dev_password@localhost:5434/mrms_scratch?schema=public\" bunx prisma migrate deploy",
     "test:unit:watch": "bun test tests/unit --watch",
     "worker:start": "bun lib/queue/worker.ts",

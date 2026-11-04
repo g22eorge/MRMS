@@ -76,13 +76,18 @@ type Props = {
   companyTaxId?: string | null; companyLogoUrl?: string;
   documentTitle: string; quotationNumber: string; dateIssued: string; validUntil: string;
   repairId: string; preparedByName: string; preparedByRole: string;
-  clientName: string; clientPhone: string; clientEmail: string; clientOrganization: string;
+  clientName: string;   clientPhone: string;
+  clientEmail: string;
+  clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deviceType: string; deviceLabel: string; serialOrImei: string; accessories: string; physicalCondition: string;
   customerIssue: string; diagnosisSummary: string; scopeOfWork: string;
   repairCost: string; vatApplicable: boolean; vatLabel: string; vatAmount: string; totalAmountPayable: string;
   amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  paymentTerms?: string | null; dueDate?: string | null;
   isPaid?: boolean;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
@@ -131,6 +136,8 @@ export function InvoiceDocumentMinimal(props: Props) {
             <Text style={s.docMeta}>Issued: {props.dateIssued}</Text>
             <Text style={s.docMeta}>Valid until: {props.validUntil}</Text>
             <Text style={s.docMeta}>Repair ID: {props.repairId}</Text>
+            {props.paymentTerms ? <Text style={s.docMeta}>Terms: {props.paymentTerms}</Text> : null}
+            {props.dueDate ? <Text style={s.docMeta}>Due: {props.dueDate}</Text> : null}
           </View>
         </View>
         <View style={s.divider} />
@@ -143,6 +150,8 @@ export function InvoiceDocumentMinimal(props: Props) {
             {props.clientOrganization ? <Text style={s.colVal}>{props.clientOrganization}</Text> : null}
             <Text style={s.colVal}>{props.clientPhone}</Text>
             {props.clientEmail ? <Text style={s.colVal}>{props.clientEmail}</Text> : null}
+            {props.clientAddress ? <Text style={s.colVal}>{props.clientAddress}</Text> : null}
+            {props.clientAccountNumber ? <Text style={s.colVal}>Account No.: {props.clientAccountNumber}</Text> : null}
           </View>
           {isRepairMode && (
             <View style={s.col}>

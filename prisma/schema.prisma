@@ -549,6 +549,7 @@ model Client {
   email        String?
   organization String?
   address      String?
+  accountNumber String?
   notes        String?
   orgId        String
   org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)

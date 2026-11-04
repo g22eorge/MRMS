@@ -88,13 +88,18 @@ type Props = {
   companyTaxId?: string | null; companyLogoUrl?: string;
   documentTitle: string; quotationNumber: string; dateIssued: string; validUntil: string;
   repairId: string; preparedByName: string; preparedByRole: string;
-  clientName: string; clientPhone: string; clientEmail: string; clientOrganization: string;
+  clientName: string;   clientPhone: string;
+  clientEmail: string;
+  clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deviceType: string; deviceLabel: string; serialOrImei: string; accessories: string; physicalCondition: string;
   customerIssue: string; diagnosisSummary: string; scopeOfWork: string;
   repairCost: string; vatApplicable: boolean; vatLabel: string; vatAmount: string; totalAmountPayable: string;
   amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  paymentTerms?: string | null; dueDate?: string | null;
   isPaid?: boolean;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
@@ -149,6 +154,12 @@ export function InvoiceDocumentPremium(props: Props) {
           <View style={s.bandItem}><Text style={s.bandLbl}>Repair ID</Text><Text style={s.bandVal}>{props.repairId}</Text></View>
           <View style={s.bandItem}><Text style={s.bandLbl}>Total Payable</Text><Text style={s.bandValLg}>{props.totalAmountPayable}</Text></View>
           <View style={s.bandItem}><Text style={s.bandLbl}>Status</Text><Text style={s.bandVal}>{props.status}</Text>{props.isPaid ? <View style={s.paidBadge}><Text style={s.badgeText}>PAID</Text></View> : null}</View>
+          {props.paymentTerms ? (
+            <View style={s.bandItem}><Text style={s.bandLbl}>Payment Terms</Text><Text style={s.bandVal}>{props.paymentTerms}</Text></View>
+          ) : null}
+          {props.dueDate ? (
+            <View style={s.bandItem}><Text style={s.bandLbl}>Due Date</Text><Text style={s.bandVal}>{props.dueDate}</Text></View>
+          ) : null}
         </View>
 
         <View style={s.body}>
@@ -160,6 +171,8 @@ export function InvoiceDocumentPremium(props: Props) {
               {props.clientOrganization ? <View style={s.row}><Text style={s.rlbl}>Org</Text><Text style={s.rval}>{props.clientOrganization}</Text></View> : null}
               <View style={s.row}><Text style={s.rlbl}>Phone</Text><Text style={s.rval}>{props.clientPhone}</Text></View>
               {props.clientEmail ? <View style={s.row}><Text style={s.rlbl}>Email</Text><Text style={s.rval}>{props.clientEmail}</Text></View> : null}
+              {props.clientAddress ? <View style={s.row}><Text style={s.rlbl}>Address</Text><Text style={s.rval}>{props.clientAddress}</Text></View> : null}
+              {props.clientAccountNumber ? <View style={s.row}><Text style={s.rlbl}>Account No.</Text><Text style={s.rval}>{props.clientAccountNumber}</Text></View> : null}
             </View>
             {isRepairMode && (
               <View style={s.card}>
