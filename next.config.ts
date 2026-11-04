@@ -86,6 +86,13 @@ const nextConfig: NextConfig = {
       { source: "/repair-request", destination: "/repair", permanent: false },
       // No top-level /profile page — user profile lives under Settings.
       { source: "/profile", destination: "/settings/profile", permanent: false },
+      // `/app` used to be a page (app/app/page.tsx) that sent people to the
+      // dashboard or login. Inside the Docker image, which builds in /app, its
+      // path collided with the home page's (/app/app/page.tsx): the production
+      // build compiled the home page from that file, so `/` redirected to /login
+      // on care and app instead of rendering the landing page. Same behaviour,
+      // no file: the proxy's auth gate sends signed-out visitors to /login.
+      { source: "/app", destination: "/dashboard", permanent: false },
     ];
   },
   async headers() {

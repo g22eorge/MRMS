@@ -3,6 +3,7 @@
 node_modules
 .next
 .next-gate
+.next-*
 coverage
 test-results
 playwright-report
