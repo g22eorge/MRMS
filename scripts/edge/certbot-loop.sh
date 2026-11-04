@@ -40,15 +40,36 @@ log() { echo "[certbot-loop] $*"; }
 mkdir -p "$WEBROOT/.well-known/acme-challenge" "$PUBLISH"
 chmod 0755 "$WEBROOT" "$WEBROOT/.well-known" "$WEBROOT/.well-known/acme-challenge" "$PUBLISH"
 
+# The hostname is resolved through a public resolver, not the server's own.
+# The hosting provider's resolver (first in the host's resolv.conf) cached the
+# old Vercel record for its full one-hour TTL at the care switch, so a probe
+# that trusted it kept reporting "not routed here" for an hour while the rest of
+# the internet -- Let's Encrypt included -- already pointed at this server.
+PROBE_RESOLVER="${EDGE_PROBE_RESOLVER:-1.1.1.1}"
+
+public_ipv4s() {
+  # busybox nslookup prints the server first ("Address: 1.1.1.1:53"); skip it.
+  nslookup "$1" "$PROBE_RESOLVER" 2>/dev/null \
+    | awk '/^Address/ { print $NF }' \
+    | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' \
+    | grep -vxF "$PROBE_RESOLVER" || true
+}
+
 routes_here() {
   domain="$1"
   name="mrms-probe-$domain"
   token="$(head -c 18 /dev/urandom | od -An -tx1 | tr -d ' \n')"
   printf '%s' "$token" > "$WEBROOT/.well-known/acme-challenge/$name"
   chmod 0644 "$WEBROOT/.well-known/acme-challenge/$name"
-  got="$(wget -q -T 10 -O - "http://$domain/.well-known/acme-challenge/$name" 2>/dev/null || true)"
+  ok=1
+  for ip in $(public_ipv4s "$domain"); do
+    # Ask that address directly, with the hostname in Host, the way HTTP-01 does.
+    got="$(wget -q -T 10 --header "Host: $domain" -O - \
+      "http://$ip/.well-known/acme-challenge/$name" 2>/dev/null || true)"
+    if [ "$got" = "$token" ]; then ok=0; break; fi
+  done
   rm -f "$WEBROOT/.well-known/acme-challenge/$name"
-  [ "$got" = "$token" ]
+  return "$ok"
 }
 
 publish() {

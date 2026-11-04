@@ -74,7 +74,7 @@ repo:
 | --- | --- | --- |
 | `deploy/edge/care.conf` | → `/var/www/edge/nginx/mrms-care.conf` | :80 serves the ACME webroot and redirects; :443 proxies to `host.docker.internal:3010`, forwarding `Host` |
 | `scripts/edge/install-nginx-conf.sh` | run by `deploy.yml` | copies the block in, runs `nginx -t`, reloads; on failure restores the previous file and fails the deploy. Skips with a warning if eaglestays has not merged its change yet |
-| `certbot` service (profile `edge`) | `docker-compose.yml` | probes `http://care…/.well-known/acme-challenge/<token>` every 60s; once its own token comes back (DNS + nginx both route here) it issues, then renews twice a day. Publishes to `/var/www/edge/certs` with the key `root:101 0640` for nginx's worker |
+| `certbot` service (profile `edge`) | `docker-compose.yml` | resolves the hostname through 1.1.1.1 (not the host's resolver, whose provider cache held the old record for an hour at the care switch) and fetches `/.well-known/acme-challenge/<token>` from that IP every 60s; once its own token comes back (DNS + nginx both route here) it issues, then renews twice a day. Publishes to `/var/www/edge/certs` with the key `root:101 0640` for nginx's worker |
 
 Properties to rely on:
 
@@ -87,6 +87,9 @@ Properties to rely on:
   refused for up to an hour.
 - Expect care's https to fail for about 1–2 minutes after the DNS flip, until
   the server's resolver sees the new record and the certificate lands.
+- The app port (3010) is published on the docker0 address only (`APP_BIND`,
+  set by `deploy.yml`), so `http://141.136.44.99:3010` is closed to the
+  internet; nginx reaches it through `host.docker.internal`.
 - Every eaglestays deploy runs `compose down && up`, which briefly takes care
   down too. Shared front door, shared restarts.
 

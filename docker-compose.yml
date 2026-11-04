@@ -133,7 +133,12 @@ services:
       migrate:
         condition: service_completed_successfully
     ports:
-      - "${APP_PORT:-3000}:3000"
+      # APP_BIND is the host address the port listens on. Unset (local
+      # development) it is every interface. On the shared VPS deploy.yml sets it
+      # to the docker0 bridge address: the shared nginx reaches the app there via
+      # host.docker.internal, and the public internet cannot reach it at all --
+      # otherwise http://<server-ip>:APP_PORT is a plain-HTTP side door past TLS.
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-3000}:3000"
     volumes:
       - uploads:/data/uploads
       # Shared with the `backup` service, which writes the dumps. Read-write

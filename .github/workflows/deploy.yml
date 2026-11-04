@@ -219,6 +219,14 @@ jobs:
 
             echo "$GH_TOKEN" | $DOCKER login ghcr.io -u "$GH_USER" --password-stdin
 
+            # Publish the app on the docker0 bridge only (see APP_BIND in
+            # docker-compose.yml). ENV_CI can override it; if docker0 is missing
+            # it stays on every interface rather than failing the deploy.
+            if ! grep -qE '^APP_BIND=' .env; then
+              bind="$(ip -4 -o addr show docker0 2>/dev/null | awk '{print $4}' | cut -d/ -f1)"
+              if [ -n "$bind" ]; then printf 'APP_BIND=%s\n' "$bind" >> .env; fi
+            fi
+
             # Only ever this project. No `down`, no other directory, nothing on
             # 80/443 — eaglestays is live on the same machine.
             $DOCKER compose pull
@@ -263,4 +271,6 @@ jobs:
             $DOCKER compose run --rm migrate bunx prisma migrate status
             $DOCKER compose ps
             port="$(grep -E '^APP_PORT=' .env | cut -d= -f2 | sed 's/[[:space:]].*//')"
-            curl -fsS "http://127.0.0.1:${port:-3000}/api/health" && echo
+            bind="$(grep -E '^APP_BIND=' .env | tail -n 1 | cut -d= -f2 | sed 's/[[:space:]].*//')"
+            if [ -z "$bind" ] || [ "$bind" = "0.0.0.0" ]; then bind=127.0.0.1; fi
+            curl -fsS "http://${bind}:${port:-3000}/api/health" && echo
