@@ -18,7 +18,7 @@
 # route here, which is exactly what HTTP-01 is about to check.
 set -eu
 
-DOMAINS="$(printf '%s' "${EDGE_DOMAINS:-care.eagleinfosolutions.com}" | tr ',' ' ')"
+DOMAINS="$(printf '%s' "${EDGE_DOMAINS:-care.eagleinfosolutions.com app.eagleinfosolutions.com}" | tr ',' ' ')"
 WEBROOT=/edge/acme
 PUBLISH=/edge/certs
 # nginx:alpine runs its workers as uid/gid 101. The key is read at handshake

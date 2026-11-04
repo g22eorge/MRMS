@@ -153,6 +153,41 @@ services:
           cpus: "0.10"
           memory: 128M
 
+  # The commercial product, app.eagleinfosolutions.com: the same image and the
+  # same database as `app`, in the other deployment mode. Mode is a property of
+  # the process, not the request (lib/deployment-context.ts): `app` carries
+  # care's URL and is single-tenant whatever host reaches it, so the commercial
+  # product needs its own process carrying its own URL. Both share uploads,
+  # Postgres and Redis; one worker and one scheduler serve both.
+  # Server only (profile `commercial`), behind deploy/edge/app.conf.
+  app-commercial:
+    image: ${IMAGE_PREFIX:-mrms}-app:${IMAGE_TAG:-latest}
+    profiles: ["commercial"]
+    restart: unless-stopped
+    env_file: *env-file
+    environment:
+      <<: *app-env
+      NEXT_PUBLIC_APP_URL: ${COMMERCIAL_APP_URL:-https://app.eagleinfosolutions.com}
+      BETTER_AUTH_URL: ${COMMERCIAL_APP_URL:-https://app.eagleinfosolutions.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_BIND:-0.0.0.0}:${COMMERCIAL_APP_PORT:-3011}:3000"
+    volumes:
+      - uploads:/data/uploads
+      - backups:/backups
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -271,7 +306,7 @@ services:
     restart: unless-stopped
     entrypoint: ["sh", "/scripts/certbot-loop.sh"]
     environment:
-      EDGE_DOMAINS: ${EDGE_DOMAINS:-care.eagleinfosolutions.com}
+      EDGE_DOMAINS: ${EDGE_DOMAINS:-care.eagleinfosolutions.com app.eagleinfosolutions.com}
       CERTBOT_EMAIL: ${CERTBOT_EMAIL:-}
     volumes:
       # Account key and renewal state. Losing it only means re-registering.

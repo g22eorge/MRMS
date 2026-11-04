@@ -179,8 +179,9 @@ jobs:
           {
             printf '%s\n' "$ENV_CI"
             printf 'IMAGE_PREFIX=%s\nIMAGE_TAG=%s\n' "$IMAGE_PREFIX" "$IMAGE_TAG"
-            # Turns on the `certbot` service, which only belongs on the server.
-            printf 'COMPOSE_PROFILES=edge\n'
+            # Server-only services: `certbot` (edge) and `app-commercial`, the
+            # app.eagleinfosolutions.com process (commercial).
+            printf 'COMPOSE_PROFILES=edge,commercial\n'
           } > .env
           grep -qE '^POSTGRES_PASSWORD=[^[:space:]#]' .env \
             || { echo "::error::ENV_CI has no POSTGRES_PASSWORD value — see .env.ci.example"; exit 1; }
@@ -192,7 +193,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
-          source: "docker-compose.yml,.env,scripts/backup-db.sh,scripts/restore-db.sh,scripts/edge/certbot-loop.sh,scripts/edge/install-nginx-conf.sh,deploy/edge/care.conf"
+          source: "docker-compose.yml,.env,scripts/backup-db.sh,scripts/restore-db.sh,scripts/edge/certbot-loop.sh,scripts/edge/install-nginx-conf.sh,deploy/edge/care.conf,deploy/edge/app.conf"
           target: ${{ steps.names.outputs.path }}
           overwrite: true
 
@@ -237,11 +238,13 @@ jobs:
 
             # Wait for the container healthcheck (/api/health, which checks the
             # database) rather than trusting that "started" means "working".
-            for i in $(seq 1 60); do
-              state="$($DOCKER inspect --format '{{.State.Health.Status}}' "$($DOCKER compose ps -q app)" 2>/dev/null || true)"
-              [ "$state" = "healthy" ] && { echo "app healthy"; break; }
-              [ "$i" = 60 ] && { echo "app not healthy after 5 minutes: $state"; $DOCKER compose logs --tail 80 migrate app; exit 1; }
-              sleep 5
+            for svc in app app-commercial; do
+              for i in $(seq 1 60); do
+                state="$($DOCKER inspect --format '{{.State.Health.Status}}' "$($DOCKER compose ps -q $svc)" 2>/dev/null || true)"
+                [ "$state" = "healthy" ] && { echo "$svc healthy"; break; }
+                [ "$i" = 60 ] && { echo "$svc not healthy after 5 minutes: $state"; $DOCKER compose logs --tail 80 migrate $svc; exit 1; }
+                sleep 5
+              done
             done
 
             # Put care.eagleinfosolutions.com's server block into the nginx that
@@ -274,3 +277,5 @@ jobs:
             bind="$(grep -E '^APP_BIND=' .env | tail -n 1 | cut -d= -f2 | sed 's/[[:space:]].*//')"
             if [ -z "$bind" ] || [ "$bind" = "0.0.0.0" ]; then bind=127.0.0.1; fi
             curl -fsS "http://${bind}:${port:-3000}/api/health" && echo
+            cport="$(grep -E '^COMMERCIAL_APP_PORT=' .env | cut -d= -f2 | sed 's/[[:space:]].*//')"
+            curl -fsS "http://${bind}:${cport:-3011}/api/health" && echo

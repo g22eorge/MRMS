@@ -57,13 +57,21 @@ mismatches are the newer dump, not a failed import.
    dump off the box; keep Turso read-only ~7 days.
 
    `app.eagleinfosolutions.com` (Vercel project `mrms-apga`, the commercial
-   product) is **not** part of this switch. One stack runs in one mode, and
-   `BETTER_AUTH_URL=https://care…` forces single-tenant for every hostname it
-   serves (`lib/deployment-context.ts`). Moving `app.` needs its own stack and
-   its own data. Until then, make sure merging to `main` does not ship
-   Postgres-only code to `mrms-apga`.
+   product) moves the same way, onto the **same database**: the imported
+   `eagle-prod-merged` already holds the commercial tenants. It runs as a
+   second process, `app-commercial` (same image, port 3011), because mode is
+   fixed per process: `app` carries care's URL and is single-tenant for every
+   host (`lib/deployment-context.ts`). Its switch is the same delete-and-add in
+   Netlify (`app` CNAME -> `A 141.136.44.99`); certbot covers both hostnames.
+   `mrms-apga` deploys production from `main`, so do not merge to `main` until
+   its git deploys are off.
 
-### Routing care through the shared nginx
+   Known gap: one worker and one scheduler serve both processes with care's
+   `NEXT_PUBLIC_APP_URL`, so links in retried or scheduled messages for
+   commercial tenants point at care. Request-triggered sends from `app.` are
+   correct. Fixing it means resolving the URL per org, not per process.
+
+### Routing care and app through the shared nginx
 
 eaglestays' nginx container owns 80/443 on this box. It includes every
 `*.conf` in `/var/www/edge/nginx` (one-time change on eaglestays, branch
