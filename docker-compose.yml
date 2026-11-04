@@ -293,7 +293,10 @@ services:
           cpus: "0.05"
           memory: 32M
 
-  # TLS for the public hostname(s), on the shared VPS only. 80/443 belong to
+  # TLS for the public hostnames, on the shared VPS only: MRMS's two, plus
+  # eagleinfosolutions.com and www for the eis-app website (its own repo and
+  # deploy; it has no certbot of its own yet -- move this to a shared edge stack
+  # when Netlify is retired). 80/443 belong to
   # eaglestays' nginx, which includes our server block (deploy/edge/care.conf)
   # and reads the certificates this service publishes under EDGE_DIR. It waits
   # for DNS to point here, then issues and renews by itself -- see
@@ -306,7 +309,7 @@ services:
     restart: unless-stopped
     entrypoint: ["sh", "/scripts/certbot-loop.sh"]
     environment:
-      EDGE_DOMAINS: ${EDGE_DOMAINS:-care.eagleinfosolutions.com app.eagleinfosolutions.com}
+      EDGE_DOMAINS: ${EDGE_DOMAINS:-care.eagleinfosolutions.com app.eagleinfosolutions.com eagleinfosolutions.com www.eagleinfosolutions.com}
       CERTBOT_EMAIL: ${CERTBOT_EMAIL:-}
     volumes:
       # Account key and renewal state. Losing it only means re-registering.
