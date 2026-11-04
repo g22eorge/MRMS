@@ -100,6 +100,7 @@ type Props = {
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
   paymentTerms?: string | null; dueDate?: string | null;
+  paymentTo?: string | null;
   isPaid?: boolean;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
@@ -240,6 +241,19 @@ export function InvoiceDocumentPremium(props: Props) {
               <Text key={i} style={s.termItem}>– {l}</Text>
             ))}
           </View>
+
+          {props.paymentTo ? (
+            <View style={[s.diagCard, { marginBottom: 14 }]}>
+              <Text style={s.secLbl}>Payment To</Text>
+              {props.paymentTo.split(/\n\s*\n/).map((block, bi) => (
+                <View key={bi} style={bi > 0 ? { marginTop: 6 } : {}}>
+                  {block.split("\n").map((line, i) => (
+                    <Text key={i} style={s.termItem}>{line.trim()}</Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           {/* ── Signatures ── */}
           <View style={s.sigRow} wrap={false}>

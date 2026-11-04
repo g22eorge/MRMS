@@ -550,7 +550,8 @@ model Client {
   organization String?
   address      String?
   accountNumber String?
-  notes        String?
+  taxId         String?
+  notes         String?
   orgId        String
   org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   createdAt    DateTime     @default(now())
@@ -707,6 +708,8 @@ model Job {
   closedAt          DateTime?
   updatedAt         DateTime        @updatedAt
 
+  poNumber          String?
+
   photos                    Photo[]
   auditLogs                 AuditLog[]
   notifications             Notification[]
@@ -771,6 +774,7 @@ model Invoice {
 
   notes String?
 
+  poNumber      String?
   lines            InvoiceLine[]
   payments         Payment[]
   refunds          Refund[]
@@ -3069,6 +3073,8 @@ model Quotation {
   sentAt         DateTime?
   acceptedAt     DateTime?
   rejectedAt     DateTime?
+
+  poNumber       String?
 
   createdById  String?
   createdBy    User?   @relation("QuotationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)

@@ -321,6 +321,7 @@ export async function generateInvoiceBuffer(
     footerText: normalizedFooterText,
     paymentTerms,
     dueDate: formatEATDocDate(dueDate),
+    paymentTo: (branding as unknown as { paymentInstructions?: string | null }).paymentInstructions ?? null,
     signatureCompanyLabel: branding.signatureCompanyLabel ?? "Company",
     signatureClientLabel: branding.signatureClientLabel ?? "Client",
     lineItems,

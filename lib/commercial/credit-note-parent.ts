@@ -18,6 +18,8 @@ export type ParentClient = {
   phone?: string | null;
   email?: string | null;
   organization?: string | null;
+  address?: string | null;
+  accountNumber?: string | null;
 } | null;
 
 type SaleParent = {

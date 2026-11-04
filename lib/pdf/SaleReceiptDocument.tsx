@@ -36,7 +36,7 @@ type Sale = {
   createdAt: Date;
   currency?: string | null;
   branch: { name: string } | null;
-  client: { fullName: string; phone: string | null; organization?: string | null } | null;
+  client: { fullName: string; phone: string | null; organization?: string | null; address?: string | null; accountNumber?: string | null } | null;
   subtotal: number;
   discountAmount: number;
   vatAmount: number;
@@ -108,6 +108,8 @@ export function SaleReceiptDocument({ sale, branding }: { sale: Sale; branding: 
       clientAttn={clientContactName(sale.client)}
       clientPhone={sale.client?.phone ?? null}
       clientEmail={null}
+      clientAddress={sale.client?.address ?? null}
+      clientAccountNumber={sale.client?.accountNumber ?? null}
       clientLocation={null}
       lineItems={lineItems}
       subTotal={sale.discountAmount > 0 || sale.vatAmount > 0 ? formatMoney(sale.subtotal, currency) : null}

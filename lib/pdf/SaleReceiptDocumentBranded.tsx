@@ -20,7 +20,7 @@ type Sale = {
   saleNumber: string; status: string; createdAt: Date; currency?: string | null;
   name?: string | null;
   branch: { name: string } | null;
-  client: { fullName: string; phone: string | null; organization?: string | null } | null;
+  client: { fullName: string; phone: string | null; organization?: string | null; address?: string | null; accountNumber?: string | null } | null;
   subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number; paidAmount: number;
   items: Array<{ id: string; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
   payments: Array<{ id: string; amount: number; method: string; reference: string | null; receivedAt: Date }>;
@@ -119,6 +119,8 @@ export function SaleReceiptDocumentBranded({ sale, branding }: { sale: Sale; bra
         {/* Meta band */}
         <View style={s.metaBand}>
           <View style={s.metaItem}><Text style={s.metaLbl}>Customer</Text><Text style={s.metaVal}>{saleCustomerName(sale, "Walk-in")}</Text></View>
+          {sale.client?.address ? <View style={s.metaItem}><Text style={s.metaLbl}>Address</Text><Text style={s.metaVal}>{sale.client.address}</Text></View> : null}
+          {sale.client?.accountNumber ? <View style={s.metaItem}><Text style={s.metaLbl}>Account</Text><Text style={s.metaVal}>{sale.client.accountNumber}</Text></View> : null}
           {sale.branch ? <View style={s.metaItem}><Text style={s.metaLbl}>Branch</Text><Text style={s.metaVal}>{sale.branch.name}</Text></View> : null}
           <View style={s.metaItem}><Text style={s.metaLbl}>Status</Text><Text style={s.metaVal}>{sale.status}</Text></View>
           <View style={s.metaItem}><Text style={s.metaLbl}>Total Paid</Text><Text style={s.metaVal}>{formatMoney(sale.paidAmount, currency)}</Text></View>

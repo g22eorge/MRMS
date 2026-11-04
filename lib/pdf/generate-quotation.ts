@@ -165,6 +165,8 @@ export async function generateQuotationBuffer(
     status: prettyEnum(job.status),
     currency,
     termsText: quotationTerms(branding.termsText, "REPAIR"),
+    paymentTerms: branding.termsText ? `Net ${branding.quoteValidityDays} days` : "Due on receipt",
+    dueDate: formatEATDocDate(dueDate),
     promo: defaultQuotationPromo(branding.companyName),
     footerText: branding.footerText,
     signatureCompanyLabel: branding.signatureCompanyLabel,

@@ -90,6 +90,7 @@ type Props = {
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
   paymentTerms?: string | null; dueDate?: string | null;
+  paymentTo?: string | null;
   signatureCompanyLabel: string; signatureClientLabel: string;
   invoiceNumber?: string;
   paymentMade?: string | null;
@@ -228,6 +229,18 @@ export function InvoiceDocumentItemized(props: Props) {
             <View style={s.footCol}>
               <Text style={s.footLbl}>Terms &amp; conditions</Text>
               <Text style={s.footText}>{props.termsText}</Text>
+            </View>
+          ) : null}
+          {props.paymentTo ? (
+            <View style={s.footCol}>
+              <Text style={s.footLbl}>Payment To</Text>
+              {props.paymentTo.split(/\n\s*\n/).map((block, bi) => (
+                <View key={bi} style={bi > 0 ? { marginTop: 4 } : {}}>
+                  {block.split("\n").map((line, i) => (
+                    <Text key={i} style={s.footText}>{line.trim()}</Text>
+                  ))}
+                </View>
+              ))}
             </View>
           ) : null}
           <View style={s.footCol}>

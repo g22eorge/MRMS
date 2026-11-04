@@ -28,7 +28,7 @@ export async function generateStatementBuffer(
 ): Promise<GenerateStatementResult> {
   const client = await prisma.client.findFirst({
     where: { id: clientId, orgId },
-    select: { id: true, fullName: true, organization: true, phone: true, email: true, address: true },
+    select: { id: true, fullName: true, organization: true, phone: true, email: true, address: true, accountNumber: true },
   });
   if (!client) return { ok: false, error: "Client not found" };
 
@@ -81,6 +81,7 @@ export async function generateStatementBuffer(
       phone: client.phone,
       email: client.email,
       address: client.address,
+      accountNumber: client.accountNumber ?? null,
     },
     lines,
     totals: {

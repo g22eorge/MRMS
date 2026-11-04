@@ -246,6 +246,7 @@ type Props = {
   currency: string;
   termsText: string;
   paymentTerms?: string | null; dueDate?: string | null;
+  paymentTo?: string | null;
   promo?: QuotationPromo | null;
   footerText: string;
   signatureCompanyLabel: string;
@@ -523,6 +524,21 @@ export function InvoiceDocumentV2(rawProps: Props) {
             ))}
           </View>
         </View>
+
+        {props.paymentTo ? (
+          <View style={s.section}>
+            <View style={s.sectionHead}><Text style={s.sectionTitle}>Payment To</Text></View>
+            <View style={s.sectionBody}>
+              {props.paymentTo.split(/\n\s*\n/).map((block, bi) => (
+                <View key={bi} style={bi > 0 ? { marginTop: 6 } : {}}>
+                  {block.split("\n").map((line, i) => (
+                    <Text key={i} style={s.metaValue}>{line.trim()}</Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Signatures */}
         <View style={s.sigWrap} wrap={false}>

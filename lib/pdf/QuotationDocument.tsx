@@ -214,6 +214,8 @@ type Props = {
   clientPhone: string;
   clientEmail: string;
   clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deviceType: string;
   deviceLabel: string;
   serialOrImei: string;
@@ -237,6 +239,8 @@ type Props = {
   termsText: string;
   promo?: QuotationPromo | null;
   footerText: string;
+  paymentTerms?: string | null;
+  dueDate?: string | null;
   signatureCompanyLabel: string;
   signatureClientLabel: string;
 };
