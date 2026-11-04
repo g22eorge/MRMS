@@ -253,7 +253,38 @@ services:
           cpus: "0.05"
           memory: 32M
 
+  # TLS for the public hostname(s), on the shared VPS only. 80/443 belong to
+  # eaglestays' nginx, which includes our server block (deploy/edge/care.conf)
+  # and reads the certificates this service publishes under EDGE_DIR. It waits
+  # for DNS to point here, then issues and renews by itself -- see
+  # scripts/edge/certbot-loop.sh. Off unless COMPOSE_PROFILES includes `edge`
+  # (deploy.yml sets it), so a local `compose up` never asks Let's Encrypt
+  # for production hostnames or writes to /var/www.
+  certbot:
+    image: certbot/certbot:v5.8.0
+    profiles: ["edge"]
+    restart: unless-stopped
+    entrypoint: ["sh", "/scripts/certbot-loop.sh"]
+    environment:
+      EDGE_DOMAINS: ${EDGE_DOMAINS:-care.eagleinfosolutions.com}
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL:-}
+    volumes:
+      # Account key and renewal state. Losing it only means re-registering.
+      - letsencrypt:/etc/letsencrypt
+      - ${EDGE_DIR:-/var/www/edge}/acme:/edge/acme
+      - ${EDGE_DIR:-/var/www/edge}/certs:/edge/certs
+      - ./scripts/edge/certbot-loop.sh:/scripts/certbot-loop.sh:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 128M
+        reservations:
+          cpus: "0.01"
+          memory: 16M
+
 volumes:
+  letsencrypt:
   pgdata:
   uploads:
   redisdata:

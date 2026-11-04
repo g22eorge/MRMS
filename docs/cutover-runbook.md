@@ -1,18 +1,111 @@
 # Production cutover: SQLite/Turso → Postgres on Docker
 
-Everything in this document has been rehearsed against the production snapshot
-except the two steps that need the live systems: taking the final dump, and
-switching DNS. Timings below are from the rehearsal (2,777 rows).
+## Status (2026-10-26)
 
-**Status:** the whole data path has been run against the export of 2026-08-25
-(4,103 rows, newest row 2026-08-24) — validated, imported, verified, and served
-by the application inside the Docker stack. See the Phase 6 section of
-`postgres-migration-plan.md` for the figures.
+The Docker stack is live on the shared Eagle Stays VPS. Today's dump is in
+Postgres. **Users still hit Vercel + Turso.** Do not treat
+`http://141.136.44.99:3010` as production.
 
-What remains is only what needs the live systems: deploying to the shared
-server, freezing writes, taking the **final** export, and routing the domain.
-Any earlier export is stale by definition — anything written since would be
-lost, which is why the final one is taken inside the freeze.
+### Done
+
+- GitHub Actions `Deploy` on `feat/postgres-docker-migration` (GHCR pull, no
+  build on the 1 vCPU box). Path `/var/www/mrms`. Port **3010**.
+- `ENV_CI` + `SERVER_*` + `DEPLOY_PATH` secrets on `g22eorge/MRMS`.
+- CSP: no `upgrade-insecure-requests` while the public URL is `http://`.
+  Image `4eb1e2c9`. Open **http://** not https on :3010.
+- Import of `mrms-prod.db-2` (SHA `6d533801…`, written 2026-10-26): 8,338 rows,
+  11 users, 143 clients, 129 jobs, 169 invoices, 191 payments. Last audit
+  2026-10-26 07:31 UTC. Eight `Receipt.paymentId` orphans nulled (documented
+  `nullOrphan` policy).
+- WhatsApp / Resend / Pesapal left blank in `ENV_CI` so the scheduler does not
+  message real clients from this stack.
+
+`verify-business.ts` still compares to the September baseline; count/money
+mismatches are the newer dump, not a failed import.
+
+### What remains (do in this order)
+
+1. **Smoke the VPS** at `http://141.136.44.99:3010` with a production login:
+   open a job and change status (Messages tab); record a payment; open an
+   invoice PDF; search a client in lowercase; `/api/admin/db-health` in sync.
+   Vercel is still source of truth — do not run the shop on :3010 yet.
+
+2. **Data freeze (decision).** Anything written on Vercel after
+   `mrms-prod.db-2` is not on the VPS. Before DNS: freeze Vercel writes, take a
+   final Turso dump, re-import with `--truncate`. Or accept this dump and lose
+   later rows.
+
+3. **TLS + hostname (built, see "Routing care through the shared nginx"
+   below).** Not a Cloudflare origin cert: eagleinfosolutions.com is on
+   Netlify DNS with no Cloudflare proxy, so a browser would reject one. MRMS's
+   `certbot` service gets a Let's Encrypt certificate by itself once DNS
+   points here. Needs eaglestays branch `feat/shared-nginx-includes` merged to
+   its `main` once.
+
+4. **The window.** Freeze Vercel writes; final Turso dump; re-import with
+   `--truncate`; verify. Set `NEXT_PUBLIC_APP_URL` and `BETTER_AUTH_URL` to
+   `https://care.eagleinfosolutions.com` in `ENV_CI` and redeploy — from here
+   login over `http://141.136.44.99:3010` stops working (Secure cookie), which
+   is expected. Lower the `care` TTL to 300 in Netlify an hour before. Then in
+   Netlify DNS replace the `care` CNAME with `A 141.136.44.99`. Keep Vercel
+   frozen until the nginx access log shows the traffic has moved.
+
+5. **After the switch.** Restore `upgrade-insecure-requests` in the CSP;
+   disable git deploys on Vercel project `mrms`; merge
+   `feat/postgres-docker-migration` to `main` and add `main` to `deploy.yml`;
+   copy WhatsApp/Resend into `ENV_CI`; run `scripts/backup-db.sh` and copy the
+   dump off the box; keep Turso read-only ~7 days.
+
+   `app.eagleinfosolutions.com` (Vercel project `mrms-apga`, the commercial
+   product) is **not** part of this switch. One stack runs in one mode, and
+   `BETTER_AUTH_URL=https://care…` forces single-tenant for every hostname it
+   serves (`lib/deployment-context.ts`). Moving `app.` needs its own stack and
+   its own data. Until then, make sure merging to `main` does not ship
+   Postgres-only code to `mrms-apga`.
+
+### Routing care through the shared nginx
+
+eaglestays' nginx container owns 80/443 on this box. It includes every
+`*.conf` in `/var/www/edge/nginx` (one-time change on eaglestays, branch
+`feat/shared-nginx-includes`). Everything else is owned and deployed by this
+repo:
+
+| Piece | Where | What it does |
+| --- | --- | --- |
+| `deploy/edge/care.conf` | → `/var/www/edge/nginx/mrms-care.conf` | :80 serves the ACME webroot and redirects; :443 proxies to `host.docker.internal:3010`, forwarding `Host` |
+| `scripts/edge/install-nginx-conf.sh` | run by `deploy.yml` | copies the block in, runs `nginx -t`, reloads; on failure restores the previous file and fails the deploy. Skips with a warning if eaglestays has not merged its change yet |
+| `certbot` service (profile `edge`) | `docker-compose.yml` | probes `http://care…/.well-known/acme-challenge/<token>` every 60s; once its own token comes back (DNS + nginx both route here) it issues, then renews twice a day. Publishes to `/var/www/edge/certs` with the key `root:101 0640` for nginx's worker |
+
+Properties to rely on:
+
+- nginx loads care's certificate at handshake time, so a missing certificate
+  fails care's handshakes only. eaglestays.ug and nginx itself are unaffected,
+  and nothing needs a reload when the certificate arrives or renews.
+- The probe exists because Let's Encrypt allows 5 failed validations per
+  hostname per hour. Calling certbot blind while DNS still points at Vercel
+  would exhaust that, and the real issuance right after the switch would be
+  refused for up to an hour.
+- Expect care's https to fail for about 1–2 minutes after the DNS flip, until
+  the server's resolver sees the new record and the certificate lands.
+- Every eaglestays deploy runs `compose down && up`, which briefly takes care
+  down too. Shared front door, shared restarts.
+
+Check it:
+
+```bash
+$DOCKER compose logs --tail 20 certbot          # "DNS does not point here yet" until the flip
+curl -sI --resolve care.eagleinfosolutions.com:443:141.136.44.99 https://care.eagleinfosolutions.com/api/health
+```
+
+Command detail for dump/import/DNS is still below (steps 5–14 of the original). Skip 1–4 of
+the old order — they are done.
+
+---
+
+Everything in the original procedure was rehearsed against earlier snapshots.
+Timings below are from the rehearsal (2,777 rows). See Phase 6 of
+`postgres-migration-plan.md` for those figures. Any dump older than the freeze
+is stale by definition.
 
 ## Where this runs
 
