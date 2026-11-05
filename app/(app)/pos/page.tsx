@@ -28,7 +28,7 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
-import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
+import { saleCustomerName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
@@ -84,7 +84,6 @@ export default async function PosPage({
           { saleNumber: icontains(q) },
           { name: icontains(q) },
           { notes: icontains(q) },
-          { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
         ],
       }
     : {};
@@ -225,7 +224,6 @@ export default async function PosPage({
     paidAmount: number;
     invoicedAt: Date | null;
     createdAt: Date;
-    client: { id: string; fullName: string; organization: string | null } | null;
     createdBy: { id: string; name: string } | null;
     _count: { payments: number; creditNotes: number; refunds: number };
   }> = [];
@@ -247,15 +245,10 @@ export default async function PosPage({
       paidAmount: true,
       invoicedAt: true,
       createdAt: true,
-      client: { select: { id: true, fullName: true, organization: true } },
       createdBy: { select: { id: true, name: true } },
       _count: { select: { payments: true, creditNotes: true, refunds: true } },
     },
   });
-  // A missing table is not an empty list: the schema reaches the database only
-  // through prisma migrate deploy, so failing here means the deployment is
-  // broken and the route's error boundary should say so.
-
   const salesPage = paginationView(page, salesTotal, pageSize);
   const salesHrefFilters = { ...{ period: segment !== "all" ? segment : "", q, sort: sort !== "newest" ? sort : "" }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const salesHref = pageHrefBuilder("/pos", salesHrefFilters);
@@ -556,16 +549,6 @@ export default async function PosPage({
                     <p className="text-[0.75rem] text-[var(--ink-muted)]">{formatEATDate(s.createdAt)}</p>
                   </div>
                 ),
-              },
-              {
-                key: "customer",
-                header: "Customer",
-                cell: (s) =>
-                  s.client ? (
-                    <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(s.client)}</Link>
-                  ) : (
-                    <span className={s.name ? "font-medium text-[var(--ink)]" : "text-[var(--ink-muted)]"}>{saleCustomerName(s)}</span>
-                  ),
               },
               {
                 key: "createdBy",
