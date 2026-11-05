@@ -36,6 +36,8 @@ type ReceiptProps = {
   clientName?: string | null;
   clientOrganization?: string | null;
   clientPhone?: string | null;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   /** The document's own lines. Empty for a payment with nothing linked. */
   lineItems?: EagleInfoLineItem[] | null;
   /** The amount received, written out. */
@@ -48,7 +50,7 @@ type ReceiptProps = {
   vatLabel?: string | null;
 };
 
-export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, paidLabel, balanceLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone, lineItems, docTotalLabel, subtotalLabel, discountLabel, vatLabel, amountWords }: ReceiptProps) {
+export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, method, reference, amountLabel, paidLabel, balanceLabel, forLabel, receivedBy, clientName, clientOrganization, clientPhone, clientAddress, clientAccountNumber, lineItems, docTotalLabel, subtotalLabel, discountLabel, vatLabel, amountWords }: ReceiptProps) {
   const address = [branding.companyAddressLine1, branding.companyAddressLine2].filter(Boolean).join("\n");
 
   // Zero in the amount's currency (e.g. "UGX 600,000" -> "UGX 0") for the
@@ -101,6 +103,8 @@ export function PaymentReceiptDocument({ branding, receiptNumber, receivedAt, me
       clientAttn={clientOrganization ? clientName || null : null}
       clientLocation={null}
       clientPhone={clientPhone || null}
+      clientAddress={clientAddress || null}
+      clientAccountNumber={clientAccountNumber || null}
       headlineLabel="Amount Received"
       headlineAmount={amountLabel}
       // The amount RECEIVED, not the document total: this line exists so the

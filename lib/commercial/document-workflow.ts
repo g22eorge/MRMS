@@ -1,10 +1,10 @@
-import type { Prisma } from "@prisma/client";
+import type { TxClient } from "@/lib/prisma";
 
 import { postSalePayment } from "@/lib/accounting/post";
 import { getOrgNumberConfig, composeUniversalNumber } from "@/lib/commercial/org-number";
 import { roundMoney, toBaseAmount } from "@/lib/currency";
 
-type Tx = Prisma.TransactionClient;
+type Tx = TxClient;
 type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote" | "complaint";
 
 /**
@@ -181,9 +181,10 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
   });
   if (!quotation) return null;
 
-  // Only client-facing quotes convert: drafts, rejections and expired offers
-  // must not become invoices behind the UI's back.
-  if (!["SENT", "ACCEPTED"].includes(quotation.status)) return null;
+  // Convertible at any time: the client approves and the quote becomes an
+  // invoice, however old the quote is or whether it ever expired in status
+  // along the way. Only an explicitly voided quote is terminal.
+  if (quotation.status === "VOID") return null;
 
   if (quotation.convertedToInvoiceId) {
     const existing = await tx.invoice.findFirst({ where: { id: quotation.convertedToInvoiceId, orgId: params.orgId } });

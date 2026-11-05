@@ -40,14 +40,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         select: {
           saleNumber: true,
           name: true,
-          client: { select: { fullName: true, phone: true, email: true, organization: true } },
+          client: { select: { fullName: true, phone: true, email: true, organization: true, address: true, accountNumber: true } },
         },
       },
       invoice: {
         select: {
           invoiceNumber: true,
-          client: { select: { fullName: true, phone: true, email: true, organization: true } },
-          job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true } } } },
+          client: { select: { fullName: true, phone: true, email: true, organization: true, address: true, accountNumber: true } },
+          job: { select: { jobNumber: true, client: { select: { fullName: true, phone: true, email: true, organization: true, address: true, accountNumber: true } } } },
         },
       },
       items: {
@@ -101,6 +101,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     clientAttn: clientContactName(parent.client),
     clientEmail: parent.client?.email ?? null,
     clientPhone: parent.client?.phone ?? null,
+    clientAddress: parent.client?.address ?? null,
+    clientAccountNumber: parent.client?.accountNumber ?? null,
     clientLocation: null,
     lineItems,
     subTotal: formatMoney(creditNote.totalAmount, currency),

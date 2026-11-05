@@ -440,11 +440,13 @@ export async function updateQuotationStatus(quotationId: string, status: Quotati
   // other (e.g. revert ACCEPTED→DRAFT to edit an approved quote, or re-accept a
   // rejected one). Enforce the allowed transitions here, not just in the UI.
   const ALLOWED_TRANSITIONS: Record<QuotationStatus, QuotationStatus[]> = {
+    // Client approval must never be blocked by expiry or a past rejection —
+    // ACCEPTED is reachable from every live status, and VOID stays terminal.
     DRAFT: ["SENT", "ACCEPTED", "REJECTED", "EXPIRED", "VOID"],
     SENT: ["ACCEPTED", "REJECTED", "EXPIRED", "DRAFT", "VOID"],
     ACCEPTED: ["VOID"],
-    REJECTED: ["DRAFT", "SENT", "VOID"],
-    EXPIRED: ["DRAFT", "SENT", "VOID"],
+    REJECTED: ["ACCEPTED", "DRAFT", "SENT", "VOID"],
+    EXPIRED: ["ACCEPTED", "DRAFT", "SENT", "VOID"],
     VOID: [],
   };
   if (quotation.status === status) return; // idempotent no-op

@@ -16,11 +16,15 @@ import { redirect } from "next/navigation";
 import { getAppCurrency, normalizeCurrency, parseSupportedCurrencies } from "@/lib/currency";
 import { getOrgAccess } from "@/lib/billing-access";
 import { PLATFORM_ROUTES } from "@/lib/platform/routes";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole, getCurrentUserRoleOptional } from "@/lib/session";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { getDeploymentContext } from "@/lib/deployment-context";
 import { EIS_ORG_ID } from "@/lib/org";
+
+async function getPrisma() {
+  const { prisma } = await import("@/lib/prisma");
+  return prisma;
+}
 
 /** Use in server components and server actions that require a full org context. */
 export async function requireOrgSession() {
@@ -57,6 +61,7 @@ async function buildOrgSession(
   user: NonNullable<Awaited<ReturnType<typeof getCurrentUserRole>>["user"]>,
   orgId: string,
 ) {
+  const prisma = await getPrisma();
   const orgRow = await prisma.organization
     .findUnique({
       where: { id: orgId },

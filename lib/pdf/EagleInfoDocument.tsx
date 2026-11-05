@@ -99,10 +99,10 @@ const s = StyleSheet.create({
   emptyRow: { paddingVertical: 14, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: DIVIDER },
   emptyText: { fontSize: 8.5, color: FAINT, fontStyle: "italic" },
   colNum:   { width: 22 },
-  colDesc:  { flex: 1, paddingRight: 10 },
-  colQty:   { width: 44, textAlign: "center" },
-  colRate:  { width: 92, textAlign: "right" },
-  colAmt:   { width: 100, textAlign: "right" },
+  colDesc:  { flex: 1, minWidth: 0, paddingRight: 10 },
+  colQty:   { width: "12%", textAlign: "center" },
+  colRate:  { width: "18%", textAlign: "right" },
+  colAmt:   { width: "18%", textAlign: "right" },
   itemName: { fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 2, lineHeight: 1.35 },
   itemSku:  { fontSize: 7.5, color: MUTED, letterSpacing: 0.2 },
   cell:     { fontSize: 9 },
@@ -196,6 +196,8 @@ export type EagleInfoDocumentProps = {
   clientEmail?: string | null;
   clientPhone?: string | null;
   clientLocation?: string | null;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
 
   // Line items
   lineItems: EagleInfoLineItem[];
@@ -229,7 +231,7 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
   const {
     companyName, companyAddress, companyPhone, companyEmail, companyWebsite, companyTaxId, companyLogoUrl,
     docTitle, docNumber, docDate, primaryDateLabel, terms, dueDate, metaRows, topRuleColor,
-    clientLabel = "To", clientName, clientAttn, clientEmail, clientPhone, clientLocation,
+    clientLabel = "To", clientName, clientAttn, clientEmail, clientPhone, clientLocation, clientAddress, clientAccountNumber,
     lineItems,
     subTotal, discountLabel, discountAmount, vatLabel, vatAmount, totalLabel = "Total", totalAmount, paymentMade, balanceDue,
     headlineLabel, headlineAmount, amountInWords,
@@ -313,6 +315,8 @@ export function EagleInfoDocument(props: EagleInfoDocumentProps) {
             {clientAttn    ? <Text style={s.toAttn}>Attn: {clientAttn}</Text>  : null}
             {clientEmail   ? <Text style={s.toLine}>{clientEmail}</Text>   : null}
             {clientPhone   ? <Text style={s.toLine}>{clientPhone}</Text>   : null}
+            {clientAddress ? <Text style={s.toLine}>{clientAddress}</Text> : null}
+            {clientAccountNumber ? <Text style={s.toLine}>Account: {clientAccountNumber}</Text> : null}
             {clientLocation? <Text style={s.toLine}>{clientLocation}</Text>: null}
           </View>
           <View style={s.bandRight}>

@@ -65,7 +65,7 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
             placeholder="Search name or slug…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] pl-8 pr-3 py-1.5 text-sm text-[var(--ink)] placeholder-[var(--ink-muted)]/60 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            className="w-44 sm:w-52 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] pl-8 pr-3 py-1.5 text-sm text-[var(--ink)] placeholder-[var(--ink-muted)]/60 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />
         </div>
         <select

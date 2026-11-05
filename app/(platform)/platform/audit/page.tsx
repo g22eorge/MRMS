@@ -33,31 +33,35 @@ export default async function PlatformAuditPage({
   if (action) exportParams.set("action", action);
   const exportHref = `/api/audit/export?${exportParams.toString()}`;
 
-  const events = await prisma.systemAuditEvent
-    .findMany({
-      where: {
-        ...(orgId ? { orgId } : {}),
-        ...(action ? { action } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-      select: {
-        id: true,
-        orgId: true,
-        actorUserId: true,
-        entityType: true,
-        entityId: true,
-        action: true,
-        summary: true,
-        beforeJson: true,
-        afterJson: true,
-        createdAt: true,
-      },
-    })
-    .catch(() => []);
+  const where = {
+    ...(orgId ? { orgId } : {}),
+    ...(action ? { action } : {}),
+  };
 
-  const actorIds = Array.from(new Set(events.map((event) => event.actorUserId).filter(Boolean))) as string[];
-  const orgIds = Array.from(new Set(events.map((event) => event.orgId).filter(Boolean))) as string[];
+  const total = await prisma.systemAuditEvent.count({ where }).catch(() => 0);
+  const pageView = paginationView(page, total, pageSize);
+
+  const pageRows = await prisma.systemAuditEvent.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    skip: pageView.skip,
+    take: pageView.take,
+    select: {
+      id: true,
+      orgId: true,
+      actorUserId: true,
+      entityType: true,
+      entityId: true,
+      action: true,
+      summary: true,
+      beforeJson: true,
+      afterJson: true,
+      createdAt: true,
+    },
+  }).catch(() => []);
+
+  const actorIds = Array.from(new Set(pageRows.map((event) => event.actorUserId).filter(Boolean))) as string[];
+  const orgIds = Array.from(new Set(pageRows.map((event) => event.orgId).filter(Boolean))) as string[];
   const [actors, orgs] = await Promise.all([
     actorIds.length
       ? prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true, email: true } }).catch(() => [])
@@ -69,12 +73,7 @@ export default async function PlatformAuditPage({
 
   const actorMap = new Map(actors.map((actor) => [actor.id, actor]));
   const orgMap = new Map(orgs.map((org) => [org.id, org]));
-  const actionOptions = Array.from(new Set(events.map((event) => event.action))).sort();
-
-  // Filter options and lookup maps are derived from the full fetched dataset;
-  // only the displayed rows are paginated below.
-  const pageView = paginationView(page, events.length, pageSize);
-  const pageRows = events.slice(pageView.skip, pageView.skip + pageView.take);
+  const actionOptions = Array.from(new Set(pageRows.map((event) => event.action))).sort();
   const auditHrefFilters = { orgId, action,
     size: pageSize !== PAGE_SIZE ? pageSize : "",
   };
@@ -120,7 +119,7 @@ export default async function PlatformAuditPage({
         getRowKey={(event) => event.id}
         empty={
           <>
-            No audit events found. If the table is missing, run <span className="mono">/api/admin/db-fix</span> or deploy the latest schema.
+            No audit events found. If the table is missing, the release&apos;s migration step did not run — see <span className="mono">/api/admin/db-health</span>.
           </>
         }
         columns={[

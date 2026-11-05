@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { OrgPlan } from "@prisma/client";
 import { CURRENCY } from "@/lib/pesapal";
 import { getEffectivePlanPrice } from "@/lib/plan-prices";
@@ -27,6 +26,11 @@ import { getEffectivePlanPrice } from "@/lib/plan-prices";
  * logged, so each caller records them in its own way and the webhook's existing
  * strings stay byte-identical.
  */
+
+async function getPrisma() {
+  const { prisma } = await import("@/lib/prisma");
+  return prisma;
+}
 
 function addOneMonth(from: Date) {
   const d = new Date(from);
@@ -79,6 +83,7 @@ export async function applyPaymentToOrg(params: {
 }): Promise<Application> {
   const { orgId, plan, orderTrackingId } = params;
 
+  const prisma = await getPrisma();
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
     select: { id: true, name: true, planRenewsAt: true, flwSubscriptionId: true },

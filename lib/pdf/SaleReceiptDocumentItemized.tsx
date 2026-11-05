@@ -41,7 +41,7 @@ type Sale = {
   createdAt: Date;
   currency?: string | null;
   branch: { name: string } | null;
-  client: { fullName: string; phone: string | null; organization?: string | null } | null;
+  client: { fullName: string; phone: string | null; organization?: string | null; address?: string | null; accountNumber?: string | null } | null;
   subtotal: number;
   discountAmount: number;
   vatAmount: number;
@@ -174,6 +174,8 @@ export function SaleReceiptDocumentItemized({ sale, branding }: { sale: Sale; br
             <Text style={s.label}>Customer</Text>
             <Text style={s.value}>{saleCustomerName(sale, "Walk-in")}</Text>
             {sale.client?.phone ? <Text style={s.tdMuted}>{sale.client.phone}</Text> : null}
+            {sale.client?.address ? <Text style={s.tdMuted}>{sale.client.address}</Text> : null}
+            {sale.client?.accountNumber ? <Text style={s.tdMuted}>Account: {sale.client.accountNumber}</Text> : null}
           </View>
           <View style={s.metaCell}>
             <Text style={s.label}>Branch</Text>

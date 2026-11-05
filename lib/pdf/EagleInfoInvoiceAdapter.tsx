@@ -25,6 +25,8 @@ type Props = {
   clientPhone: string;
   clientEmail: string;
   clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deviceType: string;
   deviceLabel: string;
   serialOrImei: string;
@@ -44,6 +46,8 @@ type Props = {
   currency: string;
   termsText: string;
   footerText: string;
+  paymentTerms?: string;
+  dueDate?: string;
   signatureCompanyLabel: string;
   signatureClientLabel: string;
   lineItems?: PdfLineItem[];
@@ -99,14 +103,16 @@ export function EagleInfoInvoiceAdapter(props: Props) {
       docNumber={props.invoiceNumber}
       docDate={props.dateIssued}
       primaryDateLabel="Inv Date:"
-      terms={props.termsText ? "As agreed" : null}
-      dueDate={props.isPaid ? "Paid" : null}
+      terms={props.paymentTerms ?? null}
+      dueDate={props.isPaid ? "Paid" : (props.dueDate ?? null)}
       clientLabel="Bill To"
       clientName={props.clientOrganization || props.clientName}
       clientAttn={props.clientOrganization ? props.clientName : null}
       clientEmail={props.clientEmail || null}
       clientPhone={props.clientPhone || null}
       clientLocation={null}
+      clientAddress={props.clientAddress ?? null}
+      clientAccountNumber={props.clientAccountNumber ?? null}
       lineItems={items}
       subTotal={props.subtotalValue || props.repairCost || null}
       vatLabel={showVat ? props.vatLabel : null}

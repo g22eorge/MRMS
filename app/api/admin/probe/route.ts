@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 
 import { assertPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
-import { listTables, tableColumns } from "@/lib/db/introspect";
 import { whatsappConfigSummary } from "@/lib/notifications/whatsapp";
 import { emailIsConfigured } from "@/lib/notifications/email";
+import { listTables, tableColumns } from "@/lib/db-introspect";
 
 export const dynamic = "force-dynamic";
 
@@ -41,10 +41,7 @@ export async function GET() {
   };
 
   // Baseline connectivity
-  // Asked through the dialect helper: the SQLite spelling throws on Postgres,
-  // and this probe catches, so it would have reported an empty database rather
-  // than a question it could not ask.
-  await run("db:tables", async () => [...(await listTables())].sort());
+  await run("db:tables", async () => listTables());
 
   // Core reads used by dashboard/jobs
   await run("job:count", async () => prisma.job.count());
@@ -89,9 +86,9 @@ export async function GET() {
       take: 3,
       where: {
         OR: [
-          { jobNumber: { contains: "EIS" } },
-          { client: { fullName: { contains: "a" } } },
-          { client: { phone: { contains: "7" } } },
+          { jobNumber: { contains: "EIS" , mode: "insensitive" as const} },
+          { client: { fullName: { contains: "a" , mode: "insensitive" as const} } },
+          { client: { phone: { contains: "7" , mode: "insensitive" as const} } },
         ],
       },
       include: { client: true, assignedTo: true },
@@ -206,9 +203,7 @@ export async function GET() {
     return { delegate: true, hasRow: Boolean(row) };
   });
 
-  await run("branding:columns", async () =>
-    [...(await tableColumns("DocumentBrandingSettings"))].sort(),
-  );
+  await run("branding:columns", async () => tableColumns("DocumentBrandingSettings"));
 
   // Session user lookup path
   await run("user:current", async () =>

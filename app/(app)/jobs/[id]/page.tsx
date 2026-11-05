@@ -19,13 +19,14 @@ import { getClientBill, getExternalTechBill } from "@/lib/billing";
 import { canViewJobDocumentTimeline } from "@/lib/documents/routes";
 import { loadJobDocumentTimeline } from "@/lib/jobs/job-document-timeline";
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { prisma, toClientSafe } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { getWhatsAppReadiness } from "@/lib/notifications/whatsapp-readiness";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { clientDisplayName } from "@/lib/client-name";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { ShareButton } from "@/components/shared/ShareButton";
 export default async function JobDetailPage({
   params,
   searchParams,
@@ -117,9 +118,8 @@ export default async function JobDetailPage({
   const canSeeMessages = ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
 
   const includeBase = {
-    client: true,
+    client: { select: { id: true, fullName: true, organization: true, phone: true, email: true } },
     assignedTo: true,
-    photos: true,
     auditLogs: {
       include: { user: { select: { name: true } } },
       orderBy: { createdAt: "desc" as const },
@@ -430,7 +430,7 @@ export default async function JobDetailPage({
       jobId={job.id}
       locationId={stockLocation?.id ?? null}
       locationName={stockLocation?.name ?? null}
-      parts={availableParts}
+      parts={toClientSafe(availableParts)}
       lines={jobPartLines.map((line) => ({
         id: line.id,
         partId: line.partId,
@@ -480,9 +480,12 @@ export default async function JobDetailPage({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Assessment Report</p>
           <div className="flex items-center gap-2">
-            {assessments.length > 0 && canAssess ? (
-              <a href={`/api/jobs/${id}/assessment-pdf`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">↓ Download PDF</a>
-            ) : null}
+              {assessments.length > 0 && canAssess ? (
+                <>
+                  <a href={`/api/jobs/${id}/assessment-pdf`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">↓ Download PDF</a>
+                  <ShareButton url={`/api/jobs/${id}/assessment-pdf`} />
+                </>
+              ) : null}
             {assessments.some((r) => r.visibility !== "INTERNAL") && canAssess && (job.client?.phone || job.client?.email) ? (
               <SendAssessmentButton jobId={id} hasPhone={Boolean(job.client?.phone)} hasEmail={Boolean(job.client?.email)} />
             ) : null}
@@ -581,7 +584,7 @@ export default async function JobDetailPage({
       permissions={user.permissions}
       orgBaseCurrency={org.baseCurrency}
       supportedCurrencies={org.supportedCurrencies}
-      job={{ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments: clientLedger, technicianPayouts }}
+      job={JSON.parse(JSON.stringify({ ...jobWithBilling, outboundMessages, inboundMessages, clientPayments: clientLedger, technicianPayouts }))}
       technicians={technicians}
       deviceHistory={deviceHistory}
       returnTo={safeReturnTo}

@@ -67,16 +67,20 @@ export default async function RecurringInvoicesPage({
   const { user, orgId, org } = await requireOrgSession();
   if (!can.viewFinancials(user)) redirect("/dashboard");
 
-  const [recurringInvoices, clients] = await Promise.all([
-    prisma.recurringInvoice.findMany({
-      where: { orgId },
-      include: {
-        client: { select: { id: true, fullName: true, organization: true } },
-        items: true,
-        createdBy: { select: { name: true } },
-      },
-      orderBy: [{ isActive: "desc" }, { nextDueAt: "asc" }],
-    }),
+  const where = {
+    orgId,
+    ...(q
+      ? {
+          OR: [
+            { subject: { contains: q, mode: "insensitive" as const } },
+            { client: { fullName: { contains: q, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
+  };
+
+  const [total, clients] = await Promise.all([
+    prisma.recurringInvoice.count({ where }).catch(() => 0),
     prisma.client.findMany({
       where: { orgId },
       select: { id: true, fullName: true, organization: true },
@@ -84,8 +88,31 @@ export default async function RecurringInvoicesPage({
     }).catch(() => [] as { id: string; fullName: string; organization: string | null }[]),
   ]);
 
+  const pageView = paginationView(page, total, pageSize);
+
+  const [pageRows] = await Promise.all([
+    prisma.recurringInvoice.findMany({
+      where,
+      include: {
+        client: { select: { id: true, fullName: true, organization: true } },
+        items: true,
+        createdBy: { select: { name: true } },
+      },
+      orderBy: [{ isActive: "desc" }, { nextDueAt: "asc" }],
+      skip: pageView.skip,
+      take: pageView.take,
+    }),
+  ]);
+
   const currency = org.baseCurrency ?? "UGX";
   const now = new Date();
+
+  const activeCount = await prisma.recurringInvoice.count({
+    where: { orgId, isActive: true },
+  }).catch(() => 0);
+  const dueNow = await prisma.recurringInvoice.count({
+    where: { orgId, isActive: true, nextDueAt: { lte: now } },
+  }).catch(() => 0);
 
   async function createRecurringAction(_prev: RecurringFormState, formData: FormData): Promise<RecurringFormState> {
     "use server";
@@ -273,15 +300,6 @@ export default async function RecurringInvoicesPage({
     revalidatePath("/finance/recurring");
   }
 
-  const activeCount = recurringInvoices.filter((r) => r.isActive).length;
-  const dueNow = recurringInvoices.filter((r) => r.isActive && r.nextDueAt <= now).length;
-  const filteredRecurring = q
-    ? recurringInvoices.filter((r) => r.subject.toLowerCase().includes(q) || clientDisplayName(r.client, "").toLowerCase().includes(q))
-    : recurringInvoices;
-
-  // KPIs above stay whole-dataset; only the displayed rows are paginated.
-  const pageView = paginationView(page, filteredRecurring.length, pageSize);
-  const pageRows = filteredRecurring.slice(pageView.skip, pageView.skip + pageView.take);
   const recurringHrefFilters = { q: sp.q?.trim() ?? "",
     size: pageSize !== PAGE_SIZE ? pageSize : "",
   };
@@ -328,7 +346,7 @@ export default async function RecurringInvoicesPage({
         title="Recurring Invoices"
         description={`${activeCount} active${dueNow > 0 ? ` · ${dueNow} due` : ""} — templates that auto-generate or remind you to issue invoices on schedule.`}
         kpis={[
-          { label: "Templates", value: recurringInvoices.length, sub: "total schedules" },
+          { label: "Templates", value: total, sub: "total schedules" },
           { label: "Active", value: activeCount, sub: "running", tone: activeCount > 0 ? "good" : "neutral" },
           { label: "Due Now", value: dueNow, sub: "ready to issue", tone: dueNow > 0 ? "warn" : "neutral", muted: dueNow === 0 },
         ]}

@@ -37,7 +37,7 @@ export async function generateQuotationBuffer(
       recommendationOption: true, clientConversationNote: true, partsNeeded: true,
       clientBill: true, vatApplicable: true, clientApproved: true,
       quotedAt: true, quotationNumber: true, repairTimeline: true, workDone: true,
-      client: { select: { id: true, fullName: true, phone: true, email: true, organization: true } },
+      client: { select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true, accountNumber: true } },
     },
   });
 
@@ -133,6 +133,8 @@ export async function generateQuotationBuffer(
     clientPhone: job.client.phone,
     clientEmail: compactText(job.client.email, 36),
     clientOrganization: compactText(job.client.organization, 40),
+    clientAddress: compactText(job.client.address, 60),
+    clientAccountNumber: job.client.accountNumber ?? null,
     deviceType: prettyEnum(job.deviceType),
     deviceLabel: compactText(`${job.brand} ${job.model}`, 45),
     serialOrImei: compactText(job.serialOrImei, 30),
@@ -163,6 +165,8 @@ export async function generateQuotationBuffer(
     status: prettyEnum(job.status),
     currency,
     termsText: quotationTerms(branding.termsText, "REPAIR"),
+    paymentTerms: branding.termsText ? `Net ${branding.quoteValidityDays} days` : "Due on receipt",
+    dueDate: formatEATDocDate(dueDate),
     promo: defaultQuotationPromo(branding.companyName),
     footerText: branding.footerText,
     signatureCompanyLabel: branding.signatureCompanyLabel,
