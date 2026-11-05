@@ -526,8 +526,6 @@ export default async function PosPage({
                     <p className="truncate font-bold text-[var(--ink)]">{saleCustomerName(s)}</p>
                     <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                       <span className="mono">{s.saleNumber}</span>
-                      {/* Only when it is not already the customer label above. */}
-                      {s.client && s.name ? <>{" · "}{s.name}</> : null}
                       {" · "}{formatEATDate(s.createdAt)}
                       {s.createdBy ? <> · {s.createdBy.name}</> : null}
                     </p>

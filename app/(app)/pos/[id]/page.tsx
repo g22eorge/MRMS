@@ -35,7 +35,7 @@ import { syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { postRefund } from "@/lib/accounting/post";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { computeLinesVat } from "@/lib/commercial/vat";
-import { saleCustomerName } from "@/lib/client-name";
+import { saleCustomerName, clientDisplayName } from "@/lib/client-name";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { PosCustomerFields } from "@/components/pos/PosCustomerFields";
 
@@ -331,11 +331,17 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     const pickedClientId = String(formData.get("clientId") ?? "").trim() || null;
     const clientMode = String(formData.get("clientMode") ?? "existing");
     let clientId: string | null = null;
+    let saleName: string | null = null;
 
     if (pickedClientId) {
-      const client = await prisma.client.findFirst({ where: { id: pickedClientId, orgId }, select: { id: true } });
+      const client = await prisma.client.findFirst({
+        where: { id: pickedClientId, orgId },
+        select: { id: true, fullName: true, organization: true },
+      });
       if (!client) posReject(saleId, "That customer no longer exists — pick another one.");
       clientId = client.id;
+      // Harmonise: the linked database client name becomes the single sale name.
+      saleName = clientDisplayName(client, "");
     } else if (clientMode === "new") {
       // Same rule as quotations: a new customer needs a name and a phone.
       const fullName = sanitizeText(String(formData.get("newClientFullName") ?? ""));
@@ -346,19 +352,21 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       if (fullName.length < 2 || phone.length < 3) {
         posReject(saleId, "A new customer needs a name and a phone number.");
       }
-      const existing = await prisma.client.findFirst({ where: { phone, orgId }, select: { id: true } });
+      const existing = await prisma.client.findFirst({ where: { phone, orgId }, select: { id: true, fullName: true, organization: true } });
       if (existing) {
         clientId = existing.id;
+        saleName = clientDisplayName(existing, "");
       } else {
         const created = await prisma.client.create({
           data: { orgId, fullName, phone, email, organization, address },
-          select: { id: true },
+          select: { id: true, fullName: true, organization: true },
         });
         clientId = created.id;
+        saleName = clientDisplayName(created, "");
       }
     }
 
-    await prisma.sale.updateMany({ where: { id: saleId, orgId }, data: { clientId } });
+    await prisma.sale.updateMany({ where: { id: saleId, orgId }, data: { clientId, ...(saleName !== null ? { name: saleName } : {}) } });
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: saleId, action: "POS_SALE_UPDATED", summary: clientId ? "POS sale customer attached" : "POS sale customer removed" });
 
     revalidatePath(`/pos/${saleId}`);
@@ -1679,8 +1687,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             { label: "Balance", value: balance > 0 ? formatMoney(balance, saleCurrency) : "Cleared" },
             ...(refundedTotal > 0 ? [{ label: "Refunded", value: formatMoney(refundedTotal, saleCurrency) }] : []),
             { label: "Items", value: sale.items.length },
-            // The customer card above already shows this for a walk-in.
-            ...(sale.client && sale.name ? [{ label: "Sale name", value: sale.name }] : []),
             { label: "Branch", value: sale.branch?.name ?? "No branch" },
             ...(sale.notes ? [{ label: "Note", value: sale.notes }] : []),
             { label: "Created", value: formatEATDateTime(sale.createdAt) },
