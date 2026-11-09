@@ -7,7 +7,13 @@ import { requireOrgSession } from "@/lib/org-context";
 export const dynamic = "force-dynamic";
 
 export default async function IntakePage() {
-  const { user, orgId } = await requireOrgSession();
+  let user;
+  let orgId;
+  try {
+    ({ user, orgId } = await requireOrgSession());
+  } catch {
+    redirect("/dashboard");
+  }
   if (!can.viewIntake(user)) redirect("/dashboard");
 
   const requests = await prisma.repairRequest.findMany({
