@@ -140,9 +140,13 @@ export async function updateRepairRequestDetailsAction(formData: FormData) {
   return { success: true as const, request: updated };
 }
 
+const ALLOWED_STATUSES = ["PENDING_INTAKE", "PENDING_FRONT_DESK", "APPROVED", "REJECTED", "CONVERTED_TO_JOB"] as const;
+
 const statusSchema = z.object({
   id: z.string().min(1),
-  status: z.nativeEnum(RepairRequestStatus),
+  status: z.string().refine((s) => ALLOWED_STATUSES.includes(s as any), {
+    message: "Invalid status",
+  }),
 });
 
 export async function setRepairRequestStatusAction(input: { id: string; status: RepairRequestStatus }) {
@@ -278,7 +282,7 @@ export async function setRepairRequestStatusAction(input: { id: string; status: 
     // Approve / Reject / Pending
     const updated = await prisma.repairRequest.update({
       where: { id: req.id },
-      data: { requestStatus: parsed.data.status },
+      data: { requestStatus: parsed.data.status as RepairRequestStatus },
     });
 
     if (parsed.data.status === "APPROVED") {
