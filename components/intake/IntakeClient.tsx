@@ -118,18 +118,22 @@ function RequestDrawer({
 
   function act(status: string) {
     startTransition(async () => {
-      const res = await setRepairRequestStatusAction({ id: req.id, status: status as RepairRequestStatus });
-      if (res && "error" in res && res.error) {
-        toast.error(res.error);
-        return;
-      }
-      if (res && "jobId" in res && res.jobId) {
-        router.push(`/jobs/${res.jobId}`);
-        return;
-      }
-      if (res && "requestStatus" in res && res.requestStatus) {
-        setLocalStatus(res.requestStatus as RepairRequestStatus);
-        onStatusChange(req.id, res.requestStatus);
+      try {
+        const res = await setRepairRequestStatusAction({ id: req.id, status: status as RepairRequestStatus });
+        if (res && "error" in res && res.error) {
+          toast.error(res.error);
+          return;
+        }
+        if (res && "jobId" in res && res.jobId) {
+          router.push(`/jobs/${res.jobId}`);
+          return;
+        }
+        if (res && "requestStatus" in res && res.requestStatus) {
+          setLocalStatus(res.requestStatus as RepairRequestStatus);
+          onStatusChange(req.id, res.requestStatus);
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to update request status.");
       }
     });
   }
@@ -432,17 +436,21 @@ function RowActions({
   function act(status: string, e: React.MouseEvent) {
     e.stopPropagation();
     startTransition(async () => {
-      const res = await setRepairRequestStatusAction({ id: req.id, status: status as RepairRequestStatus });
-      if (res && "error" in res && res.error) {
-        toast.error(res.error);
-        return;
-      }
-      if (res && "jobId" in res && res.jobId) {
-        router.push(`/jobs/${res.jobId}`);
-        return;
-      }
-      if (res && "requestStatus" in res && res.requestStatus) {
-        onStatusChange(req.id, res.requestStatus);
+      try {
+        const res = await setRepairRequestStatusAction({ id: req.id, status: status as RepairRequestStatus });
+        if (res && "error" in res && res.error) {
+          toast.error(res.error);
+          return;
+        }
+        if (res && "jobId" in res && res.jobId) {
+          router.push(`/jobs/${res.jobId}`);
+          return;
+        }
+        if (res && "requestStatus" in res && res.requestStatus) {
+          onStatusChange(req.id, res.requestStatus);
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to update request status.");
       }
     });
   }
