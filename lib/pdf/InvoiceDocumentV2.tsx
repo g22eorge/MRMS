@@ -227,6 +227,8 @@ type Props = {
   clientPhone: string;
   clientEmail: string;
   clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deviceType: string;
   deviceLabel: string;
   serialOrImei: string;
@@ -243,6 +245,8 @@ type Props = {
   status: string;
   currency: string;
   termsText: string;
+  paymentTerms?: string | null; dueDate?: string | null;
+  paymentTo?: string | null;
   promo?: QuotationPromo | null;
   footerText: string;
   signatureCompanyLabel: string;
@@ -359,6 +363,18 @@ export function InvoiceDocumentV2(rawProps: Props) {
                 <Text style={s.metaLabel}>Date</Text>
                 <Text style={s.metaValue}>{props.dateIssued}</Text>
               </View>
+              {props.paymentTerms ? (
+                <View style={s.metaRow}>
+                  <Text style={s.metaLabel}>Payment Terms</Text>
+                  <Text style={s.metaValue}>{props.paymentTerms}</Text>
+                </View>
+              ) : null}
+              {props.dueDate ? (
+                <View style={[s.metaRow, { borderBottom: "none" }]}>
+                  <Text style={s.metaLabel}>Due Date</Text>
+                  <Text style={s.metaValue}>{props.dueDate}</Text>
+                </View>
+              ) : null}
               <View style={[s.metaRow, { borderBottom: "none" }]}>
                 <Text style={s.metaLabel}>Amount Due</Text>
                 <Text style={[s.metaValue, { fontSize: 11, color: GREEN_DARK }]}>{props.totalAmountPayable}</Text>
@@ -402,6 +418,8 @@ export function InvoiceDocumentV2(rawProps: Props) {
                 <View style={s.row}><Text style={s.label}>Phone</Text><Text style={s.value}>{props.clientPhone}</Text></View>
                 <View style={s.row}><Text style={s.label}>Email</Text><Text style={s.value}>{props.clientEmail || "N/A"}</Text></View>
                 <View style={s.row}><Text style={s.label}>Org</Text><Text style={s.value}>{props.clientOrganization || "N/A"}</Text></View>
+                {props.clientAddress ? <View style={s.row}><Text style={s.label}>Address</Text><Text style={s.value}>{props.clientAddress}</Text></View> : null}
+                {props.clientAccountNumber ? <View style={s.row}><Text style={s.label}>Account No.</Text><Text style={s.value}>{props.clientAccountNumber}</Text></View> : null}
               </View>
             </View>
           </View>
@@ -506,6 +524,21 @@ export function InvoiceDocumentV2(rawProps: Props) {
             ))}
           </View>
         </View>
+
+        {props.paymentTo ? (
+          <View style={s.section}>
+            <View style={s.sectionHead}><Text style={s.sectionTitle}>Payment To</Text></View>
+            <View style={s.sectionBody}>
+              {props.paymentTo.split(/\n\s*\n/).map((block, bi) => (
+                <View key={bi} style={bi > 0 ? { marginTop: 6 } : {}}>
+                  {block.split("\n").map((line, i) => (
+                    <Text key={i} style={s.metaValue}>{line.trim()}</Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Signatures */}
         <View style={s.sigWrap} wrap={false}>

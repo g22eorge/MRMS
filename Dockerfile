@@ -1,24 +1,185 @@
-FROM oven/bun:1 AS deps
+# syntax=docker/dockerfile:1
+
+# Two runtime images come out of this file:
+#   --target runner   the Next.js server
+#   --target migrator the Prisma CLI, for `migrate deploy` and seeding
+#
+# Both are Debian-based on purpose. Prisma ships per-platform query engines and
+# its default build is debian-openssl-3.0.x; an Alpine runtime needs a musl
+# engine declared in the schema's binaryTargets, which is a footgun that pays no
+# dividend here.
+
+# ── deps ────────────────────────────────────────────────────────────────────
+FROM oven/bun:1-debian AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
-FROM oven/bun:1 AS builder
+# bun resolves Next's optional SWC binary to the musl build on these Debian
+# images, and a musl binary cannot load against glibc — both `next build` and
+# `next dev` die with "Failed to load SWC binary for linux/<arch>". It stayed
+# hidden while an older lockfile happened to carry both variants; a clean
+# install surfaces it. Fetch the glibc build explicitly, at whatever version
+# Next itself resolved to, so the two can never drift. --no-save leaves
+# package.json and bun.lock untouched, so the host install is unaffected.
+RUN v="$(bun -e 'console.log(require("/app/node_modules/next/package.json").version)')" \
+ && case "$(uname -m)" in \
+      aarch64) swc="linux-arm64-gnu" ;; \
+      x86_64)  swc="linux-x64-gnu" ;; \
+      *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;; \
+    esac \
+ && bun add --no-save "@next/swc-${swc}@${v}"
+
+# ── build ───────────────────────────────────────────────────────────────────
+FROM oven/bun:1-debian AS builder
 WORKDIR /app
+ENV NODE_ENV=production
+# Marks this as a CI-style build: scripts/build.mjs then writes to .next rather
+# than the .next-gate directory it uses to protect a local dev server.
+ENV DOCKER_BUILD=1
+# The datasource is postgresql, so the schema validates without a reachable
+# database and the build needs no real connection string. This value is used for
+# `prisma generate` only and never reaches the running container.
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN bunx prisma generate
 RUN bun run build
 
-FROM node:20-alpine AS runner
+# ── migrator ────────────────────────────────────────────────────────────────
+# Runs migrations and seeds. Kept separate from the app image so the server does
+# not carry the Prisma CLI or the ability to alter the schema.
+FROM oven/bun:1-debian AS migrator
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json bun.lock prisma.config.ts tsconfig.json ./
+COPY prisma ./prisma
+COPY scripts ./scripts
+COPY lib ./lib
+# Operational input for scripts/pg/import.mjs: which columns are dropped and how
+# duplicate keys are resolved.
+COPY docs/pg-migration ./docs/pg-migration
+# The generated client, so seed scripts run without a second `generate`.
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+CMD ["bunx", "prisma", "migrate", "deploy"]
+
+# ── runner ──────────────────────────────────────────────────────────────────
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
+# openssl for Prisma's query engine; curl for the healthcheck.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates curl \
+  && rm -rf /var/lib/apt/lists/*
+
+# Run as a non-root user. node:22 ships uid/gid 1000 as `node`.
+RUN mkdir -p /data/uploads && chown -R node:node /data
+
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/public ./public
+# Next's dependency tracing does not reliably pull in Prisma's platform-specific
+# query engine, so copy the generated client explicitly.
+COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=node:node /app/prisma ./prisma
+
+USER node
+EXPOSE 3000
+
+# Runs server.js directly, not `bun run start`. The standalone bundle needs
+# .next/static and public/ copied beside it (done above); the npm start script
+# deliberately uses `next start` instead, because those copies do not exist in a
+# plain local build and the server would 404 every stylesheet.
+
+# /api/health checks the database, so an unreachable database marks the
+# container unhealthy rather than letting it serve 500s.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:3000/api/health || exit 1
+
+CMD ["node", "server.js"]
+
+# ── worker ──────────────────────────────────────────────────────────────────
+# BullMQ worker. Needs the application source (it imports lib/*) and the
+# generated client, but not the Next build output.
+FROM oven/bun:1-debian AS worker
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY package.json bun.lock tsconfig.json prisma.config.ts ./
+COPY prisma ./prisma
+COPY lib ./lib
+COPY app ./app
+COPY components ./components
+USER bun
+CMD ["bun", "lib/queue/worker.ts"]
+
+# ── scheduler ───────────────────────────────────────────────────────────────
+# Replaces Vercel Cron. Only needs node and one script: it makes authenticated
+# HTTP calls, so the work itself still happens inside the app.
+FROM node:22-bookworm-slim AS scheduler
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --chown=node:node scripts/scheduler.mjs ./scripts/scheduler.mjs
+USER node
+CMD ["node", "scripts/scheduler.mjs"]
+
+# ── backup ──────────────────────────────────────────────────────────────────
+# pg_dump on a schedule. Based on the Postgres image so the client tools match
+# the server major version exactly — a newer server refuses an older pg_dump.
+FROM postgres:18-alpine AS backup
+COPY scripts/pg-backup.sh /usr/local/bin/pg-backup
+RUN chmod +x /usr/local/bin/pg-backup
+CMD ["pg-backup"]
+
+# ── dev ─────────────────────────────────────────────────────────────────────
+# Development target: `next dev` with the working tree bind-mounted, so editing
+# a file on the host reloads the running container. Not used in production.
+#
+# node_modules and .next are named volumes in docker-compose.dev.yml rather than
+# part of the mount: a bind mount would shadow the install baked in below, and on
+# macOS a bind-mounted node_modules is slow enough to be unusable.
+FROM oven/bun:1-debian AS dev
+WORKDIR /app
+ENV NODE_ENV=development
+# Bind-mounted file events do not reach the container reliably on macOS or
+# Windows, so the watcher polls. Override to "" on Linux, where inotify works
+# through the mount and polling only burns CPU.
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates curl \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
+
+# bun resolves Next's optional SWC binary to the musl build on these Debian
+# images, and a musl binary cannot load against glibc — both `next build` and
+# `next dev` die with "Failed to load SWC binary for linux/<arch>". It stayed
+# hidden while an older lockfile happened to carry both variants; a clean
+# install surfaces it. Fetch the glibc build explicitly, at whatever version
+# Next itself resolved to, so the two can never drift. --no-save leaves
+# package.json and bun.lock untouched, so the host install is unaffected.
+RUN v="$(bun -e 'console.log(require("/app/node_modules/next/package.json").version)')" \
+ && case "$(uname -m)" in \
+      aarch64) swc="linux-arm64-gnu" ;; \
+      x86_64)  swc="linux-x64-gnu" ;; \
+      *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;; \
+    esac \
+ && bun add --no-save "@next/swc-${swc}@${v}"
+# Generate the client at build time so the first start is not delayed by it. The
+# entrypoint regenerates when prisma/schema.prisma has changed.
+COPY prisma ./prisma
+COPY prisma.config.ts tsconfig.json ./
+RUN bunx prisma generate
 
 EXPOSE 3000
-CMD ["node", "server.js"]
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:3000/api/health || exit 1
+CMD ["bun", "run", "dev:docker"]

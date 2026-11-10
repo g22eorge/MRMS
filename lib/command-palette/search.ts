@@ -37,7 +37,7 @@ function buildJobWhere(params: {
       { issueDescription: icontains(q) },
     );
     for (const phone of phoneVariants) {
-      textOr.push({ client: { phone: { contains: phone } } });
+      textOr.push({ client: { phone: { contains: phone , mode: "insensitive" as const} } });
     }
   }
 
@@ -137,7 +137,7 @@ export async function searchCommandPalette(params: {
       { organization: icontains(q) },
     ];
     for (const phone of phoneVariants) {
-      clientOr.push({ phone: { contains: phone } });
+      clientOr.push({ phone: { contains: phone , mode: "insensitive" as const} });
     }
 
     const clients = await prisma.client.findMany({

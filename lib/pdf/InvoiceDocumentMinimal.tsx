@@ -56,6 +56,9 @@ const s = StyleSheet.create({
 
   // ── terms ─────────────────────────────────────────────────────────────────────
   termItem:   { fontSize: 8.2, color: MID, marginBottom: 3 },
+  paidBadge: { backgroundColor: "#15803d", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 2 },
+  unpaidBadge: { backgroundColor: "#b91c1c", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 2 },
+  badgeText: { fontSize: 7.5, fontWeight: 700, color: WHITE },
 
   // ── signatures ───────────────────────────────────────────────────────────────
   sigRow:     { flexDirection: "row", gap: 30, marginTop: 20 },
@@ -73,13 +76,20 @@ type Props = {
   companyTaxId?: string | null; companyLogoUrl?: string;
   documentTitle: string; quotationNumber: string; dateIssued: string; validUntil: string;
   repairId: string; preparedByName: string; preparedByRole: string;
-  clientName: string; clientPhone: string; clientEmail: string; clientOrganization: string;
+  clientName: string;   clientPhone: string;
+  clientEmail: string;
+  clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deviceType: string; deviceLabel: string; serialOrImei: string; accessories: string; physicalCondition: string;
   customerIssue: string; diagnosisSummary: string; scopeOfWork: string;
   repairCost: string; vatApplicable: boolean; vatLabel: string; vatAmount: string; totalAmountPayable: string;
   amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  paymentTerms?: string | null; dueDate?: string | null;
+  paymentTo?: string | null;
+  isPaid?: boolean;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
   lineItems?:     PdfLineItem[];
@@ -127,6 +137,8 @@ export function InvoiceDocumentMinimal(props: Props) {
             <Text style={s.docMeta}>Issued: {props.dateIssued}</Text>
             <Text style={s.docMeta}>Valid until: {props.validUntil}</Text>
             <Text style={s.docMeta}>Repair ID: {props.repairId}</Text>
+            {props.paymentTerms ? <Text style={s.docMeta}>Terms: {props.paymentTerms}</Text> : null}
+            {props.dueDate ? <Text style={s.docMeta}>Due: {props.dueDate}</Text> : null}
           </View>
         </View>
         <View style={s.divider} />
@@ -139,6 +151,8 @@ export function InvoiceDocumentMinimal(props: Props) {
             {props.clientOrganization ? <Text style={s.colVal}>{props.clientOrganization}</Text> : null}
             <Text style={s.colVal}>{props.clientPhone}</Text>
             {props.clientEmail ? <Text style={s.colVal}>{props.clientEmail}</Text> : null}
+            {props.clientAddress ? <Text style={s.colVal}>{props.clientAddress}</Text> : null}
+            {props.clientAccountNumber ? <Text style={s.colVal}>Account No.: {props.clientAccountNumber}</Text> : null}
           </View>
           {isRepairMode && (
             <View style={s.col}>
@@ -157,6 +171,7 @@ export function InvoiceDocumentMinimal(props: Props) {
             <View style={s.colSep} />
             <Text style={s.colLabel}>Status</Text>
             <Text style={s.colValBold}>{props.status}</Text>
+            {props.isPaid ? <View style={s.paidBadge}><Text style={s.badgeText}>PAID</Text></View> : null}
           </View>
         </View>
 
@@ -210,6 +225,19 @@ export function InvoiceDocumentMinimal(props: Props) {
             <Text key={i} style={s.termItem}>— {l}</Text>
           ))}
         </View>
+
+        {props.paymentTo ? (
+          <View style={[s.section, { marginTop: 14 }]}>
+            <Text style={s.secTitle}>Payment To</Text>
+            {props.paymentTo.split(/\n\s*\n/).map((block, bi) => (
+              <View key={bi} style={bi > 0 ? { marginTop: 6 } : {}}>
+                {block.split("\n").map((line, i) => (
+                  <Text key={i} style={s.termItem}>{line.trim()}</Text>
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {/* ── Signatures ── */}
         <View style={s.sigRow} wrap={false}>

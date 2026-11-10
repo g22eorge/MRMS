@@ -20,7 +20,7 @@ type Sale = {
   saleNumber: string; status: string; createdAt: Date; currency?: string | null;
   name?: string | null;
   branch: { name: string } | null;
-  client: { fullName: string; phone: string | null; organization?: string | null } | null;
+  client: { fullName: string; phone: string | null; organization?: string | null; address?: string | null; accountNumber?: string | null } | null;
   subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number; paidAmount: number;
   items: Array<{ id: string; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
   payments: Array<{ id: string; amount: number; method: string; reference: string | null; receivedAt: Date }>;
@@ -68,10 +68,10 @@ const s = StyleSheet.create({
   trAlt: { flexDirection: "row", borderBottom: `1 solid ${LINE}`, backgroundColor: "#f9fafb" },
   th: { paddingVertical: 7, paddingHorizontal: 8, fontSize: 7.5, fontWeight: 700, textTransform: "uppercase", color: EMR2 },
   td: { paddingVertical: 6, paddingHorizontal: 8, fontSize: 9 },
-  colItem:  { flex: 1 },
-  colQty:   { width: 44, textAlign: "right" },
-  colPrice: { width: 80, textAlign: "right" },
-  colTotal: { width: 80, textAlign: "right" },
+  colItem:  { flex: 1, minWidth: 0 },
+  colQty:   { width: "14%", textAlign: "right" },
+  colPrice: { width: "18%", textAlign: "right" },
+  colTotal: { width: "18%", textAlign: "right" },
 
   totalsBox: { border: `1 solid ${LINE}`, borderRadius: 7, backgroundColor: WHITE, padding: 10, marginLeft: "40%", marginBottom: 14 },
   totalRow:  { flexDirection: "row", justifyContent: "space-between", marginBottom: 4, paddingBottom: 3, borderBottom: `1 solid ${LINE}` },
@@ -119,6 +119,8 @@ export function SaleReceiptDocumentBranded({ sale, branding }: { sale: Sale; bra
         {/* Meta band */}
         <View style={s.metaBand}>
           <View style={s.metaItem}><Text style={s.metaLbl}>Customer</Text><Text style={s.metaVal}>{saleCustomerName(sale, "Walk-in")}</Text></View>
+          {sale.client?.address ? <View style={s.metaItem}><Text style={s.metaLbl}>Address</Text><Text style={s.metaVal}>{sale.client.address}</Text></View> : null}
+          {sale.client?.accountNumber ? <View style={s.metaItem}><Text style={s.metaLbl}>Account</Text><Text style={s.metaVal}>{sale.client.accountNumber}</Text></View> : null}
           {sale.branch ? <View style={s.metaItem}><Text style={s.metaLbl}>Branch</Text><Text style={s.metaVal}>{sale.branch.name}</Text></View> : null}
           <View style={s.metaItem}><Text style={s.metaLbl}>Status</Text><Text style={s.metaVal}>{sale.status}</Text></View>
           <View style={s.metaItem}><Text style={s.metaLbl}>Total Paid</Text><Text style={s.metaVal}>{formatMoney(sale.paidAmount, currency)}</Text></View>

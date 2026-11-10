@@ -20,6 +20,44 @@ export function QuotationPreviewDrawer() {
   if (!previewQuotationId || typeof document === "undefined") return null;
   const pdfUrl = `/api/quotations/${previewQuotationId}`;
 
+  async function handleDownload() {
+    try {
+      const res = await fetch(pdfUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `quotation-${previewQuotationId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(pdfUrl, "_blank");
+    }
+  }
+
+  async function handleShare() {
+    const shareData = {
+      title: `Quotation #${previewQuotationId}`,
+      text: "View this quotation PDF",
+      url: pdfUrl,
+    };
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      try {
+        await (navigator as any).share(shareData);
+        return;
+      } catch {
+        // User cancelled or share failed — fall through to copy fallback.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(pdfUrl);
+    } catch {
+      window.open(pdfUrl, "_blank");
+    }
+  }
+
   // Portaled to document.body: <main> carries `fade-in`, an animation with
   // `fill-mode: both` whose final frame is `transform: translateY(0)`. That
   // transform persists and makes <main> the containing block for its
@@ -32,6 +70,32 @@ export function QuotationPreviewDrawer() {
         <div className="flex items-center justify-between border-b border-neutral-300 bg-white px-4 py-2">
           <span className="text-sm font-semibold text-gray-700">Quotation preview</span>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownload}
+              aria-label="Download quotation PDF"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
+              title="Download"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+            <button
+              onClick={handleShare}
+              aria-label="Share quotation PDF"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
+              title="Share"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.42" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+            </button>
             <a
               href={pdfUrl}
               target="_blank"

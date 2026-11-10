@@ -20,7 +20,7 @@ type Sale = {
   saleNumber: string; status: string; createdAt: Date; currency?: string | null;
   name?: string | null;
   branch: { name: string } | null;
-  client: { fullName: string; phone: string | null; organization?: string | null } | null;
+  client: { fullName: string; phone: string | null; organization?: string | null; address?: string | null; accountNumber?: string | null } | null;
   subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number; paidAmount: number;
   items: Array<{ id: string; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
   payments: Array<{ id: string; amount: number; method: string; reference: string | null; receivedAt: Date }>;
@@ -83,6 +83,8 @@ export function SaleReceiptDocumentThermal({ sale, branding }: { sale: Sale; bra
         <View style={s.metaRow}><Text style={s.metaLbl}>Date</Text><Text style={s.metaVal}>{sale.createdAt.toLocaleString("en-GB", { timeZone: "Africa/Nairobi" })}</Text></View>
         <View style={s.metaRow}><Text style={s.metaLbl}>Customer</Text><Text style={s.metaVal}>{saleCustomerName(sale, "Walk-in")}</Text></View>
         {sale.client?.phone ? <View style={s.metaRow}><Text style={s.metaLbl}>Phone</Text><Text style={s.metaVal}>{sale.client.phone}</Text></View> : null}
+        {sale.client?.address ? <View style={s.metaRow}><Text style={s.metaLbl}>Address</Text><Text style={s.metaVal}>{sale.client.address}</Text></View> : null}
+        {sale.client?.accountNumber ? <View style={s.metaRow}><Text style={s.metaLbl}>Account</Text><Text style={s.metaVal}>{sale.client.accountNumber}</Text></View> : null}
         {sale.branch        ? <View style={s.metaRow}><Text style={s.metaLbl}>Branch</Text><Text style={s.metaVal}>{sale.branch.name}</Text></View>  : null}
 
         <View style={s.solidDiv} />

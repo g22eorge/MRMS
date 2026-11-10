@@ -107,7 +107,7 @@ test("expense row-menu payment records and rolls up", async ({ page }) => {
     .poll(async () => prisma.expensePayment.count({ where: { expenseId: expense.id } }), { timeout: 30000 })
     .toBe(1);
   const fresh = await prisma.expense.findUniqueOrThrow({ where: { id: expense.id } });
-  expect(fresh.paidAmount).toBe(40000);
+  expect(Number(fresh.paidAmount)).toBe(40000);
   expect(fresh.paidAt).toBeNull(); // part payment leaves it open
 });
 

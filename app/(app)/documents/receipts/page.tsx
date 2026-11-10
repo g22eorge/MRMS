@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { formatMoney, normalizeCurrency, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { orgDb } from "@/lib/db";
 import { requireOrgSession } from "@/lib/org-context";
@@ -90,7 +90,6 @@ export default async function ReceiptsPage({
     const baseCurrency = org.baseCurrency;
     if (!(can.viewFinancials(user) || ["ADMIN", "OPS"].includes(user.role))) redirect("/dashboard");
     // Payment + receipt + C5 ledger post run inside the txn below; ensure schema first.
-    await ensureMoneySchema();
 
     const sourceKey = String(formData.get("sourceKey") ?? "").trim();
     const legacyInvoiceId = String(formData.get("invoiceId") ?? "").trim();
@@ -167,7 +166,6 @@ export default async function ReceiptsPage({
     const baseCurrency = org.baseCurrency;
     // Rewriting a recorded amount is void-class: same grant as deletion.
     if (!can.voidInvoices(user)) redirect("/dashboard");
-    await ensureMoneySchema();
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
     const amount = Number(String(formData.get("amount") ?? "").trim());
@@ -223,7 +221,7 @@ export default async function ReceiptsPage({
       // Post a balanced adjusting entry for the amount change so the ledger tracks
       // the new receipt amount (unique per edit, so repeated edits each adjust).
       if (Math.abs(ledgerDelta) > 0.005) {
-        const adjCount = await tx.journalEntry.count({ where: { orgId, reference: { startsWith: `pay:${paymentId}:adj:` } } });
+        const adjCount = await tx.journalEntry.count({ where: { orgId, reference: { startsWith: `pay:${paymentId}:adj:` , mode: "insensitive" as const} } });
         await postJournalEntry(tx, {
           orgId,
           userId: user.id,
@@ -264,7 +262,6 @@ export default async function ReceiptsPage({
     const baseCurrency = org.baseCurrency;
     // Deleting a cash record destroys money history: voidInvoices grant only.
     if (!can.voidInvoices(user)) return;
-    await ensureMoneySchema();
 
     const paymentId = String(formData.get("paymentId") ?? "").trim();
     if (!paymentId) return;

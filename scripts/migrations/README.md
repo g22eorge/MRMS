@@ -97,6 +97,9 @@ still resolves its parent.
 
 ## `backfill-job-invoice-lines` — applied to care 2026-08-25
 
+Archived to `sqlite-archive/` during the Postgres migration; it targets libsql
+and is kept only as a record. The commands below no longer run.
+
 Itemises job invoices written before repairs carried invoice lines. A job
 invoice used to record only a total, so it could not be credited line by line
 and the PDF printed a subtotal no line accounted for.

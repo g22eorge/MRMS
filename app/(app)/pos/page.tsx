@@ -21,7 +21,6 @@ import { assertOrgCanMutate } from "@/lib/org-write";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
-import { Button } from "@/components/ui/Button";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { PAGE_SIZE, parsePage, parsePageSize, paginationView, pageHrefBuilder, sizeHrefBuilder } from "@/lib/pagination";
 import { ListPageLayout } from "@/components/ui/ListPageLayout";
@@ -29,7 +28,7 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCards } from "@/components/ui/StatCards";
 import { StatusBadge, type BadgeTone } from "@/components/ui/StatusBadge";
-import { clientDisplayName, saleCustomerName } from "@/lib/client-name";
+import { saleCustomerName } from "@/lib/client-name";
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
@@ -85,7 +84,6 @@ export default async function PosPage({
           { saleNumber: icontains(q) },
           { name: icontains(q) },
           { notes: icontains(q) },
-          { client: { OR: [{ fullName: icontains(q) }, { organization: icontains(q) }] } },
         ],
       }
     : {};
@@ -110,8 +108,6 @@ export default async function PosPage({
   const kpiTodayTotal = kpiTodayCollections.products ?? 0;
   const kpiMonthTotal = kpiMonthCollections.products ?? 0;
   const kpiAvgSale = kpiMonthCount > 0 ? kpiMonthTotal / kpiMonthCount : 0;
-
-  let dbNeedsFix = false;
 
   async function createSaleAction(_formData: FormData) {
     "use server";
@@ -228,40 +224,31 @@ export default async function PosPage({
     paidAmount: number;
     invoicedAt: Date | null;
     createdAt: Date;
-    client: { id: string; fullName: string; organization: string | null } | null;
     createdBy: { id: string; name: string } | null;
     _count: { payments: number; creditNotes: number; refunds: number };
   }> = [];
   const salesWhere = { ...segmentFilter(segment), ...searchFilter };
   let salesTotal = 0;
-  try {
-    salesTotal = await db.sale.count({ where: salesWhere });
-    sales = await db.sale.findMany({
-      where: salesWhere,
-      orderBy: sort === "oldest" ? { createdAt: "asc" } : sort === "highest" ? { totalAmount: "desc" } : { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        saleNumber: true,
-        name: true,
-        status: true,
-        currency: true,
-        totalAmount: true,
-        paidAmount: true,
-        invoicedAt: true,
-        createdAt: true,
-        client: { select: { id: true, fullName: true, organization: true } },
-        createdBy: { select: { id: true, name: true } },
-        _count: { select: { payments: true, creditNotes: true, refunds: true } },
-      },
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
-    sales = [];
-  }
-
+  salesTotal = await db.sale.count({ where: salesWhere });
+  sales = await db.sale.findMany({
+    where: salesWhere,
+    orderBy: sort === "oldest" ? { createdAt: "asc" } : sort === "highest" ? { totalAmount: "desc" } : { createdAt: "desc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    select: {
+      id: true,
+      saleNumber: true,
+      name: true,
+      status: true,
+      currency: true,
+      totalAmount: true,
+      paidAmount: true,
+      invoicedAt: true,
+      createdAt: true,
+      createdBy: { select: { id: true, name: true } },
+      _count: { select: { payments: true, creditNotes: true, refunds: true } },
+    },
+  });
   const salesPage = paginationView(page, salesTotal, pageSize);
   const salesHrefFilters = { ...{ period: segment !== "all" ? segment : "", q, sort: sort !== "newest" ? sort : "" }, size: pageSize !== PAGE_SIZE ? pageSize : "" };
   const salesHref = pageHrefBuilder("/pos", salesHrefFilters);
@@ -330,17 +317,6 @@ export default async function PosPage({
       headerNode={
         <>
           <FormErrorBanner message={posListError} />
-          {dbNeedsFix ? (
-            <section className="panel-shadow rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              <p className="font-semibold text-amber-50">POS database tables are missing.</p>
-              <p className="mt-1 text-amber-100/90">
-                Run <span className="mono">/api/admin/db-fix</span> as the platform admin to create <span className="mono">Sale</span> tables.
-              </p>
-              <Button href="/api/admin/db-fix" external target="_blank" rel="noreferrer" variant="secondary" size="sm" className="mt-3">
-                Open DB Fix
-              </Button>
-            </section>
-          ) : null}
 
           {/* ══ MOBILE HEADER ══ */}
           <div className="space-y-3 lg:hidden">
@@ -543,8 +519,6 @@ export default async function PosPage({
                     <p className="truncate font-bold text-[var(--ink)]">{saleCustomerName(s)}</p>
                     <p className="mt-0.5 truncate text-[var(--ink-muted)]">
                       <span className="mono">{s.saleNumber}</span>
-                      {/* Only when it is not already the customer label above. */}
-                      {s.client && s.name ? <>{" · "}{s.name}</> : null}
                       {" · "}{formatEATDate(s.createdAt)}
                       {s.createdBy ? <> · {s.createdBy.name}</> : null}
                     </p>
@@ -575,16 +549,6 @@ export default async function PosPage({
                     <p className="text-[0.75rem] text-[var(--ink-muted)]">{formatEATDate(s.createdAt)}</p>
                   </div>
                 ),
-              },
-              {
-                key: "customer",
-                header: "Customer",
-                cell: (s) =>
-                  s.client ? (
-                    <Link href={`/clients/${s.client.id}`} className="font-medium text-[var(--ink)] hover:underline">{clientDisplayName(s.client)}</Link>
-                  ) : (
-                    <span className={s.name ? "font-medium text-[var(--ink)]" : "text-[var(--ink-muted)]"}>{saleCustomerName(s)}</span>
-                  ),
               },
               {
                 key: "createdBy",

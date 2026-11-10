@@ -40,7 +40,7 @@ export function OnboardingChecklist({ status }: { status: OnboardingStatus }) {
         {status.steps.map((step) => {
           const isNext = !step.done && step.id === next?.id;
           return (
-            <li key={step.id} className={`flex items-center gap-3 px-5 py-3 ${step.done ? "opacity-55" : ""}`}>
+            <li key={step.id} className="flex items-center gap-3 px-5 py-3">
               <span
                 aria-hidden="true"
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[0.625rem] font-bold ${

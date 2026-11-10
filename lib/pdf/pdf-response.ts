@@ -1,5 +1,5 @@
-/** Standard response for generated PDF buffers. Pass `inline` for in-app preview iframes; default downloads. */
-export function pdfAttachmentResponse(buffer: Buffer | Uint8Array, filename: string, inline = false) {
+/** Standard response for generated PDF buffers. Pass `inline=false` to force download; default renders inline (mobile share options). */
+export function pdfAttachmentResponse(buffer: Buffer | Uint8Array, filename: string, inline = true) {
   const bytes = buffer instanceof Buffer ? new Uint8Array(buffer) : buffer;
   return new Response(new Blob([bytes as BlobPart], { type: "application/pdf" }), {
     headers: {

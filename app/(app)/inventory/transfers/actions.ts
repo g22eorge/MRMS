@@ -9,7 +9,7 @@ import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
-import type { Prisma } from "@prisma/client";
+import type { TxClient } from "@/lib/prisma";
 import { notifyStockTransferUpdated } from "@/lib/notifications";
 
 import { flash } from "@/lib/flash";
@@ -27,7 +27,7 @@ async function nextTransferNumber(orgId: string) {
   });
 }
 
-async function loadTransfer(tx: Prisma.TransactionClient, id: string, orgId: string) {
+async function loadTransfer(tx: TxClient, id: string, orgId: string) {
   return tx.stockTransfer.findFirst({
     where: { id, orgId },
     include: { items: true },

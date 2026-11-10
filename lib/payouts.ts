@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client";
-import { tableColumns } from "@/lib/db/introspect";
 
 import { prisma } from "@/lib/prisma";
 
@@ -16,25 +15,19 @@ export type TechnicianPayoutTotal = {
   paidAmount: number;
 };
 
-let payoutColumnsPresentCache: boolean | null = null;
-
+/**
+ * Whether the Job payout columns exist.
+ *
+ * Kept as a function, and kept awaited at its call sites, but it no longer
+ * inspects the database. It used to run `PRAGMA table_info("Job")` because some
+ * deployed databases predated externalTechFee / externalPaid / externalPaidAt /
+ * externalPaymentRef, and reading them would throw. Those columns are part of
+ * the baseline migration now, so a database that lacks them is one that has not
+ * been migrated — which is a deployment failure to surface, not a condition for
+ * feature code to tiptoe around.
+ */
 export async function hasJobPayoutColumns() {
-  if (payoutColumnsPresentCache !== null) {
-    return payoutColumnsPresentCache;
-  }
-
-  try {
-    const names = await tableColumns("Job");
-    payoutColumnsPresentCache =
-      names.has("externalTechFee") &&
-      names.has("externalPaid") &&
-      names.has("externalPaidAt") &&
-      names.has("externalPaymentRef");
-  } catch {
-    payoutColumnsPresentCache = false;
-  }
-
-  return payoutColumnsPresentCache;
+  return true;
 }
 
 export async function getJobPayoutsByIds(jobIds: string[], orgId?: string) {
@@ -50,15 +43,19 @@ export async function getJobPayoutsByIds(jobIds: string[], orgId?: string) {
     externalPaidAt: Date | string | null;
     externalPaymentRef: string | null;
   }>>(
+    // Every identifier quoted. Postgres folds an unquoted one to lower case, so
+    // `externalTechFee` became `externaltechfee` and the query died with 42703
+    // against a table whose columns were created quoted and mixed-case. It read
+    // as valid SQL and had been since the datasource changed.
     Prisma.sql`
       SELECT
-        id,
-        externalTechFee,
-        externalPaid,
-        externalPaidAt,
-        externalPaymentRef
+        "id",
+        "externalTechFee",
+        "externalPaid",
+        "externalPaidAt",
+        "externalPaymentRef"
       FROM "Job"
-      WHERE id IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}`))})
+      WHERE "id" IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}`))})
       ${orgId ? Prisma.sql`AND "orgId" = ${orgId}` : Prisma.sql``}
     `,
   );

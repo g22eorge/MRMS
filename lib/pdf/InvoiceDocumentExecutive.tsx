@@ -75,6 +75,9 @@ const s = StyleSheet.create({
   totalVal: { fontSize: 14, fontWeight: 700, color: GOLD },
 
   termItem: { fontSize: 8.2, color: MID, marginBottom: 3 },
+  paidBadge: { backgroundColor: "#15803d", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  unpaidBadge: { backgroundColor: "#b91c1c", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  badgeText: { fontSize: 8.5, color: WHITE, fontWeight: 700 },
 
   sigRow:  { flexDirection: "row", gap: 16, marginTop: 16 },
   sigCol:  { flex: 1, border: `1 solid ${LINE_L}`, borderRadius: 4, padding: 10, backgroundColor: WHITE, borderTop: `2 solid ${GOLD}` },
@@ -91,13 +94,20 @@ type Props = {
   companyTaxId?: string | null; companyLogoUrl?: string;
   documentTitle: string; quotationNumber: string; dateIssued: string; validUntil: string;
   repairId: string; preparedByName: string; preparedByRole: string;
-  clientName: string; clientPhone: string; clientEmail: string; clientOrganization: string;
+  clientName: string;   clientPhone: string;
+  clientEmail: string;
+  clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deviceType: string; deviceLabel: string; serialOrImei: string; accessories: string; physicalCondition: string;
   customerIssue: string; diagnosisSummary: string; scopeOfWork: string;
   repairCost: string; vatApplicable: boolean; vatLabel: string; vatAmount: string; totalAmountPayable: string;
   amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  paymentTerms?: string | null; dueDate?: string | null;
+  paymentTo?: string | null;
+  isPaid?: boolean;
   promo?: QuotationPromo | null;
   signatureCompanyLabel: string; signatureClientLabel: string;
   // ── optional line-items ───────────────────────────────────────────────────────
@@ -156,7 +166,13 @@ export function InvoiceDocumentExecutive(props: Props) {
           <View style={s.metaItem}><Text style={s.metaLbl}>Valid Until</Text><Text style={s.metaVal}>{props.validUntil}</Text></View>
           <View style={s.metaItem}><Text style={s.metaLbl}>Repair ID</Text><Text style={s.metaVal}>{props.repairId}</Text></View>
           <View style={s.metaItem}><Text style={s.metaLbl}>Total Payable</Text><Text style={s.metaValGold}>{props.totalAmountPayable}</Text></View>
-          <View style={s.metaItem}><Text style={s.metaLbl}>Status</Text><Text style={s.metaVal}>{props.status}</Text></View>
+          <View style={s.metaItem}><Text style={s.metaLbl}>Status</Text><Text style={s.metaVal}>{props.status}</Text>{props.isPaid ? <View style={s.paidBadge}><Text style={s.badgeText}>PAID</Text></View> : null}</View>
+          {props.paymentTerms ? (
+            <View style={s.metaItem}><Text style={s.metaLbl}>Payment Terms</Text><Text style={s.metaVal}>{props.paymentTerms}</Text></View>
+          ) : null}
+          {props.dueDate ? (
+            <View style={s.metaItem}><Text style={s.metaLbl}>Due Date</Text><Text style={s.metaVal}>{props.dueDate}</Text></View>
+          ) : null}
         </View>
 
         <View style={s.body}>
@@ -168,6 +184,8 @@ export function InvoiceDocumentExecutive(props: Props) {
               {props.clientOrganization ? <View style={s.row}><Text style={s.rlbl}>Org</Text><Text style={s.rval}>{props.clientOrganization}</Text></View> : null}
               <View style={s.row}><Text style={s.rlbl}>Phone</Text><Text style={s.rval}>{props.clientPhone}</Text></View>
               {props.clientEmail ? <View style={s.row}><Text style={s.rlbl}>Email</Text><Text style={s.rval}>{props.clientEmail}</Text></View> : null}
+              {props.clientAddress ? <View style={s.row}><Text style={s.rlbl}>Address</Text><Text style={s.rval}>{props.clientAddress}</Text></View> : null}
+              {props.clientAccountNumber ? <View style={s.row}><Text style={s.rlbl}>Account No.</Text><Text style={s.rval}>{props.clientAccountNumber}</Text></View> : null}
             </View>
             {isRepairMode && (
               <View style={s.card}>
@@ -235,6 +253,19 @@ export function InvoiceDocumentExecutive(props: Props) {
               <Text key={i} style={s.termItem}>– {l}</Text>
             ))}
           </View>
+
+          {props.paymentTo ? (
+            <View style={[s.wideCard, { marginBottom: 14 }]}>
+              <Text style={s.secLbl}>Payment To</Text>
+              {props.paymentTo.split(/\n\s*\n/).map((block, bi) => (
+                <View key={bi} style={bi > 0 ? { marginTop: 6 } : {}}>
+                  {block.split("\n").map((line, i) => (
+                    <Text key={i} style={s.termItem}>{line.trim()}</Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           {/* ── Signatures ── */}
           <View style={s.sigRow} wrap={false}>

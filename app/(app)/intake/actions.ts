@@ -140,152 +140,175 @@ export async function updateRepairRequestDetailsAction(formData: FormData) {
   return { success: true as const, request: updated };
 }
 
+const ALLOWED_STATUSES = ["PENDING_INTAKE", "PENDING_FRONT_DESK", "APPROVED", "REJECTED", "CONVERTED_TO_JOB"] as const;
+
 const statusSchema = z.object({
   id: z.string().min(1),
-  status: z.nativeEnum(RepairRequestStatus),
+  status: z.string().refine((s) => ALLOWED_STATUSES.includes(s as any), {
+    message: "Invalid status",
+  }),
 });
 
 export async function setRepairRequestStatusAction(input: { id: string; status: RepairRequestStatus }) {
-  const { session, user, orgId, org } = await requireOrgSession();
+  let session: Awaited<ReturnType<typeof requireOrgSession>>["session"];
+  let user: Awaited<ReturnType<typeof requireOrgSession>>["user"];
+  let orgId: string;
+  let org: Awaited<ReturnType<typeof requireOrgSession>>["org"];
+  try {
+    ({ session, user, orgId, org } = await requireOrgSession());
+  } catch {
+    return { error: "Session expired. Please sign in again." } as const;
+  }
   if (!can.manageIntake(user)) return { error: "Forbidden" } as const;
-  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  try {
+    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Workspace is read-only." } as const;
+  }
 
   const parsed = statusSchema.safeParse(input);
   if (!parsed.success) return { error: "Invalid status" } as const;
 
-  const req = await prisma.repairRequest.findFirst({ where: { id: parsed.data.id, orgId } });
-  if (!req) return { error: "Request not found" } as const;
+  try {
+    const req = await prisma.repairRequest.findFirst({ where: { id: parsed.data.id, orgId } });
+    if (!req) return { error: "Request not found" } as const;
 
-  // Convert to Job
-  if (parsed.data.status === "CONVERTED_TO_JOB") {
-    const limit = await checkJobLimit(orgId);
-    if (!limit.allowed) return { error: limit.reason } as const;
+    // Convert to Job
+    if (parsed.data.status === "CONVERTED_TO_JOB") {
+      const limit = await checkJobLimit(orgId);
+      if (!limit.allowed) return { error: limit.reason } as const;
 
-    // Two changes from the upsert this replaces.
-    //
-    // Match on the canonical number as well as the literal one: the unique index
-    // is over the stored string, so a request giving "0772…" against a client
-    // stored as "+256772…" created a second record for the same person.
-    //
-    // And never overwrite what the shop already knows about a customer from an
-    // inbound request. A web form saying "amina" would rename a client recorded
-    // as "Amina Yusuf", and a blank email would not, but a wrong one would. The
-    // request only fills fields the client record does not already have.
-    const requestPhone = sanitizeText(req.phone);
-    const canonicalPhone = normalizePhoneForStorage(requestPhone);
-    const existingClient = await prisma.client.findFirst({
-      where: { orgId, OR: [{ phone: canonicalPhone }, { phone: requestPhone }] },
-      select: { id: true, fullName: true, email: true },
-    });
+      // Two changes from the upsert this replaces.
+      //
+      // Match on the canonical number as well as the literal one: the unique index
+      // is over the stored string, so a request giving "0772…" against a client
+      // stored as "+256772…" created a second record for the same person.
+      //
+      // And never overwrite what the shop already knows about a customer from an
+      // inbound request. A web form saying "amina" would rename a client recorded
+      // as "Amina Yusuf", and a blank email would not, but a wrong one would. The
+      // request only fills fields the client record does not already have.
+      const requestPhone = sanitizeText(req.phone);
+      const canonicalPhone = normalizePhoneForStorage(requestPhone);
+      const existingClient = await prisma.client.findFirst({
+        where: { orgId, OR: [{ phone: canonicalPhone }, { phone: requestPhone }] },
+        select: { id: true, fullName: true, email: true },
+      });
 
-    const client = existingClient
-      ? await prisma.client.update({
-          where: { id: existingClient.id },
-          data: {
-            fullName: existingClient.fullName?.trim()
-              ? existingClient.fullName
-              : sanitizeText(req.customerName),
-            email: existingClient.email?.trim()
-              ? existingClient.email
-              : sanitizeOptionalText(req.email) ?? undefined,
-          },
-        })
-      : await prisma.client.create({
-          data: {
-            orgId,
-            fullName: sanitizeText(req.customerName),
-            phone: canonicalPhone,
-            email: sanitizeOptionalText(req.email) ?? undefined,
-          },
-        });
+      const client = existingClient
+        ? await prisma.client.update({
+            where: { id: existingClient.id },
+            data: {
+              fullName: existingClient.fullName?.trim()
+                ? existingClient.fullName
+                : sanitizeText(req.customerName),
+              email: existingClient.email?.trim()
+                ? existingClient.email
+                : sanitizeOptionalText(req.email) ?? undefined,
+            },
+          })
+        : await prisma.client.create({
+            data: {
+              orgId,
+              fullName: sanitizeText(req.customerName),
+              phone: canonicalPhone,
+              email: sanitizeOptionalText(req.email) ?? undefined,
+            },
+          });
 
-    let job: { id: string; jobNumber: string } | null = null;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const jobNumber = await generateJobNumber(orgId);
-      try {
-        job = await prisma.job.create({
-          data: {
-            orgId,
-            jobNumber,
-            clientId: client.id,
-            createdById: session.user.id,
-            deviceType: req.deviceType,
-            brand: sanitizeText(req.brand),
-            model: sanitizeText(req.model ?? ""),
-            serialOrImei: sanitizeOptionalText(req.serialNumber) ?? undefined,
-            issueDescription: sanitizeText(req.problemDescription),
-          },
-          select: { id: true, jobNumber: true },
-        });
-        break;
-      } catch (err) {
-        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") continue;
-        throw err;
+      let job: { id: string; jobNumber: string } | null = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const jobNumber = await generateJobNumber(orgId);
+        try {
+          job = await prisma.job.create({
+            data: {
+              orgId,
+              jobNumber,
+              clientId: client.id,
+              createdById: session.user.id,
+              deviceType: req.deviceType,
+              brand: sanitizeText(req.brand),
+              model: sanitizeText(req.model ?? ""),
+              serialOrImei: sanitizeOptionalText(req.serialNumber) ?? undefined,
+              issueDescription: sanitizeText(req.problemDescription),
+            },
+            select: { id: true, jobNumber: true },
+          });
+          break;
+        } catch (err) {
+          if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") continue;
+          throw err;
+        }
       }
+
+      if (!job) return { error: "Could not allocate job number. Please retry." } as const;
+
+      await prisma.auditLog.create({
+        data: {
+          jobId: job.id,
+          userId: session.user.id,
+          action: "JOB_CREATED",
+          detail: JSON.stringify({ status: "RECEIVED", sourceRequest: req.requestNumber }),
+          orgId,
+        },
+      });
+
+      await prisma.repairRequest.update({
+        where: { id: req.id },
+        data: { requestStatus: "CONVERTED_TO_JOB", linkedJobId: job.id },
+      });
+
+      // Non-blocking WhatsApp (outbox-routed with tracking link — SPEC-001)
+      notifyClientJobCreated({ orgId, jobId: job.id, jobNumber: job.jobNumber, phone: req.phone, customerName: req.customerName }).catch((err) =>
+        console.error("[Intake] WhatsApp notification failed:", err),
+      );
+      notifyJobCreated({
+        orgId,
+        jobNumber: job.jobNumber,
+        clientName: req.customerName,
+        deviceLabel: `${req.brand} ${req.model ?? ""}`.trim() || "Device",
+        actorName: user.name ?? user.email ?? "Staff",
+      }).catch(() => {});
+
+      revalidatePath("/intake");
+      return {
+        success: true as const,
+        requestStatus: "CONVERTED_TO_JOB" as const,
+        jobId: job.id,
+        jobNumber: job.jobNumber,
+      };
     }
 
-    if (!job) return { error: "Could not allocate job number. Please retry." } as const;
-
-    await prisma.auditLog.create({
-      data: {
-        jobId: job.id,
-        userId: session.user.id,
-        action: "JOB_CREATED",
-        detail: JSON.stringify({ status: "RECEIVED", sourceRequest: req.requestNumber }),
-        orgId,
-      },
-    });
-
-    await prisma.repairRequest.update({
+    // Approve / Reject / Pending
+    const updated = await prisma.repairRequest.update({
       where: { id: req.id },
-      data: { requestStatus: "CONVERTED_TO_JOB", linkedJobId: job.id },
+      data: { requestStatus: parsed.data.status as RepairRequestStatus },
     });
 
-    // Non-blocking WhatsApp (outbox-routed with tracking link — SPEC-001)
-    notifyClientJobCreated({ orgId, jobId: job.id, jobNumber: job.jobNumber, phone: req.phone, customerName: req.customerName }).catch((err) =>
-      console.error("[Intake] WhatsApp notification failed:", err),
-    );
-    notifyJobCreated({
-      orgId,
-      jobNumber: job.jobNumber,
-      clientName: req.customerName,
-      deviceLabel: `${req.brand} ${req.model ?? ""}`.trim() || "Device",
-      actorName: user.name ?? user.email ?? "Staff",
-    }).catch(() => {});
+    if (parsed.data.status === "APPROVED") {
+      sendIntakeApprovalNotification(
+        updated.phone,
+        updated.customerName,
+        updated.requestNumber,
+        updated.preferredDropoffDate,
+        orgId,
+      ).catch((err) => console.error("[Intake] WhatsApp notification failed:", err));
+    }
+
+    if (parsed.data.status === "REJECTED") {
+      sendIntakeRejectionNotification(updated.phone, updated.customerName, updated.requestNumber, orgId).catch((err) =>
+        console.error("[Intake] WhatsApp notification failed:", err),
+      );
+    }
 
     revalidatePath("/intake");
-    return {
-      success: true as const,
-      requestStatus: "CONVERTED_TO_JOB" as const,
-      jobId: job.id,
-      jobNumber: job.jobNumber,
-    };
+    return { success: true as const, requestStatus: updated.requestStatus };
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      return { error: `Database error: ${err.message}` } as const;
+    }
+    return { error: err instanceof Error ? err.message : "Failed to update request status." } as const;
   }
-
-  // Approve / Reject / Pending
-  const updated = await prisma.repairRequest.update({
-    where: { id: req.id },
-    data: { requestStatus: parsed.data.status },
-  });
-
-  if (parsed.data.status === "APPROVED") {
-    sendIntakeApprovalNotification(
-      updated.phone,
-      updated.customerName,
-      updated.requestNumber,
-      updated.preferredDropoffDate,
-      orgId,
-    ).catch((err) => console.error("[Intake] WhatsApp notification failed:", err));
-  }
-
-  if (parsed.data.status === "REJECTED") {
-    sendIntakeRejectionNotification(updated.phone, updated.customerName, updated.requestNumber, orgId).catch((err) =>
-      console.error("[Intake] WhatsApp notification failed:", err),
-    );
-  }
-
-  revalidatePath("/intake");
-  return { success: true as const, requestStatus: updated.requestStatus };
 }
 
 const deleteSchema = z.object({

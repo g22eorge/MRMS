@@ -7,11 +7,10 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import type { PaymentMethod } from "@prisma/client";
-import { Prisma } from "@prisma/client";
 
 import { formatMoney, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { formatEATDateTime } from "@/lib/date-eat";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma, type TxClient, toClientSafe } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -23,9 +22,6 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormField, FormRow, FormSelect, FormTextarea } from "@/components/ui/form-field";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
-import { RowActionsMenu } from "@/components/shared/RowActionsMenu";
-import { DocumentShareMenuSection } from "@/components/documents/DocumentShareMenuSection";
-import { shareSaleReceiptDocument } from "@/lib/notifications/share-document";
 import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
 import { RecordPreviewButton } from "@/components/record/RecordPreviewButton";
 import { refundableCeiling } from "@/lib/commercial/refundable";
@@ -38,7 +34,6 @@ import { findRecentDuplicate } from "@/lib/dedup";
 import { computeLinesVat } from "@/lib/commercial/vat";
 import { saleCustomerName } from "@/lib/client-name";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
-import { PosCustomerFields } from "@/components/pos/PosCustomerFields";
 
 import { flash } from "@/lib/flash";
 const METHODS: PaymentMethod[] = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "OTHER"];
@@ -53,7 +48,7 @@ function posReject(saleId: string, message: string): never {
 }
 
 async function recalcSaleTotals(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   saleId: string,
   orgId: string,
   overrideTaxApplicable?: boolean,
@@ -62,30 +57,25 @@ async function recalcSaleTotals(
   const subtotal = items.reduce((sum, it) => sum + (it.lineTotal ?? 0), 0);
   const current = await tx.sale.findFirst({ where: { id: saleId, orgId }, select: { discountAmount: true, currency: true, taxApplicable: true } });
   const currency = normalizeCurrency(current?.currency, "UGX");
-  // VAT config: read the three fields we need on the SAME transaction connection
-  // with a minimal SELECT. Do NOT use getDocumentBrandingSettings() here — it runs
-  // ensureRawTable() (CREATE/ALTER TABLE DDL) which, issued while this libSQL write
-  // transaction is open, can deadlock checkout on cold start. Falls back to safe
-  // defaults (VAT off, exclusive, 18%) if the row/columns aren't present.
+  // VAT config on the same transaction connection. Missing branding keeps
+  // checkout on VAT off / exclusive / 18%.
   let vatDefaultApplicable = false;
   let vatRatePercent = 18;
   let vatInclusive = false;
-  try {
-    const rows = await tx.$queryRaw<Array<{ vatDefaultApplicable: unknown; vatRatePercent: unknown; vatInclusive: unknown }>>`
-      SELECT "vatDefaultApplicable", "vatRatePercent", "vatInclusive"
-      FROM "DocumentBrandingSettings"
-      WHERE id = ${orgId} OR orgId = ${orgId} OR id = 'singleton'
-      ORDER BY CASE WHEN id = ${orgId} OR orgId = ${orgId} THEN 0 ELSE 1 END
-      LIMIT 1`;
-    const row = rows?.[0];
-    if (row) {
-      vatDefaultApplicable = Boolean(row.vatDefaultApplicable);
-      const rate = Number(row.vatRatePercent);
-      if (Number.isFinite(rate)) vatRatePercent = rate;
-      vatInclusive = Boolean(row.vatInclusive);
-    }
-  } catch {
-    // Drifted DB (missing table/column) — safe defaults keep checkout working.
+  const branding =
+    (await tx.documentBrandingSettings.findFirst({
+      where: { OR: [{ id: orgId }, { orgId }] },
+      select: { vatDefaultApplicable: true, vatRatePercent: true, vatInclusive: true },
+    })) ??
+    (await tx.documentBrandingSettings.findFirst({
+      where: { id: "singleton" },
+      select: { vatDefaultApplicable: true, vatRatePercent: true, vatInclusive: true },
+    }));
+  if (branding) {
+    vatDefaultApplicable = Boolean(branding.vatDefaultApplicable);
+    const rate = Number(branding.vatRatePercent);
+    if (Number.isFinite(rate)) vatRatePercent = rate;
+    vatInclusive = Boolean(branding.vatInclusive);
   }
   const taxApplicable = overrideTaxApplicable ?? current?.taxApplicable ?? vatDefaultApplicable;
   const discountAmount = Math.max(0, Math.min(current?.discountAmount ?? 0, subtotal));
@@ -140,7 +130,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   const { id } = await params;
   const errorMessage = (await searchParams)?.error?.trim() || null;
 
-  let dbNeedsFix = false;
   let sale: {
     id: string;
     saleNumber: string;
@@ -161,8 +150,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     notes: string | null;
     branchId: string | null;
     branch: { name: string } | null;
-    clientId: string | null;
-    client: { fullName: string; phone: string | null; email: string | null; organization: string | null } | null;
     items: Array<{ id: string; partId: string | null; description: string; quantity: number; unitPrice: number; lineTotal: number }>;
     payments: Array<{ id: string; amount: number; method: PaymentMethod; reference: string | null; receivedAt: Date; currency: string | null }>;
     _count: { payments: number; creditNotes: number; refunds: number };
@@ -191,47 +178,39 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     creditNoteId: string | null;
   }> = [];
 
-  try {
-    sale = await prisma.sale.findFirst({
-      where: { id, orgId },
-      select: {
-        id: true,
-        saleNumber: true,
-        name: true,
-        status: true,
-        billingMode: true,
-        invoiceNumber: true,
-        invoicedAt: true,
-        currency: true,
-        subtotal: true,
-        discountAmount: true,
-        vatAmount: true,
-        taxApplicable: true,
-        totalAmount: true,
-        paidAmount: true,
-        paidAt: true,
-        createdAt: true,
-        notes: true,
-        branchId: true,
-        branch: { select: { name: true } },
-        clientId: true,
-        client: { select: { fullName: true, phone: true, email: true, organization: true } },
-        items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
-        payments: { select: { id: true, amount: true, method: true, reference: true, receivedAt: true, currency: true }, orderBy: { receivedAt: "desc" } },
-        _count: { select: { payments: true, creditNotes: true, refunds: true } },
-      },
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Sale")) dbNeedsFix = true;
-    sale = null;
-  }
+  sale = await prisma.sale.findFirst({
+    where: { id, orgId },
+    select: {
+      id: true,
+      saleNumber: true,
+      name: true,
+      status: true,
+      billingMode: true,
+      invoiceNumber: true,
+      invoicedAt: true,
+      currency: true,
+      subtotal: true,
+      discountAmount: true,
+      vatAmount: true,
+      taxApplicable: true,
+      totalAmount: true,
+      paidAmount: true,
+      paidAt: true,
+      createdAt: true,
+      notes: true,
+      branchId: true,
+      branch: { select: { name: true } },
+      items: { select: { id: true, partId: true, description: true, quantity: true, unitPrice: true, lineTotal: true }, orderBy: { createdAt: "asc" } },
+      payments: { select: { id: true, amount: true, method: true, reference: true, receivedAt: true, currency: true }, orderBy: { receivedAt: "desc" } },
+      _count: { select: { payments: true, creditNotes: true, refunds: true } },
+    },
+  });
+  // A missing table is not an empty sale: the schema reaches the database only
+  // through prisma migrate deploy, so failing here means the deployment is
+  // broken and the route's error boundary should say so.
 
   if (!sale) {
-    if (dbNeedsFix) redirect("/pos"); // schema not yet migrated — redirect to list
-    {
-      notFound();
-    }
+    notFound();
   }
 
   const saleCurrency = normalizeCurrency(sale.currency, org.baseCurrency);
@@ -239,14 +218,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     where: { orgId, isActive: true },
     orderBy: [{ isDefault: "desc" }, { name: "asc" }],
     select: { id: true, name: true },
-  }).catch(() => []);
-
-  const pickerClients = await prisma.client.findMany({
-    where: { orgId },
-    orderBy: { fullName: "asc" },
-    take: 300,
-    select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true },
-  }).catch(() => []);
+    }).catch(() => []);
 
   // Credit notes / refunds are optional features; keep page working if tables are missing.
   try {
@@ -323,56 +295,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       data: { name, branchId, notes },
     });
     await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: saleId, action: "POS_SALE_UPDATED", summary: `POS sale details updated${name ? ` (name: ${name})` : ""}` });
-
-    revalidatePath(`/pos/${saleId}`);
-    revalidatePath("/pos");
-  }
-
-  async function setSaleClientAction(formData: FormData) {
-    "use server";
-    const { user, orgId, org } = await requireOrgSession();
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
-    assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
-
-    const saleId = String(formData.get("saleId") ?? "").trim();
-    if (!saleId) return;
-    const saleRow = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, status: true } });
-    if (!saleRow) return;
-    // Frozen on voided sales, like the sale details above.
-    if (saleRow.status === "VOID") posReject(saleId, "This sale is void, so its customer can no longer be changed.");
-
-    const pickedClientId = String(formData.get("clientId") ?? "").trim() || null;
-    const clientMode = String(formData.get("clientMode") ?? "existing");
-    let clientId: string | null = null;
-
-    if (pickedClientId) {
-      const client = await prisma.client.findFirst({ where: { id: pickedClientId, orgId }, select: { id: true } });
-      if (!client) posReject(saleId, "That customer no longer exists — pick another one.");
-      clientId = client.id;
-    } else if (clientMode === "new") {
-      // Same rule as quotations: a new customer needs a name and a phone.
-      const fullName = sanitizeText(String(formData.get("newClientFullName") ?? ""));
-      const phone = sanitizeText(String(formData.get("newClientPhone") ?? ""));
-      const email = sanitizeOptionalText(formData.get("newClientEmail") as string | null);
-      const organization = sanitizeOptionalText(formData.get("newClientOrganization") as string | null);
-      const address = sanitizeOptionalText(formData.get("newClientAddress") as string | null);
-      if (fullName.length < 2 || phone.length < 3) {
-        posReject(saleId, "A new customer needs a name and a phone number.");
-      }
-      const existing = await prisma.client.findFirst({ where: { phone, orgId }, select: { id: true } });
-      if (existing) {
-        clientId = existing.id;
-      } else {
-        const created = await prisma.client.create({
-          data: { orgId, fullName, phone, email, organization, address },
-          select: { id: true },
-        });
-        clientId = created.id;
-      }
-    }
-
-    await prisma.sale.updateMany({ where: { id: saleId, orgId }, data: { clientId } });
-    await writeSystemAuditEvent({ orgId, actorUserId: user.id, entityType: "Sale", entityId: saleId, action: "POS_SALE_UPDATED", summary: clientId ? "POS sale customer attached" : "POS sale customer removed" });
 
     revalidatePath(`/pos/${saleId}`);
     revalidatePath("/pos");
@@ -701,7 +623,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
     const amount = Number(rawAmount);
     if (!Number.isFinite(amount) || amount <= 0) posReject(saleId, "Enter a valid payment amount.");
 
-    const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, totalAmount: true, status: true, currency: true, clientId: true } });
+    const existingSale = await prisma.sale.findFirst({ where: { id: saleId, orgId }, select: { id: true, totalAmount: true, status: true, currency: true } });
     if (!existingSale || existingSale.status === "VOID") posReject(saleId, "This sale is void — no payment can be recorded.");
 
     const saleCurrency = normalizeCurrency(existingSale.currency, org.baseCurrency);
@@ -717,7 +639,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
       : "OTHER" as PaymentMethod;
 
     // Receipt + C5 ledger post run inside the txn; ensure their schema exists first.
-    await ensureMoneySchema();
 
     await prisma.$transaction(async (tx) => {
       // Re-read inside the txn: status, items and paid total must be true at
@@ -771,7 +692,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         orgId,
         paymentId: payment.id,
         saleId,
-        clientId: existingSale.clientId,
         amount: roundedAmount,
         currency: saleCurrency,
         issuedById: session.user.id,
@@ -1073,7 +993,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
 
     // Refund write + C5 ledger post + sale paid-state recompute must be atomic;
     // ensure the ledger/FX schema exists before opening the txn.
-    await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
       // Ceiling and dedupe rechecked inside the txn, against the rows written
       // beside — the outside reads race.
@@ -1158,24 +1077,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
   const canEditDetails = sale.status !== "VOID";
   const refundedTotal = refunds.reduce((sum, r) => sum + r.amount, 0);
 
-  // Share the sale receipt PDF with the customer through the outbox (WhatsApp/email).
-  async function shareSaleReceiptWhatsAppAction(formData: FormData) {
-    "use server";
-    const { user, orgId } = await requireOrgSession();
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
-    const saleId = String(formData.get("saleId") ?? "").trim();
-    if (saleId) await shareSaleReceiptDocument({ orgId, saleId, channel: "whatsapp" });
-    revalidatePath(`/pos/${saleId}`);
-  }
-  async function shareSaleReceiptEmailAction(formData: FormData) {
-    "use server";
-    const { user, orgId } = await requireOrgSession();
-    if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) redirect("/dashboard");
-    const saleId = String(formData.get("saleId") ?? "").trim();
-    if (saleId) await shareSaleReceiptDocument({ orgId, saleId, channel: "email" });
-    revalidatePath(`/pos/${saleId}`);
-  }
-
   // One control scale for the whole page — same language as the clients workspace.
   const field =
     "w-full min-w-0 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none transition placeholder:text-[var(--ink-muted)]/60 focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15";
@@ -1218,22 +1119,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             ) : null}
           </>
         }
-        overflow={
-          sale.client && sale.items.length > 0 ? (
-            <RowActionsMenu label="Share receipt">
-              <DocumentShareMenuSection
-                hiddenFieldName="saleId"
-                hiddenFieldValue={sale.id}
-                recipientPhone={sale.client.phone}
-                recipientEmail={sale.client.email}
-                whatsAppAction={shareSaleReceiptWhatsAppAction}
-                emailAction={shareSaleReceiptEmailAction}
-                whatsAppLabel="Send receipt via WhatsApp"
-                emailLabel="Email receipt"
-              />
-            </RowActionsMenu>
-          ) : undefined
-        }
+        overflow={undefined}
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -1298,18 +1184,6 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             )}
           </section>
 
-          {/* -- Customer: attach a client record, or clear back to walk-in.
-              Frozen on voided sales like the details above. -- */}
-          {canEditDetails ? (
-            <section className="dc-card space-y-2 p-3">
-              <form action={setSaleClientAction} className="space-y-2">
-                <input type="hidden" name="saleId" value={sale.id} />
-                <PosCustomerFields initialClientId={sale.clientId ?? ""} clients={pickerClients} />
-                <SubmitButton variant="secondary" size="sm" pendingLabel="Saving…">Save customer</SubmitButton>
-              </form>
-            </section>
-          ) : null}
-
           {/* -- Items -- */}
           <section className="dc-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2.5">
@@ -1322,7 +1196,7 @@ export default async function SalePage({ params, searchParams }: { params: Promi
         {isOpen ? (
           <form action={addItemAction} className={`grid gap-2 md:grid-cols-[1.3fr_1.7fr_72px_120px_auto] ${barClass}`}>
             <input type="hidden" name="saleId" value={sale.id} />
-            <PosAddItemFields parts={parts} currency={saleCurrency} fieldClass={field} />
+            <PosAddItemFields parts={toClientSafe(parts)} currency={saleCurrency} fieldClass={field} />
             <SubmitButton size="sm" className="px-4" pendingLabel="Adding…">Add</SubmitButton>
           </form>
         ) : null}
@@ -1694,19 +1568,12 @@ export default async function SalePage({ params, searchParams }: { params: Promi
             { label: "Balance", value: balance > 0 ? formatMoney(balance, saleCurrency) : "Cleared" },
             ...(refundedTotal > 0 ? [{ label: "Refunded", value: formatMoney(refundedTotal, saleCurrency) }] : []),
             { label: "Items", value: sale.items.length },
-            // The customer card above already shows this for a walk-in.
-            ...(sale.client && sale.name ? [{ label: "Sale name", value: sale.name }] : []),
             { label: "Branch", value: sale.branch?.name ?? "No branch" },
             ...(sale.notes ? [{ label: "Note", value: sale.notes }] : []),
             { label: "Created", value: formatEATDateTime(sale.createdAt) },
             ...(sale.paidAt ? [{ label: "Paid at", value: formatEATDateTime(sale.paidAt) }] : []),
-            ...(sale.invoiceNumber ? [{ label: "Invoice", value: sale.invoiceNumber }] : []),
+            ...(sale.invoiceNumber ? [          { label: "Invoice", value: sale.invoiceNumber }] : []),
           ] as SummaryRow[]}
-          party={{
-            title: "Customer",
-            name: saleCustomerName(sale),
-            lines: sale.client ? [sale.client.phone, sale.client.email] : undefined,
-          }}
         />
       </div>
     </div>

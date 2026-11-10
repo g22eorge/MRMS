@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, toClientSafe } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { Button } from "@/components/ui/Button";
@@ -26,7 +26,7 @@ export default async function NewPurchaseRequestPage() {
         actions={<Button href="/inventory/purchase-requests" variant="secondary" size="sm">All requests</Button>}
       />
 
-      <NewPurchaseRequestForm suppliers={suppliers} parts={parts} />
+      <NewPurchaseRequestForm suppliers={suppliers} parts={toClientSafe(parts)} />
     </div>
   );
 }

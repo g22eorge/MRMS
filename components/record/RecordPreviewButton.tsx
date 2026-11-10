@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { ShareButton } from "@/components/shared/ShareButton";
+
 /**
  * RecordPreviewButton — self-contained paper preview for any record with a PDF.
  * Drop it into a row/detail menu with the document's PDF URL — it manages its own
@@ -91,6 +93,7 @@ export function RecordPreviewButton({
                 >
                   Open PDF ↗
                 </a>
+                <ShareButton url={inlineUrl} />
                 <button
                   onClick={() => setOpen(false)}
                   aria-label="Close preview"

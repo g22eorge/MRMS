@@ -5,6 +5,8 @@ import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
 import { PortalHeader } from "@/components/portal/PortalHeader";
 
+import { ShareButton } from "@/components/shared/ShareButton";
+
 export const dynamic = "force-dynamic";
 
 function fmtDate(d: Date | null) {
@@ -90,6 +92,7 @@ export default async function PortalDocumentsPage() {
           >
             Download statement (PDF)
           </a>
+          <ShareButton url="/api/portal/statement" />
         </div>
       </section>
 
@@ -109,6 +112,7 @@ export default async function PortalDocumentsPage() {
                 <span className="font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
                 <span className="rounded-full bg-[var(--panel-strong)] px-2 py-0.5 text-[0.6875rem] font-bold text-[var(--ink-muted)]">{q.status}</span>
                 <a href={`/api/portal/quotation/${q.jobId}`} target="_blank" rel="noopener" className={dlClass}>↓ PDF</a>
+                <ShareButton url={`/api/portal/quotation/${q.jobId}`} />
               </div>
             </div>
           ))
@@ -135,6 +139,7 @@ export default async function PortalDocumentsPage() {
                     {outstanding > 0 ? `${formatMoney(outstanding, inv.currency)} due` : "Paid"}
                   </span>
                   <a href={`/api/portal/invoice/${inv.jobId}`} target="_blank" rel="noopener" className={dlClass}>↓ PDF</a>
+                  <ShareButton url={`/api/portal/invoice/${inv.jobId}`} />
                 </div>
               </div>
             );
@@ -157,6 +162,7 @@ export default async function PortalDocumentsPage() {
               <div className="flex items-center gap-2">
                 <span className="font-semibold tabular-nums whitespace-nowrap text-[var(--ink)]">{formatMoney(r.amount, r.currency)}</span>
                 <a href={`/api/portal/receipt/${r.id}`} target="_blank" rel="noopener" className={dlClass}>↓ Receipt</a>
+                <ShareButton url={`/api/portal/receipt/${r.id}`} />
               </div>
             </div>
           ))

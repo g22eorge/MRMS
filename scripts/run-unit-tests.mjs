@@ -31,10 +31,12 @@ function collect(dir) {
 const files = collect(ROOT);
 const env = {
   ...process.env,
-  ALLOW_SQLITE_PRODUCTION: "1",
-  TURSO_DATABASE_URL: "",
-  TURSO_AUTH_TOKEN: "",
-  DATABASE_URL: `file:${process.cwd()}/prisma/test.db`,
+  // The scratch Postgres container (docker-compose.dev.yml, port 5434) so a
+  // test run can never touch the development database. An explicitly provided
+  // DATABASE_URL wins, which is how CI points this at its own service.
+  DATABASE_URL:
+    process.env.DATABASE_URL
+    ?? "postgresql://mrms:mrms_dev_password@localhost:5434/mrms_scratch?schema=public",
 };
 
 let pass = 0, fail = 0, skip = 0;
