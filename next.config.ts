@@ -62,6 +62,19 @@ const nextConfig: NextConfig = {
   // while this option was absent, so it was copying a directory that `next
   // build` never produced.
   output: "standalone",
+  // `undici` is on Next's default server-externals list, so the bundle emits a
+  // bare `require("undici")` (it arrives via @vercel/blob, through
+  // lib/blob-storage.ts). File tracing did not follow that require into the
+  // standalone output, and the Docker image runs from standalone alone — so in
+  // production every route that loads blob storage threw
+  // "Cannot find module 'undici'": the photo API, uploads, the repair-request
+  // API, the intake page and Settings > Branding. `next start`, which has the
+  // whole node_modules beside it, never showed it. Adding undici to
+  // package.json made it resolvable at build time but did not get it copied.
+  // Naming it here does. It has no dependencies of its own.
+  outputFileTracingIncludes: {
+    "/**/*": ["./node_modules/undici/**/*"],
+  },
   // Build output dir. Defaults to .next. The local commit gate
   // (scripts/build.mjs, off-CI) sets NEXT_DIST_DIR to a separate dir so
   // `next build` never cleans the running dev server's .next out from under it.
