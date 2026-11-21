@@ -13,6 +13,9 @@
  *   --resolve-duplicates  apply the duplicate policies in import-map.json
  *   --truncate    empty the target tables first (required for a clean re-run)
  *   --batch=N     rows per insert (default 500)
+ *   --missing-only --created-after=<ISO date> [--dry-run]
+ *                 add the records the target lacks, to a database that is in
+ *                 use; never updates or deletes. See "Missing-only" below.
  *
  * DATABASE_URL selects the target. The script refuses to write to a database
  * that already holds business rows unless --truncate is given, so a mistyped
@@ -31,6 +34,21 @@ const args = process.argv.slice(2);
 const checkOnly = args.includes("--check");
 const truncate = args.includes("--truncate");
 const batchSize = Number(args.find((a) => a.startsWith("--batch="))?.split("=")[1] ?? 500);
+const missingOnly = args.includes("--missing-only");
+const dryRun = args.includes("--dry-run");
+const createdAfterArg = args.find((a) => a.startsWith("--created-after="))?.split("=")[1];
+if (missingOnly && truncate) {
+  console.error("import: --missing-only and --truncate are opposites; pass one");
+  process.exit(2);
+}
+if (missingOnly && (!createdAfterArg || Number.isNaN(Date.parse(createdAfterArg)))) {
+  console.error("import: --missing-only needs --created-after=<ISO date>, the moment the target was last loaded from this source");
+  process.exit(2);
+}
+if (dryRun && !missingOnly) {
+  console.error("import: --dry-run only applies to --missing-only (use --check to validate a full import)");
+  process.exit(2);
+}
 const dumpArg = args.find((a) => !a.startsWith("--"));
 
 if (!dumpArg) {
@@ -592,6 +610,289 @@ async function truncateAll(order) {
   await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
 }
 
+// ── Missing-only ────────────────────────────────────────────────────────────
+/**
+ * Adds the records the target lacks, without touching anything it has.
+ *
+ * For the case the full import cannot handle: the source kept taking writes
+ * after the target was loaded from it, and the target has been in use since.
+ * The policy is in `missingOnly` in docs/pg-migration/import-map.json; in short:
+ *
+ *   - A row is written only if its id is absent from the target.
+ *   - Top-level records (`roots`) qualify by creation date, after
+ *     --created-after. Every other table qualifies only as a child of a row
+ *     written in this run, so nothing is attached to a record the target
+ *     already has — a payment against an invoice that exists on both sides
+ *     may already have been entered there.
+ *   - A row whose unique value is taken on the target, or whose required
+ *     parent is not there, is skipped and listed. Nothing is renumbered.
+ *   - Existing rows are never updated. Rows edited on the source after the
+ *     cutoff are listed for a person to merge.
+ *
+ * Everything happens in one transaction. --dry-run rolls it back.
+ */
+class DryRunRollback extends Error {}
+
+const CREATION_COLUMNS = ["createdAt", "receivedAt", "issuedAt", "allocatedAt"];
+const LABEL_COLUMNS = [
+  "jobNumber", "invoiceNumber", "quoteNumber", "receiptNumber", "deliveryNoteNumber",
+  "entryNumber", "requestNumber", "sku",
+];
+
+async function runMissingOnly(order, present) {
+  const policy = importMap.missingOnly ?? {};
+  const roots = new Set(policy.roots ?? []);
+  const never = new Set(policy.never?.tables ?? []);
+  const polymorphic = policy.polymorphicOwners ?? {};
+  const stamped = policy.stampedNumbers ?? {};
+  const cutoff = new Date(createdAfterArg);
+
+  const resolutions = [
+    ...(resolveDuplicates ? await plannedResolutions() : []),
+    ...(resolveOrphans ? await plannedOrphanResolutions() : []),
+  ];
+  const overrides = new Map();
+  for (const change of resolutions) {
+    if (!overrides.has(change.table)) overrides.set(change.table, new Map());
+    overrides.get(change.table).set(change.id, change.set);
+  }
+
+  console.log(`\n  missing-only: records created after ${cutoff.toISOString()}${dryRun ? "   (DRY RUN — nothing will be kept)" : ""}`);
+
+  const report = { written: [], skipped: [], nulled: [], edited: [], absentOlder: [], ignoredTables: [] };
+  /** table -> Set of ids written in this run */
+  const written = new Map();
+  const allWritten = new Set();
+
+  const run = async (tx) => {
+    /** table -> Map(value -> exists) for parent lookups */
+    const existsCache = new Map();
+    const exists = async (table, column, value) => {
+      const key = `${table}.${column}`;
+      if (!existsCache.has(key)) existsCache.set(key, new Map());
+      const cache = existsCache.get(key);
+      if (!cache.has(value)) {
+        const rows = await tx.$queryRawUnsafe(
+          `SELECT 1 AS x FROM ${q(table)} WHERE ${q(column)} = $1 LIMIT 1`,
+          value,
+        );
+        cache.set(value, rows.length > 0);
+      }
+      return cache.get(value);
+    };
+    const markExists = (table, id) => {
+      const key = `${table}.id`;
+      if (!existsCache.has(key)) existsCache.set(key, new Map());
+      existsCache.get(key).set(id, true);
+    };
+
+    // Two passes. Some owners are named without a foreign key (a journal entry
+    // refers to its payment as "pay:<id>"), so nothing orders those tables
+    // after the rows they belong to; the second pass picks them up, along with
+    // their own children. Roots are only considered in the first.
+    for (const pass of [1, 2])
+    for (const m of order) {
+      if (!present.has(m.table)) continue;
+      if (never.has(m.model)) continue;
+      if (pass === 2 && roots.has(m.model)) continue;
+
+      const sourceCols = new Set(await sourceColumns(m.table));
+      const columns = m.columns.filter((c) => sourceCols.has(c.name));
+      if (!columns.some((c) => c.name === "id")) {
+        if (pass === 1) report.ignoredTables.push(`${m.table} (no id column)`);
+        continue;
+      }
+      const rows = await sourceRows(m.table, columns.map((c) => c.name));
+      if (!rows.length) continue;
+
+      const creationCol = CREATION_COLUMNS.find((name) => columns.some((c) => c.name === name));
+      const labelCol = LABEL_COLUMNS.find((name) => columns.some((c) => c.name === name));
+      const label = (row) => (labelCol && row[labelCol] ? `${row[labelCol]} (${row.id})` : String(row.id));
+      const createdAt = (row) => (creationCol && row[creationCol] != null ? toDate(row[creationCol], `${m.table}.${creationCol}`) : null);
+      const isRoot = roots.has(m.model);
+
+      // Rows edited on the source after the cutoff but created before it: the
+      // target has its own copy, possibly edited too. Never overwritten.
+      if (pass === 1 && isRoot && creationCol && columns.some((c) => c.name === "updatedAt")) {
+        for (const row of rows) {
+          const created = createdAt(row);
+          const updated = row.updatedAt != null ? toDate(row.updatedAt, `${m.table}.updatedAt`) : null;
+          if (created && updated && created <= cutoff && updated > cutoff) {
+            report.edited.push(`${m.table} ${label(row)} — edited ${updated.toISOString().slice(0, 10)}`);
+          }
+        }
+      }
+
+      const ownerColumns = polymorphic[m.model] ?? [];
+      const belongsToWritten = (row) => {
+        for (const fk of m.foreignKeys) {
+          const value = row[fk.columns[0]];
+          if (value != null && written.get(fk.targetTable)?.has(String(value))) return true;
+        }
+        for (const column of ownerColumns) {
+          const value = row[column];
+          if (value == null) continue;
+          const id = String(value).includes(":") ? String(value).split(":").pop() : String(value);
+          if (allWritten.has(id)) return true;
+        }
+        return false;
+      };
+
+      // A top-level record older than the cutoff that the target lacks was
+      // either deleted there on purpose or never arrived. Not this tool's call.
+      if (isRoot && creationCol) {
+        const older = rows.filter((row) => {
+          const created = createdAt(row);
+          return created !== null && created <= cutoff;
+        });
+        if (older.length) {
+          const olderIds = older.map((row) => String(row.id));
+          const onTarget = new Set(
+            (await tx.$queryRawUnsafe(`SELECT "id" FROM ${q(m.table)} WHERE "id" = ANY($1::text[])`, olderIds)).map((r) => String(r.id)),
+          );
+          for (const row of older) {
+            if (!onTarget.has(String(row.id))) {
+              report.absentOlder.push(`${m.table} ${label(row)} — created ${createdAt(row).toISOString().slice(0, 10)}`);
+            }
+          }
+        }
+      }
+
+      let candidates = isRoot
+        ? rows.filter((row) => {
+            const created = createdAt(row);
+            return created !== null && created > cutoff;
+          })
+        : rows.filter(belongsToWritten);
+      if (!candidates.length) continue;
+
+      // Drop what the target already has.
+      const ids = candidates.map((row) => String(row.id));
+      const have = new Set(
+        (await tx.$queryRawUnsafe(`SELECT "id" FROM ${q(m.table)} WHERE "id" = ANY($1::text[])`, ids)).map((r) => String(r.id)),
+      );
+      candidates = candidates.filter((row) => !have.has(String(row.id)));
+      if (!candidates.length) continue;
+
+      const tableOverrides = overrides.get(m.table);
+      const uniques = m.uniques.filter((cols) => !(cols.length === 1 && cols[0] === "id"));
+      let wroteHere = 0;
+
+      rows: for (const row of candidates) {
+        const data = {};
+        const override = tableOverrides?.get(String(row.id));
+        for (const c of columns) {
+          data[c.field] = override && c.field in override
+            ? override[c.field]
+            : coerce(row[c.name], c, `${m.table}.${c.name} (${row.id})`);
+        }
+        const fieldOf = (name) => columns.find((c) => c.name === name)?.field ?? name;
+
+        // Parents must already be on the target, or have been written above.
+        for (const fk of m.foreignKeys) {
+          const column = fk.columns[0];
+          const field = fieldOf(column);
+          const value = data[field];
+          if (value == null) continue;
+          if (await exists(fk.targetTable, fk.targetColumns[0], value)) continue;
+          const col = columns.find((c) => c.name === column);
+          // Only where the database itself would have cleared the link had the
+          // parent been deleted. A Cascade relation means the row has no
+          // business existing without its parent, so it is skipped instead.
+          if (col && !col.required && fk.onDelete === "SetNull") {
+            data[field] = null;
+            report.nulled.push(`${m.table} ${label(row)}: ${column} -> NULL (no ${fk.targetTable} ${value} on target)`);
+            continue;
+          }
+          report.skipped.push(`${m.table} ${label(row)} — its ${fk.targetTable} (${value}) is not on the target`);
+          continue rows;
+        }
+
+        // A number copied onto this row that the target has given to a
+        // different document: clear the copy, see `stampedNumbers`.
+        for (const [key, rule] of Object.entries(stamped)) {
+          const [model, column] = key.split(".");
+          if (model !== m.model || !rule?.table) continue;
+          const field = fieldOf(column);
+          if (data[field] == null) continue;
+          const holder = await tx.$queryRawUnsafe(
+            `SELECT "id", ${q(rule.ownerColumn)} AS owner FROM ${q(rule.table)} WHERE ${q(rule.column)} = $1 LIMIT 1`,
+            data[field],
+          );
+          if (!holder.length || holder[0].owner === String(row.id)) continue;
+          report.nulled.push(
+            `${m.table} ${label(row)}: ${column} "${data[field]}" cleared — on the target that number belongs to ${rule.table} ${holder[0].id}`,
+          );
+          data[field] = null;
+          for (const extra of rule.alsoClear ?? []) data[fieldOf(extra)] = null;
+        }
+
+        // A unique value already taken means the target issued it to something else.
+        for (const cols of uniques) {
+          const values = cols.map((name) => data[fieldOf(name)]);
+          if (values.some((v) => v == null)) continue;
+          const where = cols.map((name, i) => `${q(name)} = $${i + 1}`).join(" AND ");
+          const clash = await tx.$queryRawUnsafe(`SELECT "id" FROM ${q(m.table)} WHERE ${where} LIMIT 1`, ...values);
+          if (clash.length) {
+            report.skipped.push(
+              `${m.table} ${label(row)} — ${cols.join("+")} "${values.join(", ")}" is already used on the target (by ${clash[0].id})`,
+            );
+            continue rows;
+          }
+        }
+
+        await tx[m.delegate].create({ data });
+        if (!written.has(m.table)) written.set(m.table, new Set());
+        written.get(m.table).add(String(row.id));
+        allWritten.add(String(row.id));
+        markExists(m.table, String(row.id));
+        wroteHere += 1;
+      }
+
+      if (wroteHere) {
+        const entry = report.written.find((t) => t.table === m.table);
+        if (entry) entry.rows += wroteHere;
+        else report.written.push({ table: m.table, rows: wroteHere });
+      }
+    }
+
+    if (dryRun) throw new DryRunRollback();
+  };
+
+  let ok = true;
+  try {
+    await prisma.$transaction(run, { timeout: 10 * 60 * 1000, maxWait: 30 * 1000 });
+  } catch (error) {
+    if (!(error instanceof DryRunRollback)) {
+      ok = false;
+      console.error(`\n  failed — nothing was written (the transaction rolled back):`);
+      console.error(`    ${error.message?.split("\n").filter(Boolean).slice(-3).join(" | ") ?? error}`);
+    }
+  }
+
+  const total = report.written.reduce((sum, t) => sum + t.rows, 0);
+  const verb = !ok ? "would have written" : dryRun ? "would write" : "wrote";
+  console.log(`\n  ${verb} ${total} row(s) across ${report.written.length} table(s):`);
+  for (const t of report.written) console.log(`    ${String(t.rows).padStart(5)}  ${t.table}`);
+
+  const section = (title, lines) => {
+    if (!lines.length) return;
+    console.log(`\n  ${title} (${lines.length}):`);
+    for (const line of lines) console.log(`    - ${line}`);
+  };
+  section("skipped — decide by hand", report.skipped);
+  section("values cleared on the rows written", report.nulled);
+  section("on the source, absent from the target, but older than the cutoff — deleted there or never imported; NOT written", report.absentOlder);
+  section("edited on the source after the cutoff — NOT touched, merge by hand", report.edited);
+  section("tables ignored", report.ignoredTables);
+
+  console.log(
+    "\n  not handled here by design: stock movements and quantities, document counters" +
+    "\n  (run Data Heal afterwards), outbound messages, sessions and notifications.\n",
+  );
+  return ok;
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 const order = topologicalOrder();
 const present = await sourceTables();
@@ -602,7 +903,13 @@ console.log(`  datamodel tables: ${order.length}   dump tables: ${present.size}`
 
 const { problems, notes } = await validate(order, present);
 for (const note of notes) console.log(`  note: ${note}`);
-if (problems.length) {
+if (problems.length && missingOnly) {
+  // Validation covers the whole dump, most of which this mode never writes.
+  // Each row it does write has its parents and unique values checked against
+  // the target individually, so these are context, not a reason to stop.
+  console.log(`\n  ${problems.length} whole-dump finding(s), not blocking in --missing-only:`);
+  for (const p of problems) console.log(`    - ${p}`);
+} else if (problems.length) {
   console.error(`\n  ${problems.length} problem(s) — refusing to import:\n`);
   for (const p of problems) console.error(`    - ${p}`);
   console.error("");
@@ -610,13 +917,20 @@ if (problems.length) {
   await prisma.$disconnect();
   process.exit(1);
 }
-console.log("  validation: OK (enum labels, dropped columns, orphan keys, unknown tables/columns)");
+if (!problems.length) console.log("  validation: OK (enum labels, dropped columns, orphan keys, unknown tables/columns)");
 
 if (checkOnly) {
   console.log("\n  --check given; nothing written.\n");
   await sqlite.close();
   await prisma.$disconnect();
   process.exit(0);
+}
+
+if (missingOnly) {
+  const ok = await runMissingOnly(order, present);
+  await sqlite.close();
+  await prisma.$disconnect();
+  process.exit(ok ? 0 : 1);
 }
 
 const existing = await targetRowCount(order);

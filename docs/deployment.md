@@ -105,6 +105,42 @@ The importer refuses to write into a database that already holds rows unless
 `--truncate` is given, so a mistyped `DATABASE_URL` cannot silently merge two
 datasets.
 
+## Adding records the old database took after the import
+
+For when the old database kept taking writes after the target was loaded from
+it, and the target has been in use since. `--truncate` would destroy what the
+target has; `--missing-only` adds the records it lacks and changes nothing else.
+
+Take a backup first (`./scripts/backup-db.sh`). Then dry-run:
+
+```bash
+docker compose run --rm --no-deps \
+  -v "$(pwd)/fresh.db:/app/fresh.db:ro" \
+  migrate node scripts/pg/import.mjs fresh.db \
+    --missing-only --created-after=2026-10-26T07:32:00Z --dry-run \
+    --resolve-duplicates --resolve-orphans
+```
+
+`--created-after` is the moment the target was last loaded from this source.
+`--dry-run` does everything inside a transaction and rolls it back. Read the
+report; when it says what you expect, run it again without `--dry-run`.
+
+What it writes: new clients, devices, jobs, invoices, quotations and repair
+requests created after the cutoff, and the rows that belong to those (lines,
+payments, receipts, ledger entries, job history). What it never does: update or
+delete an existing row, renumber anything, or touch stock.
+
+It reports, and leaves for a person:
+
+- records whose number the target has already given to something else;
+- records the target lacks but that are older than the cutoff (deleted there, or
+  never imported);
+- records edited on the old database after the cutoff — the target keeps its
+  own copy.
+
+Run Data Heal afterwards so the document counters catch up. The policy is in
+`missingOnly` in `docs/pg-migration/import-map.json`.
+
 ## Releasing a change
 
 ```bash

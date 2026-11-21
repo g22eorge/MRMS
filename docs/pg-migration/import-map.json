@@ -93,5 +93,62 @@
   "dumps": {
     "mrms-prod.db": "2026-08-25",
     "mrms-prod-2.db": "2026-09-12 — the dump this map is currently verified against"
+  },
+  "missingOnly": {
+    "finding": "Live was loaded from a dump taken 2026-10-26, and the old Turso database kept taking writes afterwards. A full re-import would destroy what has been entered on live since; the rows created on the old system in the meantime have to be added to a database that is in use.",
+    "decision": "Add, never change. A row is written only if its id is absent from the target and it is either a new top-level record (`roots`, created after --created-after) or belongs to a record written in the same run. Anything whose unique number is already taken on the target, or whose parent could not be written, is skipped and listed. Existing rows are never updated: rows edited on the old system after the cutoff are listed for a person to merge.",
+    "roots": [
+      "Client",
+      "Device",
+      "Job",
+      "Invoice",
+      "Quotation",
+      "RepairRequest"
+    ],
+    "never": {
+      "tables": [
+        "Session",
+        "PortalSession",
+        "Notification",
+        "RateLimit",
+        "SystemAuditEvent",
+        "AiPromptLog",
+        "DocumentSequence",
+        "RepairRequestSequence",
+        "OutboundMessage",
+        "Part",
+        "PartStockTransaction",
+        "PartLocationStock",
+        "BankTransaction",
+        "Verification",
+        "Account",
+        "User",
+        "Organization"
+      ],
+      "why": "Sessions, notifications and logs are not business records. OutboundMessage rows in a retryable state would be sent again by the retry job. Stock movements cannot be added without adjusting quantities the target has moved on from. Counters are reconciled by Data Heal, not copied. Users and organisations are created by the app."
+    },
+    "polymorphicOwners": {
+      "JournalEntry": [
+        "reference"
+      ],
+      "PaymentAllocation": [
+        "targetId"
+      ],
+      "DocumentTaxLine": [
+        "documentId"
+      ]
+    },
+    "polymorphicNote": "These columns point at their owner without a foreign key, sometimes as `kind:id`. A row is treated as belonging to a record written in this run when the id part matches one.",
+    "stampedNumbers": {
+      "Job.invoiceNumber": {
+        "table": "Invoice",
+        "column": "invoiceNumber",
+        "ownerColumn": "jobId",
+        "alsoClear": [
+          "invoiceIssuedAt"
+        ]
+      },
+      "why": "A job carries a copy of its invoice number. When that number already belongs to a different invoice on the target, the job's own invoice is skipped as a clash — and writing the job with the stamp intact would leave a job and an unrelated invoice sharing one number, which is the duplicate Data Heal exists to undo. The stamp is cleared instead and reported, so the invoice is re-issued on the target under a number it owns."
+    }
   }
 }
