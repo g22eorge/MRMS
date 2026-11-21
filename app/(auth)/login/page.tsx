@@ -142,7 +142,7 @@ export default async function LoginPage() {
             <p className="mt-1.5 text-sm text-white/60">Enter your credentials to continue</p>
 
             <div className="mt-8">
-              <LoginForm allowSignup={allowSignup} />
+              <LoginForm allowSignup={allowSignup} supportWhatsappNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || undefined} />
             </div>
           </div>
         </section>
