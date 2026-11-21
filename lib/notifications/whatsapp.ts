@@ -1,3 +1,4 @@
+import { isRealCredential } from "@/lib/notifications/credential-placeholder";
 import { renderCommunicationTemplate } from "@/lib/notifications/templates";
 import { getOrgWhatsAppConfig } from "@/lib/org-whatsapp-config";
 import { getAtConfig, sendSms } from "@/lib/notifications/sms";
@@ -52,6 +53,11 @@ function getConfig(): WhatsAppConfig | null {
     console.warn("[WhatsApp] Missing configuration - notifications disabled");
     return null;
   }
+  // .env.example placeholders are not credentials — see credential-placeholder.ts.
+  if (!isRealCredential(accessToken) || !isRealCredential(phoneNumberId)) {
+    console.warn("[WhatsApp] Placeholder credentials - notifications disabled");
+    return null;
+  }
 
   return {
     businessNumber,
@@ -63,7 +69,9 @@ function getConfig(): WhatsAppConfig | null {
 }
 
 function hasUsableWhatsAppConfig(config: Pick<WhatsAppConfig, "businessNumber" | "accessToken" | "phoneNumberId">) {
-  return Boolean(config.businessNumber?.trim() && config.accessToken?.trim() && config.phoneNumberId?.trim());
+  return Boolean(
+    config.businessNumber?.trim() && isRealCredential(config.accessToken) && isRealCredential(config.phoneNumberId),
+  );
 }
 
 export function whatsappConfigSummary() {
