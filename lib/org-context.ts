@@ -32,7 +32,14 @@ export async function requireOrgSession() {
   const deployment = await getDeploymentContext();
 
   if (deployment.mode === "CARE_SINGLE_TENANT") {
-    if (checkIsPlatformAdmin(user!.email)) {
+    // A platform admin who is also a member of the care organisation uses the
+    // app like any other member. This used to send every platform admin to the
+    // console unconditionally, on the assumption that one has no organisation.
+    // Care's own administrator is both: every app page bounced them back to
+    // /platform, including the console's own "← App" link, so the shop's admin
+    // could not open the shop. Only a platform admin from outside the care
+    // organisation belongs on the console here.
+    if (user!.orgId !== EIS_ORG_ID && checkIsPlatformAdmin(user!.email)) {
       redirect(PLATFORM_ROUTES.home);
     }
 
