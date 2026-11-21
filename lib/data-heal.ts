@@ -1,3 +1,4 @@
+import { healDocumentNumbers, type DocumentNumberHealResult } from "@/lib/document-number-heal";
 import type { Db } from "@/lib/prisma";
 
 type RunDataHealOptions = {
@@ -58,6 +59,16 @@ export async function runDataHeal(prisma: Db, options: RunDataHealOptions = {}) 
       });
       auditLogsCreated += 1;
     }
+  }
+
+  // Document numbering: counters behind the numbers in use, and invoice
+  // numbers held by two documents. See lib/document-number-heal.ts. Before the
+  // early return below, for the same reason as the stock-ledger step.
+  let documentNumbers: DocumentNumberHealResult | null = null;
+  try {
+    documentNumbers = await healDocumentNumbers(prisma, { dryRun, actorUserId: options.actorUserId });
+  } catch (error) {
+    console.error("[data-heal] document number heal failed:", error);
   }
 
   const candidates = await prisma.job.findMany({
@@ -246,6 +257,7 @@ export async function runDataHeal(prisma: Db, options: RunDataHealOptions = {}) 
       stockTxnOrgIdFixed,
       invoicesResynced,
       resyncedInvoiceNumbers: resyncedNumbers.slice(0, 50),
+      documentNumbers,
       complaintsLinked: 0,
       complaintsAmbiguous: 0,
       changes: [],
@@ -350,6 +362,7 @@ export async function runDataHeal(prisma: Db, options: RunDataHealOptions = {}) 
     stockTxnOrgIdFixed,
     invoicesResynced,
     resyncedInvoiceNumbers: resyncedNumbers.slice(0, 50),
+    documentNumbers,
     complaintsLinked,
     complaintsAmbiguous,
     changes: changes.slice(0, 50),
