@@ -48,7 +48,10 @@ async function uniqueConstraintRisks() {
     },
     {
       index: "Receipt_orgId_paymentId_key",
-      sql: `SELECT COALESCE(SUM(c - 1), 0)::int AS n FROM (SELECT COUNT(*) AS c FROM "Receipt" GROUP BY "orgId", "paymentId" HAVING COUNT(*) > 1) d`,
+      // Receipts whose payment was deleted keep a NULL paymentId (onDelete:
+      // SetNull). A unique index treats every NULL as distinct, so they can
+      // never collide — but grouped together they read as one big duplicate.
+      sql: `SELECT COALESCE(SUM(c - 1), 0)::int AS n FROM (SELECT COUNT(*) AS c FROM "Receipt" WHERE "paymentId" IS NOT NULL GROUP BY "orgId", "paymentId" HAVING COUNT(*) > 1) d`,
     },
     {
       index: "Invoice_invoiceNumber_key",
