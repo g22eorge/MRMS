@@ -140,6 +140,14 @@ brought across under the next free number of its own series: add
 say). Only the listed rows are renumbered, the old number is kept in the row's
 notes, and Data Heal must be run afterwards to move the counter past it.
 
+A record edited on the old database after the cutoff is listed, never changed.
+To bring one up to date, name it: `--merge=<id>,<id>`. Only the columns that
+differ are copied, and only if the target has not edited the row since it was
+loaded (its `updatedAt` is still at or before the cutoff); a row edited on both
+sides is reported for a person to merge. History rows for a merged record
+(audit log, status and assignment history, diagnosis reports) come with it.
+This is the only option that changes an existing row. Dry-run it first.
+
 It reports, and leaves for a person:
 
 - records whose number the target has already given to something else;

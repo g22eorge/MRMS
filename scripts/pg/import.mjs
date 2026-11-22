@@ -14,6 +14,7 @@
  *   --truncate    empty the target tables first (required for a clean re-run)
  *   --batch=N     rows per insert (default 500)
  *   --missing-only --created-after=<ISO date> [--dry-run] [--renumber=<id>,<id>]
+ *                  [--merge=<id>,<id>]
  *                 add the records the target lacks, to a database that is in
  *                 use; never updates or deletes. See "Missing-only" below.
  *
@@ -38,6 +39,9 @@ const missingOnly = args.includes("--missing-only");
 const dryRun = args.includes("--dry-run");
 const renumberIds = new Set(
   (args.find((a) => a.startsWith("--renumber="))?.split("=")[1] ?? "").split(",").map((v) => v.trim()).filter(Boolean),
+);
+const mergeIds = new Set(
+  (args.find((a) => a.startsWith("--merge="))?.split("=")[1] ?? "").split(",").map((v) => v.trim()).filter(Boolean),
 );
 const createdAfterArg = args.find((a) => a.startsWith("--created-after="))?.split("=")[1];
 if (missingOnly && truncate) {
@@ -663,7 +667,10 @@ async function runMissingOnly(order, present) {
 
   console.log(`\n  missing-only: records created after ${cutoff.toISOString()}${dryRun ? "   (DRY RUN — nothing will be kept)" : ""}`);
 
-  const report = { written: [], skipped: [], linked: [], renumbered: [], nulled: [], edited: [], absentOlder: [], ignoredTables: [] };
+  const mergeChildren = new Set(policy.mergeChildren?.tables ?? []);
+  /** table -> Set of ids of existing rows updated by --merge in this run */
+  const merged = new Map();
+  const report = { written: [], skipped: [], linked: [], renumbered: [], merged: [], mergeSkipped: [], nulled: [], edited: [], absentOlder: [], ignoredTables: [] };
   /** table -> Map(source id -> id of the row the target already holds for it) */
   const aliases = new Map();
   /** table -> Set of ids written in this run */
@@ -734,6 +741,9 @@ async function runMissingOnly(order, present) {
         for (const fk of m.foreignKeys) {
           const value = row[fk.columns[0]];
           if (value != null && written.get(fk.targetTable)?.has(String(value))) return true;
+          // History of a record brought up to date by --merge, for the few
+          // tables the policy names. Nothing else is attached to it.
+          if (value != null && mergeChildren.has(m.model) && merged.get(fk.targetTable)?.has(String(value))) return true;
         }
         for (const column of ownerColumns) {
           const value = row[column];
@@ -743,6 +753,133 @@ async function runMissingOnly(order, present) {
         }
         return false;
       };
+
+      // --merge=<id>: the one place an existing row is changed. A person has
+      // named a record that was edited on the source after the cutoff. Only
+      // the columns that differ are copied, and only if the target has not
+      // touched the row since it was loaded — its updatedAt is still at or
+      // before the cutoff. A row edited on both sides is reported, never
+      // overwritten.
+      if (pass === 1 && mergeIds.size) {
+        const fieldFor = (name) => columns.find((c) => c.name === name)?.field ?? name;
+        const same = (a, b, c) => {
+          if (a == null || b == null) return a == null && b == null;
+          if (c.type === "DateTime") return new Date(a).getTime() === new Date(b).getTime();
+          if (c.type === "Decimal" || c.type === "Int" || c.type === "Float") return Number(String(a)) === Number(String(b));
+          if (c.type === "Boolean") return Boolean(a) === Boolean(b);
+          if (c.type === "Json") {
+            const parse = (v) => (typeof v === "string" ? JSON.parse(v) : v);
+            try { return JSON.stringify(parse(a)) === JSON.stringify(parse(b)); } catch { return false; }
+          }
+          return String(a) === String(b);
+        };
+
+        merging: for (const row of rows) {
+          const id = String(row.id);
+          if (!mergeIds.has(id)) continue;
+          const found = await tx.$queryRawUnsafe(`SELECT * FROM ${q(m.table)} WHERE "id" = $1`, id);
+          if (!found.length) {
+            report.mergeSkipped.push(`${m.table} ${label(row)} — not on the target; it is added by the normal run, not merged`);
+            continue;
+          }
+          const target = found[0];
+          if (!columns.some((c) => c.name === "updatedAt") || target.updatedAt == null || row.updatedAt == null) {
+            report.mergeSkipped.push(`${m.table} ${label(row)} — no updatedAt to tell whether the target changed it`);
+            continue;
+          }
+
+          const override = overrides.get(m.table)?.get(id);
+          const changes = {};
+          for (const c of columns) {
+            if (c.name === "id") continue;
+            const value = override && c.field in override
+              ? override[c.field]
+              : coerce(row[c.name], c, `${m.table}.${c.name} (${row.id})`);
+            if (!same(value, target[c.name], c)) changes[c.field] = value;
+          }
+          const names = () => Object.keys(changes).filter((f) => f !== fieldFor("updatedAt"));
+          // A copy of a number that now lives elsewhere on the target: take the
+          // number the target's own document carries, or leave the column alone.
+          for (const [key, rule] of Object.entries(stamped)) {
+            const [model, column] = key.split(".");
+            if (model !== m.model || !rule?.table) continue;
+            const field = fieldFor(column);
+            if (!(field in changes) || changes[field] == null) continue;
+            const own = await tx.$queryRawUnsafe(
+              `SELECT ${q(rule.column)} AS n FROM ${q(rule.table)} WHERE ${q(rule.ownerColumn)} = $1 LIMIT 1`,
+              id,
+            );
+            if (own.length) {
+              changes[field] = own[0].n;
+              if (same(changes[field], target[column], { type: "String" })) delete changes[field];
+              continue;
+            }
+            const holder = await tx.$queryRawUnsafe(
+              `SELECT "id" FROM ${q(rule.table)} WHERE ${q(rule.column)} = $1 LIMIT 1`,
+              changes[field],
+            );
+            if (holder.length) {
+              delete changes[field];
+              for (const extra of rule.alsoClear ?? []) delete changes[fieldFor(extra)];
+            }
+          }
+
+          if (!names().length) {
+            report.mergeSkipped.push(`${m.table} ${label(row)} — already matches the target`);
+            continue;
+          }
+          const targetUpdated = new Date(target.updatedAt);
+          if (targetUpdated > cutoff) {
+            report.mergeSkipped.push(
+              `${m.table} ${label(row)} — edited on the target on ${targetUpdated.toISOString().slice(0, 10)}; differs in ${names().join(", ")} — merge these by hand`,
+            );
+            continue;
+          }
+
+          // Links must point at something the target has.
+          for (const fk of m.foreignKeys) {
+            const field = fieldFor(fk.columns[0]);
+            if (!(field in changes) || changes[field] == null) continue;
+            const alias = aliases.get(fk.targetTable)?.get(String(changes[field]));
+            if (alias) { changes[field] = alias; continue; }
+            if (await exists(fk.targetTable, fk.targetColumns[0], changes[field])) continue;
+            report.mergeSkipped.push(`${m.table} ${label(row)} — ${fk.columns[0]} points at a ${fk.targetTable} (${changes[field]}) that is not on the target`);
+            continue merging;
+          }
+
+          // A value that must be unique and is taken by another row.
+          for (const cols of m.uniques) {
+            if (cols.length === 1 && cols[0] === "id") continue;
+            if (!cols.some((name) => fieldFor(name) in changes)) continue;
+            const values = cols.map((name) => (fieldFor(name) in changes ? changes[fieldFor(name)] : target[name]));
+            if (values.some((v) => v == null)) continue;
+            const where = cols.map((name, i) => `${q(name)} = $${i + 1}`).join(" AND ");
+            const clash = await tx.$queryRawUnsafe(
+              `SELECT "id" FROM ${q(m.table)} WHERE ${where} AND "id" <> $${cols.length + 1} LIMIT 1`,
+              ...values,
+              id,
+            );
+            if (clash.length) {
+              report.mergeSkipped.push(`${m.table} ${label(row)} — ${cols.join("+")} would clash with ${clash[0].id} on the target`);
+              continue merging;
+            }
+          }
+
+          await tx[m.delegate].update({ where: { id }, data: changes });
+          if (!merged.has(m.table)) merged.set(m.table, new Set());
+          merged.get(m.table).add(id);
+          const show = (v) => {
+            if (v == null) return "—";
+            const text = v instanceof Date ? v.toISOString() : String(v);
+            return text.length > 40 ? `${text.slice(0, 40)}…` : text;
+          };
+          const nameOf = (field) => columns.find((c) => c.field === field)?.name ?? field;
+          report.merged.push(
+            `${m.table} ${label(row)}:\n` +
+              names().map((f) => `        ${f}: ${show(target[nameOf(f)])} -> ${show(changes[f])}`).join("\n"),
+          );
+        }
+      }
 
       // A top-level record older than the cutoff that the target lacks was
       // either deleted there on purpose or never arrived. Not this tool's call.
@@ -949,6 +1086,8 @@ async function runMissingOnly(order, present) {
   };
   section("skipped — decide by hand", report.skipped);
   section("already on the target under another id — not written, records attached to the target's copy", report.linked);
+  section(`${dryRun ? "would bring" : "brought"} up to date at your request (--merge) — columns changed`, report.merged);
+  section("NOT merged (--merge)", report.mergeSkipped);
   section("renumbered at your request (--renumber)", report.renumbered);
   section("values cleared on the rows written", report.nulled);
   section("on the source, absent from the target, but older than the cutoff — deleted there or never imported; NOT written", report.absentOlder);

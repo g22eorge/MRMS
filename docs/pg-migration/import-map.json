@@ -146,6 +146,15 @@
       ],
       "why": "A client is identified by phone number within an organisation; the datamodel makes the pair unique. When a client was entered on both systems after the cutoff, the two rows are the same customer under different ids. The incoming row is not written and the target's row is not changed; jobs, devices, invoices and quotations that pointed at the incoming row are attached to the target's. Without this an invoice arrives with no client and the customer's jobs are skipped."
     },
+    "mergeChildren": {
+      "tables": [
+        "AuditLog",
+        "JobStatusHistory",
+        "JobAssignmentHistory",
+        "DiagnosisReport"
+      ],
+      "why": "--merge=<id> brings an existing record up to date with edits made on the source after the cutoff. Its history rows created since then come with it, so the record does not jump from one state to another with nothing in between. Only these append-only tables: payouts, reservations, messages and anything that moves stock or money are not attached to a record the target already had."
+    },
     "stampedNumbers": {
       "Job.invoiceNumber": {
         "table": "Invoice",
