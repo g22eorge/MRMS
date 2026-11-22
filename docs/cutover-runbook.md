@@ -34,8 +34,6 @@ steps below are done unless listed under "Still open".
   `WHATSAPP_WEBHOOK_APP_SECRET`, Resend and Pesapal are unset in `ENV_CI`.
 - The restore drill in `docs/deployment.md` has not been run on the server.
 - `upgrade-insecure-requests` has not been restored in the CSP.
-- `.github/workflows/build-mrms-app.yml` (from `main`, pre-merge) builds a
-  second copy of the app image on every push. The server does not use it.
 - `commercial` has not been synced with `main`.
 - The server holds an old-system dump in `/tmp` and pre-import backups in
   `/root`; remove them once the reconciliation is accepted.
