@@ -25,6 +25,7 @@ type OrgRow = {
 let org: OrgRow;
 let updates: Array<Record<string, unknown>>;
 let billingRows: string[];
+let billingIds: Set<string>;
 
 mock.module("@/lib/prisma", () => ({
   prisma: {
@@ -51,11 +52,22 @@ mock.module("@/lib/prisma", () => ({
       },
     },
     user: { findFirst: async () => ({ email: "admin@customer.test", name: "Customer Admin" }) },
-    // recordBillingEvent writes through raw SQL to a lazily created table.
-    $executeRaw: async (strings: TemplateStringsArray, ...vals: unknown[]) => {
-      billingRows.push(String(vals[2] ?? "") + "|" + String(vals[5] ?? ""));
-      return 1;
+    // recordBillingEvent upserts a real BillingEvent row, keyed by a hash of the
+    // idempotency key, so a redelivered webhook writes nothing new. It used to
+    // write raw SQL to a lazily created table; the Postgres migration made the
+    // model real, and this mock follows it.
+    billingEvent: {
+      upsert: async ({ where, create }: {
+        where: { id: string };
+        create: { event: string; status: string };
+      }) => {
+        if (billingIds.has(where.id)) return { id: where.id };
+        billingIds.add(where.id);
+        billingRows.push(`${create.event}|${create.status}`);
+        return { id: where.id };
+      },
     },
+    $executeRaw: async () => 1,
     $executeRawUnsafe: async () => 1,
     $queryRaw: async () => [],
   },
@@ -105,6 +117,7 @@ beforeEach(() => {
   };
   updates = [];
   billingRows = [];
+  billingIds = new Set();
   tx = {
     payment_method: "MPESA", amount: 99_900, created_date: "2026-08-30T00:00:00Z",
     confirmation_code: "CONF-1", payment_status_description: "Completed",

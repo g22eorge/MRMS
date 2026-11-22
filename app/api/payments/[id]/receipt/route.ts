@@ -37,32 +37,32 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       reference: true,
       receivedAt: true,
       createdBy: { select: { name: true } },
-      sale: {
-        select: {
-          id: true, saleNumber: true, totalAmount: true, paidAmount: true,
-          subtotal: true, discountAmount: true, vatAmount: true, taxApplicable: true,
-          client: { select: { fullName: true, organization: true, phone: true } },
-          items: {
-            select: { description: true, quantity: true, unitPrice: true, lineTotal: true },
-            orderBy: { createdAt: "asc" },
+          sale: {
+            select: {
+              id: true, saleNumber: true, totalAmount: true, paidAmount: true,
+              subtotal: true, discountAmount: true, vatAmount: true, taxApplicable: true,
+              client: { select: { fullName: true, organization: true, phone: true, address: true, accountNumber: true } },
+              items: {
+                select: { description: true, quantity: true, unitPrice: true, lineTotal: true },
+                orderBy: { createdAt: "asc" },
+              },
+            },
           },
-        },
-      },
       // invoice.client as well as invoice.job.client: an invoice raised without
       // a job — a straight sale of goods — carries its customer directly, and
       // reading only the job's meant the receipt printed "Received from: —"
       // for every one of them.
-      invoice: {
-        select: {
-          id: true, invoiceNumber: true, totalAmount: true, paidAmount: true,
-          client: { select: { fullName: true, organization: true, phone: true } },
-          lines: {
-            select: { description: true, quantity: true, unitPrice: true, lineTotal: true, taxAmount: true },
-            orderBy: { createdAt: "asc" },
+          invoice: {
+            select: {
+              id: true, invoiceNumber: true, totalAmount: true, paidAmount: true,
+              client: { select: { fullName: true, organization: true, phone: true, address: true, accountNumber: true } },
+              lines: {
+                select: { description: true, quantity: true, unitPrice: true, lineTotal: true, taxAmount: true },
+                orderBy: { createdAt: "asc" },
+              },
+              job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, organization: true, phone: true, address: true, accountNumber: true } } } },
+            },
           },
-          job: { select: { id: true, jobNumber: true, client: { select: { fullName: true, organization: true, phone: true } } } },
-        },
-      },
     },
   });
 
@@ -98,6 +98,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const clientPhone = payment.invoice?.job?.client?.phone
     ?? payment.invoice?.client?.phone
     ?? payment.sale?.client?.phone
+    ?? null;
+  const clientAddress = payment.invoice?.job?.client?.address
+    ?? payment.invoice?.client?.address
+    ?? payment.sale?.client?.address
+    ?? null;
+  const clientAccountNumber = payment.invoice?.job?.client?.accountNumber
+    ?? payment.invoice?.client?.accountNumber
+    ?? payment.sale?.client?.accountNumber
     ?? null;
 
   // Cumulative paid + outstanding balance on the linked invoice/sale, so the
@@ -160,6 +168,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     clientName,
     clientOrganization,
     clientPhone,
+    clientAddress,
+    clientAccountNumber,
     lineItems,
     docTotalLabel: docTotal != null ? formatMoney(docTotal, currency) : null,
     subtotalLabel,

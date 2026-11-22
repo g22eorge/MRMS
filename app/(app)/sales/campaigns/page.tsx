@@ -204,21 +204,34 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     revalidatePath("/sales/campaigns");
   }
 
+  const where = {
+    ...(statusFilter ? { status: statusFilter } : {}),
+    ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
+  };
+
+  const total = await db.campaign.count({ where }).catch(() => 0);
+  const pageView = paginationView(page, total, pageSize);
+
   const campaigns = await db.campaign.findMany({
-    where: {},
+    where,
     orderBy: { createdAt: "desc" },
+    skip: pageView.skip,
+    take: pageView.take,
     include: { _count: { select: { contacts: true } }, contacts: { select: { status: true } } },
   });
 
-  const selected = selectedId ? campaigns.find((c) => c.id === selectedId) : null;
+  let selected = selectedId ? campaigns.find((c) => c.id === selectedId) : null;
+  if (!selected && selectedId) {
+    selected = await db.campaign.findFirst({
+      where: { id: selectedId },
+      include: { _count: { select: { contacts: true } }, contacts: { select: { status: true } } },
+    });
+  }
 
   const contacts = selected
     ? await prisma.campaignContact.findMany({
         where: { campaignId: selected.id },
         orderBy: { createdAt: "asc" },
-        // NOTE: CampaignContact has no OutboundMessage relation in the schema —
-        // including one here threw PrismaClientValidationError and 500'd the
-        // page for every selected campaign. Delivery state comes from `status`.
         include: {
           lead: { select: { fullName: true, phone: true, email: true, status: true, organization: true } },
           client: { select: { fullName: true, phone: true, email: true, organization: true } },
@@ -226,25 +239,36 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
       })
     : [];
 
-  // ── KPIs stay whole-dataset; only the campaign list is filtered/paginated ──
-  const totalActive    = campaigns.filter((c) => c.status === "ACTIVE").length;
-  const totalContacts  = campaigns.reduce((s, c) => s + c._count.contacts, 0);
-  const totalSent      = campaigns.reduce((s, c) => s + c.contacts.filter((cc) => SENT_LIKE.includes(cc.status)).length, 0);
-  const totalOpened    = campaigns.reduce((s, c) => s + c.contacts.filter((cc) => ["OPENED", "RESPONDED"].includes(cc.status)).length, 0);
-  const totalResponded = campaigns.reduce((s, c) => s + c.contacts.filter((cc) => cc.status === "RESPONDED").length, 0);
+  // ── KPIs stay whole-dataset (lightweight count/groupBy queries, no contact rows loaded) ──
+  const [totalActive, totalContacts, contactStats, statusStats] = await Promise.all([
+    db.campaign.count({ where: { ...where, status: "ACTIVE" } }).catch(() => 0),
+    db.campaignContact.count({ where: { orgId } }).catch(() => 0),
+    db.campaignContact.groupBy({
+      by: ["status"],
+      where: { orgId },
+      _count: { status: true },
+    }).catch(() => []),
+    db.campaign.groupBy({
+      by: ["status"],
+      where: { orgId },
+      _count: { status: true },
+    }).catch(() => []),
+  ]);
+
+  const contactStatMap = new Map(contactStats.map((s) => [s.status, s._count.status]));
+  const statusStatMap = new Map(statusStats.map((s) => [s.status, s._count.status]));
+
+  const totalSent = (contactStatMap.get("SENT") ?? 0) + (contactStatMap.get("OPENED") ?? 0) + (contactStatMap.get("RESPONDED") ?? 0);
+  const totalOpened = (contactStatMap.get("OPENED") ?? 0) + (contactStatMap.get("RESPONDED") ?? 0);
+  const totalResponded = contactStatMap.get("RESPONDED") ?? 0;
   const overallResponseRate = totalSent > 0 ? Math.round((totalResponded / totalSent) * 100) : 0;
 
   const statusCounts: Record<string, number> = {};
-  for (const c of campaigns) statusCounts[c.status] = (statusCounts[c.status] ?? 0) + 1;
+  for (const [status, count] of statusStatMap) {
+    statusCounts[status] = count;
+  }
 
-  const filtered = campaigns.filter((c) => {
-    if (statusFilter && c.status !== statusFilter) return false;
-    if (q && !c.name.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  });
-
-  const pageView = paginationView(page, filtered.length, pageSize);
-  const pageCampaigns = filtered.slice(pageView.skip, pageView.skip + pageView.take);
+  const pageCampaigns = campaigns;
   const campaignsHrefFilters = {
     id: selectedId ?? "",
     status: statusFilter ?? "",
@@ -272,7 +296,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const cardLabel = "text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70";
 
   const statusChips = [
-    { key: "all", short: "All", long: `${campaigns.length} all`, count: campaigns.length, url: href({ status: null }), active: !statusFilter },
+    { key: "all", short: "All", long: `${total} all`, count: total, url: href({ status: null }), active: !statusFilter },
     ...CAMPAIGN_STATUSES.map((s) => ({
       key: s,
       short: s.charAt(0) + s.slice(1).toLowerCase(),
@@ -314,7 +338,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="text-[1.375rem] font-black text-[var(--ink)]">Campaigns</h1>
-                <p className="text-[0.8125rem] text-[var(--ink-muted)]">{campaigns.length} total · {totalActive} active</p>
+                <p className="text-[0.8125rem] text-[var(--ink-muted)]">{total} total · {totalActive} active</p>
               </div>
               <DisclosureTrigger
                 className={buttonClasses("primary", "md", { className: "rounded-xl font-bold" })}
@@ -325,7 +349,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
             <div className="grid grid-cols-4 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)]">
               {([
-                { label: "Total", value: campaigns.length },
+                { label: "Total", value: total },
                 { label: "Active", value: totalActive },
                 { label: "Sent", value: totalSent },
                 { label: "Replies", value: totalResponded },
@@ -395,7 +419,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
       <StatCards
         columns={4}
         cards={[
-          { key: "total", label: "Campaigns", value: campaigns.length, sub: "all time", muted: campaigns.length === 0 },
+          { key: "total", label: "Campaigns", value: total, sub: "all time", muted: total === 0 },
           { key: "active", label: "Active", value: totalActive, sub: "currently running", tone: "good", muted: totalActive === 0 },
           { key: "reached", label: "Contacts reached", value: totalSent, sub: `of ${totalContacts} added`, tone: "accent", muted: totalSent === 0 },
           { key: "replies", label: "Reply rate", value: `${overallResponseRate}%`, sub: `${totalResponded} replied · ${totalOpened} opened`, tone: "warn", muted: totalResponded === 0 },

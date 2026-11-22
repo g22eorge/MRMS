@@ -28,11 +28,11 @@ export async function generateStatementBuffer(
 ): Promise<GenerateStatementResult> {
   const client = await prisma.client.findFirst({
     where: { id: clientId, orgId },
-    select: { id: true, fullName: true, organization: true, phone: true, email: true, address: true },
+    select: { id: true, fullName: true, organization: true, phone: true, email: true, address: true, accountNumber: true },
   });
   if (!client) return { ok: false, error: "Client not found" };
 
-  // NB: never call this inside a $transaction — it deadlocks on Turso.
+  // NB: never call this inside a $transaction — the query escapes it.
   const branding = await getDocumentBrandingSettings(orgId);
   const logoUrl = await resolvePdfLogo();
   const statement = await getClientStatement(orgId, clientId, normalizeCurrency(baseCurrency, "UGX"));
@@ -81,6 +81,7 @@ export async function generateStatementBuffer(
       phone: client.phone,
       email: client.email,
       address: client.address,
+      accountNumber: client.accountNumber ?? null,
     },
     lines,
     totals: {

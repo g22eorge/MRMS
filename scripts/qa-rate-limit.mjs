@@ -16,14 +16,13 @@
  */
 
 import { spawn } from "node:child_process";
-import fs from "node:fs";
+import { applyQaEnv } from "./qa-env.mjs";
+
+// Build directory and database, shared with the other QA scripts.
+const { distDir } = applyQaEnv();
 
 const BASE_URL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 
-// Honor the gate build dir (see qa-perf.mjs): local builds isolate to
-// .next-gate, so serve whichever dir the build actually landed in.
-const distDir = process.env.NEXT_DIST_DIR
-  || (fs.existsSync(".next/BUILD_ID") ? ".next" : ".next-gate");
 const RATE_LIMIT_ENDPOINT = `${BASE_URL}/api/auth/sign-in/email`;
 const TOTAL_REQUESTS = 11;
 const _RATE_LIMIT_THRESHOLD = 10; // server limit per 15 min window
@@ -65,10 +64,7 @@ try {
         ...process.env,
         NEXT_DIST_DIR: distDir,
         PORT: port,
-        ALLOW_SQLITE_PRODUCTION: "1",
-        DATABASE_URL: process.env.DATABASE_URL ?? "file:./dev.db",
-        TURSO_DATABASE_URL: "",
-        TURSO_AUTH_TOKEN: "",
+        DATABASE_URL: process.env.DATABASE_URL,
         BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "qa-local-better-auth-secret-at-least-32-chars",
         BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? BASE_URL,
         NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? BASE_URL,

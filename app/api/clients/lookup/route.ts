@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { icontains } from "@/lib/db/search";
+
+async function getPrisma() {
+  const { prisma } = await import("@/lib/prisma");
+  return prisma;
+}
 
 export async function GET(req: NextRequest) {
   const { user, orgId } = await requireOrgSession();
@@ -17,6 +21,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const prisma = await getPrisma();
     const clients = await prisma.client.findMany({
       where: {
         orgId,

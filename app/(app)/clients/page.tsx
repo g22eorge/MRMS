@@ -31,6 +31,7 @@ import {
 
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
+import { prisma, type Row } from "@/lib/prisma";
 const createClientSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the client's name"),
   phone: z.string().min(3),
@@ -40,6 +41,7 @@ const createClientSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   organization: z.string().optional(),
   address: z.string().optional(),
+  accountNumber: z.string().optional(),
 });
 
 type SearchParams = {
@@ -124,7 +126,7 @@ export default async function ClientsPage({
     db.client.count({ where: { organization: { not: null } } }).catch(() => 0),
   ]);
 
-  type ClientRow = Prisma.ClientGetPayload<{
+  type ClientRow = Row<typeof prisma.client, {
     include: { _count: { select: { jobs: true } } };
   }>;
 
@@ -158,6 +160,7 @@ export default async function ClientsPage({
       email: String(formData.get("email") ?? ""),
       organization: String(formData.get("organization") ?? ""),
       address: String(formData.get("address") ?? ""),
+      accountNumber: String(formData.get("accountNumber") ?? ""),
     });
 
     if (!parsed.success) {
@@ -189,6 +192,7 @@ export default async function ClientsPage({
         email: sanitizeOptionalText(parsed.data.email),
         organization: sanitizeOptionalText(parsed.data.organization),
         address: sanitizeOptionalText(parsed.data.address),
+        accountNumber: sanitizeOptionalText(parsed.data.accountNumber),
       },
     });
 
@@ -438,6 +442,7 @@ export default async function ClientsPage({
                 <input name="email" type="email" placeholder="Email" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
                 <input name="organization" placeholder="Organization" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15" />
                 <input name="address" placeholder="Address / location" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 sm:col-span-2" />
+                <input name="accountNumber" placeholder="Account number" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/15 sm:col-span-2" />
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <SubmitButton bare className="btn-premium rounded-lg px-4 py-2.5 text-[0.8125rem] font-bold">

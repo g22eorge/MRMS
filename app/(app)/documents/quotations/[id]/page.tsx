@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 /* Edit handled via ?edit=1 inline form */
 
-import { prisma } from "@/lib/prisma";
+import { prisma, toClientSafe } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -116,7 +116,9 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
   const sent = typeof sp?.sent === "string" ? sp.sent : undefined;
   const canDelete = ["ADMIN", "OPS"].includes(user.role);
   const canSend = can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role);
-  const canConvert = can.createInvoices(user) && !convertedInvoice && !isVoid && ["DRAFT", "SENT", "ACCEPTED"].includes(quotation.status);
+  // Convertible at any time (VOID is the only dead end) — the converter itself,
+  // not this gate, is the single status rule.
+  const canConvert = can.createInvoices(user) && !convertedInvoice && !isVoid && quotation.status !== "VOID";
 
   async function sendQuotationWhatsAppAction() {
     "use server";
@@ -268,7 +270,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                         <div className="flex flex-1 flex-wrap items-end gap-2">
                           <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Description
                             <PartPickerField
-                              parts={parts}
+                              parts={toClientSafe(parts)}
                               formId={EDIT_FORM_ID}
                               name={`desc__${item.id}`}
                               partIdName={`part__${item.id}`}
@@ -316,7 +318,7 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                       className="flex flex-wrap items-end gap-2 bg-[var(--panel-strong)]/40 p-3"
                     >
                       <label className="min-w-[150px] flex-1 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Add line
-                        <PartPickerField parts={parts} required placeholder="New line item — or pick from inventory" />
+                        <PartPickerField parts={toClientSafe(parts)} required placeholder="New line item — or pick from inventory" />
                       </label>
                       <label className="w-14 text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Qty
                         <input name="quantity" type="number" min="1" step="any" defaultValue={1} className="mt-1 h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />

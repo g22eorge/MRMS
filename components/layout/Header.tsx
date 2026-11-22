@@ -148,7 +148,7 @@ export function Header({
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
-              className="flex h-9 w-9 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink-2)] transition hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)] md:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink-2)] transition hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)] md:hidden"
               aria-label="Open search"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -376,7 +376,7 @@ function ThemePicker() {
         aria-label="Choose theme"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-9 w-9 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink-2)] transition hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)]"
+        className="flex h-10 w-10 items-center justify-center rounded-[10px] p-0 text-[var(--dc-ink-2)] transition hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink)]"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />

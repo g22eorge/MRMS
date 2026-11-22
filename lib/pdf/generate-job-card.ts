@@ -35,7 +35,7 @@ export async function generateJobCardBuffer(
       recommendationOption: true, partsNeeded: true,
       repairTimeline: true, technicianNotes: true, workDone: true,
       receivedAt: true,
-      client: { select: { id: true, fullName: true, phone: true, email: true, organization: true } },
+      client: { select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true, accountNumber: true } },
     },
   });
 
@@ -87,6 +87,8 @@ export async function generateJobCardBuffer(
     clientPhone: job.client.phone,
     clientEmail: compactText(job.client.email, 36),
     clientOrganization: compactText(job.client.organization, 40),
+    clientAddress: compactText(job.client.address, 60),
+    clientAccountNumber: job.client.accountNumber ?? null,
     deviceType: prettyEnum(job.deviceType),
     deviceLabel: compactText(`${job.brand} ${job.model}`, 45),
     serialOrImei: compactText(job.serialOrImei, 30),

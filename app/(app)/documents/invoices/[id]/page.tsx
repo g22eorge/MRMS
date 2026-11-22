@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, toClientSafe } from "@/lib/prisma";
 import type { InvoiceType } from "@prisma/client";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { getCurrentUserRole } from "@/lib/session";
@@ -614,11 +614,11 @@ export default async function InvoiceDetailPage({
         <InvoiceCreateDialog
           currency={currency}
           canOverrideDiscount={canOverrideDiscountEdit}
-          clients={clients}
-          leads={leads}
-          jobs={jobs}
-          parts={parts}
-          taxRates={taxRates}
+          clients={toClientSafe(clients)}
+          leads={toClientSafe(leads)}
+          jobs={toClientSafe(jobs)}
+          parts={toClientSafe(parts)}
+          taxRates={toClientSafe(taxRates)}
           defaultTaxApplicable={taxTotal > 0}
           defaultTaxRate={subtotal > 0 ? Number(((taxTotal / subtotal) * 100).toFixed(2)) : 0}
           defaultTaxLabel="VAT"

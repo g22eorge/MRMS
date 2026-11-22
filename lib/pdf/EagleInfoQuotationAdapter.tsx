@@ -26,6 +26,8 @@ type Props = {
   clientPhone: string;
   clientEmail: string;
   clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   promo?: QuotationPromo | null;
   deviceType: string;
   deviceLabel: string;

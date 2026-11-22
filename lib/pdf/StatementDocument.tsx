@@ -59,7 +59,7 @@ type Props = {
   statementNumber: string;
   issuedAt: string;
   periodLabel: string;
-  client: { name: string; organization?: string | null; phone?: string | null; email?: string | null; address?: string | null };
+  client: { name: string; organization?: string | null; phone?: string | null; email?: string | null; address?: string | null; accountNumber?: string | null };
   lines: StatementDocLine[];
   totals: { billed: string; paid: string; outstanding: string };
   /** Drives the red balance styling — never infer this from the formatted string. */
@@ -103,6 +103,7 @@ export function StatementDocument({
             {client.address ? <Text style={house.partyLine}>{client.address}</Text> : null}
             {client.phone ? <Text style={house.partyLine}>{client.phone}</Text> : null}
             {client.email ? <Text style={house.partyLine}>{client.email}</Text> : null}
+            {client.accountNumber ? <Text style={house.partyLine}>Account: {client.accountNumber}</Text> : null}
           </View>
           <View style={house.bandRight}>
             <View style={house.metaRow}>

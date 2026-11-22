@@ -4,7 +4,18 @@ import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
-export function LoginForm({ allowSignup = true }: { allowSignup?: boolean }) {
+export function LoginForm({
+  allowSignup = true,
+  supportWhatsappNumber,
+}: {
+  allowSignup?: boolean;
+  /**
+   * Passed from the server page rather than read here: `NEXT_PUBLIC_*` in a
+   * client component is frozen at build time, and the Docker image is built
+   * with none set, so reading it here was always undefined in production.
+   */
+  supportWhatsappNumber?: string;
+}) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -96,7 +107,7 @@ export function LoginForm({ allowSignup = true }: { allowSignup?: boolean }) {
           onClick={() => {
             const emailInput = formRef.current?.querySelector<HTMLInputElement>('input[name="email"]');
             const email = (emailInput?.value ?? "").trim();
-            const waNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+            const waNumber = supportWhatsappNumber;
             if (waNumber) {
               const message = `Hi Support, please reset my password. Email: ${email || "<your email>"}`;
               window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");

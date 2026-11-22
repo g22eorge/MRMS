@@ -142,7 +142,7 @@ test("repair parts move inventory while free-text boxes stay notes-only", async 
     .poll(async () => prisma.partReservation.count({ where: { jobId: job.id, partId: part.id, status: "CONSUMED" } }))
     .toBe(1);
   const after = await prisma.part.findUniqueOrThrow({ where: { id: part.id } });
-  expect(after.qtyOnHand).toBe(8);
+  expect(Number(after.qtyOnHand)).toBe(8);
   expect(after.qtyReserved).toBe(0);
   const locStock = await prisma.partLocationStock.findUniqueOrThrow({
     where: { partId_locationId: { partId: part.id, locationId: location.id } },

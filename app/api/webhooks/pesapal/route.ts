@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
       // case rather than an error — acknowledge and add nothing.
       const org = { name: application.orgName };
 
-      void recordBillingEvent({
+      await recordBillingEvent({
         orgId,
         event: "charge.completed",
         amount: tx.amount,

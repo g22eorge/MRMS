@@ -71,7 +71,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
           select: {
             saleNumber: true,
             invoiceNumber: true,
-            client: { select: { fullName: true, organization: true } },
+        client: { select: { fullName: true, organization: true, address: true, accountNumber: true } },
           },
         },
         items: { select: { description: true, quantity: true }, orderBy: { description: "asc" } },
@@ -92,12 +92,22 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     ? `${note.invoice.invoiceNumber}${note.invoice.job ? ` / ${note.invoice.job.jobNumber}` : ""}`
     : (note.sale?.invoiceNumber ?? note.sale?.saleNumber ?? "-");
   const clientName = clientDisplayName(note.invoice?.job?.client ?? note.invoice?.client ?? note.sale?.client, "-");
+  const clientAddress = (note.invoice?.job?.client as any)?.address
+    ?? (note.invoice?.client as any)?.address
+    ?? (note.sale?.client as any)?.address
+    ?? null;
+  const clientAccountNumber = (note.invoice?.job?.client as any)?.accountNumber
+    ?? (note.invoice?.client as any)?.accountNumber
+    ?? (note.sale?.client as any)?.accountNumber
+    ?? null;
   const element = createElement(DeliveryNoteDocument as never, {
     branding: { ...branding, companyLogoUrl: logoUrl ?? null },
     deliveryNoteNumber: note.deliveryNoteNumber,
     deliveredAt: note.deliveredAt.toLocaleString("en-GB"),
     saleRef: sourceRef,
     clientName,
+    clientAddress,
+    clientAccountNumber,
     deliveredByName: note.deliveredByName,
     receivedByName: note.receivedByName,
     receivedBySignatureText: note.receivedBySignatureText,

@@ -13,7 +13,7 @@ import {
 } from "@/lib/currency";
 import { JobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { prisma, toClientSafe } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
@@ -48,6 +48,7 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 import { plural } from "@/lib/plural";
 import { flash } from "@/lib/flash";
 import { icontains } from "@/lib/db/search";
+
 const INVOICE_TYPES: InvoiceType[] = ["REPAIR", "SERVICE", "MERCHANDISE", "CONTRACT", "OTHER"];
 
 export const dynamic = "force-dynamic";
@@ -96,8 +97,6 @@ export default async function InvoicesPage({
   const voidSkippedParam = params.voidSkipped ?? "";
   const reminderFailedParam = params.reminderFailed ?? "";
   const reminderErrorParam = params.reminderError ?? "";
-
-  let dbNeedsFix = false;
 
   // ── Server actions ───────────────────────────────────────────────────────────
 
@@ -389,42 +388,39 @@ export default async function InvoicesPage({
 
   let invoices: InvoiceRow[] = [];
 
-  try {
-    const raw = await db.invoice.findMany({
-      where,
-      orderBy: { issuedAt: "desc" },
-      take: 150,
-      select: {
-        id: true,
-        invoiceNumber: true,
-        invoiceType: true,
-        subject: true,
-        issuedAt: true,
-        dueDate: true,
-        currency: true,
-        totalAmount: true,
-        paidAmount: true,
-        status: true,
-        notes: true,
-        job: {
-          select: {
-            id: true,
-            jobNumber: true,
-            status: true,
-            client: { select: { fullName: true, organization: true } },
-          },
+  const raw = await db.invoice.findMany({
+    where,
+    orderBy: { issuedAt: "desc" },
+    take: 150,
+    select: {
+      id: true,
+      invoiceNumber: true,
+      invoiceType: true,
+      subject: true,
+      issuedAt: true,
+      dueDate: true,
+      currency: true,
+      totalAmount: true,
+      paidAmount: true,
+      status: true,
+      notes: true,
+      job: {
+        select: {
+          id: true,
+          jobNumber: true,
+          status: true,
+          client: { select: { fullName: true, organization: true } },
         },
-        client: { select: { id: true, fullName: true, organization: true } },
-        payments: { select: { id: true }, take: 1 },
-        deliveryNotes: { select: { id: true }, take: 1 },
       },
-    });
-    invoices = raw.map((inv) => ({ ...inv, invoiceType: inv.invoiceType ?? "REPAIR" }));
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("no such table") && msg.includes("Invoice")) dbNeedsFix = true;
-    invoices = [];
-  }
+      client: { select: { id: true, fullName: true, organization: true } },
+      payments: { select: { id: true }, take: 1 },
+      deliveryNotes: { select: { id: true }, take: 1 },
+    },
+  });
+  invoices = raw.map((inv) => ({ ...inv, invoiceType: inv.invoiceType ?? "REPAIR" }));
+  // A missing table is not an empty list: the schema reaches the database only
+  // through prisma migrate deploy, so failing here means the deployment is
+  // broken and the page's error boundary should say so.
 
   const now = new Date();
   // Compute aging for each outstanding invoice
@@ -563,23 +559,6 @@ export default async function InvoicesPage({
             <a href="/settings/notifications" className="font-semibold text-[var(--accent)] underline underline-offset-2">
               Reminder settings
             </a>
-          </p>
-        </div>
-      )}
-
-      {/* dbNeedsFix was set when the Invoice table is missing and then never
-          read, so that failure rendered as an ordinary empty list — "No invoices
-          found." on a database that cannot answer the question. The POS page
-          already surfaces the same signal this way. */}
-      {dbNeedsFix && (
-        <div role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
-          <p className="text-[0.8125rem] font-semibold text-amber-500">The invoice tables are missing from this database.</p>
-          <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
-            This list is empty because the table could not be read, not because there are no invoices.{" "}
-            <a href="/api/admin/db-fix" target="_blank" rel="noreferrer" className="font-semibold text-[var(--accent)] underline underline-offset-2">
-              Run DB Fix
-            </a>{" "}
-            as the platform admin.
           </p>
         </div>
       )}
@@ -871,16 +850,16 @@ export default async function InvoicesPage({
 <InvoiceCreateDialog
   currency={orgCurrency}
   canOverrideDiscount={canOverrideDiscount}
-  clients={clients}
-  leads={leads}
-  jobs={jobs}
-  parts={invoiceParts}
-  taxRates={invoiceTaxRates}
+  clients={toClientSafe(clients)}
+  leads={toClientSafe(leads)}
+  jobs={toClientSafe(jobs)}
+  parts={toClientSafe(invoiceParts)}
+  taxRates={toClientSafe(invoiceTaxRates)}
   defaultTaxApplicable={branding.vatDefaultApplicable ?? false}
   defaultTaxRate={defaultInvoiceTaxRate?.rate ?? branding.vatRatePercent ?? 0}
   defaultTaxLabel={defaultInvoiceTaxRate?.code ?? branding.vatLabel ?? "Tax"}
   action={createStandaloneInvoiceAction}
-/>
+ />
 </InvoicePreviewProvider>
   );
 }

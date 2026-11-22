@@ -13,7 +13,7 @@ import { SearchToggle } from "@/components/shared/SearchToggle";
 import { JobStatusBadge, statusStripClass } from "@/components/jobs/JobStatusBadge";
 import { UI_JOB_STATUSES, JobStatus, normalizeJobStatus } from "@/lib/job-status";
 import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { prisma, type Row } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
 import { shareStatementDocument } from "@/lib/notifications/share-document";
@@ -41,6 +41,7 @@ const updateClientSchema = z.object({
   email: z.string().email("Enter a valid email address, or leave it blank").optional().or(z.literal("")),
   organization: z.string().optional(),
   address: z.string().optional(),
+  accountNumber: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -138,7 +139,7 @@ export default async function ClientDetailPage({
     }
   }
 
-  type ClientDetail = Prisma.ClientGetPayload<{
+  type ClientDetail = Row<typeof prisma.client, {
     include: {
       jobs: true;
       notesEntries: { include: { author: { select: { name: true } } } };
@@ -191,6 +192,7 @@ export default async function ClientDetailPage({
       email: String(formData.get("email") ?? ""),
       organization: String(formData.get("organization") ?? ""),
       address: String(formData.get("address") ?? ""),
+      accountNumber: String(formData.get("accountNumber") ?? ""),
       notes: String(formData.get("notes") ?? ""),
     });
     if (!parsed.success) {
@@ -206,6 +208,7 @@ export default async function ClientDetailPage({
           email: sanitizeOptionalText(parsed.data.email),
           organization: sanitizeOptionalText(parsed.data.organization),
           address: sanitizeOptionalText(parsed.data.address),
+          accountNumber: sanitizeOptionalText(parsed.data.accountNumber),
           notes: sanitizeOptionalText(parsed.data.notes),
         },
       });
@@ -339,6 +342,7 @@ export default async function ClientDetailPage({
           email: client.email,
           organization: client.organization,
           address: client.address,
+          accountNumber: client.accountNumber,
           notes: client.notes,
         }}
         canEdit={canEdit}

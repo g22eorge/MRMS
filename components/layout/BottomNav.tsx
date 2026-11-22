@@ -242,7 +242,7 @@ export function BottomNav({
                 aria-current={active ? "page" : undefined}
               >
                 {/* Icon — no pill background, just color shift */}
-                <span className={`relative flex h-9 w-9 items-center justify-center transition-all duration-200 ${
+                <span className={`relative flex h-10 w-10 items-center justify-center transition-all duration-200 ${
                   active
                     ? "text-[var(--accent)]"
                     : "text-[var(--ink-muted)] hover:text-[var(--ink)]"

@@ -137,40 +137,39 @@ export default async function TechniciansPage({
           },
         };
 
+  const jobWhere = {
+    orgId,
+    ...where,
+    AND: [
+      statusFilter
+        ? { status: statusFilter }
+        : { status: { in: ACTIVE_BOARD_STATUSES as JobStatus[] } },
+      ...(filters.ready === "1"
+        ? [{ status: "IN_REPAIR" as JobStatus, clientApproved: true }]
+        : []),
+    ],
+    ...(filters.q
+      ? {
+          OR: [
+            { jobNumber: icontains(filters.q) },
+            { brand: icontains(filters.q) },
+            { model: icontains(filters.q) },
+          ],
+        }
+      : {}),
+  };
+
+  const total = await prisma.job.count({ where: jobWhere }).catch(() => 0);
+  const pageView = paginationView(page, total, pageSize);
+
   const jobs = await prisma.job.findMany({
-    where: {
-      orgId, // tenant scope — the role branches below only filter by assignee
-      ...where,
-      // The status filter used to run in JS after the query, so the board
-      // loaded every job the org had ever recorded and then threw away the
-      // closed ones — the great majority, and a set that only grows. It is the
-      // same rule, applied where the rows are chosen instead of after.
-      //
-      // AND, not a second status key: the two filters can both be set, and
-      // overwriting one with the other would silently widen the result rather
-      // than narrowing it the way the old JS chain did.
-      AND: [
-        statusFilter
-          ? { status: statusFilter }
-          : { status: { in: ACTIVE_BOARD_STATUSES as JobStatus[] } },
-        ...(filters.ready === "1"
-          ? [{ status: "IN_REPAIR" as JobStatus, clientApproved: true }]
-          : []),
-      ],
-      ...(filters.q
-        ? {
-            OR: [
-              { jobNumber: icontains(filters.q) },
-              { brand: icontains(filters.q) },
-              { model: icontains(filters.q) },
-            ],
-          }
-        : {}),
-    },
+    where: jobWhere,
     orderBy: { receivedAt: "desc" },
     include: {
       assignedTo: { select: { name: true } },
     },
+    skip: pageView.skip,
+    take: pageView.take,
   });
 
   const normalized = jobs
@@ -203,8 +202,7 @@ export default async function TechniciansPage({
 
   // KPIs/spotlight stay computed from the whole in-memory-filtered set; only the
   // displayed work-queue rows are paginated.
-  const pageView = paginationView(page, sortedJobs.length, pageSize);
-  const pageRows = sortedJobs.slice(pageView.skip, pageView.skip + pageView.take);
+  const pageRows = sortedJobs;
   const jobsHrefFilters = {
     q: filters.q ?? "",
     status: filters.status ?? "",
@@ -215,11 +213,24 @@ export default async function TechniciansPage({
   const jobsHref = pageHrefBuilder("/technicians", jobsHrefFilters);
   const jobsHrefSize = sizeHrefBuilder("/technicians", jobsHrefFilters);
 
-  const assignedCount = normalized.length;
-  const readyCount = normalized.filter((job) => job.ready).length;
-  const inRepairCount = normalized.filter((job) => job.status === "IN_REPAIR").length;
-  const overdueCount = normalized.filter((job) => job.overdue).length;
-  const awaitingApprovalCount = normalized.filter((job) => job.status === "AWAITING_APPROVAL").length;
+  const assignedCount = total;
+  const readyCount = await prisma.job.count({
+    where: { ...jobWhere, status: "IN_REPAIR", clientApproved: true },
+  }).catch(() => 0);
+  const inRepairCount = await prisma.job.count({
+    where: { ...jobWhere, status: "IN_REPAIR" },
+  }).catch(() => 0);
+  const overdueCount = await prisma.job.count({
+    where: {
+      ...jobWhere,
+      status: "IN_REPAIR",
+      clientApproved: true,
+      receivedAt: { lte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+    },
+  }).catch(() => 0);
+  const awaitingApprovalCount = await prisma.job.count({
+    where: { ...jobWhere, status: "AWAITING_APPROVAL" },
+  }).catch(() => 0);
 
   // Per-tech workload (admin/ops visibility)
   const isAdmin = user.role === "ADMIN" || user.role === "OPS";
@@ -437,7 +448,7 @@ export default async function TechniciansPage({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
           <p className="text-xs text-[var(--ink-muted)]">
-            <span className="font-bold text-[var(--ink)]">{sortedJobs.length}</span> jobs
+            <span className="font-bold text-[var(--ink)]">{total}</span> jobs
           </p>
           <Link href="/jobs" className="text-[0.8125rem] font-semibold text-[var(--accent)] hover:underline">All Jobs →</Link>
         </div>

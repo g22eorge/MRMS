@@ -14,8 +14,8 @@ import {
 
 const s = StyleSheet.create({
   colNum:  { width: 22 },
-  colDesc: { flex: 1, paddingRight: 10 },
-  colQty:  { width: 60, textAlign: "right" },
+  colDesc: { flex: 1, minWidth: 0, paddingRight: 10 },
+  colQty:  { width: "15%", textAlign: "right" },
 
   noteBlock: { marginBottom: SP.md },
   noteText: { fontSize: 8.5, color: INK, lineHeight: 1.45 },
@@ -47,6 +47,8 @@ type Props = {
   deliveredAt: string;
   saleRef: string;
   clientName: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deliveredByName: string;
   receivedByName: string;
   receivedBySignatureText?: string | null;
@@ -57,6 +59,7 @@ type Props = {
 
 export function DeliveryNoteDocument({
   branding, deliveryNoteNumber, deliveredAt, saleRef, clientName,
+  clientAddress, clientAccountNumber,
   deliveredByName, receivedByName, receivedBySignatureText, deliveryMethod, note, items,
 }: Props) {
   const lines = companyLetterheadLines({
@@ -88,7 +91,8 @@ export function DeliveryNoteDocument({
           <View style={house.bandCol}>
             <Text style={house.label}>Delivered To</Text>
             <Text style={house.partyName}>{clientName}</Text>
-            <Text style={house.partyLine}>{deliveredAt}</Text>
+            {clientAddress ? <Text style={house.partyLine}>{clientAddress}</Text> : null}
+            {clientAccountNumber ? <Text style={house.partyLine}>Account: {clientAccountNumber}</Text> : null}
             {deliveryMethod ? <Text style={house.partyLine}>{deliveryMethod}</Text> : null}
           </View>
           <View style={house.bandColDivided}>

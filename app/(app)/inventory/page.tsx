@@ -67,10 +67,10 @@ export default async function InventoryPage({
   // the WHOLE catalog to reduce in JS. Run the list as parameterised SQL so we
   // paginate in the DB and return aggregates, not every row.
   const baseConds: Prisma.Sql[] = [Prisma.sql`"orgId" = ${orgId}`];
-  if (statusFilter !== "all") baseConds.push(Prisma.sql`"isActive" = ${statusFilter === "active" ? 1 : 0}`);
+  if (statusFilter !== "all") baseConds.push(Prisma.sql`"isActive" = ${statusFilter === "active"}`);
   if (q) {
     const like = `%${q}%`;
-    baseConds.push(Prisma.sql`("name" LIKE ${like} OR "sku" LIKE ${like} OR "manufacturer" LIKE ${like})`);
+    baseConds.push(Prisma.sql`("name" ILIKE ${like} OR "sku" ILIKE ${like} OR "manufacturer" ILIKE ${like})`);
   }
   const stockConds: Prisma.Sql[] = [...baseConds];
   if (statusFilter === "active" && stockFilter === "low") stockConds.push(Prisma.sql`("qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0)`);
@@ -104,9 +104,9 @@ export default async function InventoryPage({
         SUM(CASE WHEN "reorderLevel" <= 0 THEN 1 ELSE 0 END) AS "noReorderItems",
         SUM(CASE WHEN "qtyReserved" > "qtyOnHand" THEN 1 ELSE 0 END) AS "overReserved",
         COALESCE(SUM(CASE WHEN "qtyOnHand" <= "reorderLevel" AND "reorderLevel" > 0 THEN ("reorderLevel" - "qtyOnHand") * COALESCE("unitCost", 0) ELSE 0 END), 0) AS "workingCapitalAtRisk"
-      FROM "Part" WHERE "orgId" = ${orgId} AND "isActive" = 1
-    `.catch(() => [] as Array<Record<string, unknown>>),
-    prisma.$queryRaw<Array<{ c: number | bigint }>>`SELECT COUNT(*) AS c FROM "Part" ${rowWhere}`.catch(() => [{ c: 0 }]),
+      FROM "Part" WHERE "orgId" = ${orgId} AND "isActive" = TRUE
+    `,
+    prisma.$queryRaw<Array<{ c: number | bigint }>>`SELECT COUNT(*) AS c FROM "Part" ${rowWhere}`,
     prisma.part
       .groupBy({ by: ["isActive"], where: { orgId }, _count: { _all: true } })
       .catch(() => [] as Array<{ isActive: boolean; _count: { _all: number } }>),
@@ -135,7 +135,7 @@ export default async function InventoryPage({
     FROM "Part" ${rowWhere}
     ORDER BY "qtyOnHand" ASC, name ASC
     LIMIT ${pageView.take} OFFSET ${pageView.skip}
-  `.catch(() => [] as Array<Record<string, unknown>>);
+  `;
   const pageRows = pageRowsRaw.map(coerceRow);
   const inventoryFilters = {
     status: statusFilter,

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, toClientSafe } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { NewStockCountForm } from "./NewStockCountForm";
@@ -31,7 +31,7 @@ export default async function NewStockCountPage() {
           </div>
         </div>
       </div>
-      <NewStockCountForm locations={locations} parts={parts.map((part) => ({ id: part.id, sku: part.sku, name: part.name, qty: part.qtyOnHand }))} />
+      <NewStockCountForm locations={locations} parts={toClientSafe(parts.map((part) => ({ id: part.id, sku: part.sku, name: part.name, qty: part.qtyOnHand })))} />
     </div>
   );
 }

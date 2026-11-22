@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { toClientSafe } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { getAppCurrency } from "@/lib/currency";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
@@ -106,11 +107,11 @@ export default async function NewQuotationPage({
         jobId={params.jobId}
         currency={currency}
         canOverrideDiscount={canOverrideDiscount}
-        clients={clients}
-        leads={leads}
-        jobs={jobs}
-        parts={parts}
-        taxRates={taxRates}
+        clients={toClientSafe(clients)}
+        leads={toClientSafe(leads)}
+        jobs={toClientSafe(jobs)}
+        parts={toClientSafe(parts)}
+        taxRates={toClientSafe(taxRates)}
         defaultTaxApplicable={branding.vatDefaultApplicable}
         defaultTaxRate={defaultTaxRate?.rate ?? branding.vatRatePercent}
         defaultTaxLabel={defaultTaxRate?.code ?? branding.vatLabel}

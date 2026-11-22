@@ -2,7 +2,7 @@
 
 This file is the operating guide for AI agents and developers working in this repo. It describes the current system, the desired production behavior, and the checks to run when troubleshooting reliability, security, tenant isolation, and performance.
 
-Last updated: 2026-06-02.
+Last updated: 2026-08-24 (migrated from SQLite/Turso to PostgreSQL; deployment is Docker on a VPS).
 
 ## Current System State
 
@@ -18,12 +18,17 @@ Eagle Info Repair Manager is no longer a simple repair-only scaffold. It is a Ne
 Primary stack:
 
 - Next.js 16 App Router, React 19, TypeScript.
-- Prisma 6.19 with SQLite schema provider.
-- Local development database is SQLite file URL.
-- Production runtime uses Turso/libSQL through `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
+- Prisma 6.19 with the `postgresql` provider. One `DATABASE_URL` everywhere; there is no per-environment driver switch.
+- Local development runs entirely in containers (`bun run dev:up`); the databases are published on 5433 and 5434 for host tooling.
+- Production is Docker Compose on a single VPS, database included. See `docs/deployment.md`.
 - BetterAuth for auth/session.
 - Tailwind/shadcn-style UI, Sonner/toasts, and Zod for validation. Forms are server actions with native validation, not a client form library — React Hook Form was listed here but never imported, and has been removed along with @hookform/resolvers, kysely and a stray `install` package.
 - Bun is the package/runtime command used by this repo.
+
+Migrated from SQLite/Turso in 2026-08. If you find code that probes the schema
+before using it — `sqlite_master`, `PRAGMA table_info`, `"no such table"` string
+matching, `ALTER TABLE` at runtime — it is a leftover, not a pattern to copy.
+Schema changes reach a database exactly one way: `prisma migrate deploy`.
 
 ## Branch Policy
 
@@ -72,7 +77,7 @@ Always preserve these:
 - Append-only audit logs. Do not delete audit entries as a cleanup shortcut.
 - File uploads must validate file type and size.
 - Production auth must set `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL`.
-- Production runtime must set Turso env vars. Local SQLite is only allowed in development/build/CI or when explicitly allowed.
+- Production runtime must set `DATABASE_URL`, and `CRON_SECRET` for the scheduled jobs.
 
 ## Job Status And Desired Messaging Behavior
 
@@ -134,45 +139,115 @@ Troubleshooting:
 
 ## Database And Prisma Runbook
 
-The Prisma schema provider is SQLite. This means Prisma validation during build requires `DATABASE_URL` to start with `file:`.
+The provider is `postgresql` and `DATABASE_URL` is the only database
+configuration. The schema validates without a reachable database, so the build
+needs no connection at all.
 
 Important files:
 
-- `prisma/schema.prisma`: source of model truth.
-- `lib/prisma.ts`: runtime client selection, local SQLite vs Turso/libSQL adapter, stale singleton guard, targeted runtime repairs.
-- `scripts/vercel-build.mjs`: forces build-time `DATABASE_URL=file:./dev.db`, clears Turso env for build validation, generates Prisma client, asserts required models, then runs `next build`.
-- `scripts/assert-prisma-models.mjs`: required model sanity check.
-- `app/api/admin/db-fix/route.ts`: emergency production schema repair endpoint for platform/admin use.
-- `scripts/prod-job-column-safety.mjs`: production job-column safety repair.
+- `prisma/schema.prisma`: source of model truth. 119 models, 59 enums.
+- `prisma/migrations/0_init`: the Postgres baseline. The 48 SQLite migrations are
+  archived in `prisma/migrations-sqlite-archive/` and are **not** applied — they
+  contain `PRAGMA` statements and cannot be replayed.
+- `lib/prisma.ts`: the client, plus the `Db` / `TxClient` / `Row` types that
+  helpers must be typed against (an extended client is not assignable to
+  `PrismaClient` or `Prisma.TransactionClient`).
+- `lib/prisma-decimal.ts`: **generated** — regenerate with
+  `node scripts/pg/generate-decimal-extension.mjs`, never edit by hand.
+- `lib/db-introspect.ts` / `lib/db-errors.ts`: `information_schema` queries and
+  portable missing-table/column detection.
+- `scripts/build.mjs`: `prisma generate`, model assertion, `next build`.
+- `scripts/pg/`: migration tooling — importer, verifier, drift report, baseline.
 
-Common production DB errors and what they mean:
+### Money is `Decimal` in the database and `number` in the application
 
-- `SQLite input error: no such column: main.Payment.kind`: production schema is behind code. Apply migrations/db fix for the `Payment.kind` column.
-- `SQLite input error: no such column: lostReason`: production schema is behind code for leads. Apply the lead schema repair/migration.
-- Prisma build error `URL must start with the protocol file:`: the build is validating the SQLite schema with a non-file runtime URL. Use `scripts/vercel-build.mjs` path; do not run raw `prisma generate`/`next build` in Vercel with Turso in `DATABASE_URL`.
-- `Missing TURSO_DATABASE_URL`: production runtime started without Turso env vars.
-- BetterAuth warnings during build about default secret/base URL: expected in local build if env is absent; production runtime must set proper values.
+93 columns are `numeric` (money `(18,2)`, rates `(12,6)`, UoM factors `(18,6)`,
+quantities `(18,3)`). Two Prisma extensions in `lib/prisma.ts` convert them to
+`number` at the boundary: a `result` extension for model reads — which changes
+the *declared type* as well as the value — and a `query` extension for
+`aggregate`, `groupBy` and `$queryRaw`, which the first cannot see.
 
-Local dev:
+So: write plain numbers, read plain numbers, and never call `.toNumber()` on a
+money field — it is already a number and the call will throw. If you add a money
+column, add it to `docs/pg-migration/numeric-classification.json` and regenerate
+the extension, or its type and its value will disagree.
+
+### Common errors and what they mean
+
+- `relation "X" does not exist` / Prisma `P2021`: migrations have not been applied
+  to this database. Run `prisma migrate deploy`; do not patch the schema by hand.
+- `column "x" does not exist` / Prisma `P2022`: same cause. Use
+  `isMissingTableError` / `isMissingColumnError` from `lib/db-errors.ts` if code
+  needs to detect it — never match on message text, which differs per dialect.
+- `Missing DATABASE_URL`: the runtime started without a connection string.
+- Unique-constraint failure on import: the source data violates a constraint the
+  datamodel declares. See `docs/pg-migration/import-map.json`.
+
+### Commands
 
 ```bash
-bun run dev
+bun run dev:up           # the whole dev stack in containers; app on :3000
+bun run dev:logs         # follow the app
+bun run dev:check        # tsc + lint, in the container
+bun run dev:test         # unit tests, in the container
+bun run dev:migrate      # prisma migrate dev, in the container
+bun run pg:drift <db>    # drift report against a SQLite dump (host tool)
+bun run build            # production build
 ```
 
-Schema/client:
+**Development runs in Docker.** Editing a file on the host reloads the running
+container — the app through Next's dev server, the worker and scheduler through
+file watchers. The exception is `prisma/schema.prisma`: the client is generated
+inside the container, so run `bun run dev:migrate` after a schema change. Full
+detail in `docs/development.md`.
+
+Do not start a host dev server alongside it. Both would bind :3000, and the one
+that loses is not obvious — the symptom is stale HTML served from whichever
+process won.
+
+### The database is in Docker. There is no local one.
+
+Every database this app uses runs in a container. Nothing is installed on the
+host, nothing reads a `file:` URL, and there is no `prisma/dev.db` to fall back
+on. Point tooling at the published ports:
+
+| | host port | database | credentials |
+| --- | --- | --- | --- |
+| development | **5433** | `mrms` | `mrms` / `mrms_dev_password` |
+| scratch (tests, QA, import rehearsals) | **5434** | `mrms_scratch` | same |
 
 ```bash
-bun run db:push
-bun run prisma:generate
+bun run dev:psql     # psql against the development database
+docker exec mrms-postgres-dev psql -U mrms -d mrms -c '<sql>'
 ```
 
-Production-style build:
+**Port 5432 is not this app.** A native Postgres commonly holds it on a
+developer machine — on this one it serves carecheck, credopo and eaglestays, and
+has no `mrms` database at all. `psql -p 5432 -d mrms` at least fails loudly; a
+GUI client pointed at the server just lists the other projects' databases and
+shows nothing belonging to this one, which reads as "the import never ran" while
+the data sits in 5433 untouched. That has already cost one debugging session.
+If the data looks missing, check the port before checking the data.
 
-```bash
-bun run vercel-build
-```
+The development database holds **imported production data**, not seed data. Its
+users are the real ones — `admin@eagle.tech`, `kakande@eagle.tech`,
+`g22eorge@gmail.com`, all on org `org_eis_01`, all carrying production password
+hashes. The seed accounts (`admin@eagle.test` / `password123`, note the TLD)
+exist only in a database that has had `bun run seed` run against it, which the
+development one has not. Offering seed credentials for it sends someone to a
+login screen that will never accept them.
 
-If the sandbox blocks Google Fonts, rerun the same build with network access rather than treating it as an app error.
+`bun run seed` refuses to run where business tables already hold rows, and needs
+`ALLOW_DESTRUCTIVE_SEED=1` to proceed. That guard is there for the database
+described above. Seed the scratch database, or a throwaway one, never this.
+
+Never use `prisma db push` against a database that matters: it is what produced
+the drift this migration had to reconcile (51 columns the datamodel expected and
+the database lacked, 16 the reverse, six undeclared tables). Generate a migration
+instead.
+
+If the sandbox blocks Google Fonts, rerun the build with network access rather
+than treating it as an app error.
 
 ## Documents And Numbering
 
@@ -239,7 +314,7 @@ For production fixes, run:
 bunx tsc --noEmit
 bun run lint
 bun audit
-bun run vercel-build
+bun run build
 ```
 
 If `bun audit` cannot connect because of sandbox/network restrictions, rerun with network permission. Do not skip it.
@@ -299,10 +374,12 @@ Notifications not showing:
 
 DB column missing:
 
-- Confirm current deployed DB schema.
-- Run admin db health/db fix if this is production and the missing column is known.
-- Apply migration/db push in lower environments.
-- Regenerate Prisma client after schema changes.
+- This means migrations have not been applied. Check `/api/admin/db-health`,
+  which diffs the whole datamodel against the live schema and lists applied
+  migrations.
+- Run `prisma migrate deploy`. Do not add the column by hand: runtime DDL is what
+  produced the drift this migration had to reconcile.
+- Regenerate the Prisma client after schema changes.
 
 Dashboard wrong/stale:
 
@@ -318,12 +395,20 @@ External tech privacy issue:
 - Ensure `client`, phone, email, financial fields, invoices, payments, and pricing history are excluded.
 - Confirm routes and APIs reject unauthorized roles.
 
-Build fails on Vercel:
+Build fails:
 
-- Use `bun run vercel-build`.
-- Ensure Prisma build validation sees `DATABASE_URL=file:./dev.db`.
-- Ensure runtime env has Turso variables.
-- Ensure `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, and trusted origins are configured.
+- Use `bun run build`. The build needs no database — a `postgresql` schema
+  validates without one — so a build failure is a code or dependency problem.
+- Ensure `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` and trusted origins are set in
+  the deployed environment (not needed for the build itself).
+
+Container will not start or reports unhealthy:
+
+- `docker compose logs migrate` — `app` only starts once migrations succeed, so a
+  failed migration leaves the previous container serving.
+- `/api/health` returns 503 when the database is unreachable; that is what the
+  healthcheck keys off.
+- See `docs/deployment.md`.
 
 ## Coding Practices In This Repo
 
@@ -348,7 +433,9 @@ Be extra careful around:
 - Document numbering and finance totals.
 - Payments, refunds, credit notes, and inventory stock changes.
 - Dashboard metrics and cross-org aggregation.
-- Build scripts that intentionally override DB env during build.
+- The Decimal boundary in `lib/prisma.ts` and the generated `lib/prisma-decimal.ts`.
+- The importer's duplicate-resolution policies (`docs/pg-migration/import-map.json`).
+- The `scheduler` service: if it stops, four scheduled jobs stop silently.
 
 ## Production Readiness Standard
 

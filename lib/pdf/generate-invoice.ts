@@ -52,7 +52,7 @@ export async function generateInvoiceBuffer(
       clientApproved: true, approvalDate: true, quotedAt: true,
       repairTimeline: true, timelineNote: true, technicianNotes: true, statusNote: true,
       receivedAt: true, completedAt: true, closedAt: true,
-      client: { select: { id: true, fullName: true, phone: true, email: true, organization: true } },
+      client: { select: { id: true, fullName: true, phone: true, email: true, organization: true, address: true, accountNumber: true } },
     },
   });
 
@@ -117,6 +117,7 @@ export async function generateInvoiceBuffer(
   const issuedAtDate = new Date();
   const dueDate = new Date(issuedAtDate);
   dueDate.setDate(dueDate.getDate() + branding.quoteValidityDays);
+  const paymentTerms = branding.termsText ? `Net ${branding.quoteValidityDays} days` : "Due on receipt";
   const logoUrl = await resolveInvoiceLogo(orgId);
   const normalizedFooterText = (branding.footerText ?? "").trim();
   // Print the quotation number the customer actually received, not a fresh
@@ -287,6 +288,8 @@ export async function generateInvoiceBuffer(
     clientPhone: job.client.phone,
     clientEmail: compactText(job.client.email, 36),
     clientOrganization: compactText(job.client.organization, 40),
+    clientAddress: compactText(job.client.address, 60),
+    clientAccountNumber: job.client.accountNumber ?? null,
     deviceType: prettyEnum(job.deviceType),
     deviceLabel: compactText(`${job.brand} ${job.model}`, 45),
     serialOrImei: compactText(job.serialOrImei, 30),
@@ -316,6 +319,9 @@ export async function generateInvoiceBuffer(
     currency,
     termsText: branding.termsText ?? "",
     footerText: normalizedFooterText,
+    paymentTerms,
+    dueDate: formatEATDocDate(dueDate),
+    paymentTo: (branding as unknown as { paymentInstructions?: string | null }).paymentInstructions ?? null,
     signatureCompanyLabel: branding.signatureCompanyLabel ?? "Company",
     signatureClientLabel: branding.signatureClientLabel ?? "Client",
     lineItems,

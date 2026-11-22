@@ -177,6 +177,8 @@ type Props = {
   clientPhone: string;
   clientEmail: string;
   clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deviceType: string;
   deviceLabel: string;
   serialOrImei: string;

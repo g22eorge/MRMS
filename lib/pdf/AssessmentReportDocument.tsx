@@ -54,6 +54,8 @@ export type AssessmentReportProps = {
   deviceIssue: string;
   preparedForName?: string;
   preparedForOrg?: string;
+  preparedForAddress?: string | null;
+  preparedForAccountNumber?: string | null;
 
   findings: string[];            // section 1 paragraphs
   recommendedSolution: string;   // section 2 lead
@@ -124,6 +126,8 @@ export function AssessmentReportDocument(p: AssessmentReportProps) {
             {/* The organisation is the account; the person is the contact on it. */}
             <Text style={house.partyName}>{forOrg || forName || "—"}</Text>
             {forOrg && forName ? <Text style={house.partyAttn}>Attn: {forName}</Text> : null}
+            {p.preparedForAddress ? <Text style={house.partyLine}>{p.preparedForAddress}</Text> : null}
+            {p.preparedForAccountNumber ? <Text style={house.partyLine}>Account: {p.preparedForAccountNumber}</Text> : null}
           </View>
           <View style={house.bandRight}>
             <View style={house.metaRow}>

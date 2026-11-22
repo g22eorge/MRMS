@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { formatMoney, formatMoneyCompact, normalizeCurrency, roundMoney, toBaseAmount } from "@/lib/currency";
 import { can } from "@/lib/permissions";
-import { prisma, ensureMoneySchema } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { findRecentDuplicate } from "@/lib/dedup";
 import { requireOrgSession } from "@/lib/org-context";
 import { requireModule, OrgModule } from "@/lib/module-access";
@@ -201,7 +201,6 @@ export default async function CreditNotesPage({
     }
 
     // Refund write + ledger post run inside the txn; ensure schema first.
-    await ensureMoneySchema();
     const refund = await prisma.$transaction(async (tx) => {
       const created = await tx.refund.create({
         data: {
@@ -515,7 +514,6 @@ export default async function CreditNotesPage({
     const dupCn = await findRecentDuplicate(prisma.creditNote, { orgId, ...parentLink, totalAmount });
     if (dupCn) { revalidatePath("/documents/credit-notes"); redirect("/documents/credit-notes"); }
 
-    await ensureMoneySchema();
     let creditNoteNumber = "";
     let creditNoteId = "";
     let refundId = "";
@@ -692,13 +690,16 @@ export default async function CreditNotesPage({
       : {}),
   };
 
-  const [creditNotesTotal, statsRows, creditNotes, eligibleSales, eligibleInvoices] = await Promise.all([
+  const [creditNotesTotal, totalValueResult, pendingReturnResult, creditNotes, eligibleSales, eligibleInvoices] = await Promise.all([
     prisma.creditNote.count({ where: creditNotesWhere }).catch(() => 0),
-    // Whole-dataset KPIs (value/pending/refunded) computed from every matching row.
-    prisma.creditNote.findMany({
+    // Whole-dataset KPIs (value/pending/refunded) via aggregate — no contact rows loaded.
+    prisma.creditNote.aggregate({
       where: creditNotesWhere,
-      select: { totalAmount: true, itemsReceivedBackAt: true, refunds: { select: { amount: true } } },
-    }).catch(() => []),
+      _sum: { totalAmount: true },
+    }).catch(() => ({ _sum: { totalAmount: null } })),
+    prisma.creditNote.count({
+      where: { ...creditNotesWhere, itemsReceivedBackAt: null },
+    }).catch(() => 0),
     prisma.creditNote.findMany({
       where: creditNotesWhere,
       include: {
@@ -756,8 +757,8 @@ export default async function CreditNotesPage({
     }).catch(() => []),
   ]);
 
-  const totalValue = statsRows.reduce((s, cn) => s + cn.totalAmount, 0);
-  const pendingReturn = statsRows.filter((cn) => !cn.itemsReceivedBackAt).length;
+  const totalValue = Number(totalValueResult._sum.totalAmount ?? 0);
+  const pendingReturn = pendingReturnResult;
   const currency = org.baseCurrency;
   const pageView = paginationView(page, creditNotesTotal, pageSize);
   const creditNotesHrefFilters = {

@@ -65,7 +65,12 @@ export default async function SupplierBillsPage({
   const orderBy =
     sort === "due" ? { dueAt: "asc" as const } : { issuedAt: "desc" as const };
 
-  const [total, bills, outstandingRows, overdueCount] = await Promise.all([
+  const totalOutstandingQuery = prisma.$queryRaw<{ totalOutstanding: number }[]>`
+    SELECT COALESCE(SUM(CASE WHEN "totalAmount" > "paidAmount" THEN "totalAmount" - "paidAmount" ELSE 0 END), 0) AS "totalOutstanding"
+    FROM "SupplierBill" WHERE "orgId" = ${orgId} AND "status" <> 'CANCELLED'
+  `;
+
+  const [total, bills, overdueCount] = await Promise.all([
     prisma.supplierBill.count({ where }).catch(() => 0),
     prisma.supplierBill.findMany({
       where,
@@ -78,17 +83,10 @@ export default async function SupplierBillsPage({
       skip: (page - 1) * pageSize,
       take: pageSize,
     }).catch(() => []),
-    // Outstanding is a per-row Math.max sum (not SQL-aggregatable); keep a slim
-    // whole-dataset fetch so the KPI stays correct after the list is paginated.
-    prisma.supplierBill.findMany({
-      where: { orgId, status: { not: "CANCELLED" } },
-      select: { totalAmount: true, paidAmount: true },
-    }).catch(() => [] as { totalAmount: number; paidAmount: number }[]),
     prisma.supplierBill.count({ where: { orgId, dueAt: { lt: now }, status: { notIn: ["PAID", "CANCELLED"] } } }).catch(() => 0),
   ]);
 
-  const totalOutstanding = outstandingRows
-    .reduce((sum, bill) => sum + Math.max(0, bill.totalAmount - bill.paidAmount), 0);
+  const [{ totalOutstanding }] = await totalOutstandingQuery;
 
   const pageView = paginationView(page, total, pageSize);
   const billsHrefFilters = {

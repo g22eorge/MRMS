@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-
-import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { enqueueEmailMessage, enqueueWhatsAppMessage, deliverOutboundMessage } from "@/lib/notifications/whatsapp-outbox";
@@ -24,6 +22,12 @@ import { enqueueEmailMessage, enqueueWhatsAppMessage, deliverOutboundMessage } f
  * named in the response rather than being silently marked sent, which would
  * tell the operator a customer had been contacted when nobody had.
  */
+
+async function getPrisma() {
+  const { prisma } = await import("@/lib/prisma");
+  return prisma;
+}
+
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { user, orgId, org } = await requireOrgSession();
@@ -33,6 +37,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const prisma = await getPrisma();
   const campaign = await prisma.campaign.findFirst({
     where: { id, orgId },
     select: { id: true, name: true, type: true, subject: true, body: true, status: true },

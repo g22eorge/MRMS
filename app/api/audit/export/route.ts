@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-
-import { prisma } from "@/lib/prisma";
 import { getCurrentUserRoleOptional } from "@/lib/session";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
+
+async function getPrisma() {
+  const { prisma } = await import("@/lib/prisma");
+  return prisma;
+}
 
 function csvEscape(value: unknown) {
   const raw = value === null || value === undefined ? "" : String(value);
@@ -38,6 +41,7 @@ export async function GET(req: NextRequest) {
     orgId = user.orgId;
   }
 
+  const prisma = await getPrisma();
   const events = await prisma.systemAuditEvent
     .findMany({
       where: {

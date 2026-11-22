@@ -112,7 +112,7 @@ export function DocumentFilterBar({
           name="q"
           defaultValue={q}
           placeholder={searchPlaceholder}
-          className="min-w-[160px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-1 focus:ring-[var(--accent)]/20"
+          className="min-w-[120px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-sm outline-none transition focus:border-[var(--accent)]/50 focus:ring-1 focus:ring-[var(--accent)]/20"
         />
         <PeriodFilterChips active={period} options={periodOptions} style="button" />
         {children}
@@ -135,7 +135,7 @@ export function DocumentFilterBar({
     <div className="flex flex-wrap items-center gap-2">
       <PeriodFilterChips active={period} options={periodOptions} buildHref={buildHref} />
       {children}
-      <form method="GET" className="flex min-w-[180px] flex-1 gap-2">
+      <form method="GET" className="flex min-w-[140px] flex-1 gap-2">
         {Object.entries(extraQuery).map(([key, value]) =>
           value && value !== "all" ? <input key={key} type="hidden" name={key} value={value} /> : null,
         )}

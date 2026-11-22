@@ -1,5 +1,5 @@
 import { getAuditRetentionDays } from "@/lib/commercial/audit-retention";
-import { tableExists } from "@/lib/db/introspect";
+import { tableExists } from "@/lib/db-introspect";
 import { prisma } from "@/lib/prisma";
 
 export const PLATFORM_CRON_ENDPOINTS = [
@@ -9,9 +9,6 @@ export const PLATFORM_CRON_ENDPOINTS = [
 ] as const;
 
 export async function platformTableExists(name: string) {
-  // sqlite_master does not exist on PostgreSQL, where this query threw and the
-  // catch below reported every table as missing — a health check that fails
-  // safe into saying the system is broken is worse than no health check.
   return tableExists(name);
 }
 

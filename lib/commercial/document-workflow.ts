@@ -1,11 +1,14 @@
-import type { Prisma } from "@prisma/client";
+import type { TxClient } from "@/lib/prisma";
 
 import { postSalePayment } from "@/lib/accounting/post";
 import { getOrgNumberConfig, composeUniversalNumber } from "@/lib/commercial/org-number";
 import { roundMoney, toBaseAmount } from "@/lib/currency";
 
-type Tx = Prisma.TransactionClient;
+type Tx = TxClient;
 type CountModel = "quotation" | "invoice" | "deliveryNote" | "receipt" | "creditNote" | "complaint";
+
+/** How far nextDocumentNumber will walk past numbers that are already taken. */
+const MAX_NUMBER_ATTEMPTS = 25;
 
 /**
  * Allocate the next org-scoped, org-tagged document number in the universal
@@ -27,11 +30,21 @@ export async function nextDocumentNumber(tx: Tx, type: string, countModel: Count
   // for fresh orgs and cold serverless instances.
   const { prefix, pad } = await getOrgNumberConfig(orgId, tx);
 
-  // The sequence is unique per (orgId, type, year, month). The upsert's
-  // increment guarantees distinct values even under concurrency. The collision
-  // check (documentNumberTaken) is only needed for manual/preferred numbers.
-  // Reduce retries from 25→3: 25 caused 50+ round-trips and transaction timeouts.
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  // The sequence is unique per (orgId, type, year, month), and the upsert's
+  // increment keeps concurrent callers apart. It does not keep the counter
+  // ahead of numbers that reached the tables some other way: jobs imported
+  // with their numbers already stamped arrived without their DocumentSequence
+  // rows, which left November's INV counter at 2 with 0003 and 0004 in use.
+  // The loop used to check for a collision on the first attempt only and hand
+  // back the second candidate unchecked, so the first invoice generated for a
+  // job after that failed on the unique index, and kept failing: the
+  // transaction rolled the counter back with everything else.
+  //
+  // So every candidate is checked, and the loop walks the counter past
+  // whatever is taken — the same shape as nextUniversalNumber. The old limit
+  // of 3 dated from Turso, where each round trip was a network hop inside a
+  // single-connection transaction; here it is two indexed lookups.
+  for (let attempt = 0; attempt < MAX_NUMBER_ATTEMPTS; attempt += 1) {
     let candidate: string;
     try {
       const seq = await tx.documentSequence.upsert({
@@ -44,12 +57,10 @@ export async function nextDocumentNumber(tx: Tx, type: string, countModel: Count
     } catch (error) {
       // Lost a concurrent upsert race on a fresh month row — the winner's
       // row exists now, so retrying lands on the update path.
-      if (error instanceof Error && "code" in error && (error as { code?: string }).code === "P2002" && attempt < 2) continue;
+      if (error instanceof Error && "code" in error && (error as { code?: string }).code === "P2002" && attempt < MAX_NUMBER_ATTEMPTS - 1) continue;
       throw error;
     }
-    // Only check for collision on the first attempt (preferred number case).
-    // The upsert's atomic increment already guarantees uniqueness for auto numbers.
-    if (attempt === 0 && await documentNumberTaken(tx, countModel, candidate)) continue;
+    if (await documentNumberTaken(tx, countModel, candidate)) continue;
     return candidate;
   }
   throw new Error(`Could not allocate a unique ${type} number for this organisation.`);
@@ -67,7 +78,12 @@ async function documentNumberTaken(tx: Tx, countModel: CountModel, value: string
         (await tx.job.findFirst({ where: { quotationNumber: value }, select: { id: true } })),
       );
     case "invoice":
-      return Boolean(await tx.invoice.findFirst({ where: { invoiceNumber: value }, select: { id: true } }));
+      // Same reason as quotations: Job.invoiceNumber is unique in its own
+      // right, and a job can hold a number that no Invoice row carries.
+      return Boolean(
+        (await tx.invoice.findFirst({ where: { invoiceNumber: value }, select: { id: true } })) ??
+        (await tx.job.findFirst({ where: { invoiceNumber: value }, select: { id: true } })),
+      );
     case "deliveryNote":
       return Boolean(await tx.deliveryNote.findFirst({ where: { deliveryNoteNumber: value }, select: { id: true } }));
     case "creditNote":
@@ -181,9 +197,10 @@ export async function ensureInvoiceFromQuotation(tx: Tx, params: { orgId: string
   });
   if (!quotation) return null;
 
-  // Only client-facing quotes convert: drafts, rejections and expired offers
-  // must not become invoices behind the UI's back.
-  if (!["SENT", "ACCEPTED"].includes(quotation.status)) return null;
+  // Convertible at any time: the client approves and the quote becomes an
+  // invoice, however old the quote is or whether it ever expired in status
+  // along the way. Only an explicitly voided quote is terminal.
+  if (quotation.status === "VOID") return null;
 
   if (quotation.convertedToInvoiceId) {
     const existing = await tx.invoice.findFirst({ where: { id: quotation.convertedToInvoiceId, orgId: params.orgId } });

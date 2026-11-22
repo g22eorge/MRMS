@@ -10,6 +10,7 @@ import { PortalHeader } from "@/components/portal/PortalHeader";
 import { approveQuotationAction, postRepairMessageAction } from "./actions";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { ShareButton } from "@/components/shared/ShareButton";
 export const dynamic = "force-dynamic";
 
 // Customer-facing repair steps (internal workshop sub-states are collapsed).
@@ -167,6 +168,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
             <a href={`/api/portal/assessment/${job.id}`} target="_blank" rel="noopener" className="btn-premium rounded-lg px-3 py-1.5 text-[0.75rem] font-semibold text-white">
               ↓ Download PDF
             </a>
+            <ShareButton url={`/api/portal/assessment/${job.id}`} />
           </div>
           <p className="text-[0.8125rem] text-[var(--ink)]">{reports[0].summary}</p>
           <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">Download the PDF for the full findings, recommended work, cost and warranty details.</p>
@@ -202,6 +204,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
                 <span className="font-semibold tabular-nums text-[var(--ink)]">{formatMoney(q.totalAmount, q.currency)}</span>
                 <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-bold ${q.status === "ACCEPTED" ? "bg-emerald-500/15 text-emerald-600" : q.status === "REJECTED" ? "bg-red-500/15 text-red-500" : "bg-[var(--panel-strong)] text-[var(--ink-muted)]"}`}>{q.status}</span>
                 <a href={`/api/portal/quotation/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">↓ PDF</a>
+                <ShareButton url={`/api/portal/quotation/${job.id}`} />
                 {q.status === "SENT" ? (
                   <form action={approveQuotationAction}>
                     <input type="hidden" name="quotationId" value={q.id} />
@@ -223,6 +226,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Billing</p>
             <a href={`/api/portal/invoice/${job.id}`} target="_blank" rel="noopener" className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--accent)] hover:bg-[var(--panel-strong)]">↓ Invoice</a>
+            <ShareButton url={`/api/portal/invoice/${job.id}`} />
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div><p className="text-[0.9375rem] font-bold tabular-nums text-[var(--ink)]">{formatMoney(invoice.totalAmount, invoice.currency)}</p><p className="text-[0.6875rem] text-[var(--ink-muted)]">Total</p></div>
@@ -237,6 +241,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
                   <li key={p.id} className="flex items-center justify-between text-[0.75rem]">
                     <span className="text-[var(--ink-muted)]">{fmtDate(p.receivedAt)} · {formatMoney(p.amount, p.currency)}</span>
                     <a href={`/api/portal/receipt/${p.id}`} target="_blank" rel="noopener" className="font-semibold text-[var(--accent)] hover:underline">↓ Receipt</a>
+                    <ShareButton url={`/api/portal/receipt/${p.id}`} />
                   </li>
                 ))}
               </ul>

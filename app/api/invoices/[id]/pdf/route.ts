@@ -16,8 +16,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  // `?inline=1` renders in the in-app preview iframe; default downloads.
-  const inline = _req.nextUrl.searchParams.get("inline") === "1";
+  // `?inline=0` forces download; default renders inline (mobile share options).
+  const inline = _req.nextUrl.searchParams.get("inline") !== "0";
   const { user, orgId } = await requireOrgSession();
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -84,6 +84,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const issuedAtDate = invoice.issuedAt ?? new Date();
   const dueDateVal = invoice.dueDate ?? new Date(issuedAtDate.getTime() + 14 * 86400000);
   const client = invoice.client;
+  const isPaid = invoice.status === "PAID";
+  const paidAmount = Number(invoice.paidAmount ?? 0);
+  const balanceDue = Math.max(Number(invoice.totalAmount) - paidAmount, 0);
 
   const element = createElement(InvoiceDoc as never, {
     companyName: branding.companyName,
@@ -125,6 +128,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     recommendation: "",
     notes: invoice.notes ?? "",
     status: invoice.status,
+    isPaid,
+    paymentMade: formatMoney(paidAmount, currency),
+    balanceDue: formatMoney(balanceDue, currency),
     currency,
     termsText: pickDocumentTerms(branding.termsText, invoice.jobId ? "REPAIR" : "SALE"),
     footerText: branding.footerText ?? "",

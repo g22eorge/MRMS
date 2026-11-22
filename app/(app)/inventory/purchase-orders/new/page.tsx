@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma, toClientSafe } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { NewPurchaseOrderForm } from "./NewPurchaseOrderForm";
@@ -42,7 +42,7 @@ export default async function NewPurchaseOrderPage({
       </div>
       <NewPurchaseOrderForm
         suppliers={suppliers}
-        parts={parts}
+        parts={toClientSafe(parts)}
         defaultSupplierId={supplierId}
         fastMode={fast === "1"}
       />

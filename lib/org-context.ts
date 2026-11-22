@@ -16,11 +16,15 @@ import { redirect } from "next/navigation";
 import { getAppCurrency, normalizeCurrency, parseSupportedCurrencies } from "@/lib/currency";
 import { getOrgAccess } from "@/lib/billing-access";
 import { PLATFORM_ROUTES } from "@/lib/platform/routes";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole, getCurrentUserRoleOptional } from "@/lib/session";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
 import { getDeploymentContext } from "@/lib/deployment-context";
 import { EIS_ORG_ID } from "@/lib/org";
+
+async function getPrisma() {
+  const { prisma } = await import("@/lib/prisma");
+  return prisma;
+}
 
 /** Use in server components and server actions that require a full org context. */
 export async function requireOrgSession() {
@@ -28,7 +32,14 @@ export async function requireOrgSession() {
   const deployment = await getDeploymentContext();
 
   if (deployment.mode === "CARE_SINGLE_TENANT") {
-    if (checkIsPlatformAdmin(user!.email)) {
+    // A platform admin who is also a member of the care organisation uses the
+    // app like any other member. This used to send every platform admin to the
+    // console unconditionally, on the assumption that one has no organisation.
+    // Care's own administrator is both: every app page bounced them back to
+    // /platform, including the console's own "← App" link, so the shop's admin
+    // could not open the shop. Only a platform admin from outside the care
+    // organisation belongs on the console here.
+    if (user!.orgId !== EIS_ORG_ID && checkIsPlatformAdmin(user!.email)) {
       redirect(PLATFORM_ROUTES.home);
     }
 
@@ -57,6 +68,7 @@ async function buildOrgSession(
   user: NonNullable<Awaited<ReturnType<typeof getCurrentUserRole>>["user"]>,
   orgId: string,
 ) {
+  const prisma = await getPrisma();
   const orgRow = await prisma.organization
     .findUnique({
       where: { id: orgId },

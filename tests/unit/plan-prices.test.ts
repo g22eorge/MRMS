@@ -242,7 +242,13 @@ describe("nothing quotes a price from its own copy", () => {
 
   it("the reconcile script's copy matches, since a .mjs cannot import the module", () => {
     // It is allowed to hold a copy; it is not allowed to disagree.
-    const src = read("scripts/billing-reconcile.mjs");
+    //
+    // The script moved to scripts/sqlite-archive/ with the Postgres migration:
+    // it opens a Turso connection and cannot run any more. The live path is
+    // app/api/admin/billing-reconcile/route.ts, which price-source-consistency
+    // covers. This case is kept pointed at the archive so the recorded prices
+    // stay honest — if the script is ever revived, it will not quote a stale one.
+    const src = read("scripts/sqlite-archive/billing-reconcile.mjs");
     const m = src.match(/const CHARGED = \{([^}]*)\}/);
     expect(m).not.toBeNull();
     const copied: Record<string, number> = {};

@@ -1,1 +1,0 @@
-ALTER TABLE "Sale" ADD COLUMN "name" TEXT;

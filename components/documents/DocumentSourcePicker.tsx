@@ -119,13 +119,16 @@ export function DocumentSourcePicker({
       const openUp = below < Math.min(LIST_MAX_HEIGHT, above);
       const available = openUp ? above : below;
       const maxHeight = Math.max(120, Math.min(LIST_MAX_HEIGHT, available));
+      const rightEdge = window.innerWidth - EDGE_MARGIN;
+      let left = r.left;
+      if (left + r.width > rightEdge) left = Math.max(EDGE_MARGIN, rightEdge - r.width);
       setPos({
         // Clamped like the row menu's Math.max(MARGIN, ...): when even the
         // 120px floor does not fit above the input, anchoring by the raw
         // subtraction would push the list's top edge past the top of the
         // window — the defect this cap exists to prevent, mirrored.
         top: Math.max(EDGE_MARGIN, openUp ? r.top - GAP - maxHeight : r.bottom + GAP),
-        left: r.left,
+        left,
         width: r.width,
         maxHeight,
       });

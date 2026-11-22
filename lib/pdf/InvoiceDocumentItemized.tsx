@@ -78,13 +78,19 @@ type Props = {
   companyTaxId?: string | null; companyLogoUrl?: string;
   documentTitle: string; quotationNumber: string; dateIssued: string; validUntil: string;
   repairId: string; preparedByName: string; preparedByRole: string;
-  clientName: string; clientPhone: string; clientEmail: string; clientOrganization: string;
+  clientName: string;   clientPhone: string;
+  clientEmail: string;
+  clientOrganization: string;
+  clientAddress?: string | null;
+  clientAccountNumber?: string | null;
   deviceType: string; deviceLabel: string; serialOrImei: string; accessories: string; physicalCondition: string;
   customerIssue: string; diagnosisSummary: string; scopeOfWork: string;
   repairCost: string; vatApplicable: boolean; vatLabel: string; vatAmount: string; totalAmountPayable: string;
   amountWords?: string | null;
   estimatedDuration: string; approvalStatus: string; recommendation: string; notes: string;
   status: string; currency: string; termsText: string; footerText: string;
+  paymentTerms?: string | null; dueDate?: string | null;
+  paymentTo?: string | null;
   signatureCompanyLabel: string; signatureClientLabel: string;
   invoiceNumber?: string;
   paymentMade?: string | null;
@@ -110,7 +116,8 @@ export function InvoiceDocumentItemized(props: Props) {
     props.companyTaxId ? `TIN: ${props.companyTaxId}` : "",
   ].filter(Boolean);
 
-  const clientLines = [props.clientOrganization, props.clientPhone, props.clientEmail].filter(Boolean);
+  const clientLines = [props.clientOrganization, props.clientAddress, props.clientPhone, props.clientEmail].filter(Boolean);
+  const accountLine = props.clientAccountNumber ? `Account No.: ${props.clientAccountNumber}` : null;
   const deviceLine = [props.deviceLabel, props.serialOrImei && `S/N ${props.serialOrImei}`].filter(Boolean).join("  ·  ");
 
   return (
@@ -147,6 +154,18 @@ export function InvoiceDocumentItemized(props: Props) {
               {props.balanceDue ?? (props.isPaid ? "—" : props.totalAmountPayable)}
             </Text>
           </View>
+          {props.paymentTerms ? (
+            <View style={s.cell}>
+              <Text style={s.cellLbl}>Payment terms</Text>
+              <Text style={s.cellVal}>{props.paymentTerms}</Text>
+            </View>
+          ) : null}
+          {props.dueDate ? (
+            <View style={s.cellLast}>
+              <Text style={s.cellLbl}>Due date</Text>
+              <Text style={s.cellVal}>{props.dueDate}</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={s.parties}>
@@ -154,6 +173,7 @@ export function InvoiceDocumentItemized(props: Props) {
             <Text style={s.partyLbl}>Billed to</Text>
             <Text style={s.partyName}>{props.clientName}</Text>
             {clientLines.map((l, i) => <Text key={i} style={s.partyLine}>{l}</Text>)}
+            {accountLine ? <Text style={s.partyLine}>{accountLine}</Text> : null}
           </View>
           <View style={s.party}>
             <Text style={s.partyLbl}>{deviceLine ? "Equipment" : "Reference"}</Text>
@@ -209,6 +229,18 @@ export function InvoiceDocumentItemized(props: Props) {
             <View style={s.footCol}>
               <Text style={s.footLbl}>Terms &amp; conditions</Text>
               <Text style={s.footText}>{props.termsText}</Text>
+            </View>
+          ) : null}
+          {props.paymentTo ? (
+            <View style={s.footCol}>
+              <Text style={s.footLbl}>Payment To</Text>
+              {props.paymentTo.split(/\n\s*\n/).map((block, bi) => (
+                <View key={bi} style={bi > 0 ? { marginTop: 4 } : {}}>
+                  {block.split("\n").map((line, i) => (
+                    <Text key={i} style={s.footText}>{line.trim()}</Text>
+                  ))}
+                </View>
+              ))}
             </View>
           ) : null}
           <View style={s.footCol}>

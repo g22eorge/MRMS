@@ -11,6 +11,7 @@ type ClientProfile = {
   email: string | null;
   organization: string | null;
   address: string | null;
+  accountNumber: string | null;
   notes: string | null;
 };
 
@@ -72,6 +73,7 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
           <ViewRow label="Organization" value={client.organization} />
           <div className="md:col-span-2">
             <ViewRow label="Address / location" value={client.address} />
+          <ViewRow label="Account number" value={client.accountNumber} />
           </div>
           <div className="md:col-span-2">
             <ViewRow label="Internal notes" value={client.notes} />
@@ -120,6 +122,11 @@ export function ClientProfileCard({ client, canEdit, action }: Props) {
         <label className="space-y-1 md:col-span-2">
           <span className="text-xs font-medium text-[var(--ink-muted)]">Address / location</span>
           <input name="address" defaultValue={client.address ?? ""} className={controlClass} />
+        </label>
+
+        <label className="space-y-1 md:col-span-2">
+          <span className="text-xs font-medium text-[var(--ink-muted)]">Account number</span>
+          <input name="accountNumber" defaultValue={client.accountNumber ?? ""} className={controlClass} />
         </label>
 
         <label className="space-y-1 md:col-span-2">

@@ -1353,7 +1353,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
         </dl>
 
         {/* Share button */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <StatusShareButton jobNumber={job.jobNumber} />
         </div>
       </div>
@@ -2967,7 +2967,7 @@ function StatusShareButton({ jobNumber, compact = false }: { jobNumber: string; 
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         <span>Share Status</span>
       </summary>
-      <div className="dc-card absolute left-0 z-20 mt-2 w-52 overflow-hidden">
+      <div className="dc-card absolute left-0 z-20 mt-2 max-w-[calc(100vw-1rem)] w-52 overflow-hidden">
         <div className="p-3 space-y-2">
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Client status link</p>
           <p className="break-all rounded bg-[var(--panel-strong)] px-2 py-1.5 mono text-[0.75rem] text-[var(--ink-muted)]">

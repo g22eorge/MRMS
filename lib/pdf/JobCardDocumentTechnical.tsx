@@ -87,6 +87,7 @@ type Props = {
   companyContacts: string; companyEmail?: string; companyWebsite?: string; companyLogoUrl?: string;
   documentNumber: string; dateIssued: string; repairId: string; preparedByName: string; preparedByRole: string;
   clientName: string; clientPhone: string; clientEmail: string; clientOrganization: string;
+  clientAddress?: string | null; clientAccountNumber?: string | null;
   deviceType: string; deviceLabel: string; serialOrImei: string; accessories: string; physicalCondition: string;
   customerIssue: string; diagnosisSummary: string; partsNeeded: string; technicianNotes: string;
   status: string; footerText: string; signatureCompanyLabel: string; signatureClientLabel: string;
