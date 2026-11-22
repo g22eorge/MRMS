@@ -854,8 +854,9 @@ async function runMissingOnly(order, present) {
           // target gave its number to something else.
           // The numbered column is the one shaped like TAG/.../NNN; any other
           // column of the constraint (orgId) is the scope it is unique within.
-          const at = values.findIndex((v) => typeof v === "string" && /^.*\/\d+$/.test(v));
-          const series = at >= 0 ? values[at].match(/^(.*\/)(\d+)$/) : null;
+          // Either separator: TAG/TYPE/YYYY/MM/NNN, or the older REQ-YYYY-NNNN.
+          const at = values.findIndex((v) => typeof v === "string" && /^.*[/-]\d+$/.test(v));
+          const series = at >= 0 ? values[at].match(/^(.*[/-])(\d+)$/) : null;
           const scope = cols.map((name, i) => [name, values[i]]).filter((_, i) => i !== at);
           if (clash.length && series && renumberIds.has(String(row.id))) {
             const [, prefix, digits] = series;
