@@ -161,12 +161,37 @@ Run Data Heal afterwards so the document counters catch up. The policy is in
 
 ## Releasing a change
 
+**In production, a push to `main` is the release.** `.github/workflows/deploy.yml`
+does the rest, and nothing is built on the server:
+
+1. Quality gate on GitHub's runner: typecheck, lint, unit tests against a
+   throwaway Postgres, production build.
+2. One image per service (`app`, `worker`, `scheduler`, `migrate`, `backup`)
+   built on GitHub's runners and pushed to GHCR as
+   `ghcr.io/<owner>/mrms-<service>:<commit sha>`.
+3. Copy `docker-compose.yml`, a `.env` written from the `ENV_CI` secret, and the
+   backup and proxy scripts to `DEPLOY_PATH` (default `/var/www/mrms`). The
+   server holds those files, not a checkout of the repository. Then over SSH:
+   `docker compose pull`, `docker compose up -d --no-build`, wait for the
+   containers to report healthy, and `prisma migrate status`.
+
+It takes about 12 minutes and the site answers 502 briefly while `app`
+restarts. `feat/postgres-docker-migration` is still in the trigger alongside
+`main`; deploys from every branch share one concurrency group, so two never
+run against the server at once. `workflow_dispatch` re-runs it by hand. The
+secrets it needs are listed at the top of the workflow file.
+
+There is no staging environment between a push and production. Verify before
+pushing.
+
+On a server that builds for itself, without the workflow, the equivalent is:
+
 ```bash
 git pull
 docker compose up -d --build
 ```
 
-`migrate` runs first and `app` only starts if it succeeds, so a failed migration
+Either way, `migrate` runs first and `app` only starts if it succeeds, so a failed migration
 leaves the previous container serving rather than starting a new one against a
 schema it does not match. Prisma takes a Postgres advisory lock while migrating,
 so concurrent replicas serialise instead of racing.
@@ -244,29 +269,27 @@ docker compose ps                                  # STATUS column shows (health
 docker inspect --format '{{.State.Health.Status}}' mrms-app-1
 ```
 
-## Validating on the shared VPS before a domain is ready
+## Validating on a server before a domain is ready
 
-Until a hostname is sorted, test the migration branch at the server's
+This is how the stack was proven on the shared VPS before the cutover, and how
+to prove it on a new server. Production no longer runs this way: the domains
+point at the server and `main` deploys to it (see "Releasing a change").
+
+Until a hostname is sorted, test at the server's
 `http://<server-ip>:<APP_PORT>` directly — the base `docker-compose.yml`
-already publishes `APP_PORT` to the host, so no Traefik/domain setup is
+already publishes `APP_PORT` to the host, so no proxy or domain setup is
 needed for this phase. Set `NEXT_PUBLIC_APP_URL`/`BETTER_AUTH_URL` to that
 `http://` address (not `https://` — there's no TLS yet, and BetterAuth reads
 the scheme off this URL to decide the cookie's `Secure` flag, so `https` here
 would break login over plain HTTP).
 
-`.github/workflows/deploy-migration-staging.yml` automates this: on push to
-`feat/postgres-docker-migration` (or manually via `workflow_dispatch`), it
-runs the quality gate, then SSHes into the server and runs the same
-`git pull && docker compose up -d --build` from "Releasing a change" below.
-It never touches `main`, and builds happen on the server itself rather than
-in CI + a registry (simplest for infrequent validation deploys — revisit if
-that build load starts competing with eaglestays on deploys, given the
-capacity note below). See the workflow file for the one-time manual setup
-(git clone on the server, `.env`, and the GitHub repo secrets it needs).
+The same `.github/workflows/deploy.yml` serves this phase: point its
+`SERVER_*` secrets and `ENV_CI` at the new server and push, or run it with
+`workflow_dispatch`. It builds on GitHub's runners and the server only pulls,
+so a validation deploy does not compete with other sites on the box for CPU.
 
-Once a hostname is ready, move to `docker-compose.shared-edge.yml` below —
-that's the point at which the shared Traefik proxy and a real domain take
-over from the raw `IP:PORT`.
+Once a hostname is ready, put a proxy in front (next section) — that's the
+point at which TLS and a real domain take over from the raw `IP:PORT`.
 
 ## Sharing a server with another site
 
@@ -290,10 +313,9 @@ This drops `app`'s host-port publish (Traefik reaches it over the `edge`
 network instead, so nothing on the box competes for a host port) and adds the
 Traefik router labels, keyed off `MRMS_HOSTNAME` in `.env`.
 
-**Validating the migration before it takes over the real domains.** Set
+**Validating a new stack before it takes over real domains.** Set
 `MRMS_HOSTNAME` to a staging subdomain first, not `care.`/`app.eagleinfosolutions.com`
-— those still point at the current production (Vercel) until this stack is
-confirmed. Also add the staging hostname to `BETTER_AUTH_TRUSTED_ORIGINS` in
+— those are live production. Also add the staging hostname to `BETTER_AUTH_TRUSTED_ORIGINS` in
 `.env` (comma-separated) so BetterAuth accepts it. Cutting over later is just
 changing `MRMS_HOSTNAME` to the real domain, updating DNS, and restarting the
 `app` service to pick up the new Traefik label — the same running stack and
