@@ -2,7 +2,7 @@
 
 This file is the operating guide for AI agents and developers working in this repo. It describes the current system, the desired production behavior, and the checks to run when troubleshooting reliability, security, tenant isolation, and performance.
 
-Last updated: 2026-08-24 (migrated from SQLite/Turso to PostgreSQL; deployment is Docker on a VPS).
+Last updated: 2026-11-22 (cutover complete: `main` deploys to the VPS; Vercel is paused and disconnected).
 
 ## Current System State
 
@@ -35,6 +35,15 @@ Schema changes reach a database exactly one way: `prisma migrate deploy`.
 The owner's current workflow is:
 
 - `main` is priority production work.
+- **Pushing `main` deploys to production.** `.github/workflows/deploy.yml` runs
+  the quality gate, builds the images and restarts the stack on the VPS; it
+  takes about 12 minutes and the site returns 502 briefly while it restarts.
+  There is no staging step in between, so verify before you push.
+- `feat/postgres-docker-migration` was merged into `main` on 2026-11-22. It is
+  still in the deploy trigger, so a push there deploys too. Do new work on
+  `main`.
+- Vercel no longer serves anything: both projects are paused and their Git
+  links removed. See the status section of `docs/cutover-runbook.md`.
 - Commit and push `main` after verified fixes.
 - `commercial` should be synced/committed locally after main, but do not push it unless the owner explicitly asks or the agreed "after 10 pushes to main" rule is reached.
 - Do not push `commercial` by habit.

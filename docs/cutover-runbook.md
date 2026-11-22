@@ -1,6 +1,46 @@
 # Production cutover: SQLite/Turso → Postgres on Docker
 
-## Status (2026-10-26)
+## Status (2026-11-22): cutover complete
+
+Production is PostgreSQL in Docker on the VPS. **`main` deploys to the
+server.** The rest of this document is the record of how it got there; the
+steps below are done unless listed under "Still open".
+
+- `care.eagleinfosolutions.com` and `app.eagleinfosolutions.com` resolve to
+  `141.136.44.99` and are served by this stack behind the shared nginx. One
+  process answers both hosts; the `app-commercial` profile is not running.
+- `feat/postgres-docker-migration` was merged into `main` on 2026-11-22
+  (`dba82817`). `.github/workflows/deploy.yml` triggers on `main` (and still on
+  the migration branch): quality gate, five images to GHCR tagged by commit,
+  then `compose pull` + `compose up -d` on the server. Deploys from every
+  branch share one concurrency group.
+- Vercel: projects `mrms` and `mrms-apga` are **paused** (every `vercel.app`
+  address returns 503 `DEPLOYMENT_PAUSED`) and their Git links are removed, so
+  a push no longer builds there. Both are reversible from the Vercel dashboard:
+  unpause, and reconnect `g22eorge/MRMS` under Settings → Git with production
+  branch `main` (`mrms`) or `commercial` (`mrms-apga`).
+- Data: live was loaded from the 2026-10-26 dump and then used. The old Turso
+  database `eagle-prod-merged` kept taking writes until 2026-11-18; a dump
+  taken 2026-11-21 was reconciled into live with
+  `scripts/pg/import.mjs --missing-only` (see "Adding records the old database
+  took after the import" in `docs/deployment.md`). Turso has had no writes
+  since that dump.
+
+### Still open
+
+- Turso `eagle-prod-merged` still exists and is writable by anything holding
+  its credentials. Keep it about seven days from 2026-11-22, then retire it.
+- WhatsApp: the business number is not registered with Meta (error 133010);
+  `WHATSAPP_WEBHOOK_APP_SECRET`, Resend and Pesapal are unset in `ENV_CI`.
+- The restore drill in `docs/deployment.md` has not been run on the server.
+- `upgrade-insecure-requests` has not been restored in the CSP.
+- `.github/workflows/build-mrms-app.yml` (from `main`, pre-merge) builds a
+  second copy of the app image on every push. The server does not use it.
+- `commercial` has not been synced with `main`.
+- The server holds an old-system dump in `/tmp` and pre-import backups in
+  `/root`; remove them once the reconciliation is accepted.
+
+## Status as of 2026-10-26 (historical)
 
 The Docker stack is live on the shared Eagle Stays VPS. Today's dump is in
 Postgres. **Users still hit Vercel + Turso.** Do not treat
@@ -143,7 +183,11 @@ then SSHes in and runs `compose pull` + `compose up -d --no-build`.
 
 ## Order of operations, and why
 
-`main` still deploys to Vercel (projects `mrms` and `mrms-apga`) on every push.
+*Historical: this was followed, and step 7 landed on 2026-11-22. `main` no
+longer deploys to Vercel.*
+
+At the time of writing, `main` deployed to Vercel (projects `mrms` and
+`mrms-apga`) on every push.
 So the branch is deployed and proven first, and `main` is merged **last**:
 
 1. Deploy `feat/postgres-docker-migration` to the server on its own port.
@@ -322,6 +366,12 @@ whole window.
   devDependencies.
 
 ## Rollback
+
+*As of 2026-11-22 the switch has happened and `main` is merged, so only the
+second paragraph applies. The old deployment is paused, not deleted, and it runs
+pre-merge code against Turso: bringing it back means unpausing the Vercel
+projects, pointing DNS back, and accepting the loss of everything written to
+Postgres since 2026-10-26.*
 
 Before step 11 nothing has changed for users: lift the freeze on the old
 deployment. `main` has not been merged, so Vercel is still serving the code it
