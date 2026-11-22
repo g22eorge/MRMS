@@ -852,28 +852,36 @@ async function runMissingOnly(order, present) {
           // --renumber=<id>: a person has decided this document should come
           // across under the next free number of its own series, because the
           // target gave its number to something else.
-          const series = cols.length === 1 && typeof values[0] === "string" ? values[0].match(/^(.*\/)(\d+)$/) : null;
+          // The numbered column is the one shaped like TAG/.../NNN; any other
+          // column of the constraint (orgId) is the scope it is unique within.
+          const at = values.findIndex((v) => typeof v === "string" && /^.*\/\d+$/.test(v));
+          const series = at >= 0 ? values[at].match(/^(.*\/)(\d+)$/) : null;
+          const scope = cols.map((name, i) => [name, values[i]]).filter((_, i) => i !== at);
           if (clash.length && series && renumberIds.has(String(row.id))) {
             const [, prefix, digits] = series;
             // Everywhere the number can live: this column, and any copy of it
             // another table carries (a job's stamp of its invoice number).
-            const holders = [[m.table, cols[0]]];
+            const holders = [[m.table, cols[at]]];
             for (const [key, rule] of Object.entries(stamped)) {
-              if (rule?.table === m.table && rule.column === cols[0]) holders.push(key.split("."));
+              if (rule?.table === m.table && rule.column === cols[at]) holders.push(key.split("."));
             }
             let highest = 0;
             for (const [table, column] of holders) {
+              // The scope applies to the table that owns the constraint only.
+              const scoped = table === m.table ? scope : [];
               const found = await tx.$queryRawUnsafe(
-                `SELECT COALESCE(MAX(substring(${q(column)} from '[0-9]+$')::int), 0) AS n FROM ${q(table)} WHERE starts_with(${q(column)}, $1)`,
+                `SELECT COALESCE(MAX(substring(${q(column)} from '[0-9]+$')::int), 0) AS n FROM ${q(table)} WHERE starts_with(${q(column)}, $1)` +
+                  scoped.map(([name], i) => ` AND ${q(name)} = $${i + 2}`).join(""),
                 prefix,
+                ...scoped.map(([, value]) => value),
               );
               highest = Math.max(highest, Number(found[0].n));
             }
             const next = `${prefix}${String(highest + 1).padStart(digits.length, "0")}`;
-            renumberedHere.push(`${m.table} ${row.id}: ${cols[0]} "${values[0]}" -> "${next}" (the target gave "${values[0]}" to ${clash[0].id})`);
-            data[fieldOf(cols[0])] = next;
+            renumberedHere.push(`${m.table} ${row.id}: ${cols[at]} "${values[at]}" -> "${next}" (the target gave "${values[at]}" to ${clash[0].id})`);
+            data[fieldOf(cols[at])] = next;
             if (columns.some((c) => c.name === "notes") && !data[fieldOf("notes")]) {
-              data[fieldOf("notes")] = `Previously numbered ${values[0]}.`;
+              data[fieldOf("notes")] = `Previously numbered ${values[at]}.`;
             }
             clash = [];
           }
