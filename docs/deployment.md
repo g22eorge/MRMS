@@ -134,6 +134,12 @@ A client the target already holds under another id (same phone number in the
 same organisation) is not written; the incoming jobs, devices, invoices and
 quotations are attached to the target's client, and the report lists each one.
 
+A document skipped because the target gave its number to something else can be
+brought across under the next free number of its own series: add
+`--renumber=<id>,<id>` with the ids from the report (an invoice and its receipt,
+say). Only the listed rows are renumbered, the old number is kept in the row's
+notes, and Data Heal must be run afterwards to move the counter past it.
+
 It reports, and leaves for a person:
 
 - records whose number the target has already given to something else;

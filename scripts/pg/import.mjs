@@ -13,7 +13,7 @@
  *   --resolve-duplicates  apply the duplicate policies in import-map.json
  *   --truncate    empty the target tables first (required for a clean re-run)
  *   --batch=N     rows per insert (default 500)
- *   --missing-only --created-after=<ISO date> [--dry-run]
+ *   --missing-only --created-after=<ISO date> [--dry-run] [--renumber=<id>,<id>]
  *                 add the records the target lacks, to a database that is in
  *                 use; never updates or deletes. See "Missing-only" below.
  *
@@ -36,6 +36,9 @@ const truncate = args.includes("--truncate");
 const batchSize = Number(args.find((a) => a.startsWith("--batch="))?.split("=")[1] ?? 500);
 const missingOnly = args.includes("--missing-only");
 const dryRun = args.includes("--dry-run");
+const renumberIds = new Set(
+  (args.find((a) => a.startsWith("--renumber="))?.split("=")[1] ?? "").split(",").map((v) => v.trim()).filter(Boolean),
+);
 const createdAfterArg = args.find((a) => a.startsWith("--created-after="))?.split("=")[1];
 if (missingOnly && truncate) {
   console.error("import: --missing-only and --truncate are opposites; pass one");
@@ -660,7 +663,7 @@ async function runMissingOnly(order, present) {
 
   console.log(`\n  missing-only: records created after ${cutoff.toISOString()}${dryRun ? "   (DRY RUN — nothing will be kept)" : ""}`);
 
-  const report = { written: [], skipped: [], linked: [], nulled: [], edited: [], absentOlder: [], ignoredTables: [] };
+  const report = { written: [], skipped: [], linked: [], renumbered: [], nulled: [], edited: [], absentOlder: [], ignoredTables: [] };
   /** table -> Map(source id -> id of the row the target already holds for it) */
   const aliases = new Map();
   /** table -> Set of ids written in this run */
@@ -785,6 +788,7 @@ async function runMissingOnly(order, present) {
         const data = {};
         // Reported only if the row is written; a skipped row cleared nothing.
         const nulledHere = [];
+        const renumberedHere = [];
         const override = tableOverrides?.get(String(row.id));
         for (const c of columns) {
           data[c.field] = override && c.field in override
@@ -844,7 +848,35 @@ async function runMissingOnly(order, present) {
           const values = cols.map((name) => data[fieldOf(name)]);
           if (values.some((v) => v == null)) continue;
           const where = cols.map((name, i) => `${q(name)} = $${i + 1}`).join(" AND ");
-          const clash = await tx.$queryRawUnsafe(`SELECT "id" FROM ${q(m.table)} WHERE ${where} LIMIT 1`, ...values);
+          let clash = await tx.$queryRawUnsafe(`SELECT "id" FROM ${q(m.table)} WHERE ${where} LIMIT 1`, ...values);
+          // --renumber=<id>: a person has decided this document should come
+          // across under the next free number of its own series, because the
+          // target gave its number to something else.
+          const series = cols.length === 1 && typeof values[0] === "string" ? values[0].match(/^(.*\/)(\d+)$/) : null;
+          if (clash.length && series && renumberIds.has(String(row.id))) {
+            const [, prefix, digits] = series;
+            // Everywhere the number can live: this column, and any copy of it
+            // another table carries (a job's stamp of its invoice number).
+            const holders = [[m.table, cols[0]]];
+            for (const [key, rule] of Object.entries(stamped)) {
+              if (rule?.table === m.table && rule.column === cols[0]) holders.push(key.split("."));
+            }
+            let highest = 0;
+            for (const [table, column] of holders) {
+              const found = await tx.$queryRawUnsafe(
+                `SELECT COALESCE(MAX(substring(${q(column)} from '[0-9]+$')::int), 0) AS n FROM ${q(table)} WHERE starts_with(${q(column)}, $1)`,
+                prefix,
+              );
+              highest = Math.max(highest, Number(found[0].n));
+            }
+            const next = `${prefix}${String(highest + 1).padStart(digits.length, "0")}`;
+            renumberedHere.push(`${m.table} ${row.id}: ${cols[0]} "${values[0]}" -> "${next}" (the target gave "${values[0]}" to ${clash[0].id})`);
+            data[fieldOf(cols[0])] = next;
+            if (columns.some((c) => c.name === "notes") && !data[fieldOf("notes")]) {
+              data[fieldOf("notes")] = `Previously numbered ${values[0]}.`;
+            }
+            clash = [];
+          }
           if (clash.length) {
             // Declared in `sameAs`: this unique value identifies the record
             // itself, so the target's row is the same one. Nothing is written
@@ -867,6 +899,7 @@ async function runMissingOnly(order, present) {
 
         await tx[m.delegate].create({ data });
         report.nulled.push(...nulledHere);
+        report.renumbered.push(...renumberedHere);
         if (!written.has(m.table)) written.set(m.table, new Set());
         written.get(m.table).add(String(row.id));
         allWritten.add(String(row.id));
@@ -907,6 +940,7 @@ async function runMissingOnly(order, present) {
   };
   section("skipped — decide by hand", report.skipped);
   section("already on the target under another id — not written, records attached to the target's copy", report.linked);
+  section("renumbered at your request (--renumber)", report.renumbered);
   section("values cleared on the rows written", report.nulled);
   section("on the source, absent from the target, but older than the cutoff — deleted there or never imported; NOT written", report.absentOlder);
   section("edited on the source after the cutoff — NOT touched, merge by hand", report.edited);
