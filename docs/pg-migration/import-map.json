@@ -139,6 +139,13 @@
       ]
     },
     "polymorphicNote": "These columns point at their owner without a foreign key, sometimes as `kind:id`. A row is treated as belonging to a record written in this run when the id part matches one.",
+    "sameAs": {
+      "Client": [
+        "orgId",
+        "phone"
+      ],
+      "why": "A client is identified by phone number within an organisation; the datamodel makes the pair unique. When a client was entered on both systems after the cutoff, the two rows are the same customer under different ids. The incoming row is not written and the target's row is not changed; jobs, devices, invoices and quotations that pointed at the incoming row are attached to the target's. Without this an invoice arrives with no client and the customer's jobs are skipped."
+    },
     "stampedNumbers": {
       "Job.invoiceNumber": {
         "table": "Invoice",

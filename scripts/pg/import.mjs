@@ -645,6 +645,7 @@ async function runMissingOnly(order, present) {
   const never = new Set(policy.never?.tables ?? []);
   const polymorphic = policy.polymorphicOwners ?? {};
   const stamped = policy.stampedNumbers ?? {};
+  const sameAs = policy.sameAs ?? {};
   const cutoff = new Date(createdAfterArg);
 
   const resolutions = [
@@ -659,7 +660,9 @@ async function runMissingOnly(order, present) {
 
   console.log(`\n  missing-only: records created after ${cutoff.toISOString()}${dryRun ? "   (DRY RUN — nothing will be kept)" : ""}`);
 
-  const report = { written: [], skipped: [], nulled: [], edited: [], absentOlder: [], ignoredTables: [] };
+  const report = { written: [], skipped: [], linked: [], nulled: [], edited: [], absentOlder: [], ignoredTables: [] };
+  /** table -> Map(source id -> id of the row the target already holds for it) */
+  const aliases = new Map();
   /** table -> Set of ids written in this run */
   const written = new Map();
   const allWritten = new Set();
@@ -780,6 +783,8 @@ async function runMissingOnly(order, present) {
 
       rows: for (const row of candidates) {
         const data = {};
+        // Reported only if the row is written; a skipped row cleared nothing.
+        const nulledHere = [];
         const override = tableOverrides?.get(String(row.id));
         for (const c of columns) {
           data[c.field] = override && c.field in override
@@ -794,6 +799,13 @@ async function runMissingOnly(order, present) {
           const field = fieldOf(column);
           const value = data[field];
           if (value == null) continue;
+          // The parent was not written because the target already holds the
+          // same record under another id (`sameAs`): point at that one.
+          const alias = aliases.get(fk.targetTable)?.get(String(value));
+          if (alias) {
+            data[field] = alias;
+            continue;
+          }
           if (await exists(fk.targetTable, fk.targetColumns[0], value)) continue;
           const col = columns.find((c) => c.name === column);
           // Only where the database itself would have cleared the link had the
@@ -801,7 +813,7 @@ async function runMissingOnly(order, present) {
           // business existing without its parent, so it is skipped instead.
           if (col && !col.required && fk.onDelete === "SetNull") {
             data[field] = null;
-            report.nulled.push(`${m.table} ${label(row)}: ${column} -> NULL (no ${fk.targetTable} ${value} on target)`);
+            nulledHere.push(`${m.table} ${label(row)}: ${column} -> NULL (no ${fk.targetTable} ${value} on target)`);
             continue;
           }
           report.skipped.push(`${m.table} ${label(row)} — its ${fk.targetTable} (${value}) is not on the target`);
@@ -820,7 +832,7 @@ async function runMissingOnly(order, present) {
             data[field],
           );
           if (!holder.length || holder[0].owner === String(row.id)) continue;
-          report.nulled.push(
+          nulledHere.push(
             `${m.table} ${label(row)}: ${column} "${data[field]}" cleared — on the target that number belongs to ${rule.table} ${holder[0].id}`,
           );
           data[field] = null;
@@ -834,6 +846,18 @@ async function runMissingOnly(order, present) {
           const where = cols.map((name, i) => `${q(name)} = $${i + 1}`).join(" AND ");
           const clash = await tx.$queryRawUnsafe(`SELECT "id" FROM ${q(m.table)} WHERE ${where} LIMIT 1`, ...values);
           if (clash.length) {
+            // Declared in `sameAs`: this unique value identifies the record
+            // itself, so the target's row is the same one. Nothing is written
+            // or changed; rows that point here are attached to it instead.
+            const identity = sameAs[m.model];
+            if (Array.isArray(identity) && identity.length === cols.length && identity.every((name) => cols.includes(name))) {
+              if (!aliases.has(m.table)) aliases.set(m.table, new Map());
+              aliases.get(m.table).set(String(row.id), String(clash[0].id));
+              report.linked.push(
+                `${m.table} ${label(row)} — same ${cols.join("+")} as ${clash[0].id} on the target; its records are attached to that one`,
+              );
+              continue rows;
+            }
             report.skipped.push(
               `${m.table} ${label(row)} — ${cols.join("+")} "${values.join(", ")}" is already used on the target (by ${clash[0].id})`,
             );
@@ -842,6 +866,7 @@ async function runMissingOnly(order, present) {
         }
 
         await tx[m.delegate].create({ data });
+        report.nulled.push(...nulledHere);
         if (!written.has(m.table)) written.set(m.table, new Set());
         written.get(m.table).add(String(row.id));
         allWritten.add(String(row.id));
@@ -881,6 +906,7 @@ async function runMissingOnly(order, present) {
     for (const line of lines) console.log(`    - ${line}`);
   };
   section("skipped — decide by hand", report.skipped);
+  section("already on the target under another id — not written, records attached to the target's copy", report.linked);
   section("values cleared on the rows written", report.nulled);
   section("on the source, absent from the target, but older than the cutoff — deleted there or never imported; NOT written", report.absentOlder);
   section("edited on the source after the cutoff — NOT touched, merge by hand", report.edited);

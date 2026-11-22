@@ -130,6 +130,10 @@ requests created after the cutoff, and the rows that belong to those (lines,
 payments, receipts, ledger entries, job history). What it never does: update or
 delete an existing row, renumber anything, or touch stock.
 
+A client the target already holds under another id (same phone number in the
+same organisation) is not written; the incoming jobs, devices, invoices and
+quotations are attached to the target's client, and the report lists each one.
+
 It reports, and leaves for a person:
 
 - records whose number the target has already given to something else;
