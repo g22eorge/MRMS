@@ -4,10 +4,12 @@
 # builds. It has one vCPU and is already serving eaglestays; a `next build` on it
 # would compete with that site for the length of every deploy.
 #
-# Deploys the Postgres migration branch, for now. It does not touch `main`,
-# which keeps deploying wherever it already does until the cutover — see
-# docs/cutover-runbook.md for the order, which matters. Add `main` to the
-# trigger as part of the cutover, not before.
+# Deploys `main`. Until the cutover it deployed only the Postgres migration
+# branch, while `main` went to Vercel; `main` was added here in the same change
+# that merged that branch, after both Vercel projects were paused and their Git
+# links removed (docs/cutover-runbook.md). The migration branch stays in the
+# trigger so a fix pushed there still reaches the server; drop it once the
+# branch is retired.
 #
 # ── What this does NOT do on the shared server ──────────────────────────────
 # eaglestays' nginx publishes 80 and 443 itself (its Traefik edge proxy is on a
@@ -34,11 +36,14 @@ name: Deploy
 on:
   push:
     branches:
+      - main
       - feat/postgres-docker-migration
   workflow_dispatch: {}
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  # One group for every branch: both deploy to the same server, and two runs
+  # must not SSH in at once.
+  group: deploy
   # A deploy that has started SSHing should finish, not be cut off halfway
   # through `compose up` by the next push.
   cancel-in-progress: false
