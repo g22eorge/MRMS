@@ -30,6 +30,21 @@ RUN v="$(bun -e 'console.log(require("/app/node_modules/next/package.json").vers
     esac \
  && bun add --no-save "@next/swc-${swc}@${v}"
 
+# ── prisma ──────────────────────────────────────────────────────────────────
+# The generated client, on its own. `migrator` and `worker` need it and nothing
+# else from a build, but they used to copy it out of `builder`, so each of
+# their images ran a full `next build` first — three of them per deploy, on
+# three separate runners. This stage depends only on the lockfile and the
+# schema, so it is rebuilt when one of those changes and cached otherwise.
+FROM oven/bun:1-debian AS prisma
+WORKDIR /app
+# Validates without a reachable database; never reaches a running container.
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json prisma.config.ts ./
+COPY prisma ./prisma
+RUN bunx prisma generate
+
 # ── build ───────────────────────────────────────────────────────────────────
 FROM oven/bun:1-debian AS builder
 WORKDIR /app
@@ -61,7 +76,7 @@ COPY lib ./lib
 # duplicate keys are resolved.
 COPY docs/pg-migration ./docs/pg-migration
 # The generated client, so seed scripts run without a second `generate`.
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=prisma /app/node_modules/.prisma ./node_modules/.prisma
 CMD ["bunx", "prisma", "migrate", "deploy"]
 
 # ── runner ──────────────────────────────────────────────────────────────────
@@ -109,7 +124,7 @@ FROM oven/bun:1-debian AS worker
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=prisma /app/node_modules/.prisma ./node_modules/.prisma
 COPY package.json bun.lock tsconfig.json prisma.config.ts ./
 COPY prisma ./prisma
 COPY lib ./lib
