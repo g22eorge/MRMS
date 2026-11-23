@@ -242,8 +242,24 @@ export async function generateInvoiceBuffer(
     // right trade: the number is printed and sent, so it is genuinely spent.
     try {
       invoiceNumber = await prisma.$transaction(async (tx) => {
+        // If this job already has an Invoice row, that row's number is the
+        // invoice's number. Without excluding it, the allocator saw the job's
+        // own invoice holding the stored number, called it taken, and minted
+        // another on every WhatsApp send or download: the job then carried a
+        // number its invoice did not, and one was burned each time.
+        const ownInvoice = orgId
+          ? await tx.invoice.findFirst({
+              where: { orgId, jobId: job.id },
+              select: { id: true, invoiceNumber: true },
+            })
+          : null;
         const allocated = orgId
-          ? await nextAvailableInvoiceNumber(tx, orgId, storedInvoiceNumber)
+          ? await nextAvailableInvoiceNumber(
+              tx,
+              orgId,
+              ownInvoice?.invoiceNumber ?? storedInvoiceNumber,
+              ownInvoice?.id,
+            )
           : unpersistedInvoiceNumber;
         await tx.job.update({
           where: { id: job.id },

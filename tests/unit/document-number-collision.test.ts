@@ -60,6 +60,26 @@ describe("nextDocumentNumber with a counter behind the numbers in use", () => {
   });
 });
 
+describe("nextAvailableInvoiceNumber for a job that already has its invoice", () => {
+  // lib/pdf/generate-invoice.ts sends and downloads a job's invoice without
+  // touching the Invoice row. It used to ask for the job's stored number
+  // without saying which invoice was the job's own, so the allocator found
+  // that invoice holding the number and minted a new one on every send.
+  const own = "EIS/INV/2026/11/0007";
+
+  it("keeps the number when the invoice holding it is the job's own", async () => {
+    const tx = fakeTx({ sequence: 7, invoices: [own], jobs: [own] });
+    expect(await nextAvailableInvoiceNumber(tx, "org-own-a", own, `inv-${own}`)).toBe(own);
+  });
+
+  it("mints a new number when the holder is not excluded, which is why the caller must pass it", async () => {
+    const tx = fakeTx({ sequence: 7, invoices: [own], jobs: [own] });
+    const now = new Date();
+    const stamp = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}`;
+    expect(await nextAvailableInvoiceNumber(tx, "org-own-b", own)).toBe(`EIS/INV/${stamp}/0008`);
+  });
+});
+
 describe("nextAvailableInvoiceNumber", () => {
   it("never hands a job a number another job already holds", async () => {
     const now = new Date();
