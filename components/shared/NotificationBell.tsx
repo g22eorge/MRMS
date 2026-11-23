@@ -409,7 +409,7 @@ export function NotificationBell() {
                   {showAll ? "No notifications yet" : "All caught up"}
                 </p>
                 <p className="text-xs text-[var(--ink-muted)]/70">
-                  Alerts appear here when job statuses change, approvals are needed, or techs are assigned.
+                  Status changes, approvals and assignments show up here.
                 </p>
               </div>
             ) : (

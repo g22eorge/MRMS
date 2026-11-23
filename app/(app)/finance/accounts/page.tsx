@@ -268,7 +268,7 @@ export default async function ChartOfAccountsPage({
       <FormErrorBanner message={acctParams.error} />
       <PageHeader
         title="Accounts"
-        description="The categories your money flows through. Click any account to see its history."
+        description="Click an account to see its history."
         actions={
           <Link
             href="/finance/reports/pl"
@@ -302,7 +302,7 @@ export default async function ChartOfAccountsPage({
         <PageEmptyState
           variant="dashed"
           title="No accounts yet"
-          description="Load the standard chart of accounts to get started instantly — 40 accounts covering assets, liabilities, equity, revenue, and expenses. You can edit or delete them afterwards."
+          description="Load the standard chart of accounts: 40 accounts you can edit afterwards."
           action={
             <form action={seedDefaults}>
               <SubmitButton bare className="btn-premium rounded-lg px-5 py-2.5 text-sm font-semibold">

@@ -326,7 +326,7 @@ export default async function BankPage({
       </details>
 
       {bankAccounts.length === 0 ? (
-        <PageEmptyState title="No bank accounts yet" description="Add your first bank account to start recording transactions." />
+        <PageEmptyState title="No bank accounts yet" description="Add a bank account to start." />
       ) : (
         <div className="grid grid-cols-12 gap-5">
           {/* ── ACCOUNT SIDEBAR ──────────────────────────────────────────── */}

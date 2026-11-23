@@ -21,7 +21,7 @@ export default async function PortalLoginPage() {
           <PortalLoginForm />
         </div>
         <p className="text-center text-[0.75rem] text-[var(--ink-muted)]">
-          Trouble signing in? Contact your service provider to reset your access.
+          Trouble signing in? Ask your service provider to reset your access.
         </p>
       </div>
     </div>

@@ -136,7 +136,7 @@ export default async function WarrantyClaimsPage({
 
         {cost.claimsHonoured === 0 ? (
           <p className="mt-2 text-[0.8125rem] text-[var(--ink-muted)]">
-            No claims honoured in this period, so nothing has been spent on warranty work.
+            No warranty claims honoured in this period.
           </p>
         ) : (
           <>
@@ -194,7 +194,7 @@ export default async function WarrantyClaimsPage({
             {tab.status === "OPEN" ? "No open warranty claims." : "Nothing here yet."}
           </p>
           <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
-            Claims are raised from the repair a customer brings back, on its Assessment tab.
+            Raise a claim from the repair&apos;s Assessment tab.
           </p>
         </div>
       ) : (

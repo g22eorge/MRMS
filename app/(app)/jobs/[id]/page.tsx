@@ -503,7 +503,7 @@ export default async function JobDetailPage({
         {!canAssess ? (
           <p className="text-[0.8125rem] text-[var(--ink-muted)]">Complete the <span className="font-semibold">diagnosis</span> and <span className="font-semibold">repair details</span> first (parts optional). The report can then be generated and downloaded.</p>
         ) : assessments.length === 0 ? (
-          <p className="text-[0.8125rem] text-[var(--ink-muted)]">No assessment yet. Generate an AI draft (or a blank report if AI is off), edit it, then publish it to the client.</p>
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">No assessment yet. Draft one, edit it, then publish it to the client.</p>
         ) : (
           assessments.map((r) => {
             const visible = r.visibility !== "INTERNAL";

@@ -59,7 +59,7 @@ export function NewPurchaseRequestForm({ suppliers, parts }: { suppliers: Suppli
     <form onSubmit={submit} className="space-y-4">
       {/* Plain, one-line guide so a first-timer knows exactly what to do. */}
       <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[0.8125rem] text-[var(--ink-muted)]">
-        List what you need to buy, with how many. That is all we need — supplier and timing are optional.
+        What do you need, and how many? Supplier and timing are optional.
       </p>
 
       {/* Step 1 — the actual job leads the page. */}

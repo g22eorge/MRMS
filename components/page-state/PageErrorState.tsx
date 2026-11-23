@@ -7,7 +7,7 @@ import { PageStatePanel } from "./PageStatePanel";
 export function PageErrorState({
   eyebrow = "Page Error",
   title = "We could not load this screen",
-  description = "Please retry. If this keeps happening, refresh the page or contact support.",
+  description = "Try again. If it keeps happening, refresh or contact support.",
   digest,
   onRetry,
   backHref = "/dashboard",

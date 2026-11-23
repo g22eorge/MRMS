@@ -26,7 +26,7 @@ const FIELDS: { key: "PESAPAL_CONSUMER_KEY" | "PESAPAL_CONSUMER_SECRET"; label: 
     key: "PESAPAL_CONSUMER_SECRET",
     label: "Consumer Secret",
     placeholder: "Your Pesapal consumer secret",
-    hint: "Keep this secret — used for server-side API calls only.",
+    hint: "Keep this secret.",
   },
 ];
 
@@ -47,7 +47,7 @@ export function PesapalSettingsForm({ configured, webhookUrl, ipnId, ipnKey }: P
       <div>
         <p className="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">Pesapal Configuration</p>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
-          Enter your Pesapal API credentials. Leave a field blank to keep the existing value.
+          Your Pesapal credentials. Leave a field blank to keep it.
         </p>
       </div>
 

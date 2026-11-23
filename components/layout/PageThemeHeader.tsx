@@ -36,13 +36,13 @@ function pageMeta(pathname: string) {
   if (pathname === "/documents/invoices") return { title: "Invoices" };
   if (pathname === "/documents/job-cards") return { title: "Job Cards" };
   if (pathname === "/documents/quotations") return { title: "Quotations" };
-  if (pathname === "/settings/branding") return { title: "Branding", description: "Manage invoice logo, company details, VAT defaults, and document colours." };
+  if (pathname === "/settings/branding") return { title: "Branding", description: "Logo, company details, VAT defaults and document colours." };
   if (pathname === "/settings/profile") return { title: "Profile" };
   if (pathname === "/settings/notifications") return { title: "Notifications" };
-  if (pathname === "/settings/notifications/templates") return { title: "Comms Templates", description: "Manage message templates, nudge sequencing, and status-channel policy rules." };
+  if (pathname === "/settings/notifications/templates") return { title: "Comms Templates", description: "Templates, follow-ups and status rules." };
   if (pathname === "/settings/notifications/outbox") return { title: "Outbox", description: "Delivery queue for outbound WhatsApp and email notifications." };
   if (pathname === COMMUNICATIONS_ROUTES.outbox) return { title: "Outbox", description: "Delivery queue for outbound WhatsApp and email notifications." };
-  if (pathname === COMMUNICATIONS_ROUTES.templates) return { title: "Comms Templates", description: "Manage message templates, nudge sequencing, and status-channel policy rules." };
+  if (pathname === COMMUNICATIONS_ROUTES.templates) return { title: "Comms Templates", description: "Templates, follow-ups and status rules." };
   if (pathname === COMMUNICATIONS_ROUTES.whatsapp) return { title: "WhatsApp" };
   if (pathname.startsWith("/communications")) return { title: "Communications" };
   if (pathname === "/intake") return { title: "Repair Requests" };

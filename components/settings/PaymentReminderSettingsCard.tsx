@@ -80,10 +80,7 @@ export function PaymentReminderSettingsCard({ orgId, settings }: { orgId: string
       <div className="border-b border-[var(--line)] px-4 py-3">
         <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Payment reminders</p>
         <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-          Chases unpaid invoices on a fixed ladder: a courtesy a week before the due date, one on the
-          day, then twice after. Nothing is sent in the first three weeks of a 30-day term, and an
-          invoice still unpaid three weeks past its due date is left for a person rather than chased
-          again.
+          Reminds a week before the due date, on the day, then twice after. Nothing is sent in the first three weeks of a 30-day term, and three weeks overdue is left to a person.
         </p>
       </div>
 
@@ -119,8 +116,7 @@ export function PaymentReminderSettingsCard({ orgId, settings }: { orgId: string
           <span className="text-[0.8125rem]">
             <b>Send automatic reminders</b>
             <span className="block text-xs text-[var(--ink-muted)]">
-              Runs once a day. Balances are re-checked at the moment of sending, so an invoice paid
-              overnight is never chased.
+              Runs daily. Balances are checked at sending, so a paid invoice isn&apos;t chased.
             </span>
           </span>
         </label>
@@ -146,7 +142,7 @@ export function PaymentReminderSettingsCard({ orgId, settings }: { orgId: string
           <span className="text-[0.8125rem]">
             <b>One statement for clients with several unpaid invoices</b>
             <span className="block text-xs text-[var(--ink-muted)]">
-              Without this a client holding ten invoices receives ten messages in one morning.
+              Otherwise a client with ten invoices gets ten messages in one morning.
             </span>
           </span>
         </label>

@@ -500,8 +500,7 @@ export default async function BrandingPage({
             <textarea name="termsText" defaultValue={settings.termsText} placeholder="Terms &amp; conditions shown on documents" className="min-h-28 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
             {isShippedDefaultTerms(settings.termsText) ? (
               <p className="text-[0.6875rem] leading-relaxed text-[var(--ink-muted)]">
-                Leave this as it is and each document prints the terms that fit it: repair terms on repair
-                work, sales terms on goods. Write your own and yours are used everywhere instead.
+                Leave as is to print the standard terms for each document. Write your own to use them everywhere.
               </p>
             ) : null}
             <input name="footerText" defaultValue={settings.footerText} placeholder="Footer text" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14" />
@@ -517,9 +516,9 @@ export default async function BrandingPage({
 
       <div className="dc-card overflow-hidden px-3 py-2.5">
         <p className="mb-2 text-sm font-semibold">Invoice Logo</p>
-        <p className="text-xs text-[var(--ink-muted)]">Accepted: PNG, JPEG or WebP, up to 2 MB. A wide aspect ratio reads best on a document.</p>
+        <p className="text-xs text-[var(--ink-muted)]">PNG, JPEG or WebP, up to 2 MB. Wide logos print best.</p>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
-          This logo belongs to your business alone and appears on your own quotations, invoices and receipts.
+          Shown on your quotations, invoices and receipts.
         </p>
 
         <form action={uploadLogoAction} className="mt-3 grid gap-2 lg:flex lg:flex-wrap lg:items-end">

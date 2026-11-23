@@ -245,7 +245,7 @@ export default async function LeadDetailPage({
               <div className="border-b border-[var(--line)] px-4 py-2.5"><p className={cardLabel}>Customer</p></div>
               <form action={convertLeadAction} className="space-y-2 p-3">
                 <p className="text-[0.8125rem] text-[var(--ink-muted)]">
-                  Won — create the customer record from this lead instead of re-typing it.
+                  Won. Create the customer from this lead.
                 </p>
                 <SubmitButton size="sm">Convert to customer</SubmitButton>
               </form>

@@ -57,7 +57,7 @@ export function ReceiveStockForm({ poId, items, locations }: { poId: string; ite
             ))}
           </select>
         </label>
-        <p className="text-[0.75rem] text-[var(--ink-muted)]">Quantities are pre-filled to receive the full outstanding order — adjust any line that arrived short, then confirm.</p>
+        <p className="text-[0.75rem] text-[var(--ink-muted)]">Pre-filled with the full outstanding order. Adjust anything that arrived short.</p>
         <DataTable
           frameless
           dense

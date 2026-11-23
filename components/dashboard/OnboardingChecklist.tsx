@@ -20,7 +20,7 @@ export function OnboardingChecklist({ status }: { status: OnboardingStatus }) {
         <div>
           <p className="text-[0.9375rem] font-bold text-[var(--dc-ink)]">Get started</p>
           <p className="mt-0.5 text-[0.75rem] text-[var(--dc-ink-3)]">
-            A few quick steps to set your workspace up properly.
+            A few steps to finish setting up.
           </p>
         </div>
         <div className="flex items-center gap-2.5">

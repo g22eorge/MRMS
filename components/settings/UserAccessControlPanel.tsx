@@ -77,7 +77,7 @@ export function UserAccessControlPanel({
     <ConfirmDialog
       open={confirmOpen}
       title="Apply access changes?"
-      description="This will update the user's role and permissions. Changes take effect on their next action."
+      description="Updates their role and permissions from their next action."
       confirmLabel="Save Changes"
       onCancel={() => setConfirmOpen(false)}
       onConfirm={() => {

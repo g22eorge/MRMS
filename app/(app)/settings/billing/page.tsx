@@ -235,7 +235,7 @@ export default async function BillingPage({
         {!isAdmin && (
           <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5">
             <p className="text-sm text-[var(--ink-muted)]">
-              Only admins can manage the subscription. Contact your workspace admin to upgrade.
+              Only an admin can change the subscription.
             </p>
           </div>
         )}
@@ -497,8 +497,7 @@ export default async function BillingPage({
             </p>
             {org.plan === "STARTER" && trialDaysLeft <= 7 && trialDaysLeft > 0 && (
               <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                Your trial ends soon. Upgrade now to avoid interruption.
-              </p>
+                Your trial ends soon. Upgrade to keep going.</p>
             )}
           </div>
         )}
@@ -515,7 +514,7 @@ export default async function BillingPage({
 
         {org.billingStatus === "CANCELLED" && org.planCancelledAt && (
           <p className="text-sm text-amber-600 dark:text-amber-400">
-            Subscription cancelled. Your access continues until the end of the current billing period.
+            Subscription cancelled. Access continues to the end of this billing period.
           </p>
         )}
 
@@ -617,7 +616,7 @@ export default async function BillingPage({
 
       {!isAdmin && (
         <p className="text-sm text-[var(--ink-muted)]">
-          Only admins can manage the subscription. Contact your workspace admin to upgrade.
+          Only an admin can change the subscription.
         </p>
       )}
     </div>

@@ -136,7 +136,7 @@ export function JobCompletionFlowModal({
 
       <div className="space-y-5 p-4">
         <p className="text-sm text-[var(--ink-muted)]">
-          Job marked complete. Issue the invoice, share it with the client, then record payment when it arrives.
+          Job complete. Issue the invoice, share it, then record payment.
         </p>
 
         <ol className="grid gap-2 sm:grid-cols-3">
@@ -239,7 +239,7 @@ export function JobCompletionFlowModal({
             ) : (
               <>
                 <p className="text-sm text-[var(--ink-muted)]">
-                  No client phone number on this job. You can share the PDF manually or add a phone on the client record.
+                  No client phone on this job. Share the PDF yourself, or add a phone to the client.
                 </p>
                 <button
                   type="button"

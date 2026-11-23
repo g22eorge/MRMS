@@ -687,7 +687,7 @@ export default async function RefundsPage({
       ) : null}
       {/* Header + KPIs */}
       <PageHeader
-        description="Money paid back on an invoice, sale or credit note. For a POS return that restocks items, use Credit Notes."
+        description="Money paid back on an invoice, sale or credit note. For returned stock, use Credit Notes."
         actions={
           ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role) ? (
             <DisclosureButton
@@ -811,8 +811,7 @@ export default async function RefundsPage({
           </form>
           ) : (
             <div className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-3 text-[0.8125rem] text-[var(--ink-muted)]">
-              No paid invoices, sales, or credit notes have refundable balances.
-            </div>
+              Nothing refundable right now.        </div>
           )}
         </div>
         </DisclosurePanel>

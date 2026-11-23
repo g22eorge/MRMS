@@ -6,7 +6,7 @@
 import type { OrgModule, OrgPlan } from "@prisma/client";
 
 export const MODULE_LABELS: Record<OrgModule, string> = {
-  JOBS: "Jobs & Repairs",
+  JOBS: "Repairs",
   INVENTORY: "Inventory",
   POS: "Point of Sale",
   PURCHASE_ORDERS: "Purchase Orders",
@@ -37,16 +37,16 @@ export const MODULE_ICON_PATHS: Record<OrgModule, string> = {
 };
 
 export const MODULE_DESCRIPTIONS: Record<OrgModule, string> = {
-  JOBS: "Track repair jobs end-to-end — intake, diagnosis, status, and completion",
-  INVENTORY: "Manage inventory item stock, reorder alerts, and supplier items",
-  POS: "Walk-in sales, product checkout, and receipts",
-  PURCHASE_ORDERS: "Raise purchase orders to suppliers and manage goods received",
-  INVOICING: "Generate invoices, send to clients, and track payments",
-  COMPLAINTS: "Log customer complaints and manage resolution workflows",
-  REPORTS: "Revenue reports, performance dashboards, and CSV exports",
-  SALES: "Leads pipeline, corporate accounts, and sales team management",
-  FIELD: "Dispatch field technicians and manage on-site job visits",
-  TARGETS: "Set revenue and performance targets, track attainment",
+  JOBS: "Repair jobs from intake to handover",
+  INVENTORY: "Stock levels and reorder alerts",
+  POS: "Counter sales and receipts",
+  PURCHASE_ORDERS: "Orders to suppliers and goods received",
+  INVOICING: "Quotations, invoices and payments",
+  COMPLAINTS: "Customer complaints and how they were resolved",
+  REPORTS: "Revenue and performance reports, with exports",
+  SALES: "Leads, corporate accounts and the sales team",
+  FIELD: "On-site visits and field staff",
+  TARGETS: "Revenue and performance targets",
 };
 
 export const MODULE_MIN_PLAN: Record<OrgModule, OrgPlan> = {

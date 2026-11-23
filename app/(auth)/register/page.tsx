@@ -54,7 +54,7 @@ export default async function RegisterPage() {
                 Your operations,<br />fully organised
               </h1>
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/55">
-                Set up your workspace in 60 seconds. Manage jobs, technicians, and clients — all in one place.
+                Set up your workspace in a minute.
               </p>
             </div>
 
@@ -90,7 +90,7 @@ export default async function RegisterPage() {
             </div>
 
             <h2 className="text-2xl font-semibold text-white">Create your account</h2>
-            <p className="mt-1.5 text-sm text-white/60">Start managing your team in minutes — no credit card needed</p>
+            <p className="mt-1.5 text-sm text-white/60">No credit card needed.</p>
 
             <div className="mt-8">
               <RegisterForm />

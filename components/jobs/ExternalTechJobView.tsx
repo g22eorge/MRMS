@@ -73,7 +73,7 @@ export function ExternalTechJobView({
       <div className="dc-card overflow-hidden p-4">
         <div className="mb-3 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2">
           <p className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">External Work Brief</p>
-          <p className="mt-1 text-sm text-[var(--ink)]">Update diagnosis, required parts, and ETA only. Client identity remains hidden in this workspace.</p>
+          <p className="mt-1 text-sm text-[var(--ink)]">Diagnosis, parts and ETA only. The client&apos;s identity is hidden.</p>
         </div>
         <h2 className="text-lg font-semibold">{job.jobNumber}</h2>
         {job.status === "IN_REPAIR" && job.clientApproved ? (
@@ -84,7 +84,7 @@ export function ExternalTechJobView({
         ) : null}
         {job.status === "AWAITING_APPROVAL" ? (
           <div className="mt-2 rounded-md border border-[var(--accent)] bg-[var(--accent)]/10 px-3 py-2 text-sm text-[var(--accent)]">
-            Awaiting client approval. Hold repair work until approval is confirmed.
+            Awaiting client approval. Hold work until it&apos;s confirmed.
           </div>
         ) : null}
         <p className="text-sm text-[var(--ink-muted)] [overflow-wrap:anywhere]">

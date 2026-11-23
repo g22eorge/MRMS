@@ -294,7 +294,7 @@ export function CommercialLineItemsEditor({
   return (
     <LineItemsPanel
       title="Products & Services"
-      subtitle="Type each line — pick from inventory or write a custom one."
+      subtitle="Pick from inventory or type your own."
       addLabel="Add Line"
       onAddLine={onAddLine}
       className={`rounded-lg bg-[var(--panel-strong)] ${className ?? ""}`}

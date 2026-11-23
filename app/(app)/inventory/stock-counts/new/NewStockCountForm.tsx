@@ -71,7 +71,7 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
   return (
     <form onSubmit={submit} className="space-y-4">
       <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[0.8125rem] text-[var(--ink-muted)]">
-        Pick a location, then for each item type in how many you actually counted. We work out the difference for you.
+        Pick a location and enter what you counted.
       </p>
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">

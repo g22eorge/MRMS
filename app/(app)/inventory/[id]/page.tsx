@@ -123,7 +123,7 @@ export default async function PartDetailPage({
       {saved && (
         <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-2.5 text-[0.8125rem] font-semibold text-emerald-700">
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>
-          Stock updated — new entry recorded in the log.
+          Stock updated.
         </div>
       )}
       {error && (

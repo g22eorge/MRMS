@@ -172,7 +172,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
             <ShareButton url={`/api/portal/assessment/${job.id}`} />
           </div>
           <p className="text-[0.8125rem] text-[var(--ink)]">{reports[0].summary}</p>
-          <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">Download the PDF for the full findings, recommended work, cost and warranty details.</p>
+          <p className="mt-1 text-[0.75rem] text-[var(--ink-muted)]">The PDF has the full findings, recommended work, cost and warranty.</p>
         </div>
       ) : null}
 

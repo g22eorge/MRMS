@@ -275,7 +275,7 @@ export default async function PurchaseOrderDetailPage({
           {canReceive && locations.length === 0 ? (
             <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
               <p className="text-sm font-bold text-[var(--ink)]">Receive stock</p>
-              <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">You have no stock location yet — create one here and keep going, no need to leave this page.</p>
+              <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">No stock location yet. Add one here.</p>
               <form action={createLocationForPoAction} className="mt-2 flex flex-wrap items-end gap-2">
                 <input name="name" required placeholder="Location name (e.g. Main Store)" className="min-w-[180px] flex-1 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]/10" />
                 <input name="code" placeholder="Code (optional)" className="w-32 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm uppercase outline-none focus:ring-2 focus:ring-[var(--accent)]/10" />

@@ -225,7 +225,7 @@ export default async function ReceiptDetailPage({ params, searchParams }: { para
       {isEdit ? (
         <EditDialog title={`Edit receipt · ${receipt?.receiptNumber ?? payment.id.slice(-6)}`} closeHref={`/documents/receipts/${payment.id}`}>
           <form action={updateReceiptDetailsAction} className="space-y-3">
-            <p className="text-[0.8125rem] text-[var(--ink-muted)]">Reference and note only — amount, method and date never change, so the booked money stays exact.</p>
+            <p className="text-[0.8125rem] text-[var(--ink-muted)]">Reference and note only. Amount, method and date can&apos;t change.</p>
             <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Reference
               <input
                 name="reference"

@@ -28,7 +28,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
           Send Test Message
         </p>
         <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-          Verify end-to-end delivery from your business number to a real WhatsApp recipient.
+          Send a test from your business number to a real WhatsApp number.
         </p>
       </div>
 
@@ -73,7 +73,7 @@ export function WhatsAppTestPanel({ from, verifiedName }: Props) {
             className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/14"
           />
           <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
-            Use the real phone number of the WhatsApp account you want to test delivery to.
+            The number you want to test with.
           </p>
         </div>
 

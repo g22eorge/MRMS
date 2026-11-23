@@ -4,7 +4,7 @@ export default function PartNotFound() {
   return (
     <PageNotFoundState
       title="Part not found"
-      description="This inventory item may have been removed, or you may not have access to it."
+      description="This item was removed, or you don't have access."
       primaryHref="/inventory"
       primaryLabel="Go to inventory"
     />

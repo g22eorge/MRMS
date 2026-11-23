@@ -28,7 +28,7 @@ export function JobDocumentTimeline({
       <div className="rounded-xl bg-[var(--panel-strong)] px-4 py-8 text-center">
         <p className="text-sm font-semibold text-[var(--ink)]">No documents yet</p>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
-          Job cards, quotes, invoices, and receipts for this repair will appear here in order.
+          No documents yet.
         </p>
       </div>
     );

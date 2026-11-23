@@ -22,7 +22,7 @@ export default async function NewPurchaseRequestPage() {
     <div className="space-y-4">
       <PageHeader
         title="New purchase request"
-        description="Ask to buy stock. Approve it, and it turns into a supplier order."
+        description="Ask to buy stock. Once approved it becomes a supplier order."
         actions={<Button href="/inventory/purchase-requests" variant="secondary" size="sm">All requests</Button>}
       />
 

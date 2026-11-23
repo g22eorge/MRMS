@@ -97,7 +97,7 @@ export default async function WhatsAppSettingsPage() {
           </div>
         ) : (
           <div className="mt-3 rounded-lg bg-amber-500/10 px-4 py-3 text-[0.75rem] text-amber-700 dark:text-amber-400">
-            WhatsApp is not connected yet. Add your WhatsApp Business API credentials in the form below to start sending status updates and documents to clients.
+            WhatsApp isn&apos;t connected. Add your API details below.
           </div>
         )}
 

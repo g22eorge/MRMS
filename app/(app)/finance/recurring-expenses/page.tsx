@@ -173,7 +173,7 @@ export default async function RecurringExpensesPage({
       <FormErrorBanner message={sp.error} />
       <PageHeader
         title="Recurring Expenses"
-        description="Rent, retainers and subscriptions that raise themselves as owed — no retyping every month."
+        description="Rent, retainers and subscriptions that raise themselves each month."
       />
 
       {/* ── New schedule ─────────────────────────────────────────────── */}
@@ -239,7 +239,7 @@ export default async function RecurringExpensesPage({
           frameless
           rows={templates}
           getRowKey={(t) => t.id}
-          empty="No schedules yet — add rent, a retainer or a subscription above."
+          empty="No schedules yet."
           columns={[
             {
               key: "what",

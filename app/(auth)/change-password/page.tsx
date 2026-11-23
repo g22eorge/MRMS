@@ -44,7 +44,7 @@ export default async function ChangeIssuedPasswordPage({
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-white/40">{user.name}</p>
           <h1 className="mt-1 text-xl font-black text-white">Set your own password</h1>
           <p className="mt-1 text-sm text-white/60">
-            An administrator reset your password, so they know the current one. Choose your own before you continue.
+            An administrator reset your password. Choose your own to continue.
           </p>
         </div>
 

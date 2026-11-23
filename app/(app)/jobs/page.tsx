@@ -721,8 +721,7 @@ export default async function JobsPage({
           <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
             <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm0 2.5a.75.75 0 1 1 0 1.5.75.75 0 0 1 0-1.5ZM7.25 6h1.5v5h-1.5V6Z"/>
           </svg>
-          Diagnosis and timeline updates are available inside each work order.
-        </div>
+          Diagnosis and updates are inside each work order.      </div>
       ) : null}
 
       {/* ── Attention strip (desktop) — action-first cards ── */}

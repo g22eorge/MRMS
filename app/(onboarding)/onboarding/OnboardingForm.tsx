@@ -135,7 +135,7 @@ export function OnboardingForm() {
         <form onSubmit={goToStep2} className="space-y-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
           <div className="space-y-1">
             <h2 className="text-base font-semibold text-[var(--ink)]">Name your workspace</h2>
-            <p className="text-xs text-[var(--ink-muted)]">This will appear on invoices, job cards, and client communications.</p>
+            <p className="text-xs text-[var(--ink-muted)]">Shown on your invoices and messages.</p>
           </div>
           <div className="space-y-1.5">
             <label htmlFor="businessName" className="block text-sm font-medium text-[var(--ink)]">
@@ -171,7 +171,7 @@ export function OnboardingForm() {
           <div className="space-y-1">
             <h2 className="text-base font-semibold text-[var(--ink)]">What does your business need?</h2>
             <p className="text-xs text-[var(--ink-muted)]">
-              Select the features that match your workflow. You can adjust these later in settings.
+              Pick what you&apos;ll use. You can change this later.
             </p>
           </div>
 

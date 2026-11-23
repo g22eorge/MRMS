@@ -4,7 +4,7 @@ import { PageStatePanel } from "./PageStatePanel";
 
 export function PageNotFoundState({
   title = "We could not find that record",
-  description = "The item may have been removed, reassigned, or you may not have access to it.",
+  description = "It was removed or reassigned, or you don't have access.",
   primaryHref = "/jobs",
   primaryLabel = "Go to jobs",
   secondaryHref = "/dashboard",

@@ -281,7 +281,7 @@ export function NewPurchaseOrderForm({
 
       <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] bg-[var(--bg)]/95 py-2 backdrop-blur">
         {totals.zeroCostLines > 0 ? (
-          <span className="mr-auto text-xs text-amber-600">Add a cost to every line to receive or send it. You can still save a draft.</span>
+          <span className="mr-auto text-xs text-amber-600">Every line needs a cost before you can receive or send. Drafts can skip it.</span>
         ) : null}
         <Link href="/inventory/purchase-orders" className="rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--panel-strong)]">
           Cancel

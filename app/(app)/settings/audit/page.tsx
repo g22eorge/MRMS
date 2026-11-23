@@ -108,7 +108,7 @@ export default async function SettingsAuditPage({
         className="doc-list"
         rows={events}
         getRowKey={(event) => event.id}
-        empty="No audit events found. New commercial and admin actions will appear here once recorded."
+        empty="No audit events yet."
         columns={[
           {
             key: "when",

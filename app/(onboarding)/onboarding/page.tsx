@@ -26,7 +26,7 @@ export default async function OnboardingPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Set up your workspace</h1>
           <p className="text-sm text-[var(--ink-muted)]">
-            Tell us about your business so we can set up the right tools and billing plan for you.
+            Tell us about your business.
           </p>
         </div>
 

@@ -254,7 +254,7 @@ export default async function VatReportPage({
           </section>
 
           <p className="px-1 text-[0.6875rem] text-[var(--ink-muted)]">
-            Output VAT is the tax on sales and invoices paid in the period (cash basis). Input VAT is from supplier bills issued in the period. This summary reads tax stored on documents and does not post to the accounting ledger.
+            Output VAT: sales and invoices paid in the period. Input VAT: supplier bills issued in it. Read from documents, not the ledger.
           </p>
         </>
       )}

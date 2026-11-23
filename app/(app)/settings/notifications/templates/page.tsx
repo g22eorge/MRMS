@@ -123,7 +123,7 @@ export default async function NotificationTemplatesPage({
       <section className="dc-card px-3 py-2.5">
         <p className="text-[0.8125rem] font-bold text-[var(--ink)]">Templates</p>
         <p className="mt-2 text-sm text-[var(--ink-muted)]">
-          Templates are not available in this runtime (older database/client). Deploy the latest schema to enable them.
+          Templates need the latest database update.
         </p>
       </section>
     );
@@ -660,7 +660,7 @@ export default async function NotificationTemplatesPage({
                           </p>
                         ) : (
                           <p className="mt-1.5 text-[0.8125rem] text-[var(--ink-muted)]">
-                            Not set — messages will send as free-form text (only delivers within 24-hour customer window).
+                            Not set. Messages send as plain text, within the 24-hour window only.
                           </p>
                         )}
                       </div>
@@ -687,7 +687,7 @@ export default async function NotificationTemplatesPage({
       <section id="policies">
         <p className="mb-1 px-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]/70">When to message customers</p>
         <p className="mb-2 px-1 text-[0.75rem] text-[var(--ink-muted)]">
-          For each job status, choose where the update shows (dashboard, WhatsApp, email), which message to use, and when to send follow-up reminders.
+          For each status: where the update shows, which message, and when to follow up.
         </p>
 
         <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">

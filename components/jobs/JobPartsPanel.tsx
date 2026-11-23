@@ -64,8 +64,7 @@ export function JobPartsPanel({ jobId, locationId, locationName, parts, lines, r
       <div className="rounded-lg border border-dashed border-[var(--line)] px-4 py-5 text-sm text-[var(--ink-muted)]">
         <p className="font-medium text-[var(--ink)]">No stock location set up yet</p>
         <p className="mt-1">
-          Parts are drawn from a stock location. Create one under Inventory → Locations, then you can
-          record parts against this job.
+          Parts come from a stock location. Add one under Inventory → Locations.
         </p>
       </div>
     );
@@ -92,7 +91,7 @@ export function JobPartsPanel({ jobId, locationId, locationName, parts, lines, r
       <div>
         <p className="text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Parts used</p>
         <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-          Taken from inventory — stock updates as you fit each part.
+          Taken from inventory as you fit each part.
         </p>
       </div>
 

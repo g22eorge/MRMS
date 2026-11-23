@@ -914,7 +914,7 @@ export default async function PayablesPage({
             )}
           />
           {(payBillRows.length >= 200 || payExpenseRows.length >= 200 || payTechRows.length >= 200) ? (
-            <p className="text-[0.75rem] text-[var(--ink-muted)]">Showing the 200 oldest per source — narrow by search or bucket to see the rest.</p>
+            <p className="text-[0.75rem] text-[var(--ink-muted)]">Showing the 200 oldest per source. Search or filter to see more.</p>
           ) : null}
         </section>
       )}

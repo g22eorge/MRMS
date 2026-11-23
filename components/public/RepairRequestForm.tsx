@@ -164,8 +164,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
           device details{requestNum ? <> under <b className="font-semibold">{requestNum}</b></> : null}.
         </p>
         <p className="mt-3 text-[15px] leading-relaxed text-[#6A6154]">
-          Someone from the counter will be in touch shortly with a written quote and the timeline.
-          Nothing gets opened until you approve the price.
+          We&apos;ll send a written quote and timeline shortly. Nothing is opened until you approve the price.
         </p>
 
         {/* The stamp — the promise, pressed onto the receipt */}

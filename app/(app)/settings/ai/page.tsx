@@ -130,7 +130,7 @@ export default async function AiSettingsPage({ searchParams }: { searchParams: P
       <div className="dc-card overflow-hidden px-4 py-3">
         <p className="text-[0.8125rem] font-bold text-[var(--ink)]">AI Knowledge &amp; Feedback</p>
         <p className="mt-0.5 text-[0.8125rem] text-[var(--ink-muted)]">
-          Improve the AI guide without training on customer data. Add help articles and review feedback.
+          Add help articles and review feedback for the AI guide.
         </p>
       </div>
 

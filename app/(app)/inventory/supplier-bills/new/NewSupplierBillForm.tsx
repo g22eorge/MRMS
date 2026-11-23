@@ -168,7 +168,7 @@ export function NewSupplierBillForm({
   return (
     <form onSubmit={submit} className="space-y-4">
       <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-strong)]/40 px-4 py-2.5 text-[0.8125rem] text-[var(--ink-muted)]">
-        Enter the bill your supplier gave you: who it is from, and the items and prices. Link it to an order only if you want to.
+        Who it&apos;s from, the items and the prices. Linking an order is optional.
       </p>
 
       <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-4">
@@ -278,7 +278,7 @@ export function NewSupplierBillForm({
                 Rate ({baseCurrency} per 1 {billCurrency})
                 <input name="exchangeRate" inputMode="decimal" placeholder={`e.g. 3750`} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
                 <span className="mt-1 block font-normal text-[var(--ink-muted)]">
-                  The expected rate. What you actually settle at is captured when you record the payment.
+                  Expected rate. The actual rate is recorded with the payment.
                 </span>
               </label>
             ) : null}

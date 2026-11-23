@@ -58,8 +58,7 @@ export function AnthropicSettingsForm({ configured }: Props) {
           Anthropic AI (platform-wide)
         </p>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
-          Configure the platform-wide Anthropic key used by the AI Guide and Business Copilot. Values saved
-          here override environment variables.
+          Platform-wide Anthropic key for the AI Guide and Copilot. Overrides environment variables.
         </p>
       </div>
 

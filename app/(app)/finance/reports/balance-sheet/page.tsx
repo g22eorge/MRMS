@@ -220,7 +220,7 @@ export default async function BalanceSheetPage({
           {/* ── BALANCE WARNING ──────────────────────────────────────────── */}
           {!balanced && (
             <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-              Balance sheet does not balance — check accounting entries for missing or incorrect lines.
+              Balance sheet doesn&apos;t balance. Check for missing or incorrect entries.
             </div>
           )}
 

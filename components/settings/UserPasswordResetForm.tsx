@@ -51,7 +51,7 @@ export function UserPasswordResetForm({
       <ConfirmDialog
         open={confirmOpen}
         title="Reset password?"
-        description="This will update the user's password and sign them out on all devices."
+        description="Sets a new password and signs them out everywhere."
         confirmLabel="Reset Password"
         variant="danger"
         onCancel={() => setConfirmOpen(false)}
@@ -105,7 +105,7 @@ export function UserPasswordResetForm({
 
         {state.error ? <p className="text-[0.8125rem] text-red-400 md:col-span-3">{state.error}</p> : null}
         {state.success ? <p className="text-[0.8125rem] text-[var(--accent)] md:col-span-3">{state.success}</p> : null}
-        <p className="text-[0.8125rem] text-[var(--ink-muted)] md:col-span-3">Generate copies a temp password to clipboard — share it via WhatsApp.</p>
+        <p className="text-[0.8125rem] text-[var(--ink-muted)] md:col-span-3">Generate copies a temporary password to share.</p>
       </form>
     </>
   );

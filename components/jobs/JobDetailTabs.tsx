@@ -329,7 +329,7 @@ function MessagesTab({
 
       {thread.length === 0 ? (
         <div className="px-6 py-10 text-center text-sm text-[var(--ink-muted)]">
-          No messages yet. Outbound notifications and client replies will appear here.
+          No messages yet.
         </div>
       ) : (
         <div className="flex flex-col gap-2 p-4">
@@ -1773,7 +1773,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               readOnly={isTerminal && !canAssignJobs}
               className={areaClass}
             />
-            <p className="mt-1 text-xs text-[var(--ink-muted)]">Typed notes do not move inventory. Reserve and fit parts in the parts panel so stock is tracked.</p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">Notes don&apos;t move stock. Reserve and fit parts in the parts panel.</p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
@@ -2441,7 +2441,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
           {!hasPayoutControls && job.repairPath === "EXTERNAL" ? (
             <div className={softSectionClass}>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Technician Payout</p>
-              <p className="mt-1 text-xs text-[var(--ink-muted)]">You can view financial summaries, but payout controls require finance authorization.</p>
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">You can view the figures. Payout controls need finance access.</p>
             </div>
           ) : null}
           {job.repairPath !== "EXTERNAL" ? (
@@ -2478,7 +2478,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
             <div>
               <p className="text-sm font-semibold text-[var(--ink)]">Document lifecycle</p>
               <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                All paperwork for this repair in order — from job card through invoice, receipt, and delivery.
+                Job card, invoice, receipt and delivery, in order.
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5">

@@ -90,7 +90,7 @@ export default async function NewQuotationPage({
           <div>
             <p className="text-[0.75rem] uppercase tracking-[0.16em] text-[var(--ink-muted)]">Sales · Documents</p>
             <p className="text-[0.8125rem] font-bold text-[var(--ink)]">New Quotation</p>
-            <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Build a quote for products, services, leads, clients, or a repair job.</p>
+            <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Quote for products, services or a repair.</p>
             {leadName ? <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Lead: {leadName}</p> : null}
             {clientName ? <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Client: {clientName}</p> : null}
           </div>

@@ -197,7 +197,7 @@ export default async function JobCardsPage({
       <div className="sm:hidden rounded-xl border border-sky-500/20 bg-sky-500/6 px-4 py-3">
         <p className="text-[0.75rem] font-semibold text-sky-500 mb-1">Print a job card</p>
         <p className="text-[0.8125rem] text-[var(--ink-muted)] leading-relaxed">
-          Tap any job below → the <strong className="text-[var(--ink)]">Generate Job Card</strong> button appears at the bottom of the screen — prints or downloads instantly.
+          Tap a job, then <strong className="text-[var(--ink)]">Generate Job Card</strong> at the bottom of the screen.
         </p>
       </div>
 

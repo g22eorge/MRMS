@@ -411,7 +411,7 @@ export function NewQuotationForm({
                     </button>
                   </div>
                 ) : (
-                  <p className="px-1 text-[0.75rem] text-[var(--ink-muted)]">Start typing to find an existing customer — or add a new one.</p>
+                  <p className="px-1 text-[0.75rem] text-[var(--ink-muted)]">Type to find a customer, or add a new one.</p>
                 )}
               </div>
             )}

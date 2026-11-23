@@ -892,7 +892,7 @@ export default async function CreditNotesPage({
 
       {/* Header + KPIs */}
       <PageHeader
-        description="Credit a paid sale or invoice back to the customer and restock what returns. To pay the money out, use Refunds."
+        description="Credit a paid sale or invoice and restock returns. To pay money out, use Refunds."
         actions={
           <>
             {pendingReturn > 0 && (

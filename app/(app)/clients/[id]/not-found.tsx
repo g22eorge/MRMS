@@ -4,7 +4,7 @@ export default function ClientNotFound() {
   return (
     <PageNotFoundState
       title="Client not found"
-      description="This client may have been removed or you may not have access to their record."
+      description="This client was removed, or you don't have access."
       primaryHref="/clients"
       primaryLabel="Go to clients"
     />

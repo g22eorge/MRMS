@@ -93,7 +93,7 @@ export default async function PaymentsPage({
       <DataTable
         rows={pageRows}
         getRowKey={(e) => e.id}
-        empty="No payment events recorded yet. Events are logged when Pesapal IPN callbacks fire."
+        empty="No payment events yet."
         columns={[
           {
             key: "date",

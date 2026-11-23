@@ -111,7 +111,7 @@ export function NotificationPrefsForm({ prefs }: { prefs: Prefs }) {
       <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">Inventory</p>
       <div className="grid gap-2 md:grid-cols-2">
         <Toggle name="notifyStockAlert"     label="Low / Out of Stock"    hint="When a part hits the reorder level or runs out." defaultChecked={prefs.notifyStockAlert} />
-        <Toggle name="notifyStockMovement"  label="Stock Received / Transfers / Counts" hint="When goods are received, transfers complete, or stock counts are approved." defaultChecked={prefs.notifyStockMovement} />
+        <Toggle name="notifyStockMovement"  label="Stock Received / Transfers / Counts" hint="Goods received, transfers completed, stock counts approved." defaultChecked={prefs.notifyStockMovement} />
         <Toggle name="notifyPurchaseRequest" label="Purchase Requests"    hint="When a purchase request is submitted or approved." defaultChecked={prefs.notifyPurchaseRequest} />
       </div>
 

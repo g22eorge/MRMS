@@ -84,7 +84,7 @@ export function NewProductModal({
             <Toggle name="taxable" defaultOn>Tax</Toggle>
           </div>
           <p className="mt-1.5 text-[0.6875rem] text-[var(--ink-muted)]">
-            Cost is what you pay per unit — a purchase receipt updates it automatically. Selling price is what you charge.
+            Cost is what you pay per unit; receipts update it. Selling price is what you charge.
           </p>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">

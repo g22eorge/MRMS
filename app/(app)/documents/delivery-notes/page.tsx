@@ -494,7 +494,7 @@ export default async function DeliveryNotesPage({
         className="doc-list"
         rows={pageRows}
         getRowKey={(n) => n.id}
-        empty="No delivery notes yet. Generate one from any invoice or sale where handover proof is needed — including goods sold on credit."
+        empty="No delivery notes yet. Create one from an invoice or sale."
         columns={[
           {
             key: "note",

@@ -160,7 +160,7 @@ export default async function TechnicianPayoutsPage({
         <>
           {!payoutColumnsReady ? (
             <div className="rounded-xl border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-4 py-3 text-sm text-[var(--accent)]">
-              Payout columns are not migrated yet in this environment. Run latest Prisma migrations.
+              Payouts need the latest database update.
             </div>
           ) : null}
           <div className="dc-card space-y-2.5 p-3">

@@ -58,8 +58,7 @@ export function OrgModuleControls({
           Every module is available during your trial
         </p>
         <p className="mt-1 text-[0.8125rem] text-[var(--ink-muted)]">
-          Use whatever is useful. When the trial ends you keep the ones your plan covers, and you can
-          change the selection here at any time — so there is nothing to decide now.
+          Switch modules on or off here at any time.
         </p>
       </div>
     );
@@ -119,7 +118,7 @@ export function OrgModuleControls({
 
       {!canEdit && (
         <p className="text-[0.8125rem] text-[var(--ink-muted)]">
-          An administrator on this workspace can change which modules are switched on.
+          A workspace administrator can change the modules.
         </p>
       )}
     </div>

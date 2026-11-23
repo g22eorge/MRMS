@@ -145,7 +145,7 @@ export function MergeClientPanel({
               ))}
             </ul>
           ) : (
-            <p className="text-[0.75rem] text-[var(--ink-muted)]">This client has no linked records — it will just be removed.</p>
+            <p className="text-[0.75rem] text-[var(--ink-muted)]">This client has no linked records and will be removed.</p>
           )}
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)]/60 p-2.5">
             <label className="flex items-center gap-2 text-[0.8125rem] font-medium text-[var(--ink)]">
