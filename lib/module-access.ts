@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { OrgModule } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -59,4 +60,26 @@ export async function requireModule(module: OrgModule): Promise<void> {
   if (!enabled.has(module)) {
     redirect("/dashboard?blocked=module");
   }
+}
+
+/**
+ * The same gate for route handlers, which answer with JSON and cannot redirect.
+ *
+ * The page gates stop a hidden module's address being typed. The endpoints
+ * behind those pages (documents, bulk actions, exports) were reachable all the
+ * same by anyone who knew the URL. Returns a 403 to send back, or null to carry
+ * on. A missing orgId returns null so the route's own sign-in check answers
+ * first, with its own status.
+ */
+export async function apiModuleDenied(
+  orgId: string | null | undefined,
+  module: OrgModule,
+): Promise<NextResponse | null> {
+  if (!orgId) return null;
+  const enabled = await getOrgModules(orgId);
+  if (enabled.has(module)) return null;
+  return NextResponse.json(
+    { error: "This module is not enabled for your organisation.", code: "MODULE_DISABLED" },
+    { status: 403 },
+  );
 }

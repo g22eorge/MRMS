@@ -30,6 +30,7 @@ log() { echo "[backup] $(date -u '+%Y-%m-%dT%H:%M:%SZ') $*"; }
 
 log "target ${PGUSER:-?}@${PGHOST:-?}:${PGPORT:-5432}/${PGDATABASE:-?}"
 log "interval ${BACKUP_INTERVAL}s, keeping ${BACKUP_KEEP_DAYS} days, into ${BACKUP_DIR}"
+if [ -n "${BACKUP_REMOTE:-}" ]; then log "off-site copy to ${BACKUP_REMOTE}"; else log "no off-site copy configured (BACKUP_REMOTE is empty) — dumps exist on this server only"; fi
 
 while true; do
   stamp="$(date -u '+%Y%m%dT%H%M%SZ')"
@@ -40,6 +41,20 @@ while true; do
   if pg_dump -Fc -f "${target}.partial"; then
     mv "${target}.partial" "$target"
     log "wrote $(basename "$target") ($(du -h "$target" | cut -f1))"
+    # A second copy somewhere that is not this server. Without it, losing the
+    # server loses every backup along with the database. Off unless
+    # BACKUP_REMOTE names an rclone destination (see docs/deployment.md); a
+    # failed upload is logged and leaves the local dump in place.
+    if [ -n "${BACKUP_REMOTE:-}" ]; then
+      if rclone copy --no-traverse "$target" "$BACKUP_REMOTE" 2>/tmp/rclone.err; then
+        log "copied $(basename "$target") off-site to ${BACKUP_REMOTE}"
+        if [ -n "${BACKUP_REMOTE_KEEP_DAYS:-}" ]; then
+          rclone delete --min-age "${BACKUP_REMOTE_KEEP_DAYS}d" "$BACKUP_REMOTE" 2>>/tmp/rclone.err || true
+        fi
+      else
+        log "OFF-SITE COPY FAILED — $(tail -1 /tmp/rclone.err 2>/dev/null); the local dump is intact"
+      fi
+    fi
   else
     rm -f "${target}.partial"
     log "FAILED — pg_dump exited non-zero; previous dumps are untouched"

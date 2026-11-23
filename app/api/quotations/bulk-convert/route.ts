@@ -6,6 +6,7 @@ import { normalizeCurrency } from "@/lib/currency";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserRole } from "@/lib/session";
+import { apiModuleDenied } from "@/lib/module-access";
 
 /**
  * Bulk convert selected quotations to invoices.
@@ -19,6 +20,8 @@ import { getCurrentUserRole } from "@/lib/session";
  */
 export async function POST(req: NextRequest) {
   const { user } = await getCurrentUserRole();
+  const moduleDenied = await apiModuleDenied(user?.orgId, "INVOICING");
+  if (moduleDenied) return moduleDenied;
   if (!can.createInvoices(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

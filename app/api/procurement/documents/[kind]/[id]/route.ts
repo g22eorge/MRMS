@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +128,8 @@ function documentShell(input: {
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ kind: string; id: string }> }) {
   const { user, orgId } = await requireOrgSession();
+  const moduleDenied = await apiModuleDenied(orgId, "PURCHASE_ORDERS");
+  if (moduleDenied) return moduleDenied;
   if (!can.manageInventory(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { kind, id } = await params;

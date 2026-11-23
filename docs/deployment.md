@@ -323,6 +323,20 @@ off:
 docker compose cp backup:/backups ./backups-local
 ```
 
+### A copy off the server
+
+The `backup` service writes its dumps to a volume on the same machine as the
+database, so by default losing the server loses both. Set `BACKUP_REMOTE` and
+the `BACKUP_S3_*` values in `ENV_CI` (see `.env.ci.example`) and each dump is
+also copied to an S3-compatible bucket with rclone; remote copies older than
+`BACKUP_REMOTE_KEEP_DAYS` are pruned. The service logs which mode it is in at
+start, and logs `OFF-SITE COPY FAILED` without touching the local dump if an
+upload fails:
+
+```bash
+docker compose logs backup | tail
+```
+
 ### Restore drill — do this before you need it
 
 ```bash
@@ -361,6 +375,11 @@ returns it to `healthy` within 30s.
 docker compose ps                                  # STATUS column shows (healthy)
 docker inspect --format '{{.State.Health.Status}}' mrms-app-1
 ```
+
+`.github/workflows/uptime.yml` asks both sites' `/api/health` every ten minutes
+and fails when either does not answer `"ok":true` after three tries. GitHub
+emails the failure to whoever last edited that schedule. It is how an outage is
+noticed, not a monitoring service.
 
 ## Validating on a server before a domain is ready
 

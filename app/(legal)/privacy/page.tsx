@@ -55,8 +55,9 @@ export default function PrivacyPage() {
 
             <h3 className="mb-2 text-sm font-semibold text-white/80">1.2 Data you enter on behalf of your clients</h3>
             <p className="mb-4">
-              The Platform stores the repair job data you create, including client names, phone numbers, email
-              addresses, device information, diagnosis notes, invoices, and photos.
+              The Platform stores the business records you create: client names, phone numbers and email
+              addresses, sales, stock, invoices and payments, and, where you use them, repair jobs, device
+              details, diagnosis notes and photos.
               This data belongs to you — we process it on your behalf as a data processor.
             </p>
 

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { can } from "@/lib/permissions";
 import { shareQuotationDocument } from "@/lib/notifications/share-document";
 import { getCurrentUserRole } from "@/lib/session";
+import { apiModuleDenied } from "@/lib/module-access";
 
 /**
  * Bulk WhatsApp for selected quotations.
@@ -19,6 +20,8 @@ import { getCurrentUserRole } from "@/lib/session";
  */
 export async function POST(req: NextRequest) {
   const { user } = await getCurrentUserRole();
+  const moduleDenied = await apiModuleDenied(user?.orgId, "INVOICING");
+  if (moduleDenied) return moduleDenied;
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

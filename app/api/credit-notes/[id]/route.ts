@@ -14,12 +14,15 @@ import { creditNoteParent } from "@/lib/commercial/credit-note-parent";
 
 import { clientContactName } from "@/lib/client-name";
 import { pickDocumentTerms } from "@/lib/quote-terms";
+import { apiModuleDenied } from "@/lib/module-access";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { user, orgId } = await requireOrgSession();
+  const moduleDenied = await apiModuleDenied(orgId, "INVOICING");
+  if (moduleDenied) return moduleDenied;
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "MANAGER"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

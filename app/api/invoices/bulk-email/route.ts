@@ -6,9 +6,12 @@ import { orgDb } from "@/lib/db";
 import { formatMoney } from "@/lib/currency";
 import { enqueueEmailMessage } from "@/lib/notifications/whatsapp-outbox";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export async function POST(req: NextRequest) {
   const { user } = await getCurrentUserRole();
+  const moduleDenied = await apiModuleDenied(user?.orgId, "INVOICING");
+  if (moduleDenied) return moduleDenied;
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

@@ -11,12 +11,15 @@ import { createReceiptForPayment, nextDocumentNumber } from "@/lib/commercial/do
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const { user } = await getCurrentUserRole();
+  const moduleDenied = await apiModuleDenied(user?.orgId, "INVOICING");
+  if (moduleDenied) return moduleDenied;
   if (!(can.approveInvoices(user) || ["ADMIN", "OPS", "FINANCE"].includes(user.role))) {
     return new Response("Unauthorized", { status: 403 });
   }

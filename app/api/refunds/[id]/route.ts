@@ -12,12 +12,15 @@ import { resolveInvoiceLogo, prettyEnum } from "@/lib/pdf/pdf-utils";
 import { prisma } from "@/lib/prisma";
 
 import { clientContactName, clientDisplayName } from "@/lib/client-name";
+import { apiModuleDenied } from "@/lib/module-access";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { user, orgId } = await requireOrgSession();
+  const moduleDenied = await apiModuleDenied(orgId, "INVOICING");
+  if (moduleDenied) return moduleDenied;
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "MANAGER", "FINANCE"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

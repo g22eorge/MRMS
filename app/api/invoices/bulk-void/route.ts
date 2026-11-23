@@ -6,9 +6,12 @@ import { orgDb } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
 import { sanitizeText } from "@/lib/sanitize";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export async function POST(req: NextRequest) {
   const { user } = await getCurrentUserRole();
+  const moduleDenied = await apiModuleDenied(user?.orgId, "INVOICING");
+  if (moduleDenied) return moduleDenied;
   // Voiding destroys invoice records: canonical voidInvoices grant only
   // (ADMIN/FINANCE + explicit grants), no role backdoor.
   if (!can.voidInvoices(user)) {

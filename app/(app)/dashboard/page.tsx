@@ -62,6 +62,7 @@ export default async function DashboardPage({
       return (
         <WorkspaceDashboard
           userId={session.user.id}
+          orgId={orgId}
           userName={user.name}
           role={user.role}
           permissions={user.permissions ?? []}

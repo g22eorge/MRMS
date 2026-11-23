@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { enqueueEmailMessage, enqueueWhatsAppMessage, deliverOutboundMessage } from "@/lib/notifications/whatsapp-outbox";
+import { apiModuleDenied } from "@/lib/module-access";
 
 /**
  * Send a campaign to its pending contacts.
@@ -31,6 +32,8 @@ async function getPrisma() {
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { user, orgId, org } = await requireOrgSession();
+  const moduleDenied = await apiModuleDenied(orgId, "SALES");
+  if (moduleDenied) return moduleDenied;
   assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
   // Same gate as the campaigns page itself.
   if (!["ADMIN", "OPS"].includes(user.role)) {

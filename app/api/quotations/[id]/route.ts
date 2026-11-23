@@ -14,6 +14,7 @@ import { requireOrgSession } from "@/lib/org-context";
 
 import { clientContactName, clientDisplayName } from "@/lib/client-name";
 import { defaultQuotationPromo } from "@/lib/pdf/QuotationPromoStrip";
+import { apiModuleDenied } from "@/lib/module-access";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,8 @@ export async function GET(
   const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { id } = await context.params;
   const { user, orgId } = await requireOrgSession();
-
+  const moduleDenied = await apiModuleDenied(orgId, "INVOICING");
+  if (moduleDenied) return moduleDenied;
   if (!can.createQuotations(user) && !can.viewAllSales(user) && !can.viewFinancials(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

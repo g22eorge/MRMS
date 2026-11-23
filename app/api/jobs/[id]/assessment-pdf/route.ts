@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { generateAssessmentBuffer } from "@/lib/pdf/generate-assessment";
 import { pdfAttachmentResponse, pdfGenerationErrorResponse } from "@/lib/pdf/pdf-response";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { id } = await ctx.params;
   const { user, orgId } = await requireOrgSession();
-
+  const moduleDenied = await apiModuleDenied(orgId, "JOBS");
+  if (moduleDenied) return moduleDenied;
   // The assessment PDF carries client pricing — never for external technicians,
   // and internal technicians only for jobs assigned to them.
   if (user.role === "TECHNICIAN_EXTERNAL") return new Response("Forbidden", { status: 403 });

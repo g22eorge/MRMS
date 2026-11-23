@@ -10,6 +10,7 @@ import { clientDisplayName } from "@/lib/client-name";
 import { icontains } from "@/lib/db/search";
 import type { JobStatus, InvoiceStatus, SupplierBillStatus } from "@prisma/client";
 import { eatDateKey } from "@/lib/date-eat";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,8 @@ const bucketOf = (age: number) => (age <= 0 ? "current" : age <= 30 ? "d30" : ag
 
 export async function GET(request: NextRequest) {
   const { user, orgId } = await requireOrgSession();
+  const moduleDenied = await apiModuleDenied(orgId, "JOBS");
+  if (moduleDenied) return moduleDenied;
   const canSeeRepairs = can.approveInvoices(user) || can.reviewExternalBills(user);
   const canSeeInvoices = can.approveInvoices(user);
   const canSeeBills = can.approveInvoices(user) || can.runFinancialReports(user);

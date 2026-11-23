@@ -57,7 +57,7 @@ export async function IntakeDashboard({
 
       <DashboardHero
         title="Client Intake Console"
-        summary="Capture requests quickly and move each intake through approval to handover."
+        summary="Log requests and move them through approval to handover."
         primaryHref="/jobs/new"
         primaryLabel={routeLabel("/jobs/new")}
         secondaryHref="/jobs?status=AWAITING_APPROVAL"

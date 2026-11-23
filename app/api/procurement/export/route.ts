@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
 import { eatDateKey } from "@/lib/date-eat";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,8 @@ function download(name: string, body: string) {
 
 export async function GET(request: NextRequest) {
   const { user, orgId } = await requireOrgSession();
+  const moduleDenied = await apiModuleDenied(orgId, "PURCHASE_ORDERS");
+  if (moduleDenied) return moduleDenied;
   if (!can.manageInventory(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

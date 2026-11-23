@@ -147,6 +147,8 @@ CMD ["node", "scripts/scheduler.mjs"]
 # pg_dump on a schedule. Based on the Postgres image so the client tools match
 # the server major version exactly — a newer server refuses an older pg_dump.
 FROM postgres:18-alpine AS backup
+# rclone sends each dump to a second place when BACKUP_REMOTE is set.
+RUN apk add --no-cache rclone
 COPY scripts/pg-backup.sh /usr/local/bin/pg-backup
 RUN chmod +x /usr/local/bin/pg-backup
 CMD ["pg-backup"]

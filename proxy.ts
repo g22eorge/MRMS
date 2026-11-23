@@ -11,6 +11,8 @@ const PUBLIC_PATHS = [
   "/login",
   "/register",
   "/invite",
+  "/forgot-password",
+  "/reset-password",
 
   // API
   "/api/auth",
@@ -47,6 +49,10 @@ const PUBLIC_PATHS = [
   "/opengraph-image",
   "/twitter-image",
   "/apple-icon",
+  // The web app manifest and its icons: fetched by the browser without a
+  // session when someone adds the app to their home screen.
+  "/manifest.webmanifest",
+  "/pwa-icon",
 ];
 
 /**

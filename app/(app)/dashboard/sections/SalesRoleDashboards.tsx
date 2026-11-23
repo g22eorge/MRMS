@@ -38,7 +38,7 @@ export async function SalesManagerDashboard({ orgId }: { orgId: string | null })
     <div className="space-y-4">
       <DashboardHero
         title="Sales Command Centre"
-        summary="Monitor leads pipeline, track quotations, and review revenue against targets."
+        summary="Leads, quotations and revenue against target."
         primaryHref="/sales"
         primaryLabel={routeLabel("/sales")}
         secondaryHref="/targets"
@@ -106,7 +106,7 @@ export async function SalesCorporateDashboard({ userId, orgId }: { userId: strin
     <div className="space-y-4">
       <DashboardHero
         title="Corporate Sales"
-        summary="Manage your corporate accounts, track quotation approvals, and keep leads progressing."
+        summary="Corporate accounts, quotation approvals and leads."
         primaryHref="/sales"
         primaryLabel={routeLabel("/sales")}
         secondaryHref="/sales/quotations/new"
@@ -175,7 +175,7 @@ export async function SalesRetailDashboard({ userId, orgId }: { userId: string; 
     <div className="space-y-4">
       <DashboardHero
         title="Retail Sales Desk"
-        summary="Manage your active leads, open quotations, and daily POS sessions."
+        summary="Your leads, quotations and POS sessions."
         primaryHref="/sales"
         primaryLabel={routeLabel("/sales")}
         secondaryHref="/pos"

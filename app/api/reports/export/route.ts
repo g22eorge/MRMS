@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { clientDisplayName } from "@/lib/client-name";
 import { JOB_STATUSES, isOpenJobStatus } from "@/lib/job-status";
 import { eatDateKey } from "@/lib/date-eat";
+import { apiModuleDenied } from "@/lib/module-access";
 
 type ExportType =
   | "pipeline-aging"
@@ -118,6 +119,8 @@ export async function GET(req: NextRequest) {
 
   const permissionUser = { role: user.role, permissions };
   const orgId = user.orgId;
+  const moduleDenied = await apiModuleDenied(orgId, "REPORTS");
+  if (moduleDenied) return moduleDenied;
 
   const type = (req.nextUrl.searchParams.get("type") ?? "") as ExportType;
   if (!["pipeline-aging", "revenue-variance", "technician-performance", "external-payouts", "device-performance", "pos-sales", "invoices", "expenses", "inventory-stock", "leads", "staff-sales"].includes(type)) {

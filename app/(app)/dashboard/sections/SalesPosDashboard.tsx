@@ -30,7 +30,7 @@ export async function SalesPosDashboard({ userId }: { userId: string }) {
     <div className="space-y-4">
       <DashboardHero
         title="Point of Sale"
-        summary="Open a new session to start taking sales, or continue your active session."
+        summary="Open a session to start selling, or continue yours."
         primaryHref="/pos"
         primaryLabel={openSession ? "Continue Session" : "Open New Session"}
       />

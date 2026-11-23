@@ -111,7 +111,7 @@ export async function InternalTechDashboard({
 
       <DashboardHero
         title="Internal Bench Workspace"
-        summary="Keep diagnostics, repairs, and handoffs flowing · jump directly into the next action queue."
+        summary="Your diagnostics, repairs and handoffs."
         primaryHref="/jobs"
         primaryLabel={routeLabel("/jobs")}
         secondaryHref={canUpdatePricing ? "/jobs?pricing=needs&status=AWAITING_APPROVAL,IN_REPAIR,READY_FOR_PICKUP" : "/jobs?status=DIAGNOSING"}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export async function GET(
   _req: NextRequest,
@@ -9,7 +10,8 @@ export async function GET(
 ) {
   const { id } = await context.params;
   const { session, user, orgId } = await requireOrgSession();
-
+  const moduleDenied = await apiModuleDenied(orgId, "JOBS");
+  if (moduleDenied) return moduleDenied;
   try {
     const where =
       user.role === "TECHNICIAN_EXTERNAL"

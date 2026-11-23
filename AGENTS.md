@@ -99,6 +99,11 @@ Always preserve these:
   sends a flagged user to `/change-password` until they choose their own. A new
   reset path must set the flag; a new page guard must not bypass
   `requireOrgSession`. Portal logins have the same rule on `PortalUser`.
+- Two-step sign-in is the BetterAuth `twoFactor` plugin, opt-in per user. A
+  two-step account gets no session from `/api/login`: the response carries
+  `twoFactorRedirect` and the code step at `/login/verify` completes it. Any new
+  sign-in path must honour that. Recovery is an administrator switching it off
+  (`resetUserTwoFactor`) or a platform password reset, never a bypass.
 - Production auth must set `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL`.
 - Production runtime must set `DATABASE_URL`, and `CRON_SECRET` for the scheduled jobs.
 
@@ -168,7 +173,7 @@ needs no connection at all.
 
 Important files:
 
-- `prisma/schema.prisma`: source of model truth. 119 models, 59 enums.
+- `prisma/schema.prisma`: source of model truth. 126 models, 59 enums.
 - `prisma/migrations/0_init`: the Postgres baseline. The 48 SQLite migrations are
   archived in `prisma/migrations-sqlite-archive/` and are **not** applied — they
   contain `PRAGMA` statements and cannot be replayed.

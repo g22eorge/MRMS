@@ -9,6 +9,7 @@ import { sendIntakeApprovalNotification, sendIntakeRejectionNotification } from 
 import { notifyClientJobCreated } from "@/lib/notifications";
 import { checkJobLimit } from "@/lib/plan-limits";
 import { assertOrgCanMutate } from "@/lib/org-write";
+import { apiModuleDenied } from "@/lib/module-access";
 
 const ALLOWED_STATUSES = ["APPROVED", "REJECTED", "CONVERTED_TO_JOB"] as const;
 type AllowedStatus = (typeof ALLOWED_STATUSES)[number];
@@ -18,6 +19,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { session, user, orgId, org } = await requireOrgSession();
+  const moduleDenied = await apiModuleDenied(orgId, "JOBS");
+  if (moduleDenied) return moduleDenied;
   if (!can.viewClientInfo(user)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }

@@ -8,6 +8,7 @@ import { can } from "@/lib/permissions";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { ReceiptTemplateComponent, resolveTemplateKey } from "@/lib/pdf/templates";
 import { resolveInvoiceLogo } from "@/lib/pdf/pdf-utils";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +20,8 @@ export async function GET(
   const inline = req.nextUrl.searchParams.get("inline") !== "0";
   const { id } = await context.params;
   const { user, orgId } = await requireOrgSession();
-
+  const moduleDenied = await apiModuleDenied(orgId, "POS");
+  if (moduleDenied) return moduleDenied;
   if (!(can.viewFinancials(user) || ["ADMIN", "OPS", "FRONT_DESK"].includes(user.role))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

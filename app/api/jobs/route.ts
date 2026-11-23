@@ -4,10 +4,12 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export async function GET(req: NextRequest) {
   const { session, user, orgId } = await requireOrgSession();
-
+  const moduleDenied = await apiModuleDenied(orgId, "JOBS");
+  if (moduleDenied) return moduleDenied;
   // Bounded list: the response stays a top-level array (e2e privacy specs
   // assert Array.isArray), but page/limit keep a large history from
   // becoming an unbounded JSON dump.

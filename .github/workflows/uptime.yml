@@ -1,0 +1,40 @@
+# Asks both sites whether they are up, every ten minutes.
+#
+# The health endpoint answers 200 only when the app can reach its database, so
+# this catches the server being down, the proxy misrouting, an expired
+# certificate and a lost database connection. When a check fails the run fails,
+# and GitHub emails whoever last edited this schedule.
+#
+# It cannot tell you why, and it is ten minutes coarse. It replaces finding out
+# from a customer, not a monitoring service.
+name: Uptime
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: uptime
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Health check
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ask each site
+        run: |
+          status=0
+          for url in https://care.eagleinfosolutions.com/api/health https://app.eagleinfosolutions.com/api/health; do
+            ok=0
+            # Three tries a few seconds apart: a deploy restarts the app and
+            # answers 502 for under a minute, which is not an outage.
+            for attempt in 1 2 3; do
+              body="$(curl -fsS --max-time 20 "$url" 2>&1)" && echo "$body" | grep -q '"ok":true' && { ok=1; break; }
+              sleep 25
+            done
+            if [ "$ok" = "1" ]; then echo "UP    $url"; else echo "DOWN  $url — $body"; status=1; fi
+          done
+          exit $status

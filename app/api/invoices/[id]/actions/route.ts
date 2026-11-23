@@ -9,12 +9,15 @@ import { sendInvoiceViaWhatsAppAction } from "@/app/(app)/jobs/[id]/actions";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { syncInvoicePaymentState } from "@/lib/commercial/payment-sync";
 import type { DeliveryMethod } from "@prisma/client";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { user, orgId } = await requireOrgSession();
+  const moduleDenied = await apiModuleDenied(orgId, "INVOICING");
+  if (moduleDenied) return moduleDenied;
   const { id } = await ctx.params;
 
   const invoice = await prisma.invoice.findFirst({ where: { id, orgId }, select: { id: true, orgId: true, invoiceNumber: true, status: true, jobId: true, totalAmount: true, paidAmount: true, clientId: true } });

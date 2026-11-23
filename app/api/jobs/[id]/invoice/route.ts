@@ -6,6 +6,7 @@ import { jobPdfErrorStatus, pdfAttachmentResponse, pdfGenerationErrorResponse } 
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
+import { apiModuleDenied } from "@/lib/module-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +18,8 @@ export async function GET(
   const inline = req.nextUrl.searchParams.get("inline") === "1";
   const { id } = await context.params;
   const { session, user, orgId, org: orgCtx } = await requireOrgSession();
-
+  const moduleDenied = await apiModuleDenied(orgId, "JOBS");
+  if (moduleDenied) return moduleDenied;
   if (!(["ADMIN", "OPS"].includes(user.role) || can.approveInvoices(user))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

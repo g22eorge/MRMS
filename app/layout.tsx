@@ -75,6 +75,8 @@ export const metadata: Metadata = {
     description: "Business management platform for repairs, sales, inventory, finance, documents, and daily operations.",
     images: [ogImage],
   },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Duuka ProMax", statusBarStyle: "black" },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-icon", type: "image/png" }],
