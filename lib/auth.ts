@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { twoFactor } from "better-auth/plugins";
 
 import { prisma } from "@/lib/prisma";
 
@@ -83,7 +84,30 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL,
   trustedOrigins,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
-  emailAndPassword: { enabled: true },
+  // Two-step sign-in with an authenticator app, opt-in per user from Settings
+  // -> Profile. A user without it signs in exactly as before; one with it is
+  // asked for a six-digit code after their password. Ten single-use backup
+  // codes cover a lost phone, and an administrator can switch it off for a
+  // locked-out colleague (resetUserTwoFactor).
+  plugins: [twoFactor({ issuer: "Duuka ProMax" })],
+  emailAndPassword: {
+    enabled: true,
+    // Self-service reset from /forgot-password. The link lands on
+    // /reset-password with a single-use token good for an hour. Sending is a
+    // no-op until RESEND_API_KEY is set, and the page says so instead of
+    // pretending to send.
+    resetPasswordTokenExpiresIn: 60 * 60,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      const { sendPasswordResetEmail } = await import("@/lib/email");
+      await sendPasswordResetEmail(user.email, user.name ?? "there", url);
+    },
+    // They have just chosen their own password, so a pending forced change
+    // from an admin reset is satisfied.
+    onPasswordReset: async ({ user }) => {
+      await prisma.user.update({ where: { id: user.id }, data: { mustChangePassword: false } }).catch(() => null);
+    },
+  },
   user: {
     additionalFields: {
       role: {

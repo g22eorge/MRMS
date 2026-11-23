@@ -83,19 +83,19 @@ type PermissionOption = {
 };
 
 const roleOptions: Array<{ value: Role; label: string; description: string }> = [
-  { value: Role.ADMIN, label: "Admin", description: "Full platform control including user management and financial approvals." },
-  { value: Role.MANAGER, label: "Manager", description: "Oversees operations, staff workload, and pipeline health across all departments." },
-  { value: Role.TECH_MANAGER, label: "Tech Manager", description: "Oversees technician performance, repair turnaround, workload balance, and quality metrics." },
-  { value: Role.FINANCE, label: "Finance", description: "Reviews invoices, approves costs, manages settlements and financial reports." },
-  { value: Role.SALES, label: "Sales", description: "Handles intake, client approvals, quotes, and revenue pipeline tracking." },
+  { value: Role.ADMIN, label: "Admin", description: "Everything, including users and financial approvals." },
+  { value: Role.MANAGER, label: "Manager", description: "Operations, staff workload and pipeline." },
+  { value: Role.TECH_MANAGER, label: "Tech Manager", description: "Technician performance, turnaround and workload." },
+  { value: Role.FINANCE, label: "Finance", description: "Invoices, cost approvals, settlements and reports." },
+  { value: Role.SALES, label: "Sales", description: "Intake, client approvals, quotes and sales." },
   { value: Role.SALES_MANAGER, label: "Sales Manager", description: "Manages sales team, quotations, targets, and commissions." },
   { value: Role.SALES_CORPORATE, label: "Corporate Sales", description: "Handles corporate accounts, invoices, and bulk quotations." },
   { value: Role.SALES_RETAIL, label: "Retail Sales", description: "Handles walk-in retail sales, quotations, and handovers." },
   { value: Role.SALES_POS, label: "POS Operator", description: "Runs point-of-sale transactions and daily cashier sessions." },
   { value: Role.OPS, label: "Operations/Accounts", description: "Coordinates workflow, billing, settlement, and daily operations." },
-  { value: Role.OPERATIONS_MANAGER, label: "Operations Manager", description: "Full operational oversight — jobs, sales, finance, inventory, and staff coordination without admin privileges." },
+  { value: Role.OPERATIONS_MANAGER, label: "Operations Manager", description: "Jobs, sales, finance, inventory and staff, without admin rights." },
   { value: Role.FRONT_DESK, label: "Front Desk", description: "Handles front desk intake, customer details, and handover documents." },
-  { value: Role.TECH_FIELD, label: "Field Technician", description: "Handles on-site visits, collections, deliveries, and client sign-offs." },
+  { value: Role.TECH_FIELD, label: "Field Technician", description: "Site visits, collections, deliveries and sign-offs." },
   { value: Role.TECHNICIAN_INTERNAL, label: "Internal Technician", description: "Works diagnosis and in-house repair execution." },
   { value: Role.TECHNICIAN_EXTERNAL, label: "External Technician", description: "External workflow access without client identity or billing history." },
 ];
@@ -564,6 +564,38 @@ export default async function UsersPage({
     return { success: "User details saved" };
   }
 
+  /**
+   * Switch two-step sign-in off for a colleague who has lost their phone and
+   * their backup codes. They sign in with their password alone afterwards and
+   * can set it up again themselves. Signs them out everywhere, so a session
+   * someone else may be holding ends too.
+   */
+  async function resetUserTwoFactor(formData: FormData) {
+    "use server";
+
+    const { user: actor, orgId: actorOrgId, org } = await requireOrgSession();
+    if (actor.role !== "ADMIN") return;
+    assertOrgCanMutate({ access: org.access, userRole: actor.role, userAccessMode: actor.accessMode, kind: "GENERAL" });
+    const targetId = String(formData.get("userId") ?? "").trim();
+    const target = await prisma.user.findFirst({ where: { id: targetId, orgId: actorOrgId }, select: { id: true, email: true } });
+    if (!target) return;
+
+    await prisma.$transaction([
+      prisma.twoFactor.deleteMany({ where: { userId: target.id } }),
+      prisma.user.update({ where: { id: target.id }, data: { twoFactorEnabled: false } }),
+      prisma.session.deleteMany({ where: { userId: target.id } }),
+    ]);
+    await writeSystemAuditEvent({
+      orgId: actorOrgId,
+      actorUserId: actor.id,
+      entityType: "User",
+      entityId: target.id,
+      action: "USER_TWO_FACTOR_RESET",
+      summary: `Two-step sign-in switched off for ${target.email} by an administrator`,
+    });
+    redirect(flash(`/settings/users?${new URLSearchParams({ userId: target.id, tab: "security" }).toString()}`, "Two-step sign-in switched off"));
+  }
+
   async function resetUserPassword(state: UserPasswordResetState, formData: FormData): Promise<UserPasswordResetState> {
     "use server";
 
@@ -913,6 +945,7 @@ export default async function UsersPage({
     role: Role;
     accessMode: string;
     isActive: boolean;
+    twoFactorEnabled: boolean | null;
     createdAt: Date;
     updatedAt: Date;
     sessions: Array<{ updatedAt: Date }>;
@@ -942,6 +975,7 @@ export default async function UsersPage({
         role: true,
         accessMode: true,
         isActive: true,
+        twoFactorEnabled: true,
         createdAt: true,
         updatedAt: true,
         sessions: {
@@ -1012,7 +1046,7 @@ export default async function UsersPage({
     console.error("[settings/users] failed to load", error);
     return (
       <section className="dc-card p-6 text-sm text-[var(--ink-muted)]">
-        Could not load user access controls right now. Please retry after a moment.
+        Couldn&apos;t load access controls. Try again.
       </section>
     );
   }
@@ -1214,7 +1248,7 @@ export default async function UsersPage({
                   {user.role === "ADMIN" ? (
                     <section className="dc-card p-3">
                       <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Access mode</p>
-                      <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Read-only users can view records but cannot create or change anything.</p>
+                      <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">Read-only users can view but not change anything.</p>
                       <form action={setUserAccessMode} className="mt-2 flex flex-wrap items-center gap-2">
                         <input type="hidden" name="userId" value={selectedUser.id} />
                         <select
@@ -1237,7 +1271,25 @@ export default async function UsersPage({
                 </div>
               )}
               {tab === "security" && (
-                <UserPasswordResetForm userId={selectedUser.id} action={resetUserPassword} />
+                <div className="space-y-4">
+                  <UserPasswordResetForm userId={selectedUser.id} action={resetUserPassword} />
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
+                    <div>
+                      <p className="text-[0.8125rem] font-semibold text-[var(--ink)]">Two-step sign-in</p>
+                      <p className="text-[0.8125rem] text-[var(--ink-muted)]">
+                        {selectedUser.twoFactorEnabled ? "On. Switch it off if they have lost their phone." : "Off. They can turn it on in their own profile."}
+                      </p>
+                    </div>
+                    {selectedUser.twoFactorEnabled && user.role === "ADMIN" ? (
+                      <form action={resetUserTwoFactor}>
+                        <input type="hidden" name="userId" value={selectedUser.id} />
+                        <SubmitButton bare className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] font-semibold text-[var(--ink)]">
+                          Switch off
+                        </SubmitButton>
+                      </form>
+                    ) : null}
+                  </div>
+                </div>
               )}
               {tab === "log" && (
                 <div className="divide-y divide-[var(--line)]">

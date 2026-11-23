@@ -72,9 +72,16 @@ export async function POST(request: NextRequest) {
     } else if (
       path.endsWith("/reset-password") ||
       path.endsWith("/send-verification-email") ||
-      path.endsWith("/forget-password")
+      path.endsWith("/forget-password") ||
+      path.endsWith("/request-password-reset")
     ) {
       rl = await checkRateLimit(`ba-passreset:${ip}`, { limit: 5, windowMs: 10 * 60_000 });
+    }
+
+    // The code step of two-step sign-in. The library locks an account after
+    // repeated wrong codes; this stops one address trying many accounts.
+    if (!rl && path.includes("/two-factor/verify-")) {
+      rl = await checkRateLimit(`ba-2fa:${ip}`, { limit: 10, windowMs: 5 * 60_000 });
     }
 
     if (rl && !rl.allowed) {

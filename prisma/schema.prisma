@@ -45,6 +45,10 @@ model Organization {
   slug     String  @unique
   plan     OrgPlan @default(STARTER)
   isActive Boolean @default(true)
+  /// Set when the organisation's own administrator asks for the workspace to
+  /// be deleted. The workspace is deactivated at once; the data is removed by a
+  /// platform admin, within the 30 days the privacy policy promises.
+  deletionRequestedAt DateTime?
 
   // Flutterwave subscription tracking
   billingStatus     OrgBillingStatus @default(TRIALING)
@@ -187,6 +191,10 @@ model User {
   // chooses their own. While set, requireOrgSession sends them to
   // /change-password. Same rule PortalUser.mustChangePassword enforces.
   mustChangePassword Boolean     @default(false)
+  /// Two-step sign-in is on for this user. Set by the sign-in library once a
+  /// code from their authenticator app has been verified, never directly.
+  twoFactorEnabled   Boolean?    @default(false)
+  twoFactors         TwoFactor[]
   orgId           String?
   org             Organization?  @relation(fields: [orgId], references: [id], onDelete: SetNull)
   branchId        String?
@@ -3735,4 +3743,47 @@ model RateLimit {
   resetAt DateTime
 
   @@index([resetAt])
+}
+
+/// A server-side error, grouped. One row per distinct error per hour: the same
+/// failure hit five hundred times is one row with count 500, not five hundred
+/// rows. Written by instrumentation.ts; read by the platform console.
+model ErrorEvent {
+  id          String   @id @default(cuid())
+  /// Hash of the message and where it happened, so repeats collapse.
+  fingerprint String
+  /// The hour the error occurred in, so a recurrence tomorrow is a new row.
+  bucket      DateTime
+  message     String
+  stack       String?
+  /// The route that failed, e.g. "/jobs/[id]".
+  route       String?
+  path        String?
+  method      String?
+  /// "page", "route" or "action", as Next reports it.
+  kind        String?
+  digest      String?
+  count       Int      @default(1)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@unique([fingerprint, bucket])
+  @@index([lastSeenAt])
+}
+
+/// A user's authenticator secret and one-time backup codes, both encrypted by
+/// the sign-in library. One row per user who has started setting up two-step
+/// sign-in; `verified` turns true when they confirm a first code.
+model TwoFactor {
+  id                      String    @id @default(cuid())
+  secret                  String
+  backupCodes             String
+  userId                  String
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verified                Boolean?  @default(true)
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
+
+  @@index([userId])
+  @@index([secret])
 }

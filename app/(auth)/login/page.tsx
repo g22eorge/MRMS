@@ -50,7 +50,7 @@ export default async function LoginPage() {
                 Every module your<br />business needs
               </h1>
               <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/50">
-                From repair jobs to finance — all roles, one platform.
+                Sales, stock, repairs and accounts.
               </p>
             </div>
 

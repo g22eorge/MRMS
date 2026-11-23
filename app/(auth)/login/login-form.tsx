@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 export function LoginForm({
   allowSignup = true,
-  supportWhatsappNumber,
 }: {
   allowSignup?: boolean;
   /**
@@ -38,6 +37,14 @@ export function LoginForm({
       if (!response.ok) {
         const errorBody = (await response.json().catch(() => ({}))) as { message?: string };
         toast.error(errorBody.message || "Invalid credentials");
+        return;
+      }
+
+      // Password accepted, but this account has two-step sign-in: no session
+      // exists yet, only a short-lived cookie that the code step completes.
+      const body = (await response.clone().json().catch(() => ({}))) as { twoFactorRedirect?: boolean };
+      if (body.twoFactorRedirect) {
+        window.location.href = "/login/verify";
         return;
       }
 
@@ -102,23 +109,9 @@ export function LoginForm({
           />
           Remember me
         </label>
-        <button
-          type="button"
-          onClick={() => {
-            const emailInput = formRef.current?.querySelector<HTMLInputElement>('input[name="email"]');
-            const email = (emailInput?.value ?? "").trim();
-            const waNumber = supportWhatsappNumber;
-            if (waNumber) {
-              const message = `Hi Support, please reset my password. Email: ${email || "<your email>"}`;
-              window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-            } else {
-              alert("Please contact your administrator to reset your password.");
-            }
-          }}
-          className="text-xs text-[#C9A227]/60 transition hover:text-[#C9A227]"
-        >
+        <Link href="/forgot-password" className="text-xs text-[#C9A227]/60 transition hover:text-[#C9A227]">
           Forgot password?
-        </button>
+        </Link>
       </div>
 
       {/* Submit */}

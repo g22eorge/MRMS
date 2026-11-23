@@ -6,11 +6,12 @@ import { describe, it, expect, mock, beforeEach } from "bun:test";
  * /change-password until they choose their own — the same rule the two
  * in-app reset paths follow. This path was missed when the flag was added.
  */
-type Update = { where: { id: string }; data: { mustChangePassword: boolean } };
+type Update = { where: { id: string }; data: { mustChangePassword: boolean; twoFactorEnabled: boolean } };
 
 const userUpdates: Update[] = [];
 const sessionDeletes: string[] = [];
 const accountWrites: string[] = [];
+const twoFactorDeletes: string[] = [];
 
 const tx = {
   account: {
@@ -19,6 +20,12 @@ const tx = {
       return { count: 1 };
     },
     create: async () => ({}),
+  },
+  twoFactor: {
+    deleteMany: async ({ where }: { where: { userId: string } }) => {
+      twoFactorDeletes.push(where.userId);
+      return { count: 1 };
+    },
   },
   user: {
     update: async (args: Update) => {
@@ -81,6 +88,7 @@ describe("resetOrgAdminPasswordAction", () => {
     userUpdates.length = 0;
     sessionDeletes.length = 0;
     accountWrites.length = 0;
+    twoFactorDeletes.length = 0;
   });
 
   it("flags another user to choose their own password, and signs them out", async () => {
@@ -89,7 +97,9 @@ describe("resetOrgAdminPasswordAction", () => {
 
     expect(result.error).toBeUndefined();
     expect(accountWrites).toEqual(["tenant-admin"]);
-    expect(userUpdates).toEqual([{ where: { id: "tenant-admin" }, data: { mustChangePassword: true } }]);
+    expect(userUpdates).toEqual([{ where: { id: "tenant-admin" }, data: { mustChangePassword: true, twoFactorEnabled: false } }]);
+    // A locked-out administrator may have lost their phone too.
+    expect(twoFactorDeletes).toEqual(["tenant-admin"]);
     expect(sessionDeletes).toEqual(["tenant-admin"]);
   });
 
@@ -97,7 +107,7 @@ describe("resetOrgAdminPasswordAction", () => {
     const { resetOrgAdminPasswordAction } = await import("@/app/(platform)/platform/actions");
     await resetOrgAdminPasswordAction({}, form("platform-admin"));
 
-    expect(userUpdates).toEqual([{ where: { id: "platform-admin" }, data: { mustChangePassword: false } }]);
+    expect(userUpdates).toEqual([{ where: { id: "platform-admin" }, data: { mustChangePassword: false, twoFactorEnabled: false } }]);
   });
 
   it("changes nothing when the passwords do not match", async () => {

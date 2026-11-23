@@ -4,14 +4,20 @@ export const dynamic = "force-dynamic";
 import { getCurrentUserRole } from "@/lib/session";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
 import { ProfileForm } from "@/components/settings/ProfileForm";
+import { TwoFactorCard } from "@/components/settings/TwoFactorCard";
+import { prisma } from "@/lib/prisma";
 
 export default async function ProfilePage() {
   const { user } = await getCurrentUserRole();
+  const security = user?.id
+    ? await prisma.user.findUnique({ where: { id: user.id }, select: { twoFactorEnabled: true } }).catch(() => null)
+    : null;
 
   return (
     <div className="space-y-4">
       <ProfileForm name={user.name} email={user.email} role={user.role} phone={user.phone} />
       <ChangePasswordForm />
+      <TwoFactorCard enabled={Boolean(security?.twoFactorEnabled)} />
     </div>
   );
 }

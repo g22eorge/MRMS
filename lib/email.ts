@@ -86,3 +86,20 @@ export async function sendPaymentFailedAlert(to: string, name: string, orgName: 
     <a href="${appUrl}/settings/billing" style="display:inline-block;background:#C9A227;color:#000;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none">Update payment →</a>
   `));
 }
+
+/**
+ * The link from "Forgot password?". Says nothing about whether the request
+ * was expected: someone who did not ask for it should be able to ignore it.
+ */
+export async function sendPasswordResetEmail(to: string, name: string, url: string) {
+  await send(
+    to,
+    "Reset your Duuka ProMax password",
+    base(`
+      <h2 style="font-size:18px;margin:0 0 12px">Reset your password</h2>
+      <p style="font-size:14px;line-height:1.6;margin:0 0 20px">Hi ${esc(name)}, use the button below to choose a new password. The link works once, for one hour.</p>
+      <p style="margin:0 0 20px"><a href="${esc(url)}" style="display:inline-block;background:#C9A227;color:#000;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px;text-decoration:none">Choose a new password</a></p>
+      <p style="font-size:12px;color:#888;margin:0">If you did not ask for this, ignore this email and your password stays as it is.</p>
+    `),
+  );
+}

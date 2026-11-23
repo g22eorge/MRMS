@@ -61,8 +61,12 @@ export async function resetOrgAdminPasswordAction(
     // a platform admin resetting their own.
     await tx.user.update({
       where: { id: userId },
-      data: { mustChangePassword: userId !== admin.id },
+      data: { mustChangePassword: userId !== admin.id, twoFactorEnabled: false },
     });
+    // A locked-out administrator may have lost their phone as well as their
+    // password. Two-step sign-in comes off with the reset; they can turn it
+    // back on once they are in.
+    await tx.twoFactor.deleteMany({ where: { userId } });
     // Force re-login everywhere after a platform reset.
     await tx.session.deleteMany({ where: { userId } });
   });
@@ -115,7 +119,12 @@ export async function toggleOrgActive(formData: FormData) {
   const isActive = formData.get("isActive") === "true";
   if (!orgId) return;
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } });
-  await prisma.organization.update({ where: { id: orgId }, data: { isActive: !isActive } });
+  // Reactivating cancels a pending deletion request; deactivating leaves any
+  // request as it is.
+  await prisma.organization.update({
+    where: { id: orgId },
+    data: { isActive: !isActive, ...(isActive ? {} : { deletionRequestedAt: null }) },
+  });
   // Cutting off a customer's access is the platform action with the most
   // immediate effect on them; it should never be the one nobody can date.
   await writeSystemAuditEvent({
@@ -364,5 +373,41 @@ export async function stopImpersonationAction() {
       before: { startedAt: new Date(current.startedAt).toISOString() },
     });
   }
+  redirect(PLATFORM_ROUTES.home);
+}
+
+
+/**
+ * Carry out a workspace deletion its administrator asked for. Permanent.
+ * The platform admin types the organisation's name, so this cannot be a slip.
+ */
+export async function purgeOrganisationAction(formData: FormData) {
+  const admin = await requirePlatformAdmin();
+  const orgId = String(formData.get("orgId") ?? "");
+  const typed = String(formData.get("confirmName") ?? "").trim().toLowerCase();
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true, slug: true } });
+  if (!org) redirect(PLATFORM_ROUTES.home);
+  if (typed !== org.name.trim().toLowerCase()) {
+    redirect(`${PLATFORM_ROUTES.org(orgId)}?purgeError=${encodeURIComponent("Type the organisation's name exactly to confirm.")}`);
+  }
+
+  const { purgeOrganisation } = await import("@/lib/workspace/purge");
+  let removed = 0;
+  try {
+    ({ removed } = await purgeOrganisation(orgId));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not delete the workspace.";
+    redirect(`${PLATFORM_ROUTES.org(orgId)}?purgeError=${encodeURIComponent(message)}`);
+  }
+
+  await writeSystemAuditEvent({
+    orgId: null,
+    actorUserId: admin.id,
+    entityType: "Organization",
+    entityId: orgId,
+    action: "ORG_DELETED",
+    summary: `Deleted workspace "${org.name}" (/${org.slug}) at its administrator's request; ${removed} records removed`,
+  });
+  revalidatePlatformHome();
   redirect(PLATFORM_ROUTES.home);
 }
