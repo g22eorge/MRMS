@@ -34,6 +34,8 @@ type SearchParams = {
   userId?: string;
   limitError?: string;
   tab?: string;
+  /** "archived" lists deactivated accounts; anything else lists active ones. */
+  view?: string;
 };
 
 type UserDetailsState = {
@@ -897,6 +899,12 @@ export default async function UsersPage({
 
   const params = await searchParams;
   let q = "";
+  // Deactivated accounts live in their own list. They used to sit at the
+  // bottom of the one list with an "Off" badge, which is fine for one and
+  // buries the working staff once a business has had some turnover.
+  let view: "active" | "archived" = "active";
+  let activeCount = 0;
+  let archivedCount = 0;
   let filteredUsers: Array<{
     id: string;
     name: string;
@@ -968,7 +976,18 @@ export default async function UsersPage({
       permissionGrants: (permissionMap.get(entry.id) ?? []).map((permission) => ({ permission })),
     }));
 
-    filteredUsers = usersWithPermissions.filter((item) => searchMatches(item, q));
+    activeCount = usersWithPermissions.filter((item) => item.isActive).length;
+    archivedCount = usersWithPermissions.length - activeCount;
+    // A link to a specific person opens the list they are in. Deactivating
+    // someone redirects back with their id, and they have just left the active
+    // list; without this the page would silently show somebody else.
+    const requested = usersWithPermissions.find((item) => item.id === params.userId) ?? null;
+    view = params.view === "archived" || (params.view !== "active" && requested && !requested.isActive)
+      ? "archived"
+      : "active";
+    filteredUsers = usersWithPermissions
+      .filter((item) => item.isActive === (view === "active"))
+      .filter((item) => searchMatches(item, q));
     selectedUser = filteredUsers.find((item) => item.id === params.userId) ?? filteredUsers[0] ?? null;
 
     if (selectedUser) {
@@ -1002,7 +1021,7 @@ export default async function UsersPage({
   const tab = params.tab ?? "profile";
 
   function tabHref(t: string) {
-    return `/settings/users?${new URLSearchParams({ ...(q && { q }), ...(selectedUser && { userId: selectedUser.id }), tab: t }).toString()}`;
+    return `/settings/users?${new URLSearchParams({ ...(q && { q }), ...(view === "archived" && { view }), ...(selectedUser && { userId: selectedUser.id }), tab: t }).toString()}`;
   }
 
   const tabs = [
@@ -1062,7 +1081,23 @@ export default async function UsersPage({
               className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
             />
           </div>
+          <div className="grid grid-cols-2 border-b border-[var(--line)] text-center text-[0.8125rem] font-semibold">
+            {([
+              { key: "active", label: "Active", count: activeCount },
+              { key: "archived", label: "Archived", count: archivedCount },
+            ] as const).map((entry) => (
+              <Link
+                key={entry.key}
+                href={`/settings/users${entry.key === "archived" ? "?view=archived" : ""}`}
+                aria-current={view === entry.key ? "page" : undefined}
+                className={`px-2 py-2 transition ${view === entry.key ? "border-b-2 border-[var(--accent)] text-[var(--ink)]" : "border-b-2 border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+              >
+                {entry.label} <span className="tabular-nums text-[var(--ink-muted)]">{entry.count}</span>
+              </Link>
+            ))}
+          </div>
           <form method="GET" className="flex gap-1 border-b border-[var(--line)] px-2 py-2">
+            {view === "archived" ? <input type="hidden" name="view" value="archived" /> : null}
             <input
               name="q"
               defaultValue={q}
@@ -1070,14 +1105,14 @@ export default async function UsersPage({
               className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
             />
             {q ? (
-              <Link href="/settings/users" className="flex items-center rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">✕</Link>
+              <Link href={`/settings/users${view === "archived" ? "?view=archived" : ""}`} className="flex items-center rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.8125rem] text-[var(--ink-muted)] hover:text-[var(--ink)]">✕</Link>
             ) : null}
           </form>
           <div className="divide-y divide-[var(--line)]">
             {filteredUsers.map((item) => (
               <Link
                 key={item.id}
-                href={`/settings/users?${new URLSearchParams({ ...(q && { q }), userId: item.id }).toString()}`}
+                href={`/settings/users?${new URLSearchParams({ ...(q && { q }), ...(view === "archived" && { view }), userId: item.id }).toString()}`}
                 className={`flex items-center gap-2.5 px-3 py-2.5 transition ${selectedUser?.id === item.id ? "bg-[var(--accent)]/8" : "hover:bg-[var(--panel-strong)]/40"}`}
               >
                 <span className={`h-5 w-0.5 shrink-0 rounded-full transition-all ${selectedUser?.id === item.id ? "bg-[var(--accent)]" : "bg-transparent"}`} />
@@ -1086,12 +1121,14 @@ export default async function UsersPage({
                   <p className="truncate text-[0.8125rem] text-[var(--ink-muted)]">{roleLabel(item.role)}</p>
                 </div>
                 {!item.isActive && (
-                  <span className="shrink-0 rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[0.75rem] text-[var(--ink-muted)]">Off</span>
+                  <span className="shrink-0 rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[0.75rem] text-[var(--ink-muted)]">Archived</span>
                 )}
               </Link>
             ))}
             {filteredUsers.length === 0 && (
-              <p className="px-3 py-5 text-center text-[0.8125rem] text-[var(--ink-muted)]">No users found.</p>
+              <p className="px-3 py-5 text-center text-[0.8125rem] text-[var(--ink-muted)]">
+                {q ? "No users found." : view === "archived" ? "No archived accounts. Deactivating a user moves them here." : "No active users."}
+              </p>
             )}
           </div>
         </section>
@@ -1107,7 +1144,7 @@ export default async function UsersPage({
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 <span className={`rounded-full border px-2 py-0.5 text-[0.75rem] font-semibold ${selectedUser.isActive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-[var(--line)] text-[var(--ink-muted)]"}`}>
-                  {selectedUser.isActive ? "Active" : "Inactive"}
+                  {selectedUser.isActive ? "Active" : "Archived"}
                 </span>
                 {user.role === "ADMIN" && selectedUser.id !== user.id && (
                   <RowActionsMenu label="User actions" size="compact">
