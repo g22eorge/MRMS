@@ -109,9 +109,28 @@ describe("page text in another language", () => {
     // Exact match on the trimmed text only: a client called "Sales Ltd" or a
     // note containing "Paid" is not a phrase in the table.
     expect(source).toContain("const translated = table[trimmed];");
-    expect(source).toContain("node.nodeValue = raw.replace(trimmed, translated);");
+    expect(source).toContain("const next = raw.replace(trimmed, translated);");
     expect(source).toContain('"TEXTAREA"');
     expect(source).toContain("[data-no-translate]");
+  });
+
+  it("never rewrites a word that is spelled the same in both languages", async () => {
+    // "Clients", "Total" and "Date" are their own French. Writing them back
+    // unchanged retriggered the observer without end and froze the page.
+    const { pageTextTable } = await import("@/lib/i18n-pages");
+    const fr = pageTextTable("fr") ?? {};
+    expect(Object.entries(fr).some(([english, french]) => english === french)).toBe(true);
+    const source = readFileSync("components/layout/PageTranslator.tsx", "utf8");
+    expect(source).toContain("written.get(node) === raw");
+    expect(source).toContain("if (next !== raw) node.nodeValue = next;");
+    expect(source).toContain("if (translated !== value) element.setAttribute(name, translated);");
+  });
+
+  it("reloads the page when the language changes, and does nothing when it has not", () => {
+    const form = readFileSync("components/settings/LanguageForm.tsx", "utf8");
+    expect(form).toContain('if (String(data.get("locale")) === current) return;');
+    expect(form).toContain("window.location.reload();");
+    expect(readFileSync("app/(app)/settings/profile/page.tsx", "utf8")).toContain("<LanguageForm");
   });
 
   it("is mounted for the whole signed-in app, from the business's setting", () => {

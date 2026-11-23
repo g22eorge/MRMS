@@ -53,23 +53,38 @@ export function PageTranslator({ locale }: { locale?: string | null }) {
       const skip = (element: Element | null) =>
         !element || SKIP_TAGS.has(element.tagName) || element.closest("[data-no-translate],[contenteditable='true']") !== null;
 
+      // What this component last wrote to each node. Without it, a word that
+      // is spelled the same in both languages ("Clients", "Total", "Date" in
+      // French) was written back unchanged, which still counts as a change,
+      // which triggered another pass, forever: the page froze. A node is left
+      // alone while it still holds what was written to it.
+      const written = new WeakMap<Node, string>();
+      const writtenAttributes = new WeakMap<Element, Map<string, string>>();
+
       const translateText = (node: Text) => {
         const raw = node.nodeValue;
-        if (!raw) return;
+        if (!raw || written.get(node) === raw) return;
         const trimmed = raw.trim();
         if (trimmed.length < 2 || trimmed.length > 60) return;
         const translated = table[trimmed];
         if (!translated || skip(node.parentElement)) return;
         if (!adopted(node) && !adopted(node.parentElement)) return;
-        node.nodeValue = raw.replace(trimmed, translated);
+        const next = raw.replace(trimmed, translated);
+        written.set(node, next);
+        if (next !== raw) node.nodeValue = next;
       };
 
       const translateAttributes = (element: Element) => {
         for (const name of ATTRIBUTES) {
           const value = element.getAttribute(name);
           if (!value) continue;
+          if (writtenAttributes.get(element)?.get(name) === value) continue;
           const translated = table[value.trim()];
-          if (translated && !skip(element) && adopted(element)) element.setAttribute(name, translated);
+          if (!translated || skip(element) || !adopted(element)) continue;
+          const seen = writtenAttributes.get(element) ?? new Map<string, string>();
+          seen.set(name, translated);
+          writtenAttributes.set(element, seen);
+          if (translated !== value) element.setAttribute(name, translated);
         }
       };
 
@@ -93,8 +108,9 @@ export function PageTranslator({ locale }: { locale?: string | null }) {
       sweepSoon();
       cleanup = () => timers.forEach((id) => window.clearTimeout(id));
 
-      // A translated phrase has no entry of its own, so writing it back does
-      // not trigger another pass: the observer settles after one round.
+      // Each node is written at most once per value (see `written`), so the
+      // observer settles after one round even where a translation is also an
+      // English phrase in its own right.
       observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           if (mutation.type === "characterData") translateTree(mutation.target);

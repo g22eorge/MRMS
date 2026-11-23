@@ -7,7 +7,7 @@ import { ProfileForm } from "@/components/settings/ProfileForm";
 import { TwoFactorCard } from "@/components/settings/TwoFactorCard";
 import { prisma } from "@/lib/prisma";
 import { LOCALES, localeOrDefault } from "@/lib/i18n";
-import { SubmitButton } from "@/components/ui/SubmitButton";
+import { LanguageForm } from "@/components/settings/LanguageForm";
 import { setOrgLocaleAction } from "./actions";
 
 export default async function ProfilePage() {
@@ -28,20 +28,7 @@ export default async function ProfilePage() {
         <section className="dc-card space-y-2 px-4 py-3.5">
           <h2 className="text-sm font-semibold text-[var(--ink)]">Language</h2>
           <p className="text-[0.8125rem] text-[var(--ink-muted)]">For everyone in your business. Menus and common page text. Longer sentences, documents and messages stay in English.</p>
-          <form action={setOrgLocaleAction} className="flex flex-wrap items-center gap-2">
-            <select
-              name="locale"
-              defaultValue={orgLocale}
-              className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-[0.8125rem] text-[var(--ink)]"
-            >
-              {LOCALES.map((locale) => (
-                <option key={locale.code} value={locale.code}>{locale.label}</option>
-              ))}
-            </select>
-            <SubmitButton bare className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] font-semibold text-[var(--ink)]">
-              Save
-            </SubmitButton>
-          </form>
+          <LanguageForm current={orgLocale} options={LOCALES} action={setOrgLocaleAction} />
         </section>
       ) : null}
     </div>

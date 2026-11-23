@@ -215,5 +215,6 @@ export async function setOrgLocaleAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "");
   if (!isLocale(locale)) return;
   await prisma.organization.update({ where: { id: orgId }, data: { locale } });
-  revalidatePath("/", "layout");
+  // No revalidation: the form reloads the page, which is the only thing that
+  // clears text already translated in place.
 }
