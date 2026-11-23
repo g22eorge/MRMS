@@ -164,19 +164,30 @@ Run Data Heal afterwards so the document counters catch up. The policy is in
 **In production, a push to `main` is the release.** `.github/workflows/deploy.yml`
 does the rest, and nothing is built on the server:
 
-1. Quality gate on GitHub's runner: typecheck, lint, unit tests against a
-   throwaway Postgres, production build.
-2. One image per service (`app`, `worker`, `scheduler`, `migrate`, `backup`)
-   built on GitHub's runners and pushed to GHCR as
-   `ghcr.io/<owner>/mrms-<service>:<commit sha>`.
-3. Copy `docker-compose.yml`, a `.env` written from the `ENV_CI` secret, and the
-   backup and proxy scripts to `DEPLOY_PATH` (default `/var/www/mrms`). The
+1. Quality gate on GitHub's runner: typecheck, lint, and unit tests against a
+   throwaway Postgres. It does not run `next build`; step 2 does, once.
+2. At the same time as step 1, one image per service (`app`, `worker`,
+   `scheduler`, `migrate`, `backup`) built on GitHub's runners and pushed to
+   GHCR as `ghcr.io/<owner>/mrms-<service>:<commit sha>`. Only `app` builds
+   Next. `migrate` and `worker` take the generated Prisma client from the
+   Dockerfile's shared `prisma` stage instead of from a full build.
+3. Only when 1 and 2 have both passed: copy `docker-compose.yml`, a `.env`
+   written from the `ENV_CI` secret, and the backup and proxy scripts to `DEPLOY_PATH` (default `/var/www/mrms`). The
    server holds those files, not a checkout of the repository. Then over SSH:
    `docker compose pull`, `docker compose up -d --no-build`, wait for the
    containers to report healthy, and `prisma migrate status`.
 
-It takes about 12 minutes and the site answers 502 briefly while `app`
-restarts. `feat/postgres-docker-migration` is still in the trigger alongside
+It takes about 6 minutes (5m36s on the first run of this shape, 2026-11-23:
+gate 2m32s, `app` image 3m40s, deploy 1m49s) and the site answers 502 briefly
+while `app` restarts. Images are pushed before the gate finishes, so a commit
+that fails the gate can leave images in GHCR that were never deployed; they are
+tagged by commit and nothing pulls them.
+
+A push that changes only `*.md` files or `docs/` does not start the workflow,
+because no image would differ. `docs/pg-migration/` is the exception: its
+`import-map.json` is input to the importer in the `migrate` image.
+
+`feat/postgres-docker-migration` is still in the trigger alongside
 `main`; deploys from every branch share one concurrency group, so two never
 run against the server at once. `workflow_dispatch` re-runs it by hand. The
 secrets it needs are listed at the top of the workflow file.

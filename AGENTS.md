@@ -2,7 +2,7 @@
 
 This file is the operating guide for AI agents and developers working in this repo. It describes the current system, the desired production behavior, and the checks to run when troubleshooting reliability, security, tenant isolation, and performance.
 
-Last updated: 2026-11-22 (cutover complete: `main` deploys to the VPS; Vercel is paused and disconnected).
+Last updated: 2026-11-23 (deploy pipeline shortened to about 6 minutes; forced password change after an admin reset).
 
 ## Current System State
 
@@ -36,9 +36,17 @@ The owner's current workflow is:
 
 - `main` is priority production work.
 - **Pushing `main` deploys to production.** `.github/workflows/deploy.yml` runs
-  the quality gate, builds the images and restarts the stack on the VPS; it
-  takes about 12 minutes and the site returns 502 briefly while it restarts.
+  the quality gate and builds the images side by side, then restarts the stack
+  on the VPS once both have passed; it takes about 6 minutes (5m36s on the
+  first run, 2026-11-23) and the site returns 502 briefly while it restarts.
   There is no staging step in between, so verify before you push.
+- The quality gate is typecheck, lint and unit tests. It does **not** run
+  `next build`; the `app` image build is the only production build in the
+  pipeline, and a build failure there stops the deploy. Run `bun run build`
+  yourself before pushing, as the verification list below says.
+- A push that changes only Markdown or `docs/` deploys nothing
+  (`docs/pg-migration/` excepted: it is baked into the `migrate` image). Use
+  `workflow_dispatch` to deploy by hand.
 - `feat/postgres-docker-migration` was merged into `main` on 2026-11-22. It is
   still in the deploy trigger, so a push there deploys too. Do new work on
   `main`.
@@ -85,6 +93,11 @@ Always preserve these:
 - `orgId` isolation for commercial routes and APIs.
 - Append-only audit logs. Do not delete audit entries as a cleanup shortcut.
 - File uploads must validate file type and size.
+- A password set by someone else is temporary. Both admin reset paths set
+  `User.mustChangePassword`, and `requireOrgSession` in `lib/org-context.ts`
+  sends a flagged user to `/change-password` until they choose their own. A new
+  reset path must set the flag; a new page guard must not bypass
+  `requireOrgSession`. Portal logins have the same rule on `PortalUser`.
 - Production auth must set `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL`.
 - Production runtime must set `DATABASE_URL`, and `CRON_SECRET` for the scheduled jobs.
 

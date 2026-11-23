@@ -11,7 +11,7 @@ steps below are done unless listed under "Still open".
   process answers both hosts; the `app-commercial` profile is not running.
 - `feat/postgres-docker-migration` was merged into `main` on 2026-11-22
   (`dba82817`). `.github/workflows/deploy.yml` triggers on `main` (and still on
-  the migration branch): quality gate, five images to GHCR tagged by commit,
+  the migration branch): quality gate and five images to GHCR tagged by commit, in parallel,
   then `compose pull` + `compose up -d` on the server. Deploys from every
   branch share one concurrency group.
 - Vercel: projects `mrms` and `mrms-apga` are **paused** (every `vercel.app`
