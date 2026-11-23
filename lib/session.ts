@@ -75,6 +75,7 @@ export async function getCurrentUserRole() {
         phone: string | null;
         orgId: string | null;
         permissions: string[];
+        mustChangePassword: boolean;
       }
     | null = null;
 
@@ -90,6 +91,7 @@ export async function getCurrentUserRole() {
         email: true,
         phone: true,
         orgId: true,
+        mustChangePassword: true,
         permissionGrants: { select: { permission: true } },
       },
     });
@@ -104,6 +106,7 @@ export async function getCurrentUserRole() {
           email: row.email,
           phone: row.phone ?? null,
           orgId: row.orgId ?? null,
+          mustChangePassword: row.mustChangePassword === true,
           permissions: row.permissionGrants
             .map((p) => p.permission)
             .filter((permission): permission is string => typeof permission === "string" && permission.length > 0),
@@ -111,6 +114,13 @@ export async function getCurrentUserRole() {
       : null;
   } catch {
     // Fallback for partially migrated DBs (older deployments).
+    //
+    // The raw queries below were written for SQLite and left unquoted, so on
+    // Postgres "orgId" folded to "orgid", failed, and was swallowed: this path
+    // returned a user with no organisation and every page sent them to
+    // /onboarding. It was unreachable until a column was added to the select
+    // above while a server still held the previous client — which is exactly
+    // the moment the fallback exists for.
     const baseUser = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { id: true, role: true, isActive: true, name: true, email: true },
@@ -124,7 +134,7 @@ export async function getCurrentUserRole() {
     if (baseUser) {
       try {
         const rows = await prisma.$queryRaw<Array<{ phone: string | null; orgId: string | null; accessMode: string | null }>>`
-          SELECT phone, orgId, accessMode FROM "User" WHERE id = ${session.user.id} LIMIT 1
+          SELECT "phone", "orgId", "accessMode" FROM "User" WHERE "id" = ${session.user.id} LIMIT 1
         `;
         phone = rows[0]?.phone ?? null;
         orgId = rows[0]?.orgId ?? null;
@@ -137,7 +147,7 @@ export async function getCurrentUserRole() {
 
       try {
         const permissionRows = await prisma.$queryRaw<Array<{ permission: string }>>`
-          SELECT permission FROM "UserPermission" WHERE userId = ${session.user.id}
+          SELECT "permission" FROM "UserPermission" WHERE "userId" = ${session.user.id}
         `;
         permissions = permissionRows
           .map((row) => row.permission)
@@ -148,7 +158,7 @@ export async function getCurrentUserRole() {
     }
 
     user = baseUser
-      ? { ...baseUser, role: normalizeRole(baseUser.role), phone, orgId, permissions, accessMode }
+      ? { ...baseUser, role: normalizeRole(baseUser.role), phone, orgId, permissions, accessMode, mustChangePassword: false }
       : null;
   }
 
@@ -200,6 +210,7 @@ export async function getCurrentUserRoleOptional() {
         email: true,
         phone: true,
         orgId: true,
+        mustChangePassword: true,
         permissionGrants: { select: { permission: true } },
       },
     });

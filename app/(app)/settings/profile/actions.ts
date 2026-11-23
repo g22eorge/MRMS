@@ -145,6 +145,7 @@ export async function changePasswordAction(
     // it has to end the attacker's session too. The admin reset paths already
     // did this; the self-service one left every other session logged in.
     await tx.session.deleteMany({ where: { userId: session.user.id } });
+    await tx.user.update({ where: { id: session.user.id }, data: { mustChangePassword: false } });
   });
 
   return { success: "Password changed" };
@@ -190,6 +191,13 @@ export async function adminChangeUserPasswordAction(
     }
 
     await tx.session.deleteMany({ where: { userId: target.id } });
+
+    // Same rule as the reset on Settings → Users: a password an admin set is
+    // one the admin knows, so the user replaces it at the next sign-in.
+    await tx.user.update({
+      where: { id: target.id },
+      data: { mustChangePassword: target.id !== user.id },
+    });
   });
 
   revalidatePath("/settings/users");

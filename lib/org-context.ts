@@ -29,6 +29,13 @@ async function getPrisma() {
 /** Use in server components and server actions that require a full org context. */
 export async function requireOrgSession() {
   const { session, user } = await getCurrentUserRole();
+
+  // An admin has just set this user's password, so the admin knows it. Nothing
+  // in the app opens until they have chosen their own. /change-password sits
+  // outside the (app) segment and reads the session directly, so it does not
+  // come back through here and bounce against itself.
+  if (user!.mustChangePassword) redirect("/change-password");
+
   const deployment = await getDeploymentContext();
 
   if (deployment.mode === "CARE_SINGLE_TENANT") {

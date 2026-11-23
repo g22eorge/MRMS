@@ -601,6 +601,13 @@ export default async function UsersPage({
 
       // Force re-login everywhere after reset.
       await tx.session.deleteMany({ where: { userId: parsed.data.userId } });
+
+      // The admin typed this password, so the admin knows it: the user picks
+      // their own at the next sign-in. Not when an admin resets their own.
+      await tx.user.update({
+        where: { id: parsed.data.userId },
+        data: { mustChangePassword: parsed.data.userId !== session.user.id },
+      });
     });
 
     try {
@@ -661,7 +668,7 @@ export default async function UsersPage({
     let currentPermissionValues: string[] = [];
     try {
       const rows = await prisma.$queryRaw<Array<{ permission: string }>>`
-        SELECT permission FROM "UserPermission" WHERE userId = ${targetUserId}
+        SELECT "permission" FROM "UserPermission" WHERE "userId" = ${targetUserId}
       `;
       currentPermissionValues = rows.map((row) => row.permission).filter(Boolean);
     } catch {
@@ -945,7 +952,7 @@ export default async function UsersPage({
     let permissionMap = new Map<string, string[]>();
     try {
       const rows = await prisma.$queryRaw<Array<{ userId: string; permission: string }>>`
-        SELECT userId, permission FROM "UserPermission"
+        SELECT "userId", "permission" FROM "UserPermission"
       `;
       permissionMap = rows.reduce((acc, row) => {
         if (!acc.has(row.userId)) acc.set(row.userId, []);

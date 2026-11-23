@@ -183,6 +183,10 @@ model User {
   role            Role           @default(OPS)
   isActive        Boolean        @default(true)
   accessMode      UserAccessMode @default(FULL)
+  // Set when an admin resets this user's password; cleared when the user
+  // chooses their own. While set, requireOrgSession sends them to
+  // /change-password. Same rule PortalUser.mustChangePassword enforces.
+  mustChangePassword Boolean     @default(false)
   orgId           String?
   org             Organization?  @relation(fields: [orgId], references: [id], onDelete: SetNull)
   branchId        String?
