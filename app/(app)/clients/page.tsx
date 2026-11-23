@@ -17,6 +17,7 @@ import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
 import { getCurrentUserRole } from "@/lib/session";
 import { formatEATDate } from "@/lib/date-eat";
 import { assertOrgCanMutate } from "@/lib/org-write";
+import { getOrgModules } from "@/lib/module-access";
 import { requireOrgSession } from "@/lib/org-context";
 import { clientContactName, clientDisplayName } from "@/lib/client-name";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -63,6 +64,9 @@ export default async function ClientsPage({
   if (!can.viewClientInfo(user)) {
     redirect("/dashboard");
   }
+  // Every business has customers; only one with the repair module has jobs to
+  // count against them. Without it the job figures, filters and column go.
+  const hasJobs = user.orgId ? (await getOrgModules(user.orgId)).has("JOBS") : true;
 
   const filters = await searchParams;
   const page = parsePage(filters.page);
@@ -304,13 +308,13 @@ export default async function ClientsPage({
         </div>
 
         {/* Compact 4-number stat row */}
-        <div className="grid grid-cols-4 overflow-hidden rounded-xl border border-[var(--line)] divide-x divide-[var(--line)]">
+        <div className={`grid ${hasJobs ? "grid-cols-4" : "grid-cols-3"} overflow-hidden rounded-xl border border-[var(--line)] divide-x divide-[var(--line)]`}>
           {([
             { label: "Total",   value: kpiTotal },
             { label: "New",     value: kpiNewThisMonth },
             { label: "Active",  value: kpiWithActiveJobs },
             { label: "Orgs",    value: kpiWithOrg },
-          ] as const).map(({ label, value }) => (
+          ] as const).filter(({ label }) => hasJobs || label !== "Active").map(({ label, value }) => (
             <div key={label} className="flex flex-col items-center py-3">
               <p className="text-[1.375rem] font-black leading-none tabular-nums text-[var(--ink)]">{value}</p>
               <p className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">{label}</p>
@@ -319,7 +323,7 @@ export default async function ClientsPage({
         </div>
 
         {/* 4-chip segment filter — grid fills full width */}
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className={`grid-cols-4 gap-1.5 ${hasJobs ? "grid" : "hidden"}`}>
           {([
             { seg: "all",    label: "All",      count: totalClients },
             { seg: "active", label: "Active",   count: activeClients },
@@ -365,13 +369,13 @@ export default async function ClientsPage({
 
       {/* ══ DESKTOP: KPI cards ══ */}
       <StatCards
-        columns={4}
+        columns={hasJobs ? 4 : 3}
         cards={[
           { key: "total",  label: "Total clients",   value: kpiTotal,          sub: "all time",              muted: kpiTotal === 0 },
-          { key: "new",    label: "New this month",  value: kpiNewThisMonth,   sub: "first seen this month", tone: "good",   muted: kpiNewThisMonth === 0 },
-          { key: "active", label: "With active jobs", value: kpiWithActiveJobs, sub: "open repairs",          tone: "accent", muted: kpiWithActiveJobs === 0 },
+          { key: "new",    label: "New this month",  value: kpiNewThisMonth,   sub: "first seen this month", tone: "good" as const,   muted: kpiNewThisMonth === 0 },
+          { key: "active", label: "With active jobs", value: kpiWithActiveJobs, sub: "open repairs",          tone: "accent" as const, muted: kpiWithActiveJobs === 0 },
           { key: "orgs",   label: "Organisations",   value: kpiWithOrg,        sub: "with org name",         muted: kpiWithOrg === 0 },
-        ]}
+        ].filter((card) => hasJobs || card.key !== "active")}
       />
 
       {/* ══ DESKTOP: Stat chips + New Client ══ */}
@@ -382,7 +386,7 @@ export default async function ClientsPage({
             { seg: "active", label: `${activeClients} active`       },
             { seg: "new",  label: `${newClients} no job`            },
             { seg: "high", label: `${withManyJobs} high activity`   },
-          ] as const).map(({ seg, label }) => (
+          ] as const).filter(({ seg }) => hasJobs || seg === "all").map(({ seg, label }) => (
             <Link key={seg} href={segmentHref(seg)}
               className={`rounded-full border px-3 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
                 segment === seg
@@ -562,10 +566,10 @@ export default async function ClientsPage({
                 className: "hidden text-[0.75rem] text-[var(--ink-muted)] xl:table-cell",
                 cell: (client) => client.email ?? <span className="opacity-30">—</span>,
               },
-              {
+              ...(hasJobs ? [{
                 key: "jobs",
                 header: "Jobs",
-                cell: (client) =>
+                cell: (client: ClientRow) =>
                   client._count.jobs > 0 ? (
                     <Link href={`/jobs?client=${client.id}`}
                       className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[0.75rem] font-semibold transition hover:opacity-80 ${
@@ -578,7 +582,7 @@ export default async function ClientsPage({
                   ) : (
                     <span className="text-[0.75rem] text-[var(--ink-muted)]/40">—</span>
                   ),
-              },
+              }] : []),
               {
                 key: "joined",
                 header: "Joined",

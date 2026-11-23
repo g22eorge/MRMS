@@ -78,6 +78,11 @@ export async function AdminDashboard({
   // two dashboards can never disagree about what "Active" means.
 
   const canCreateJob = can.createJob(permissionUser) && enabledModules.has("JOBS");
+  // A business without the repair module gets the money, sales and stock
+  // parts of this page and none of the job ones.
+  const hasJobs = enabledModules.has("JOBS");
+  const hasSalesCrm = enabledModules.has("SALES");
+  const hasInventory = enabledModules.has("INVENTORY");
 
   // Needs-action items, severity-ordered (critical → warning → info)
   const needs = [
@@ -108,19 +113,19 @@ export async function AdminDashboard({
 
   // Cash channels
   const channels = [
-    { label: "Repairs", value: repairsMtd, href: "/jobs?status=COMPLETED" },
-    { label: "Products", value: productsMtd, href: "/pos" },
-    { label: "Corporate", value: corporateMtd, href: "/documents/invoices" },
-  ] as const;
+    { label: "Repairs", value: repairsMtd, href: "/jobs?status=COMPLETED", show: hasJobs },
+    { label: "Products", value: productsMtd, href: "/pos", show: true },
+    { label: "Corporate", value: corporateMtd, href: "/documents/invoices", show: true },
+  ].filter((c) => c.show);
 
   // Financial position rows
   const position = [
-    { label: "Receivables", sub: `${outstandingCount} open`, value: outstandingValue, tone: outstandingValue > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink)]", href: "/documents/invoices?status=ISSUED" },
-    { label: "Expenses this month", sub: null as string | null, value: expensesValue, tone: "text-[var(--dc-ink)]", href: "/finance/expenses" },
-    { label: "Payables", sub: "to suppliers", value: payablesValue, tone: payablesValue > 0 ? "text-[var(--dc-crit)]" : "text-[var(--dc-ink)]", href: "/inventory/supplier-bills?status=POSTED" },
-    { label: "Tech payouts due", sub: technicianPayoutsDue > 0 ? "pending" : "all clear", value: technicianPayoutsDue, tone: technicianPayoutsDue > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink)]", href: "/jobs?repairPath=EXTERNAL" },
-    { label: "Bank + cash balance", sub: "across accounts", value: totalBankBalance, tone: "text-[var(--dc-good)]", href: "/finance/bank" },
-  ] as const;
+    { label: "Receivables", sub: `${outstandingCount} open`, value: outstandingValue, tone: outstandingValue > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink)]", href: "/documents/invoices?status=ISSUED", show: true },
+    { label: "Expenses this month", sub: null as string | null, value: expensesValue, tone: "text-[var(--dc-ink)]", href: "/finance/expenses", show: true },
+    { label: "Payables", sub: "to suppliers", value: payablesValue, tone: payablesValue > 0 ? "text-[var(--dc-crit)]" : "text-[var(--dc-ink)]", href: "/inventory/supplier-bills?status=POSTED", show: enabledModules.has("PURCHASE_ORDERS") },
+    { label: "Tech payouts due", sub: technicianPayoutsDue > 0 ? "pending" : "all clear", value: technicianPayoutsDue, tone: technicianPayoutsDue > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink)]", href: "/jobs?repairPath=EXTERNAL", show: hasJobs },
+    { label: "Bank + cash balance", sub: "across accounts", value: totalBankBalance, tone: "text-[var(--dc-good)]", href: "/finance/bank", show: true },
+  ].filter((p) => p.show);
 
   // Revenue sparkline (YTD monthly)
   const rev = revenueTrend.length ? revenueTrend : [{ key: "", revenue: 0, margin: 0 }];
@@ -172,6 +177,7 @@ export async function AdminDashboard({
         currency={currency}
         quickActions={quickActions}
         recentJobs={recentJobs}
+        showRepairs={hasJobs}
       />
 
       {/* ════════ Desktop dashboard — calm layout (hidden on mobile) ════════ */}
@@ -198,14 +204,14 @@ export async function AdminDashboard({
             contradiction and gives one obvious "how am I doing?" figure. */}
         <section>
           <SectionHead title="Today" />
-          <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-4">
+          <div className={`grid gap-4 ${hasJobs ? "grid-cols-[1.6fr_1fr_1fr_1fr]" : "grid-cols-[1.6fr_1fr]"}`}>
             <Link href="/documents/receipts" className="dc-card dc-lift block px-6 py-5">
               <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.03em] text-[var(--dc-ink-3)]">Revenue today</p>
               <p className="mt-2 text-[2.5rem] font-bold leading-none tracking-[-0.03em] tabular-nums text-[var(--dc-accent-2)]">
                 {formatMoneyCompact(revenueTodayValue, currency)}
               </p>
               <p className="mt-2.5 text-[0.71875rem] text-[var(--dc-ink-3)]">
-                Repairs {formatMoneyCompact(cashTodayValue, currency)} · Products {formatMoneyCompact(salesTodayValue, currency)}
+                {hasJobs ? <>Repairs {formatMoneyCompact(cashTodayValue, currency)} · </> : null}Products {formatMoneyCompact(salesTodayValue, currency)}
                 {expensesTodayValue > 0 ? <> · <span className="text-[var(--dc-crit)]">{formatMoneyCompact(expensesTodayValue, currency)} out</span></> : null}
               </p>
             </Link>
@@ -219,33 +225,38 @@ export async function AdminDashboard({
                 Active is neutral on purpose: having jobs in progress is the
                 normal state of a repair shop, and colouring it teaches people
                 to ignore the colours that do mean something. */}
-            <KpiCard
-              title="Active"
-              value={String(activeJobsCount)}
-              caption={`${receivedToday} in · ${completedToday} done today`}
-              tone="neutral"
-              href="/jobs"
-            />
+            {hasJobs ? (
+              <KpiCard
+                title="Active"
+                value={String(activeJobsCount)}
+                caption={`${receivedToday} in · ${completedToday} done today`}
+                tone="neutral"
+                href="/jobs"
+              />
+            ) : null}
             <KpiCard
               title="Due"
               value={formatMoneyCompact(outstandingValue, currency)}
-              caption={`${completedUnpaidCount} completed & unpaid`}
+              caption={hasJobs ? `${completedUnpaidCount} completed & unpaid` : "unpaid invoices"}
               tone={outstandingValue > 0 ? "serious" : "good"}
               href="/documents/invoices?status=ISSUED"
             />
-            <KpiCard
-              title="Ready"
-              value={String(readyForPickupCount)}
-              caption="awaiting pickup"
-              tone={readyForPickupCount > 0 ? "warning" : "good"}
-              href="/jobs?status=READY_FOR_PICKUP"
-            />
+            {hasJobs ? (
+              <KpiCard
+                title="Ready"
+                value={String(readyForPickupCount)}
+                caption="awaiting pickup"
+                tone={readyForPickupCount > 0 ? "warning" : "good"}
+                href="/jobs?status=READY_FOR_PICKUP"
+              />
+            ) : null}
           </div>
         </section>
 
         {/* ── Repair pipeline: one quiet line ──
             The note was "% conversion", which reads as a sales metric; it is
             actually completed ÷ received for the month (see admin-data.ts). */}
+        {hasJobs ? (
         <section>
           <SectionHead
             title="Repair pipeline"
@@ -265,11 +276,13 @@ export async function AdminDashboard({
             })}
           </Card>
         </section>
+        ) : null}
 
-        {/* ── Three calm zones ── */}
-        <div className="grid grid-cols-3 items-start gap-4">
+        {/* ── Three calm zones (two without the repair module) ── */}
+        <div className={`grid items-start gap-4 ${hasJobs ? "grid-cols-3" : "grid-cols-2"}`}>
 
           {/* Zone 1 — Needs action */}
+          {hasJobs ? (
           <Card className="p-5">
             <CardHead
               title="Needs action"
@@ -301,6 +314,7 @@ export async function AdminDashboard({
               ))}
             </div>
           </Card>
+          ) : null}
 
           {/* Zone 2 — Money */}
           <div className="space-y-4">
@@ -308,7 +322,7 @@ export async function AdminDashboard({
               <CardHead title="Cash this month" href="/finance" hrefLabel="Finance →" />
               <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.03em] text-[var(--dc-ink-3)]">Collected</p>
               <p className="mt-1 text-[1.6875rem] font-bold leading-none tracking-[-0.025em] tabular-nums text-[var(--dc-accent-2)]">{formatMoneyCompact(totalMtd, currency)}</p>
-              <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className={`mt-4 grid gap-2 ${channels.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
                 {channels.map((c) => (
                   <Link key={c.label} href={c.href} className="rounded-[11px] bg-[var(--dc-panel-2)] px-3 py-2.5 transition hover:opacity-80">
                     <p className="text-[0.65625rem] text-[var(--dc-ink-3)]">{c.label}</p>
@@ -363,8 +377,14 @@ export async function AdminDashboard({
               )}
             </Card>
 
+            {hasSalesCrm || hasInventory ? (
             <Card className="p-5">
-              <CardHead title="Sales & stock" href="/sales/leads" hrefLabel={`${routeLabel("/sales/leads")} →`} />
+              {hasSalesCrm ? (
+                <CardHead title="Sales & stock" href="/sales/leads" hrefLabel={`${routeLabel("/sales/leads")} →`} />
+              ) : (
+                <CardHead title="Stock" href="/inventory" hrefLabel={`${routeLabel("/inventory")} →`} />
+              )}
+              {hasSalesCrm ? (
               <div className="flex items-center">
                 {funnel.map((f, i) => (
                   <React.Fragment key={f.label}>
@@ -376,16 +396,25 @@ export async function AdminDashboard({
                   </React.Fragment>
                 ))}
               </div>
-              <div className="mt-3 flex items-center gap-4 border-t border-[var(--dc-line)] pt-3 text-[0.75rem] text-[var(--dc-ink-2)]">
-                <Link href="/sales/leads?status=WON" className="transition hover:opacity-80"><b className="font-bold text-[var(--dc-good)]">{wonCount}</b> won</Link>
-                <Link href="/sales/leads?status=LOST" className="transition hover:opacity-80"><b className="font-bold text-[var(--dc-crit)]">{lostCount}</b> lost</Link>
-                <Link href="/inventory?filter=low" className="ml-auto transition hover:opacity-80">
+              ) : null}
+              <div className={`flex items-center gap-4 text-[0.75rem] text-[var(--dc-ink-2)] ${hasSalesCrm ? "mt-3 border-t border-[var(--dc-line)] pt-3" : ""}`}>
+                {hasSalesCrm ? (
+                  <>
+                    <Link href="/sales/leads?status=WON" className="transition hover:opacity-80"><b className="font-bold text-[var(--dc-good)]">{wonCount}</b> won</Link>
+                    <Link href="/sales/leads?status=LOST" className="transition hover:opacity-80"><b className="font-bold text-[var(--dc-crit)]">{lostCount}</b> lost</Link>
+                  </>
+                ) : null}
+                {hasInventory ? (
+                <Link href="/inventory?filter=low" className={`transition hover:opacity-80 ${hasSalesCrm ? "ml-auto" : ""}`}>
                   Low stock <b className={`font-bold ${lowStockItems.length > 0 ? "text-[var(--dc-warn)]" : "text-[var(--dc-ink)]"}`}>{lowStockItems.length}</b>
                   {" · "}out <b className={`font-bold ${outOfStockCount > 0 ? "text-[var(--dc-crit)]" : "text-[var(--dc-ink)]"}`}>{outOfStockCount}</b>
                 </Link>
+                ) : null}
               </div>
             </Card>
+            ) : null}
 
+            {hasJobs ? (
             <Card className="p-5">
               <CardHead title="Top technicians" href="/technicians" hrefLabel="Leaderboard →" />
               {techLeaderboard.length === 0 ? (
@@ -408,6 +437,7 @@ export async function AdminDashboard({
                 </div>
               )}
             </Card>
+            ) : null}
           </div>
 
         </div>

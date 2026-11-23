@@ -45,6 +45,12 @@ export type MobileHomeProps = {
   currency: string;
   quickActions?: MobileQuickAction[];
   recentJobs?: { id: string; device: string; statusLabel: string; dot: string; ago: string }[];
+  /**
+   * False for a business without the repair module: the job counts, the
+   * "needs action" row and the recent jobs are left out, and the money figures
+   * stand on their own. Defaults to true.
+   */
+  showRepairs?: boolean;
 };
 
 function hero(v: number, currency: string) {
@@ -69,6 +75,7 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
   const revPct = pct(p.revenueTodayValue, p.cashYesterdayValue);
   const activeJobs = p.activeJobsCount ?? (p.receivedCount + p.inRepairCount + p.awaitingApprovalCount);
   const quickActions = p.quickActions ?? [];
+  const showRepairs = p.showRepairs ?? true;
 
   return (
     <div className="lg:hidden -mx-4 px-4 space-y-4 pb-4">
@@ -96,10 +103,12 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
         <div className="mx-auto mt-2 h-[3px] w-24 rounded-full bg-gradient-to-r from-[var(--accent)] to-emerald-400 opacity-80" aria-hidden />
         {/* Breakdown chips */}
         <div className="mt-3 flex items-center justify-center gap-3">
-          <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[0.75rem] font-bold text-emerald-500">
-            Repairs {compact(p.cashTodayValue, p.currency)}
-          </span>
-          {p.salesTodayValue > 0 && (
+          {showRepairs ? (
+            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[0.75rem] font-bold text-emerald-500">
+              Repairs {compact(p.cashTodayValue, p.currency)}
+            </span>
+          ) : null}
+          {(p.salesTodayValue > 0 || !showRepairs) && (
             <span className="rounded-full bg-[var(--accent)]/10 px-2.5 py-0.5 text-[0.75rem] font-bold text-[var(--accent)]">
               Sales {compact(p.salesTodayValue, p.currency)}
             </span>
@@ -112,29 +121,34 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
         )}
       </div>
 
-      {/* ── Secondary strip: Active | Due | Ready ─────────────────── */}
-      <div className="grid grid-cols-3 divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-        <Link href="/jobs" className="flex flex-col items-center gap-0.5 py-4 active:bg-[var(--panel-strong)]">
-          <span className={`text-[1.375rem] font-black leading-none ${activeJobs > 0 ? "text-sky-400" : "text-[var(--ink-muted)]/25"}`}>
-            {activeJobs}
-          </span>
-          <span className="text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Active</span>
-        </Link>
+      {/* ── Secondary strip: Active | Due | Ready (Due alone without repairs) ── */}
+      <div className={`grid ${showRepairs ? "grid-cols-3" : "grid-cols-1"} divide-x divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]`}>
+        {showRepairs ? (
+          <Link href="/jobs" className="flex flex-col items-center gap-0.5 py-4 active:bg-[var(--panel-strong)]">
+            <span className={`text-[1.375rem] font-black leading-none ${activeJobs > 0 ? "text-sky-400" : "text-[var(--ink-muted)]/25"}`}>
+              {activeJobs}
+            </span>
+            <span className="text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Active</span>
+          </Link>
+        ) : null}
         <Link href="/documents/invoices?status=ISSUED" className="flex flex-col items-center gap-0.5 py-4 active:bg-[var(--panel-strong)]">
           <span className={`text-[1.125rem] font-black leading-none ${p.outstandingValue > 0 ? "text-amber-400" : "text-[var(--ink-muted)]/25"}`}>
             {compact(p.outstandingValue, p.currency)}
           </span>
           <span className="text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Due</span>
         </Link>
-        <Link href="/jobs?status=READY_FOR_PICKUP" className="flex flex-col items-center gap-0.5 py-4 active:bg-[var(--panel-strong)]">
-          <span className={`text-[1.375rem] font-black leading-none ${p.readyForPickupCount > 0 ? "text-[var(--accent)]" : "text-[var(--ink-muted)]/25"}`}>
-            {p.readyForPickupCount}
-          </span>
-          <span className="text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Ready</span>
-        </Link>
+        {showRepairs ? (
+          <Link href="/jobs?status=READY_FOR_PICKUP" className="flex flex-col items-center gap-0.5 py-4 active:bg-[var(--panel-strong)]">
+            <span className={`text-[1.375rem] font-black leading-none ${p.readyForPickupCount > 0 ? "text-[var(--accent)]" : "text-[var(--ink-muted)]/25"}`}>
+              {p.readyForPickupCount}
+            </span>
+            <span className="text-[0.8125rem] font-semibold text-[var(--ink-muted)]">Ready</span>
+          </Link>
+        ) : null}
       </div>
 
       {/* ── Needs action — 3 hero numbers, colour-coded by urgency ──── */}
+      {showRepairs ? (
       <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="border-b border-[var(--line)] px-4 py-2.5">
           <p className="text-sm font-semibold text-[var(--ink)]">Needs action</p>
@@ -176,6 +190,7 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
           </Link>
         )}
       </div>
+      ) : null}
 
       {/* ── Quick actions ─────────────────────────────────────────── */}
       {quickActions.length > 0 ? (
@@ -192,7 +207,7 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
       ) : null}
 
       {/* ── Recent activity — last few jobs, each taps through ────────── */}
-      {(p.recentJobs?.length ?? 0) > 0 ? (
+      {showRepairs && (p.recentJobs?.length ?? 0) > 0 ? (
         <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5">
             <p className="text-sm font-semibold text-[var(--ink)]">Recent</p>

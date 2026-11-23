@@ -87,23 +87,92 @@ describe("the action's guarantees, in its source", () => {
   });
 });
 
-describe("a trial has every module, whatever was picked at signup", () => {
+describe("a trial gets the modules it chose at signup", () => {
   const SRC = readFileSync("lib/module-access.ts", "utf8");
+  const ACTION = readFileSync("app/(app)/settings/billing/module-actions.ts", "utf8");
 
-  it("short-circuits before reading grants", () => {
-    // Selection happens during onboarding, before anyone has seen the product,
-    // so an under-selection hides features the customer would have paid for and
-    // never learns about.
-    expect(SRC).toContain('org?.billingStatus === "TRIALING"');
-    expect(SRC).toContain("return [...ALL_MODULES]");
-    const trialIdx = SRC.indexOf('billingStatus === "TRIALING"');
-    const grantsIdx = SRC.indexOf("orgModuleGrant.findMany");
-    expect(trialIdx).toBeLessThan(grantsIdx);
+  it("does not open every module to a trial", () => {
+    // It used to, so that an under-selection at signup would not hide features.
+    // In practice a clothes shop that had picked point of sale and inventory
+    // spent its trial looking at jobs, intake and technicians.
+    expect(SRC).not.toContain('billingStatus === "TRIALING"');
+    expect(SRC).toContain("orgModuleGrant.findMany");
+  });
+
+  it("leaves adding a module to the administrator, within the plan", () => {
+    // The replacement for "show everything": discovery by choice, in Settings
+    // -> Billing. The plan check is the same on a trial as off it, so a module
+    // above the plan cannot be switched on free and then kept when the trial
+    // ends -- the action offers the plan it needs instead.
+    expect(ACTION).toContain("if (!planAtLeast(org.plan, required))");
+    expect(ACTION).not.toContain("TRIALING");
+  });
+
+  it("keeps the customer list out of the repair module", async () => {
+    // Every business has customers. Filed under JOBS, a shop without repairs
+    // had no customer list.
+    const { HREF_MODULE, hrefModuleAllowed } = await import("@/lib/nav/href-module");
+    expect(HREF_MODULE["/clients"]).toBeUndefined();
+    expect(hrefModuleAllowed("/clients", new Set(["POS"]))).toBe(true);
+    expect(hrefModuleAllowed("/jobs", new Set(["POS"]))).toBe(false);
+    expect(hrefModuleAllowed("/service", new Set(["POS"]))).toBe(false);
+  });
+
+  it("gates every module's pages on the server, not only in the menus", () => {
+    // A hidden menu item is not access control: the address can be typed.
+    const gates: Array<[string, string]> = [
+      ["jobs", "JOBS"], ["intake", "JOBS"], ["technicians", "JOBS"], ["warranty", "JOBS"],
+      ["payout-followups", "JOBS"], ["service", "JOBS"], ["field", "FIELD"], ["pos", "POS"],
+      ["sales", "SALES"], ["targets", "TARGETS"], ["complaints", "COMPLAINTS"],
+      ["reports", "REPORTS"], ["ai-insights", "REPORTS"],
+      ["inventory/purchase-orders", "PURCHASE_ORDERS"], ["inventory/suppliers", "PURCHASE_ORDERS"],
+      ["inventory/stock-counts", "INVENTORY"],
+      ["documents/invoices", "INVOICING"], ["documents/quotations", "INVOICING"], ["documents/receipts", "INVOICING"],
+    ];
+    for (const [segment, moduleKey] of gates) {
+      const layout = readFileSync(`app/(app)/${segment}/layout.tsx`, "utf8");
+      expect(layout).toContain(`requireModule(OrgModule.${moduleKey})`);
+    }
   });
 
   it("still falls back to all modules when the grants table cannot be read", () => {
     // Pre-existing behaviour, and the safe direction: a broken lookup must not
     // lock a paying customer out of their own product.
     expect(SRC).toContain("// Table missing (un-migrated env) — allow all.");
+  });
+});
+
+describe("screens every business shares follow the modules it chose", () => {
+  it("gives repair-shaped roles a neutral dashboard when there is no repair module", () => {
+    const page = readFileSync("app/(app)/dashboard/page.tsx", "utf8");
+    expect(page).toContain('!enabledModules.has("JOBS") && REPAIR_DASHBOARD_ROLES.has(user.role)');
+    expect(page).toContain("<WorkspaceDashboard");
+    // Built from the same model as the menus, so the two cannot disagree, and
+    // carrying no money figures of its own.
+    const workspace = readFileSync("app/(app)/dashboard/sections/WorkspaceDashboard.tsx", "utf8");
+    expect(workspace).toContain("buildSidebarModel(role, permissions, enabledModules)");
+    expect(workspace).not.toContain("formatMoney");
+  });
+
+  it("drops job counts and repair history from the client pages", () => {
+    const list = readFileSync("app/(app)/clients/page.tsx", "utf8");
+    expect(list).toContain("...(hasJobs ? [{");
+    const detail = readFileSync("app/(app)/clients/[id]/page.tsx", "utf8");
+    expect(detail).toContain("secondary={canEdit && hasJobs ? (");
+    expect(detail).toContain("{hasJobs ? (");
+  });
+});
+
+describe("deactivated accounts are listed apart from active ones", () => {
+  const page = readFileSync("app/(app)/settings/users/page.tsx", "utf8");
+
+  it("filters the list by the chosen view", () => {
+    expect(page).toContain('.filter((item) => item.isActive === (view === "active"))');
+  });
+
+  it("opens the list a requested person is in", () => {
+    // Deactivating someone redirects back with their id; they have just left
+    // the active list, and the page must not silently show somebody else.
+    expect(page).toContain('params.view !== "active" && requested && !requested.isActive');
   });
 });

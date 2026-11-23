@@ -107,7 +107,7 @@ export default async function MorePage() {
       <SectionHeader title="Business" />
       <div className="divide-y divide-[var(--line)]/50 rounded-2xl border border-[var(--line)] bg-[var(--panel)] mx-2 overflow-hidden">
 
-        {can.viewIntake(perm) && (
+        {can.viewIntake(perm) && ok("JOBS") && (
           <NavRow href="/intake" iconBg="bg-[var(--panel-strong)]"
             description="Receive devices and log new repairs"
             icon={<ItemIcon d={["M22 12h-6l-2 3h-4l-2-3H2", "M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"]} color="text-[var(--ink-muted)]" />}
@@ -128,14 +128,14 @@ export default async function MorePage() {
           />
         )}
 
-        {user.role !== "TECHNICIAN_EXTERNAL" && (
+        {user.role !== "TECHNICIAN_EXTERNAL" && ok("JOBS") && (
           <NavRow href="/technicians" iconBg="bg-[var(--panel-strong)]"
             description="Job board and tech performance"
             icon={<ItemIcon d={["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"]} color="text-[var(--ink-muted)]" />}
           />
         )}
 
-        {["ADMIN","OPS","MANAGER"].includes(user.role) && (
+        {["ADMIN","OPS","MANAGER"].includes(user.role) && ok("PURCHASE_ORDERS") && (
           <NavRow href="/inventory/suppliers" iconBg="bg-[var(--panel-strong)]"
             description="Supplier directory and bills"
             icon={<ItemIcon d={["M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z","M3.27 6.96 12 12.01l8.73-5.05","M12 22.08V12"]} color="text-[var(--ink-muted)]" />}
@@ -170,7 +170,7 @@ export default async function MorePage() {
           />
         )}
 
-        {can.approveWork(perm) && (
+        {can.approveWork(perm) && ok("JOBS") && (
           <NavRow href="/warranty" iconBg="bg-[var(--panel-strong)]"
             description="Warranty claims and approvals"
             icon={<ItemIcon d={["M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"]} color="text-[var(--ink-muted)]" />}
@@ -348,7 +348,7 @@ export default async function MorePage() {
               />
             )}
 
-            {can.viewAccountsSummary(perm) && (
+            {can.viewAccountsSummary(perm) && ok("REPORTS") && (
               <NavRow href="/reports" iconBg="bg-[var(--panel-strong)]"
                 description="Analytics, KPIs and performance"
                 icon={<ItemIcon d={["M3 3v18h18","m19 9-5 5-4-4-3 3"]} color="text-[var(--ink-muted)]" />}

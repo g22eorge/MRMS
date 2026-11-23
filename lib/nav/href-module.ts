@@ -5,12 +5,16 @@
  * mobile bottom nav (components/layout/BottomNav.tsx). Previously each kept
  * its own near-identical copy that drifted independently.
  */
+// "/clients" is deliberately absent: every business has customers, whichever
+// modules it chose. It was filed under JOBS, so a shop with point of sale and
+// invoicing but no repairs had no customer list.
 export const HREF_MODULE: Record<string, string> = {
   "/jobs": "JOBS",
   "/intake": "JOBS",
   "/technicians": "JOBS",
-  "/clients": "JOBS",
   "/payout-followups": "JOBS",
+  "/technicians/payouts": "JOBS",
+  "/service": "JOBS",
   "/complaints": "COMPLAINTS",
   "/warranty": "JOBS",
   "/field": "FIELD",
@@ -35,6 +39,7 @@ export const HREF_MODULE: Record<string, string> = {
   "/reports": "REPORTS",
   "/ai-insights": "REPORTS",
   "/sales": "SALES",
+  "/sales/campaigns": "SALES",
   "/targets": "TARGETS",
 };
 

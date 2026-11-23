@@ -20,7 +20,9 @@ import {
 import { SystemOverviewDashboard } from "./sections/SystemOverviewDashboard";
 import { TechFieldDashboard } from "./sections/TechFieldDashboard";
 import { TechManagerDashboard } from "./sections/TechManagerDashboard";
+import { WorkspaceDashboard } from "./sections/WorkspaceDashboard";
 import type { PeriodFilters } from "./sections/data";
+import { getOrgModules } from "@/lib/module-access";
 import { requireOrgSession } from "@/lib/org-context";
 
 type SearchParams = PeriodFilters;
@@ -45,7 +47,28 @@ export default async function DashboardPage({
   // flat, soft-bordered surface instead of the older crisper panel look. Same
   // mechanism the job-detail page uses (.jobdetail-cal). Structural layout stays
   // role-specific; only the visual vocabulary converges.
+  // These roles' dashboards are built from repair jobs. In a business without
+  // the repair module they would be a wall of zeros linking to pages the module
+  // gate bounces, so such a business gets a neutral page listing what the
+  // person can open. Admin, finance and the sales roles have dashboards that
+  // already stand without repairs.
+  const enabledModules = await getOrgModules(orgId);
+  const REPAIR_DASHBOARD_ROLES = new Set([
+    "TECHNICIAN_EXTERNAL", "TECHNICIAN_INTERNAL", "TECH_MANAGER", "TECH_FIELD",
+    "OPS", "FRONT_DESK", "INTAKE", "MANAGER",
+  ]);
   const content = (() => {
+    if (!enabledModules.has("JOBS") && REPAIR_DASHBOARD_ROLES.has(user.role)) {
+      return (
+        <WorkspaceDashboard
+          userId={session.user.id}
+          userName={user.name}
+          role={user.role}
+          permissions={user.permissions ?? []}
+          enabledModules={enabledModules as Set<string>}
+        />
+      );
+    }
     switch (user.role) {
       case "TECHNICIAN_EXTERNAL":
         return <ExternalTechDashboard userId={session.user.id} orgId={orgId} period={period} filters={filters} />;

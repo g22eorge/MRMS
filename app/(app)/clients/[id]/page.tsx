@@ -22,6 +22,7 @@ import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { MergeClientPanel } from "@/components/clients/MergeClientPanel";
 import { ClientProfileCard } from "@/components/clients/ClientProfileCard";
 import { sanitizeOptionalText, sanitizeText } from "@/lib/sanitize";
+import { getOrgModules } from "@/lib/module-access";
 import { requireOrgSession } from "@/lib/org-context";
 import { clientDisplayName } from "@/lib/client-name";
 import { assertOrgCanMutate } from "@/lib/org-write";
@@ -72,6 +73,7 @@ export default async function ClientDetailPage({
   const { id } = await params;
   const filters = await searchParams;
   const { user, orgId, org } = await requireOrgSession();
+  const hasJobs = (await getOrgModules(orgId)).has("JOBS");
   const canEdit = user.role === "ADMIN" || user.role === "OPS";
   const canSeeFinancials = can.viewFinancials(user);
 
@@ -320,7 +322,7 @@ export default async function ClientDetailPage({
         eyebrow="Clients"
         // The organisation is the account; the contact shows in the details below.
         title={clientDisplayName(client)}
-        secondary={canEdit ? (
+        secondary={canEdit && hasJobs ? (
           <Link href={`/jobs/new?clientId=${client.id}`} className="btn-premium shrink-0 rounded-lg px-3 py-1.5 text-[0.75rem]">+ New Repair</Link>
         ) : undefined}
       />
@@ -542,6 +544,8 @@ export default async function ClientDetailPage({
         <MergeClientPanel sourceId={client.id} sourceName={clientDisplayName(client)} sourceEmail={client.email} candidates={mergeCandidates} />
       ) : null}
 
+      {/* Repair history. Left out for a business without the repair module. */}
+      {hasJobs ? (
       <div className="dc-card px-3 py-2.5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-[var(--ink-muted)]/70">Job History</p>
@@ -601,6 +605,7 @@ export default async function ClientDetailPage({
           </div>
         )}
       </div>
+      ) : null}
 
       <div className="overflow-hidden rounded-xl border border-[var(--line)]/60">
         <div className="flex items-baseline gap-2 px-4 py-2.5">
@@ -636,12 +641,18 @@ export default async function ClientDetailPage({
         <RecordSummaryRail
           headline={statement
             ? { label: "Outstanding", value: formatMoney(statement.totals.outstanding, statement.currency), tone: statement.totals.outstanding > 0 ? "crit" : "good" }
-            : { label: "Total jobs", value: String(totalJobs) }}
+            : hasJobs
+              ? { label: "Total jobs", value: String(totalJobs) }
+              : { label: "Client since", value: formatEATDate(client.createdAt) }}
           rows={[
-            { label: "Total jobs", value: totalJobs },
-            { label: "Open", value: openJobs },
-            { label: "Completed", value: completedJobs },
-            { label: "Completion", value: `${completionRate.toFixed(0)}%` },
+            ...(hasJobs
+              ? [
+                  { label: "Total jobs", value: totalJobs },
+                  { label: "Open", value: openJobs },
+                  { label: "Completed", value: completedJobs },
+                  { label: "Completion", value: `${completionRate.toFixed(0)}%` },
+                ]
+              : []),
             ...(statement
               ? [
                   { label: "Billed", value: formatMoney(statement.totals.billed, statement.currency) },

@@ -22,22 +22,20 @@ function loadOrgModuleList(orgId: string): Promise<OrgModule[]> {
   return unstable_cache(
     async () => {
       try {
-        // A trial gets everything, whatever was picked at signup.
+        // What the business chose is what it gets, on a trial too.
         //
-        // Modules are chosen during onboarding, before anyone has seen the
-        // product, so the choice is a guess — and an under-selection is
-        // invisible: the feature they would have paid for simply is not there,
-        // and they never learn it existed. Opening the trial turns that guess
-        // into something they can answer from use rather than from a form, and
-        // the plan is then priced on what they actually reached for.
-        const org = await prisma.organization.findUnique({
-          where: { id: orgId },
-          select: { billingStatus: true },
-        });
-        if (org?.billingStatus === "TRIALING") return [...ALL_MODULES];
-
+        // A trial used to open every module, on the reasoning that a choice
+        // made at signup is a guess and an under-selection is invisible. In
+        // practice it put a repair workflow -- jobs, intake, technicians,
+        // warranty -- in front of a clothes shop that had picked point of sale
+        // and inventory, for the whole of its first month. The answer to
+        // "they might not know what else exists" is the module list in
+        // Settings -> Billing, where an administrator can switch on any module
+        // the plan covers and is told which plan the others need
+        // (setOrgModuleAction), not showing everything to everyone.
         const grants = await prisma.orgModuleGrant.findMany({ where: { orgId }, select: { module: true } });
-        // No explicit grants = unrestricted (all modules on by default).
+        // No grants at all means an organisation from before modules were
+        // chosen at signup. Unrestricted, so nothing it uses disappears.
         return grants.length === 0 ? [...ALL_MODULES] : grants.map((g) => g.module);
       } catch {
         // Table missing (un-migrated env) — allow all.
