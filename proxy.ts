@@ -53,6 +53,9 @@ const PUBLIC_PATHS = [
   // session when someone adds the app to their home screen.
   "/manifest.webmanifest",
   "/pwa-icon",
+  // The service worker and the page it shows when there is no connection.
+  "/sw.js",
+  "/offline.html",
 ];
 
 /**
