@@ -44,6 +44,20 @@ const mergeIds = new Set(
   (args.find((a) => a.startsWith("--merge="))?.split("=")[1] ?? "").split(",").map((v) => v.trim()).filter(Boolean),
 );
 const createdAfterArg = args.find((a) => a.startsWith("--created-after="))?.split("=")[1];
+// One-off widenings of the missing-only policy, for a source the default
+// policy was not written for (the commercial site's own database, where the
+// records created after the cutoff are sales rather than jobs and invoices).
+// The policy file is unchanged; a person names the exceptions for one run.
+const listArg = (name) =>
+  (args.find((a) => a.startsWith(`--${name}=`))?.split("=")[1] ?? "").split(",").map((v) => v.trim()).filter(Boolean);
+/** Models treated as top-level records for this run, in addition to `roots`. */
+const extraRoots = listArg("roots");
+/** Models taken off the `never` list for this run. */
+const allowTables = listArg("allow");
+/** Rows a person has decided must not come across (already re-entered on the target). */
+const skipIds = new Set(listArg("skip"));
+/** Only rows of this organisation are considered, in tables that carry orgId. */
+const orgArg = args.find((a) => a.startsWith("--org="))?.split("=")[1];
 if (missingOnly && truncate) {
   console.error("import: --missing-only and --truncate are opposites; pass one");
   process.exit(2);
@@ -648,8 +662,8 @@ const LABEL_COLUMNS = [
 
 async function runMissingOnly(order, present) {
   const policy = importMap.missingOnly ?? {};
-  const roots = new Set(policy.roots ?? []);
-  const never = new Set(policy.never?.tables ?? []);
+  const roots = new Set([...(policy.roots ?? []), ...extraRoots]);
+  const never = new Set((policy.never?.tables ?? []).filter((t) => !allowTables.includes(t) && !extraRoots.includes(t)));
   const polymorphic = policy.polymorphicOwners ?? {};
   const stamped = policy.stampedNumbers ?? {};
   const sameAs = policy.sameAs ?? {};
@@ -666,6 +680,9 @@ async function runMissingOnly(order, present) {
   }
 
   console.log(`\n  missing-only: records created after ${cutoff.toISOString()}${dryRun ? "   (DRY RUN — nothing will be kept)" : ""}`);
+  if (extraRoots.length) console.log(`  also top-level for this run: ${extraRoots.join(", ")}`);
+  if (allowTables.length) console.log(`  normally never copied, allowed for this run: ${allowTables.join(", ")}`);
+  if (orgArg) console.log(`  organisation: ${orgArg} only`);
 
   const mergeChildren = new Set(policy.mergeChildren?.tables ?? []);
   /** table -> Set of ids of existing rows updated by --merge in this run */
@@ -699,6 +716,32 @@ async function runMissingOnly(order, present) {
       existsCache.get(key).set(id, true);
     };
 
+    /** table -> Map(source id -> source row), for `sameAs` parent lookups */
+    const sourceById = new Map();
+    const sameAsOnTarget = async (table, id) => {
+      const model = order.find((x) => x.table === table);
+      const keys = model && sameAs[model.model];
+      if (!Array.isArray(keys)) return null;
+      if (!sourceById.has(table)) {
+        const all = await sourceRows(table, ["id", ...keys]);
+        sourceById.set(table, new Map(all.map((r) => [String(r.id), r])));
+      }
+      const source = sourceById.get(table).get(String(id));
+      if (!source || keys.some((k) => source[k] == null)) return null;
+      const where = keys.map((k, i) => `${q(k)} = $${i + 1}`).join(" AND ");
+      const found = await tx.$queryRawUnsafe(
+        `SELECT "id" FROM ${q(table)} WHERE ${where} LIMIT 2`,
+        ...keys.map((k) => source[k]),
+      );
+      if (found.length !== 1) return null;
+      if (!aliases.has(table)) aliases.set(table, new Map());
+      if (!aliases.get(table).has(String(id))) {
+        aliases.get(table).set(String(id), String(found[0].id));
+        report.linked.push(`${table} ${id} — the target holds it as ${found[0].id} (same ${keys.join("+")})`);
+      }
+      return String(found[0].id);
+    };
+
     // Two passes. Some owners are named without a foreign key (a journal entry
     // refers to its payment as "pay:<id>"), so nothing orders those tables
     // after the rows they belong to; the second pass picks them up, along with
@@ -715,7 +758,8 @@ async function runMissingOnly(order, present) {
         if (pass === 1) report.ignoredTables.push(`${m.table} (no id column)`);
         continue;
       }
-      const rows = await sourceRows(m.table, columns.map((c) => c.name));
+      let rows = await sourceRows(m.table, columns.map((c) => c.name));
+      if (orgArg && columns.some((c) => c.name === "orgId")) rows = rows.filter((row) => row.orgId === orgArg);
       if (!rows.length) continue;
 
       const creationCol = CREATION_COLUMNS.find((name) => columns.some((c) => c.name === name));
@@ -914,7 +958,7 @@ async function runMissingOnly(order, present) {
       const have = new Set(
         (await tx.$queryRawUnsafe(`SELECT "id" FROM ${q(m.table)} WHERE "id" = ANY($1::text[])`, ids)).map((r) => String(r.id)),
       );
-      candidates = candidates.filter((row) => !have.has(String(row.id)));
+      candidates = candidates.filter((row) => !have.has(String(row.id)) && !skipIds.has(String(row.id)));
       if (!candidates.length) continue;
 
       const tableOverrides = overrides.get(m.table);
@@ -948,6 +992,15 @@ async function runMissingOnly(order, present) {
             continue;
           }
           if (await exists(fk.targetTable, fk.targetColumns[0], value)) continue;
+          // The parent is not a record this run would write, but the target
+          // may hold the same thing under its own id: reference data created
+          // separately on each side (an organisation's chart of accounts).
+          // `sameAs` names the columns that identify it.
+          const twin = await sameAsOnTarget(fk.targetTable, value);
+          if (twin) {
+            data[field] = twin;
+            continue;
+          }
           const col = columns.find((c) => c.name === column);
           // Only where the database itself would have cleared the link had the
           // parent been deleted. A Cascade relation means the row has no
@@ -995,7 +1048,7 @@ async function runMissingOnly(order, present) {
           const at = values.findIndex((v) => typeof v === "string" && /^.*[/-]\d+$/.test(v));
           const series = at >= 0 ? values[at].match(/^(.*[/-])(\d+)$/) : null;
           const scope = cols.map((name, i) => [name, values[i]]).filter((_, i) => i !== at);
-          if (clash.length && series && renumberIds.has(String(row.id))) {
+          if (clash.length && series && (renumberIds.has("all") || renumberIds.has(String(row.id)))) {
             const [, prefix, digits] = series;
             // Everywhere the number can live: this column, and any copy of it
             // another table carries (a job's stamp of its invoice number).
