@@ -25,7 +25,7 @@ import { RowActionsMenu, MenuSection, MenuDestructiveRow, MenuActionLink, MenuAc
 import { DocumentPreviewButton } from "@/components/documents/DocumentPreviewButton";
 import { nextDocumentNumber } from "@/lib/commercial/document-workflow";
 import { dateFilterForDocumentPeriod } from "@/lib/documents/period-filters";
-import { formatEATDate, formatEATTime } from "@/lib/date-eat";
+import { formatEATDate, formatEATTime, eatDateKey } from "@/lib/date-eat";
 import { shareDeliveryNoteDocument } from "@/lib/notifications/share-document";
 import {
   DocumentPageHeader,
@@ -593,7 +593,7 @@ export default async function DeliveryNotesPage({
                 <form action={updateDeliveryNoteAction} className="space-y-2 p-3">
                   <input type="hidden" name="deliveryNoteId" value={n.id} />
                   <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Delivery date
-                    <input name="deliveredAt" type="date" defaultValue={new Date(n.deliveredAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+                    <input name="deliveredAt" type="date" defaultValue={eatDateKey(new Date(n.deliveredAt))} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                   </label>
                   <input name="deliveredByName" defaultValue={n.deliveredByName} placeholder="Delivered by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
                   <input name="receivedByName" defaultValue={n.receivedByName} placeholder="Received by" className="w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />

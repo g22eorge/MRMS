@@ -11,6 +11,7 @@ import { can } from "@/lib/permissions";
 
 import { loadAdminDashboardData } from "./admin-data";
 import { Card, CardHead, SectionHead, type PermissionUser } from "./shared";
+import { eatHour } from "@/lib/date-eat";
 
 /** ── Admin dashboard ───────────────────────────────────────────────────── */
 
@@ -68,11 +69,14 @@ export async function AdminDashboard({
   ].filter(Boolean) as React.ComponentProps<typeof MobileHomeDashboard>["quickActions"];
 
   // ── Desktop derivations ──────────────────────────────────────────────
-  const hour = today.getHours();
+  // In East Africa Time whatever clock the server is on. It ran on UTC, three
+  // hours behind, so this read "Good evening" under yesterday's date until
+  // 03:00. The containers are set to EAT now; saying so here as well means the
+  // greeting cannot drift again if that setting is ever lost.
+  const hour = eatHour(today);
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const dateLine = `${DOW[today.getDay()]}, ${today.getDate()} ${MON[today.getMonth()]}${orgName ? ` · ${orgName}` : ""}`;
+  const dayLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "Africa/Kampala" });
+  const dateLine = `${dayLabel}${orgName ? ` · ${orgName}` : ""}`;
 
   // Jobs actually in play — same definition the mobile home screen uses, so the
   // two dashboards can never disagree about what "Active" means.

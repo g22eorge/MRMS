@@ -1,6 +1,51 @@
 const EAT_LOCALE = "en-GB";
 const EAT_TIMEZONE = "Africa/Nairobi";
 
+/**
+ * The calendar date in East Africa Time, as "YYYY-MM-DD".
+ *
+ * For date inputs, export file names and anywhere else a day is needed as
+ * text. `toISOString().slice(0, 10)` gives the UTC day, which is yesterday
+ * between midnight and 03:00 here: a form opened at 00:30 defaulted to the
+ * previous date and its `max` refused today's, and a payment taken at 01:00
+ * was listed under the day before. Works in the browser as well as on the
+ * server, and does not depend on either one's own time zone.
+ */
+export function eatDateKey(value: Date | string | number = new Date()): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  // en-CA formats as YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: EAT_TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(date);
+}
+
+/**
+ * The instants a calendar day starts and ends in East Africa Time, from a
+ * "YYYY-MM-DD" key such as a date input's value. Null for anything else.
+ *
+ * `new Date("2026-11-23")` is midnight UTC, which is 03:00 here, so a filter
+ * built from it starts three hours into the day; and using the same instant as
+ * the upper bound leaves out the whole of the last day.
+ */
+export function eatDayStart(key: string | null | undefined): Date | null {
+  if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const date = new Date(`${key}T00:00:00.000+03:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function eatDayEnd(key: string | null | undefined): Date | null {
+  if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const date = new Date(`${key}T23:59:59.999+03:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** The hour of the day in East Africa Time, 0-23. */
+export function eatHour(value: Date = new Date()): number {
+  const hour = new Intl.DateTimeFormat("en-GB", { timeZone: EAT_TIMEZONE, hour: "2-digit", hourCycle: "h23" }).format(value);
+  return Number(hour) % 24;
+}
+
 export function formatEATDate(value: Date | string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";

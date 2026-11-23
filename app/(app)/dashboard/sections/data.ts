@@ -1,7 +1,7 @@
 import { getClientBill, resolveTechCost } from "@/lib/billing";
 import { INCOMING_PAYMENT } from "@/lib/finance/payment-kinds";
 import { getAppCurrency, toBaseAmount } from "@/lib/currency";
-import { formatEATMonthLabel } from "@/lib/date-eat";
+import { formatEATMonthLabel, eatDateKey } from "@/lib/date-eat";
 import { monthLabel, monthSequence } from "@/lib/date-ranges";
 import { prisma } from "@/lib/prisma";
 
@@ -29,7 +29,7 @@ export function parseMonth(monthParam?: string) {
 }
 
 export function asDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return eatDateKey(date);
 }
 
 function monthCountInclusive(startYear: number, startMonth: number, endYear: number, endMonth: number) {

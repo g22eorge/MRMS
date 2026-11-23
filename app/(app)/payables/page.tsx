@@ -32,6 +32,7 @@ import {
   payExpenseAction,
   payBucketAction,
 } from "../payout-followups/actions";
+import { eatDateKey } from "@/lib/date-eat";
 type SearchParams = {
   q?: string;
   tech?: string;
@@ -99,7 +100,7 @@ function PayablesRowPay({ r }: { r: CreditorRow }) {
       <form action={payExpenseAction} className="flex items-center gap-1.5">
         <input type="hidden" name="expenseId" value={r.id} />
         <input name="amount" required type="number" min="0.01" step="0.01" max={r.balance} defaultValue={String(r.balance)} placeholder="Amt" className="h-8 w-20 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none focus:border-emerald-500/50" />
-        <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none" />
+        <input name="paidAt" type="date" defaultValue={eatDateKey()} required className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none" />
         <select name="method" defaultValue="CASH" className="h-8 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2 text-[0.75rem] text-[var(--ink)] outline-none">
           {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatPaymentMethodLabel(m)}</option>)}
         </select>

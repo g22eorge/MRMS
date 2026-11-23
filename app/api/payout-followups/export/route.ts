@@ -9,6 +9,7 @@ import { filterSupportedJobStatuses } from "@/lib/job-status-server";
 import { clientDisplayName } from "@/lib/client-name";
 import { icontains } from "@/lib/db/search";
 import type { JobStatus, InvoiceStatus, SupplierBillStatus } from "@prisma/client";
+import { eatDateKey } from "@/lib/date-eat";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ function csv(headers: string[], rows: unknown[][]) {
 }
 
 function date(value: Date | null | undefined) {
-  return value ? new Date(value).toISOString().slice(0, 10) : "";
+  return value ? eatDateKey(new Date(value)) : "";
 }
 
 function download(name: string, body: string) {
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
   const q = (params.get("q") ?? "").trim() || undefined;
   const tech = (params.get("tech") ?? "").trim() || undefined;
   const bucket = (params.get("bucket") ?? "").trim() || undefined;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = eatDateKey();
 
   if (section === "invoices" && canSeeInvoices) {
     const rows = await prisma.invoice.findMany({

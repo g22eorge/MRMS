@@ -13,6 +13,7 @@ import { createSupplierBillAction } from "../actions";
 import { quickCreateSupplierAction } from "@/app/(app)/inventory/purchase-orders/actions";
 
 type Supplier = { id: string; name: string };
+import { eatDateKey } from "@/lib/date-eat";
 type PurchaseOrder = {
   id: string;
   supplierId: string;
@@ -210,7 +211,7 @@ export function NewSupplierBillForm({
           </div>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Bill date
-            <input name="issuedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
+            <input name="issuedAt" type="date" defaultValue={eatDateKey()} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
           </label>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">
             Payment due

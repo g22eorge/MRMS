@@ -10,7 +10,7 @@ import { LeadStatus } from "@prisma/client";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
-import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
+import { formatEATDate, formatEATDateTime, eatDateKey } from "@/lib/date-eat";
 import { formatMoney, getAppCurrency } from "@/lib/currency";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { DisclosureProvider, DisclosureTrigger, DisclosurePanel, DisclosureClose } from "@/components/shared/DisclosureRegion";
@@ -275,7 +275,7 @@ export default async function LeadDetailPage({
                     <option value="OTHER">Other</option>
                   </select>
                   <input name="estimatedValue" type="number" min="0" step="1" defaultValue={lead.estimatedValue ?? ""} placeholder={`Est. value (${currency})`} aria-label="Estimated value" className={field} />
-                  <input name="followUpAt" type="date" defaultValue={lead.followUpAt ? lead.followUpAt.toISOString().slice(0, 10) : ""} aria-label="Follow-up date" className={field} />
+                  <input name="followUpAt" type="date" defaultValue={lead.followUpAt ? eatDateKey(lead.followUpAt) : ""} aria-label="Follow-up date" className={field} />
                   {orgUsers.length > 0 ? (
                     <select name="assignedToId" defaultValue={lead.assignedToId ?? ""} aria-label="Assigned to" className={field}>
                       <option value="">Unassigned</option>

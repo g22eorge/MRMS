@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updatePurchaseOrderAction } from "../actions";
+import { eatDateKey } from "@/lib/date-eat";
 
 type POData = {
   id: string;
@@ -14,7 +15,7 @@ type POData = {
 
 function toDateInput(d: Date | null) {
   if (!d) return "";
-  return new Date(d).toISOString().slice(0, 10);
+  return eatDateKey(new Date(d));
 }
 
 export function POMetaForm({ po }: { po: POData }) {

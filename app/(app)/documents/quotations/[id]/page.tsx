@@ -11,7 +11,7 @@ import { revalidatePath } from "next/cache";
 
 import { can } from "@/lib/permissions";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
-import { formatEATDate } from "@/lib/date-eat";
+import { formatEATDate, eatDateKey } from "@/lib/date-eat";
 import type { BadgeTone } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import Link from "next/link";
@@ -444,11 +444,11 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
                 <div className="grid grid-cols-1 gap-3 p-4 min-[600px]:grid-cols-2">
                   <div>
                     <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Issue Date</p>
-                    <input name="issueDate" type="date" defaultValue={(quotation.issueDate ?? quotation.createdAt) ? new Date(quotation.issueDate ?? quotation.createdAt).toISOString().slice(0, 10) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                    <input name="issueDate" type="date" defaultValue={(quotation.issueDate ?? quotation.createdAt) ? eatDateKey(new Date(quotation.issueDate ?? quotation.createdAt)) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                   </div>
                   <div>
                     <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">Valid Until</p>
-                    <input name="validUntil" type="date" defaultValue={quotation.validUntil ? new Date(quotation.validUntil).toISOString().slice(0, 10) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
+                    <input name="validUntil" type="date" defaultValue={quotation.validUntil ? eatDateKey(new Date(quotation.validUntil)) : ""} className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 text-sm outline-none focus:border-[var(--accent)]/50" />
                   </div>
                 </div>
                 <div className="px-4 pb-4">

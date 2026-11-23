@@ -16,6 +16,7 @@ import { createSupplierPaymentAction } from "./actions";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { eatDateKey } from "@/lib/date-eat";
 export const dynamic = "force-dynamic";
 
 const STATUS_TONES: Record<string, BadgeTone> = {
@@ -274,7 +275,7 @@ export default async function SupplierBillsPage({
                         <option value="CARD">Card</option>
                         <option value="OTHER">Other</option>
                       </select>
-                      <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+                      <input name="paidAt" type="date" defaultValue={eatDateKey()} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
                       <input name="reference" placeholder="Reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
                       {/* Only for a bill in another currency. The rate is not
                           typed: it is derived from what the statement shows, so

@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { can } from "@/lib/permissions";
 import { formatMoney, normalizeCurrency, roundMoney } from "@/lib/currency";
 import { computeVat } from "@/lib/commercial/vat";
-import { formatEATDate } from "@/lib/date-eat";
+import { formatEATDate, eatDateKey } from "@/lib/date-eat";
 import { DataTable } from "@/components/ui/DataTable";
 import type { BadgeTone } from "@/components/ui/StatusBadge";
 import Link from "next/link";
@@ -252,8 +252,8 @@ export default async function InvoiceDetailPage({
     clientId: invoice.client?.id ?? "",
     invoiceType: invoice.invoiceType ?? "SERVICE",
     subject: invoice.subject ?? "",
-    issueDate: invoice.issuedAt ? new Date(invoice.issuedAt).toISOString().slice(0, 10) : "",
-    dueDate: invoice.dueDate ? new Date(invoice.dueDate).toISOString().slice(0, 10) : "",
+    issueDate: invoice.issuedAt ? eatDateKey(new Date(invoice.issuedAt)) : "",
+    dueDate: invoice.dueDate ? eatDateKey(new Date(invoice.dueDate)) : "",
     notes: invoice.notes ?? "",
     // Invoice has no taxRate/taxLabel columns — tax lives per line. Derive it.
     taxEnabled: taxTotal > 0,

@@ -18,6 +18,7 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { saleCustomerName } from "@/lib/client-name";
 import { formatMoney, getAppCurrency, normalizeCurrency } from "@/lib/currency";
 import { amountInWords } from "@/lib/amount-in-words";
+import { eatDateKey } from "@/lib/date-eat";
 
 type Branding = {
   documentTitle?: string | null;
@@ -133,7 +134,7 @@ const s = StyleSheet.create({
 });
 
 function fmtDate(d: Date) {
-  return new Date(d).toISOString().slice(0, 10);
+  return eatDateKey(new Date(d));
 }
 
 export function SaleReceiptDocumentItemized({ sale, branding }: { sale: Sale; branding: Branding }) {

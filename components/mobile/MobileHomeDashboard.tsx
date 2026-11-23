@@ -7,6 +7,7 @@
  * Quick actions = big icon + one word only.
  */
 import Link from "next/link";
+import { eatHour } from "@/lib/date-eat";
 
 type MobileQuickAction = {
   href: string;
@@ -69,7 +70,7 @@ function pct(cur: number, prev: number) {
 }
 
 export function MobileHomeDashboard(p: MobileHomeProps) {
-  const hour = new Date().getHours();
+  const hour = eatHour();
   const greeting = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
   const firstName = p.userName.split(" ")[0];
   const revPct = pct(p.revenueTodayValue, p.cashYesterdayValue);
@@ -86,7 +87,7 @@ export function MobileHomeDashboard(p: MobileHomeProps) {
           Good {greeting}, {firstName}
         </p>
         <p className="mt-0.5 text-[0.75rem] text-[var(--ink-muted)]">
-          {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+          {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Kampala" })}
           {" · "}<span className="font-semibold text-[var(--accent)]">{p.orgName}</span>
         </p>
       </div>

@@ -16,6 +16,7 @@ import { cancelSupplierBillAction, createSupplierPaymentAction, deleteSupplierPa
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
+import { eatDateKey } from "@/lib/date-eat";
 
 export default async function SupplierBillDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -216,7 +217,7 @@ export default async function SupplierBillDetailPage({ params }: { params: Promi
               <option value="OTHER">Other</option>
             </select>
             <input name="reference" placeholder="Reference" className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
-            <input name="paidAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
+            <input name="paidAt" type="date" defaultValue={eatDateKey()} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
             <SubmitButton bare className="btn-premium rounded-lg px-4 py-1.5 text-[0.8125rem] font-semibold">Record</SubmitButton>
             <input name="note" placeholder="Payment note" className="sm:col-span-5 rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] outline-none focus:border-[var(--accent)]/60" />
           </form>

@@ -12,6 +12,7 @@ import { approveQuotationAction, postRepairMessageAction } from "./actions";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { ShareButton } from "@/components/shared/ShareButton";
 export const dynamic = "force-dynamic";
+import { eatDateKey } from "@/lib/date-eat";
 
 // Customer-facing repair steps (internal workshop sub-states are collapsed).
 const STEPS = ["RECEIVED", "DIAGNOSING", "AWAITING_APPROVAL", "IN_REPAIR", "READY_FOR_PICKUP", "COMPLETED"] as const;
@@ -33,7 +34,7 @@ const STEP_INDEX: Record<string, number> = {
 };
 
 function fmtDate(d: Date | null) {
-  return d ? d.toISOString().slice(0, 10) : "—";
+  return d ? eatDateKey(d) : "—";
 }
 
 export default async function PortalRepairDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -265,7 +266,7 @@ export default async function PortalRepairDetail({ params }: { params: Promise<{
                     {m.body}
                   </div>
                   <span className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">
-                    {mine ? "You" : m.authorName} · {m.createdAt.toISOString().slice(0, 10)}
+                    {mine ? "You" : m.authorName} · {eatDateKey(m.createdAt)}
                   </span>
                 </li>
               );

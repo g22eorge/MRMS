@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserRoleOptional } from "@/lib/session";
 import { checkIsPlatformAdmin } from "@/lib/platform-admin";
+import { eatDateKey } from "@/lib/date-eat";
 
 async function getPrisma() {
   const { prisma } = await import("@/lib/prisma");
@@ -71,7 +72,7 @@ export async function GET(req: NextRequest) {
 
   const csv = toCsv(rows);
   const filenameScope = scope === "platform" ? "platform" : "org";
-  const date = new Date().toISOString().slice(0, 10);
+  const date = eatDateKey();
 
   return new NextResponse(csv, {
     headers: {

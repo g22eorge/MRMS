@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 
 import { getClientStatement } from "@/lib/commercial/statements";
-import { formatEATDocDate } from "@/lib/date-eat";
+import { formatEATDocDate, eatDateKey } from "@/lib/date-eat";
 import { formatMoney, normalizeCurrency } from "@/lib/currency";
 import { getDocumentBrandingSettings } from "@/lib/document-branding";
 import { resolvePdfLogo } from "@/lib/pdf/pdf-utils";
@@ -58,7 +58,7 @@ export async function generateStatementBuffer(
   const issuedAt = new Date();
   // Statements are generated on demand and never persisted, so the reference is
   // derived from the client and the day rather than taken from a sequence.
-  const statementNumber = `STMT-${client.id.slice(-6).toUpperCase()}-${issuedAt.toISOString().slice(0, 10).replace(/-/g, "")}`;
+  const statementNumber = `STMT-${client.id.slice(-6).toUpperCase()}-${eatDateKey(issuedAt).replace(/-/g, "")}`;
 
   const element = createElement(StatementDocument, {
     branding: {

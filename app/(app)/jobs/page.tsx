@@ -20,6 +20,7 @@ import { PAGE_SIZE, pageHrefBuilder, parsePageSize, sizeHrefBuilder } from "@/li
 
 import { clientDisplayName } from "@/lib/client-name";
 import { icontains } from "@/lib/db/search";
+import { eatDayEnd, eatDayStart } from "@/lib/date-eat";
 type SearchParams = {
   status?: string;
   pricing?: string;
@@ -204,8 +205,11 @@ export default async function JobsPage({
     ...(filters.from || filters.to
       ? {
           [filters.dateField === "completedAt" ? "completedAt" : "receivedAt"]: {
-            ...(filters.from ? { gte: new Date(filters.from) } : {}),
-            ...(filters.to ? { lte: new Date(filters.to) } : {}),
+            // Whole days in East Africa Time. These were midnight UTC, which
+            // started the range at 03:00 and, as the upper bound, left out
+            // the whole of the last day picked.
+            ...(eatDayStart(filters.from) ? { gte: eatDayStart(filters.from) as Date } : {}),
+            ...(eatDayEnd(filters.to) ? { lte: eatDayEnd(filters.to) as Date } : {}),
           },
         }
       : {}),

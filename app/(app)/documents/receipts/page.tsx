@@ -20,7 +20,7 @@ import { createReceiptForPayment } from "@/lib/commercial/document-workflow";
 import { syncInvoicePaymentState, syncSalePaymentState } from "@/lib/commercial/payment-sync";
 import { reverseJournalEntry, postJournalEntry } from "@/lib/accounting/post";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
-import { formatEATDate, formatEATTime } from "@/lib/date-eat";
+import { formatEATDate, formatEATTime, eatDateKey } from "@/lib/date-eat";
 import { dateFilterForDocumentPeriod } from "@/lib/documents/period-filters";
 import { shareReceiptDocument } from "@/lib/notifications/share-document";
 import {
@@ -771,7 +771,7 @@ export default async function ReceiptsPage({
           <form action={updateReceiptAction} className="space-y-3">
             <input type="hidden" name="paymentId" value={editPayment.id} />
             <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Issue date
-              <input name="issueDate" type="date" defaultValue={new Date(editPayment.receipts[0]?.issuedAt ?? editPayment.receivedAt).toISOString().slice(0, 10)} className="mt-1 h-10 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50" />
+              <input name="issueDate" type="date" defaultValue={eatDateKey(new Date(editPayment.receipts[0]?.issuedAt ?? editPayment.receivedAt))} className="mt-1 h-10 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-3 text-sm outline-none focus:border-[var(--accent)]/50" />
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block text-[0.8125rem] font-medium text-[var(--ink-muted)]">Amount

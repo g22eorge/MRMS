@@ -11,6 +11,7 @@ import { FormTextarea } from "@/components/ui/form-field";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { commercialLineTotal, emptyCommercialLineItem } from "@/lib/forms/line-items";
 import { clientContactName, clientDisplayName } from "@/lib/client-name";
+import { eatDateKey } from "@/lib/date-eat";
 
 type ClientOption = {
   id: string;
@@ -118,7 +119,7 @@ export function NewQuotationForm({
   });
   const { lines, addLine, removeLine, updateLine, serialize, replaceLines } = useLineItemsState(emptyCommercialLineItem);
   const [issueDate, setIssueDate] = useState(
-    initialData?.issueDate ?? new Date().toISOString().slice(0, 10),
+    initialData?.issueDate ?? eatDateKey(),
   );
   const [validUntil, setValidUntil] = useState(initialData?.validUntil ?? "");
   const [notes, setNotes] = useState(initialData?.notes ?? "");
@@ -304,7 +305,7 @@ export function NewQuotationForm({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="text-xs font-semibold text-[var(--ink-muted)]">
                 Issue Date
-                <input name="issueDate" type="date" max={new Date().toISOString().slice(0, 10)} value={issueDate} onChange={(event) => setIssueDate(event.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
+                <input name="issueDate" type="date" max={eatDateKey()} value={issueDate} onChange={(event) => setIssueDate(event.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50" />
               </label>
               <label className="text-xs font-semibold text-[var(--ink-muted)]">
                 Valid Until

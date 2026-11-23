@@ -31,6 +31,7 @@ import { CreateExpenseDialog, type ExpenseFormState } from "./CreateExpenseDialo
 import { EditDialog } from "@/components/ui/EditDialog";
 
 export const dynamic = "force-dynamic";
+import { eatDateKey } from "@/lib/date-eat";
 
 const CATEGORIES: ExpenseCategory[] = [
   "RENT", "UTILITIES", "SALARIES", "SUPPLIES", "MARKETING",
@@ -526,7 +527,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   const canWrite = can.viewFinancials(user);
   const canDelete = ["ADMIN"].includes(user.role);
-  const todayInput = new Date().toISOString().slice(0, 10);
+  const todayInput = eatDateKey();
 
   // Named so the same actions menu renders in the desktop table AND mobile card.
   // Mark-paid is a finance action (anyone who can write), Delete stays ADMIN.
@@ -1019,7 +1020,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
                 <input
                   name="dueAt"
                   type="date"
-                  defaultValue={editExpense.dueAt ? new Date(editExpense.dueAt).toISOString().slice(0, 10) : ""}
+                  defaultValue={editExpense.dueAt ? eatDateKey(new Date(editExpense.dueAt)) : ""}
                   className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2 text-[0.8125rem] outline-none focus:border-[var(--accent)]/50"
                 />
               </label>

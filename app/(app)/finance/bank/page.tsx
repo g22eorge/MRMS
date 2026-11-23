@@ -23,6 +23,7 @@ import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 export const dynamic = "force-dynamic";
+import { eatDateKey } from "@/lib/date-eat";
 
 export default async function BankPage({
   searchParams,
@@ -441,7 +442,7 @@ export default async function BankPage({
                         name="date"
                         type="date"
                         required
-                        defaultValue={new Date().toISOString().slice(0, 10)}
+                        defaultValue={eatDateKey()}
                         className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem]"
                       />
                     </div>

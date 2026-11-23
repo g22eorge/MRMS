@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { can } from "@/lib/permissions";
+import { eatDateKey } from "@/lib/date-eat";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ function csv(headers: string[], rows: unknown[][]) {
 }
 
 function date(value: Date | null | undefined) {
-  return value ? value.toISOString().slice(0, 10) : "";
+  return value ? eatDateKey(value) : "";
 }
 
 function download(name: string, body: string) {

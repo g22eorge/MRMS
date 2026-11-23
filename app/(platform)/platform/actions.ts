@@ -21,6 +21,7 @@ import {
 import { revalidatePlatformHome, revalidatePlatformOrg, revalidatePlatformOrgAndHome } from "@/lib/platform/revalidate";
 
 export type PlatformResetState = { error?: string; success?: string };
+import { eatDateKey } from "@/lib/date-eat";
 
 /**
  * Reset an organization's admin (or any user's) password from the platform
@@ -158,7 +159,7 @@ export async function extendTrialAction(formData: FormData) {
     entityType: "Organization",
     entityId: orgId,
     action: "ORG_TRIAL_EXTENDED",
-    summary: `Trial extended by ${days} day${days === 1 ? "" : "s"} to ${newDate.toISOString().slice(0, 10)}`,
+    summary: `Trial extended by ${days} day${days === 1 ? "" : "s"} to ${eatDateKey(newDate)}`,
     before: { trialEndsAt: org.trialEndsAt, billingStatus: org.billingStatus },
     after: { trialEndsAt: newDate, billingStatus: "TRIALING" },
   });

@@ -27,6 +27,7 @@ import { clientDisplayName } from "@/lib/client-name";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { ShareButton } from "@/components/shared/ShareButton";
+import { eatDateKey } from "@/lib/date-eat";
 export default async function JobDetailPage({
   params,
   searchParams,
@@ -461,7 +462,7 @@ export default async function JobDetailPage({
           return (
             <li key={m.id} className={`flex flex-col ${staff ? "items-end" : "items-start"}`}>
               <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[0.8125rem] ${staff ? "bg-[var(--accent)]/15 text-[var(--ink)]" : "bg-[var(--panel-strong)] text-[var(--ink)]"}`}>{m.body}</div>
-              <span className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">{staff ? m.authorName : `${m.authorName} (client)`} · {m.createdAt.toISOString().slice(0, 10)}</span>
+              <span className="mt-0.5 text-[0.6875rem] text-[var(--ink-muted)]">{staff ? m.authorName : `${m.authorName} (client)`} · {eatDateKey(m.createdAt)}</span>
             </li>
           );
         })}
@@ -542,7 +543,7 @@ export default async function JobDetailPage({
           <p className="mb-1.5 text-[0.75rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Warranty</p>
           <p className="mb-2 text-[0.8125rem] text-[var(--ink-muted)]">
             {warrantyInfo?.warrantyExpiresAt
-              ? `Covered for ${warrantyInfo.warrantyMonths} month${warrantyInfo.warrantyMonths === 1 ? "" : "s"} — until ${warrantyInfo.warrantyExpiresAt.toISOString().slice(0, 10)}.`
+              ? `Covered for ${warrantyInfo.warrantyMonths} month${warrantyInfo.warrantyMonths === 1 ? "" : "s"} — until ${eatDateKey(warrantyInfo.warrantyExpiresAt)}.`
               : "No warranty set."}
           </p>
           <form action={setWarrantyAction} className="flex items-center gap-2">

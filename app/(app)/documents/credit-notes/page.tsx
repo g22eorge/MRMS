@@ -24,7 +24,7 @@ import { shareCreditNoteDocument } from "@/lib/notifications/share-document";
 import { notifyCreditNoteIssued, notifyRefundIssued } from "@/lib/notifications";
 import { CreateCreditNoteDialog } from "./CreateCreditNoteDialog";
 import { PAYMENT_METHODS, formatPaymentMethodLabel, parsePaymentMethod } from "@/lib/constants/payment-methods";
-import { formatEATMediumDate } from "@/lib/date-eat";
+import { formatEATMediumDate, eatDateKey } from "@/lib/date-eat";
 import { DocumentFilterBar } from "@/components/documents";
 import { DOCUMENT_PERIOD_OPTIONS_SHORT } from "@/lib/documents/period-filters";
 import { DataTable, TablePagination } from "@/components/ui/DataTable";
@@ -859,7 +859,7 @@ export default async function CreditNotesPage({
         <form action={updateCreditNoteDateAction} className="p-3">
           <input type="hidden" name="creditNoteId" value={cn.id} />
           <label className="block text-[0.625rem] font-bold uppercase tracking-wide text-[var(--ink-muted)]">Issue date
-            <input name="issueDate" type="date" defaultValue={new Date(cn.issuedAt).toISOString().slice(0, 10)} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
+            <input name="issueDate" type="date" defaultValue={eatDateKey(new Date(cn.issuedAt))} className="mt-0.5 w-full rounded-md border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 outline-none focus:border-[var(--accent)]/50" />
           </label>
           <div className="mt-2"><MenuActionButton icon="save" tone="accent" className="bg-[var(--accent)]/8">Save issue date</MenuActionButton></div>
         </form>

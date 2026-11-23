@@ -26,7 +26,7 @@ import { getOrgModules } from "@/lib/module-access";
 import { requireOrgSession } from "@/lib/org-context";
 import { clientDisplayName } from "@/lib/client-name";
 import { assertOrgCanMutate } from "@/lib/org-write";
-import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
+import { formatEATDate, formatEATDateTime, eatDateKey } from "@/lib/date-eat";
 import { formatPhoneDisplay } from "@/lib/phone";
 import { RecordActionBar } from "@/components/record/RecordActionBar";
 import { RecordSummaryRail, type SummaryRow } from "@/components/record/RecordSummaryRail";
@@ -410,7 +410,7 @@ export default async function ClientDetailPage({
                         <span className="mr-2 rounded bg-[var(--panel-strong)] px-1.5 py-0.5 text-[0.625rem] font-bold uppercase text-[var(--ink-muted)]">{l.type}</span>
                         <span className="mono text-[var(--ink)]">{l.number}</span>
                       </td>
-                      <td className="px-3 py-2 text-[var(--ink-muted)]">{l.date.toISOString().slice(0, 10)}</td>
+                      <td className="px-3 py-2 text-[var(--ink-muted)]">{eatDateKey(l.date)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{formatMoney(l.billed, statement.currency)}</td>
                       <td className="px-3 py-2 text-right tabular-nums text-emerald-600">{l.paid ? formatMoney(l.paid, statement.currency) : "—"}</td>
                       <td className={`px-3 py-2 text-right tabular-nums ${l.balance > 0 ? "text-red-500" : "text-[var(--ink-muted)]"}`}>{formatMoney(l.balance, statement.currency)}</td>

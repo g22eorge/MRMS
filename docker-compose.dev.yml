@@ -19,6 +19,8 @@ name: mrms-dev
 
 x-dev-env: &dev-env
   NODE_ENV: development
+  # Same clock as production; see docker-compose.yml.
+  TZ: Africa/Kampala
   # The app reaches Postgres inside the compose network. Port 5433 below is for
   # host tools (psql, the migration scripts), not for the app.
   DATABASE_URL: postgresql://mrms:mrms_dev_password@postgres:5432/mrms?schema=public

@@ -19,6 +19,7 @@ import { JOURNAL_TEMPLATES, type JournalTemplate } from "@/lib/journal-templates
 
 // Minimal shape needed from the COA query
 type Account = { id: string; code: string; name: string; type: string };
+import { eatDateKey } from "@/lib/date-eat";
 
 type Line = {
   accountId: string;
@@ -85,7 +86,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
   const [showPicker, setShowPicker]   = useState(false);
   const [activeId,   setActiveId]     = useState<string | null>(null);
   const [description, setDescription] = useState("");
-  const [date,        setDate]        = useState(new Date().toISOString().slice(0, 10));
+  const [date,        setDate]        = useState(eatDateKey());
   const [reference,   setReference]   = useState("");
   const [lines,       setLines]       = useState<Line[]>(emptyLines());
   const [serverError, setServerError] = useState<string | null>(null);
@@ -145,7 +146,7 @@ export function NewJournalEntryForm({ accounts, createEntry }: Props) {
       // Reset only on confirmed success
       setActiveId(null);
       setDescription("");
-      setDate(new Date().toISOString().slice(0, 10));
+      setDate(eatDateKey());
       setReference("");
       setLines(emptyLines());
     });

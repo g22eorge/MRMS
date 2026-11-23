@@ -8,9 +8,10 @@ import { PortalHeader } from "@/components/portal/PortalHeader";
 import { ShareButton } from "@/components/shared/ShareButton";
 
 export const dynamic = "force-dynamic";
+import { eatDateKey } from "@/lib/date-eat";
 
 function fmtDate(d: Date | null) {
-  return d ? d.toISOString().slice(0, 10) : "—";
+  return d ? eatDateKey(d) : "—";
 }
 
 export default async function PortalDocumentsPage() {

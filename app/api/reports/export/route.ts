@@ -9,6 +9,7 @@ import { getJobPayoutsByIds } from "@/lib/payouts";
 import { prisma } from "@/lib/prisma";
 import { clientDisplayName } from "@/lib/client-name";
 import { JOB_STATUSES, isOpenJobStatus } from "@/lib/job-status";
+import { eatDateKey } from "@/lib/date-eat";
 
 type ExportType =
   | "pipeline-aging"
@@ -171,7 +172,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
-        "content-disposition": `attachment; filename="pipeline-aging-${new Date().toISOString().slice(0, 10)}.csv"`,
+        "content-disposition": `attachment; filename="pipeline-aging-${eatDateKey()}.csv"`,
       },
     });
   }
@@ -250,7 +251,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
-        "content-disposition": `attachment; filename="external-payouts-${new Date().toISOString().slice(0, 10)}.csv"`,
+        "content-disposition": `attachment; filename="external-payouts-${eatDateKey()}.csv"`,
       },
     });
   }
@@ -505,7 +506,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
-        "content-disposition": `attachment; filename="inventory-stock-${new Date().toISOString().slice(0, 10)}.csv"`,
+        "content-disposition": `attachment; filename="inventory-stock-${eatDateKey()}.csv"`,
       },
     });
   }
@@ -535,7 +536,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
-        "content-disposition": `attachment; filename="leads-${new Date().toISOString().slice(0, 10)}.csv"`,
+        "content-disposition": `attachment; filename="leads-${eatDateKey()}.csv"`,
       },
     });
   }
@@ -650,7 +651,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="technician-performance-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "content-disposition": `attachment; filename="technician-performance-${eatDateKey()}.csv"`,
     },
   });
 }

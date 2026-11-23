@@ -5,6 +5,7 @@ import { dayRange, daysBetween, monthRangeFromDate, previousDayRange, previousMo
 import { loadCashCollectionsByChannel } from "@/lib/finance/reconciliation";
 import { prisma } from "@/lib/prisma";
 import { orgDb } from "@/lib/db";
+import { eatDateKey } from "@/lib/date-eat";
 
 export const OPEN_JOB_STATUSES = [
   "RECEIVED",
@@ -208,7 +209,7 @@ export async function buildBusinessDataPack(orgId: string, asOf: Date = new Date
     // monthly figures, a different window — which is the whole point of making
     // period an argument rather than a hard-coded month.
     today: {
-      date: asOf.toISOString().slice(0, 10),
+      date: eatDateKey(asOf),
       collected: cashToday.total,
       collectedYesterday: cashYesterday.total,
       collectedByChannel: {

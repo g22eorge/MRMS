@@ -9,6 +9,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { useLineItemsState } from "@/hooks/useLineItemsState";
 import { createStockCountAction } from "../actions";
 import { quickCreateStockLocationAction } from "@/app/(app)/inventory/locations/actions";
+import { eatDateKey } from "@/lib/date-eat";
 
 type Location = { id: string; name: string; code: string | null };
 type Part = { id: string; sku: string; name: string; qty: number };
@@ -90,7 +91,7 @@ export function NewStockCountForm({ locations, parts }: { locations: Location[];
             ) : null}
           </div>
           <label className="block text-xs font-semibold text-[var(--ink-muted)]">Counted at
-            <input name="countedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
+            <input name="countedAt" type="date" defaultValue={eatDateKey()} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />
           </label>
         </div>
         <textarea name="note" rows={2} placeholder="Note (optional)" className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-[0.8125rem] text-[var(--ink)]" />

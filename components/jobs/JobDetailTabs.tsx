@@ -18,7 +18,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { AuditTimeline } from "@/components/shared/AuditTimeline";
 import { PhotoUploader } from "@/components/shared/PhotoUploader";
 import { resolveTechCost } from "@/lib/billing";
-import { formatEATDateTime , formatElapsedHours } from "@/lib/date-eat";
+import { formatEATDateTime, formatElapsedHours, eatDateKey } from "@/lib/date-eat";
 import { canGenerateInvoiceForStatus, canGenerateQuotationForStatus } from "@/lib/documents";
 import { JobStatus, normalizeJobStatus, canTransitionJobStatus, jobStageIndex, primaryNextStatus } from "@/lib/job-status";
 import { shouldOpenJobCompletionFlow } from "@/lib/jobs/completion-flow";
@@ -1047,7 +1047,7 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
     if (!value) return "";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
-    return date.toISOString().slice(0, 10);
+    return eatDateKey(date);
   }
 
   return (

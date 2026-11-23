@@ -14,6 +14,7 @@ import { formatMoney } from "@/lib/currency";
 import { warrantyCostSummary, WARRANTY_COST_PERIODS, type WarrantyCostPeriod } from "@/lib/warranty/cost";
 
 export const dynamic = "force-dynamic";
+import { eatDateKey } from "@/lib/date-eat";
 
 
 const STATUS_TABS = [
@@ -29,7 +30,7 @@ function chipClass(status: string) {
   return "bg-amber-500/12 text-amber-700 dark:text-amber-400";
 }
 
-const fmt = (d: Date) => d.toISOString().slice(0, 10);
+const fmt = (d: Date) => eatDateKey(d);
 
 /** Days a claim has been open, for the ones nobody has settled. */
 function ageDays(from: Date) {

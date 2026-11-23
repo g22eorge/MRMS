@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { eatDateKey } from "@/lib/date-eat";
 
 // Labels are what the customer reads; the values are the DeviceType enum and
 // must not change. Kept short so the row of choices stays scannable.
@@ -419,7 +420,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
               <label className={labelCls} htmlFor="rr-date">Which day will you bring it?</label>
               <input
                 id="rr-date" type="date" value={data.preferred_dropoff_date}
-                min={new Date().toISOString().split("T")[0]}
+                min={eatDateKey()}
                 onChange={(e) => set("preferred_dropoff_date", e.target.value)}
                 className={inputCls}
               />
@@ -438,7 +439,7 @@ export function RepairRequestForm({ orgSlug, companyName = "Eagle Info Solutions
                 <label className={labelCls} htmlFor="rr-pickdate">Which day should we come?</label>
                 <input
                   id="rr-pickdate" type="date" value={data.preferred_pickup_date}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={eatDateKey()}
                   onChange={(e) => set("preferred_pickup_date", e.target.value)}
                   className={inputCls}
                 />

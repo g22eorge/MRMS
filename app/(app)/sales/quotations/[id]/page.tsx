@@ -24,7 +24,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
-import { formatEATDate, formatEATDateTime } from "@/lib/date-eat";
+import { formatEATDate, formatEATDateTime, eatDateKey } from "@/lib/date-eat";
 import { formatMoney } from "@/lib/currency";
 import {
   addQuotationItem,
@@ -459,14 +459,14 @@ export default async function QuotationDetailPage({
               type="date"
               name="issueDate"
               aria-label="Issue date"
-              defaultValue={(quotation.issueDate ?? quotation.createdAt).toISOString().slice(0, 10)}
+              defaultValue={eatDateKey((quotation.issueDate ?? quotation.createdAt))}
               className={field}
             />
             <input
               type="date"
               name="validUntil"
               aria-label="Valid until"
-              defaultValue={quotation.validUntil ? quotation.validUntil.toISOString().slice(0, 10) : ""}
+              defaultValue={quotation.validUntil ? eatDateKey(quotation.validUntil) : ""}
               className={field}
             />
             <input name="notes" defaultValue={quotation.notes ?? ""} placeholder="Notes" aria-label="Notes" className={field} />
