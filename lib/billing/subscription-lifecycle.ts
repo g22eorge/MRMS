@@ -23,7 +23,9 @@ export async function runSubscriptionLifecycle(now: Date = new Date()): Promise<
 
   // ── 1. Trial reminders ────────────────────────────────────────────────────
   const trialing = await prisma.organization.findMany({
-    where: { billingStatus: "TRIALING", trialEndsAt: { gt: now } },
+    // Not a deactivated organisation: nobody there can act on a reminder, and
+    // it should not be nudged back towards a subscription it was switched off from.
+    where: { isActive: true, billingStatus: "TRIALING", trialEndsAt: { gt: now } },
     select: { id: true, name: true, trialEndsAt: true },
   });
 
@@ -67,7 +69,7 @@ export async function runSubscriptionLifecycle(now: Date = new Date()): Promise<
 
   // ── 2. Renewal lapse → PAST_DUE ───────────────────────────────────────────
   const lapsed = await prisma.organization.findMany({
-    where: { billingStatus: "ACTIVE", planRenewsAt: { lt: now } },
+    where: { isActive: true, billingStatus: "ACTIVE", planRenewsAt: { lt: now } },
     select: { id: true, name: true },
   });
 

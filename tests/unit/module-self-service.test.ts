@@ -176,3 +176,26 @@ describe("deactivated accounts are listed apart from active ones", () => {
     expect(page).toContain('params.view !== "active" && requested && !requested.isActive');
   });
 });
+
+describe("a deactivated organisation is out of the platform's working view", () => {
+  it("is listed under its own tab, not dimmed among the active ones", () => {
+    const table = readFileSync("app/(platform)/platform/OrgTable.tsx", "utf8");
+    expect(table).toContain('if (org.isActive !== (view === "active")) return false;');
+    expect(table).not.toContain("opacity-40");
+  });
+
+  it("raises no alerts and is not counted among customers", () => {
+    // It keeps the billing status it had when it was switched off, so it used
+    // to show a "past due" alert nobody could act on.
+    const page = readFileSync("app/(platform)/platform/page.tsx", "utf8");
+    expect(page).toContain("const liveOrgs = orgs.filter((o) => o.isActive);");
+    expect(page).toContain('const pastDueOrgs = liveOrgs.filter((o) => o.billingStatus === "PAST_DUE");');
+    expect(page).toContain('const trialing = liveOrgs.filter((o) => o.billingStatus === "TRIALING");');
+  });
+
+  it("gets no trial reminders and no status changes from the billing job", () => {
+    const job = readFileSync("lib/billing/subscription-lifecycle.ts", "utf8");
+    expect(job).toContain('where: { isActive: true, billingStatus: "TRIALING", trialEndsAt: { gt: now } }');
+    expect(job).toContain('where: { isActive: true, billingStatus: "ACTIVE", planRenewsAt: { lt: now } }');
+  });
+});

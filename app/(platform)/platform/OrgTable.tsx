@@ -39,16 +39,24 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [planFilter, setPlanFilter] = useState("all");
+  // Deactivated organisations have their own list. They used to sit among the
+  // live ones at 40% opacity, which made the page look like it was still
+  // loading and left the count of real customers to be worked out by eye.
+  const [view, setView] = useState<"active" | "deactivated">("active");
+  const activeCount = useMemo(() => orgs.filter((org) => org.isActive).length, [orgs]);
+  const deactivatedCount = orgs.length - activeCount;
 
   const filtered = useMemo(() => {
     const lq = q.toLowerCase();
     return orgs.filter((org) => {
+      if (org.isActive !== (view === "active")) return false;
       if (lq && !org.name.toLowerCase().includes(lq) && !org.slug.toLowerCase().includes(lq)) return false;
       if (statusFilter !== "all" && org.billingStatus !== statusFilter) return false;
       if (planFilter !== "all" && org.plan !== planFilter) return false;
       return true;
     });
-  }, [orgs, q, statusFilter, planFilter]);
+  }, [orgs, q, statusFilter, planFilter, view]);
+  const inView = view === "active" ? activeCount : deactivatedCount;
 
   const hasFilter = q !== "" || statusFilter !== "all" || planFilter !== "all";
 
@@ -56,6 +64,23 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
     <div className="space-y-3">
       {/* ── Filter bar ── */}
       <div className="flex flex-wrap items-center gap-2">
+        <div role="tablist" aria-label="Organisations" className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-sm font-semibold">
+          {([
+            { key: "active", label: "Active", count: activeCount },
+            { key: "deactivated", label: "Deactivated", count: deactivatedCount },
+          ] as const).map((entry) => (
+            <button
+              key={entry.key}
+              type="button"
+              role="tab"
+              aria-selected={view === entry.key}
+              onClick={() => setView(entry.key)}
+              className={`px-3 py-1.5 transition ${view === entry.key ? "bg-[var(--accent)]/15 text-[var(--ink)]" : "bg-[var(--panel-strong)] text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+            >
+              {entry.label} <span className="tabular-nums text-[var(--ink-muted)]">{entry.count}</span>
+            </button>
+          ))}
+        </div>
         <div className="relative">
           <svg className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-muted)]" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd"/>
@@ -100,7 +125,7 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
           </button>
         )}
         <span className="ml-auto text-xs text-[var(--ink-muted)]">
-          {hasFilter ? `${filtered.length} of ${orgs.length}` : `${orgs.length} orgs`}
+          {hasFilter ? `${filtered.length} of ${inView}` : `${inView} ${view === "active" ? "active" : "deactivated"}`}
         </span>
       </div>
 
@@ -108,8 +133,13 @@ export function OrgTable({ orgs }: { orgs: OrgRow[] }) {
       <DataTable
         rows={filtered}
         getRowKey={(org) => org.id}
-        rowClassName={(org) => (!org.isActive ? "opacity-40" : undefined)}
-        empty={hasFilter ? "No organisations match the current filter." : "No organisations yet."}
+        empty={
+          hasFilter
+            ? "No organisations match the current filter."
+            : view === "deactivated"
+              ? "No deactivated organisations. Deactivating one moves it here."
+              : "No active organisations."
+        }
         columns={[
           {
             key: "org",

@@ -1,17 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { getTotalRevenue, getMonthlyRevenue } from "@/lib/billing-events";
 import { formatMoney } from "@/lib/currency";
-import { PLATFORM_PLAN_CHIP } from "@/lib/platform/routes";
+import { getEffectivePlanPrices } from "@/lib/plan-prices";
 import { OrgTable } from "./OrgTable";
 import type { OrgRow } from "./OrgTable";
-
-import AlertsBanner from "./AlertsBanner";
-const PLAN_CHIP = PLATFORM_PLAN_CHIP;
+import { PlatformOverview } from "./PlatformOverview";
+import type { AttentionItem } from "./PlatformOverview";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlatformPage() {
-  const [rawOrgs, totalRevenue, monthRevenue] = await Promise.all([
+  const [rawOrgs, totalRevenue, monthRevenue, planPrices, recentOrgIds] = await Promise.all([
     prisma.organization.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -27,6 +26,15 @@ export default async function PlatformPage() {
     ),
     getTotalRevenue(),
     getMonthlyRevenue(),
+    getEffectivePlanPrices().catch(() => ({} as Record<string, number>)),
+    // Organisations with a session touched in the last seven days. Null when
+    // the query fails, so the figure reads as unknown rather than as zero.
+    prisma.$queryRaw<Array<{ orgId: string }>>`
+      SELECT DISTINCT u."orgId" AS "orgId"
+      FROM "Session" s
+      JOIN "User" u ON u."id" = s."userId"
+      WHERE s."updatedAt" >= ${new Date(Date.now() - 7 * 86_400_000)} AND u."orgId" IS NOT NULL
+    `.then((rows) => rows.map((row) => row.orgId)).catch(() => null),
   ]);
 
   // Serialise dates so the client component receives plain objects
@@ -37,87 +45,89 @@ export default async function PlatformPage() {
   }));
 
   // ── Derived stats ────────────────────────────────────────────────────────────
-  const totalJobs   = orgs.reduce((s, o) => s + o._count.jobs, 0);
-  const totalUsers  = orgs.reduce((s, o) => s + o._count.users, 0);
-  const activeOrgs  = orgs.filter((o) => o.billingStatus === "ACTIVE").length;
-  const trialOrgs   = orgs.filter((o) => o.billingStatus === "TRIALING").length;
-  const pastDue     = orgs.filter((o) => o.billingStatus === "PAST_DUE").length;
-  const cancelled   = orgs.filter((o) => o.billingStatus === "CANCELLED").length;
+  // Everything on this page that counts or warns is about organisations that
+  // are still switched on. A deactivated one keeps whatever billing status it
+  // had, so it used to raise a "past due" alert nobody could act on and be
+  // counted among paying customers. The table below still receives every
+  // organisation and lists the deactivated ones under their own tab.
+  const liveOrgs = orgs.filter((o) => o.isActive);
+  const deactivatedOrgs = orgs.length - liveOrgs.length;
+  const totalUsers  = liveOrgs.reduce((s, o) => s + o._count.users, 0);
 
-  const planCounts = orgs.reduce<Record<string, number>>((acc, o) => {
-    acc[o.plan] = (acc[o.plan] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  // ── Alerts ──────────────────────────────────────────────────────────────────
   const now = Date.now();
-  const expiringOrgs = orgs.filter(
-    (o) => o.billingStatus === "TRIALING" && o.trialEndsAt &&
-      new Date(o.trialEndsAt).getTime() - now < 7 * 86_400_000 &&
-      new Date(o.trialEndsAt).getTime() > now,
-  );
-  const pastDueOrgs = orgs.filter((o) => o.billingStatus === "PAST_DUE");
+  const DAY = 86_400_000;
+  const trialEnd = (o: OrgRow) => (o.trialEndsAt ? new Date(o.trialEndsAt).getTime() : null);
+  const daysBetween = (from: number, to: number) => Math.max(1, Math.ceil(Math.abs(to - from) / DAY));
+
+  // Money. Recurring is what the plans of paying organisations add up to at
+  // the prices in force; collected is what has actually been received.
+  const paying = liveOrgs.filter((o) => o.billingStatus === "ACTIVE");
+  const pastDueOrgs = liveOrgs.filter((o) => o.billingStatus === "PAST_DUE");
+  const priceOf = (plan: string) => planPrices[plan] ?? 0;
+  const mrr = paying.reduce((sum, o) => sum + priceOf(o.plan), 0);
+  const atRiskMrr = pastDueOrgs.reduce((sum, o) => sum + priceOf(o.plan), 0);
+
+  // Trials: running, about to end, and ended without anyone deciding.
+  const trialing = liveOrgs.filter((o) => o.billingStatus === "TRIALING");
+  const trialsExpired = trialing.filter((o) => { const end = trialEnd(o); return end !== null && end <= now; });
+  const trialsRunning = trialing.filter((o) => { const end = trialEnd(o); return end === null || end > now; });
+  const trialsEndingSoon = trialsRunning.filter((o) => { const end = trialEnd(o); return end !== null && end - now < 7 * DAY; });
+
+  const attention: AttentionItem[] = [
+    ...pastDueOrgs.map((o) => ({
+      id: o.id, name: o.name, rank: 0 as const, reason: "Past due",
+      detail: `${o.plan.charAt(0)}${o.plan.slice(1).toLowerCase()} plan · ${formatMoney(priceOf(o.plan))} a month`,
+    })),
+    ...trialsExpired.map((o) => ({
+      id: o.id, name: o.name, rank: 1 as const, reason: "Trial ended",
+      detail: `${daysBetween(trialEnd(o) as number, now)} days ago, not converted or closed`,
+    })),
+    ...trialsEndingSoon.map((o) => ({
+      id: o.id, name: o.name, rank: 2 as const, reason: "Trial ending",
+      detail: `in ${daysBetween(now, trialEnd(o) as number)} days`,
+    })),
+  ];
+
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+  const newThisMonth = liveOrgs.filter((o) => new Date(o.createdAt).getTime() >= startOfMonth).length;
+  const liveIds = new Set(liveOrgs.map((o) => o.id));
+  const signedInThisWeek = recentOrgIds === null ? null : recentOrgIds.filter((id) => liveIds.has(id)).length;
+  const planMix = (["STARTER", "STANDARD", "GROWTH", "PREMIUM", "ENTERPRISE"] as const).map((plan) => ({
+    plan,
+    count: liveOrgs.filter((o) => o.plan === plan).length,
+  }));
 
   return (
     <div className="space-y-6">
 
-      {/* ── Alerts ── */}
-      <AlertsBanner
-        pastDueOrgs={pastDueOrgs}
-        expiringOrgs={expiringOrgs}
-        now={now}
-      />
-
       {/* ── Page header ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-[var(--ink)]">Organisations</h1>
-          <p className="mt-0.5 text-sm text-[var(--ink-muted)]">{orgs.length} registered</p>
-        </div>
+      <div>
+        <h1 className="text-xl font-bold text-[var(--ink)]">Platform</h1>
+        <p className="mt-0.5 text-sm text-[var(--ink-muted)]">
+          {liveOrgs.length} active {liveOrgs.length === 1 ? "organisation" : "organisations"}
+          {deactivatedOrgs > 0 ? ` · ${deactivatedOrgs} deactivated` : ""}
+        </p>
       </div>
 
-      {/* ── KPI row ── */}
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-        {[
-          { label: "Total",      value: orgs.length, color: "text-[var(--ink)]" },
-          { label: "Paid",       value: activeOrgs,  color: "text-emerald-600" },
-          { label: "Trialing",   value: trialOrgs,   color: "text-blue-600" },
-          { label: "Past Due",   value: pastDue,     color: "text-red-600" },
-          { label: "Cancelled",  value: cancelled,   color: "text-[var(--ink-muted)]" },
-          { label: "Total Users",value: totalUsers,  color: "text-[var(--ink)]" },
-        ].map((m) => (
-          <div key={m.label} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-            <p className="text-[0.75rem] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">{m.label}</p>
-            <p className={`mt-1 text-2xl font-bold tabular-nums ${m.color}`}>{m.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Revenue + plan breakdown ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        <div className="col-span-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-[0.75rem] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">This Month</p>
-          <p className="mt-1 text-xl font-bold text-[var(--ink)]">{formatMoney(monthRevenue)}</p>
-        </div>
-        <div className="col-span-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-[0.75rem] font-bold uppercase tracking-[0.15em] text-[var(--ink-muted)]">All-Time Revenue</p>
-          <p className="mt-1 text-xl font-bold text-[var(--ink)]">{formatMoney(totalRevenue)}</p>
-        </div>
-        {(["STARTER","STANDARD","GROWTH","PREMIUM","ENTERPRISE"] as const).map((plan) => (
-          <div key={plan} className={`rounded-xl border px-4 py-3 ${PLAN_CHIP[plan]}`}>
-            <p className="text-[0.75rem] font-bold uppercase tracking-[0.15em] opacity-70">{plan}</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums">{planCounts[plan] ?? 0}</p>
-          </div>
-        ))}
-      </div>
+      <PlatformOverview
+        attention={attention}
+        mrr={mrr}
+        payingCount={paying.length}
+        atRiskMrr={atRiskMrr}
+        collectedThisMonth={monthRevenue}
+        collectedAllTime={totalRevenue}
+        trialsRunning={trialsRunning.length}
+        trialsEndingSoon={trialsEndingSoon.length}
+        trialsExpired={trialsExpired.length}
+        signedInThisWeek={signedInThisWeek}
+        activeOrgCount={liveOrgs.length}
+        totalUsers={totalUsers}
+        newThisMonth={newThisMonth}
+        planMix={planMix}
+      />
 
       {/* ── Org table (client component — search, filter, inline actions) ── */}
       <OrgTable orgs={orgs} />
-
-      {/* ── Quick stats footer ── */}
-      <p className="text-right text-[0.8125rem] text-[var(--ink-muted)]/60">
-        {totalJobs.toLocaleString()} total jobs across all orgs
-      </p>
 
     </div>
   );
