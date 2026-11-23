@@ -12,6 +12,7 @@ import {
   startImpersonationAction,
   extendTrialAction,
   toggleOrgActive,
+  purgeOrganisationAction,
   setOrgSmsSenderAction,
   setOrgAiModelAction,
   toggleOrgModuleAction,
@@ -50,7 +51,7 @@ export default async function OrgDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string; purgeError?: string }>;
 }) {
   const { id } = await params;
   const sp = searchParams ? await searchParams : {};
@@ -60,7 +61,7 @@ export default async function OrgDetailPage({
     where: { id },
     select: {
       id: true, name: true, slug: true, plan: true, billingStatus: true,
-      isActive: true, trialEndsAt: true, planRenewsAt: true, planCancelledAt: true,
+      isActive: true, deletionRequestedAt: true, trialEndsAt: true, planRenewsAt: true, planCancelledAt: true,
       flwSubscriptionId: true, flwCustomerId: true, aiModel: true,
       createdAt: true, updatedAt: true,
       _count: { select: { users: true, jobs: true } },
@@ -73,6 +74,8 @@ export default async function OrgDetailPage({
   );
 
   if (!org) notFound();
+  // Absent on the fallback read for a database that predates the column.
+  const deletionRequestedAt: Date | null = "deletionRequestedAt" in org ? (org.deletionRequestedAt as Date | null) : null;
 
   const [orgUsers, billingHistory, smsUsed, orgWaCfg, moduleGrants] = await Promise.all([
     prisma.user.findMany({
@@ -343,7 +346,7 @@ export default async function OrgDetailPage({
           </div>
           <div className="space-y-3 px-5 py-4">
             <p className="text-[0.8125rem] text-[var(--ink-muted)]">
-              Reset a locked-out administrator. This sets a new password and signs them out of every device.
+              Sets a new password and signs them out everywhere.
             </p>
             {orgUsers.filter((u) => u.role === "ADMIN").map((u) => (
               <div key={u.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)]/40 px-3 py-2.5">
@@ -474,6 +477,33 @@ export default async function OrgDetailPage({
               : "Organisation is currently deactivated — members cannot log in."}
           </p>
         </div>
+
+        {/* Only once the workspace's own administrator has asked for deletion.
+            Reactivating above cancels the request instead. */}
+        {deletionRequestedAt ? (
+          <div className="space-y-2 border-t border-red-400/20 pt-3">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+              Deletion requested {fmt(deletionRequestedAt)} — due by {fmt(new Date(new Date(deletionRequestedAt).getTime() + 30 * 86_400_000))}
+            </p>
+            <p className="text-xs text-red-600/70">
+              Permanently removes the organisation and every record it owns. Reactivate instead to cancel the request.
+            </p>
+            {sp.purgeError ? <p role="alert" className="text-xs font-semibold text-red-600">{sp.purgeError}</p> : null}
+            <form action={purgeOrganisationAction} className="flex flex-wrap items-center gap-2">
+              <input type="hidden" name="orgId" value={org.id} />
+              <input
+                name="confirmName"
+                required
+                autoComplete="off"
+                placeholder={`Type "${org.name}" to confirm`}
+                className="min-w-[16rem] rounded-lg border border-red-400/30 bg-[var(--panel)] px-3 py-2 text-xs text-[var(--ink)] outline-none"
+              />
+              <SubmitButton bare className="rounded-lg border border-red-500/50 bg-red-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-700">
+                Delete permanently
+              </SubmitButton>
+            </form>
+          </div>
+        ) : null}
       </div>
 
     </div>

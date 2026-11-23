@@ -10,6 +10,7 @@ const NAV = [
   { href: PLATFORM_ROUTES.payments, label: "Payments" },
   { href: PLATFORM_ROUTES.announcements, label: "Announcements" },
   { href: PLATFORM_ROUTES.audit, label: "Audit Log" },
+  { href: PLATFORM_ROUTES.errors, label: "Errors" },
   { href: PLATFORM_ROUTES.settings, label: "Settings" },
 ];
 

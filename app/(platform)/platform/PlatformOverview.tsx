@@ -79,6 +79,7 @@ export function PlatformOverview({
   totalUsers,
   newThisMonth,
   planMix,
+  errorsToday = 0,
 }: {
   attention: AttentionItem[];
   mrr: number;
@@ -94,6 +95,8 @@ export function PlatformOverview({
   totalUsers: number;
   newThisMonth: number;
   planMix: PlanSlice[];
+  /** Server errors recorded in the last 24 hours. */
+  errorsToday?: number;
 }) {
   const sorted = [...attention].sort((a, b) => a.rank - b.rank);
   const planTotal = planMix.reduce((sum, slice) => sum + slice.count, 0);
@@ -104,13 +107,26 @@ export function PlatformOverview({
       <section className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
         <div className="flex items-baseline justify-between border-b border-[var(--line)] px-4 py-2.5">
           <h2 className="text-sm font-semibold text-[var(--ink)]">Needs attention</h2>
-          <p className={`text-[0.75rem] font-semibold ${sorted.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-            {sorted.length > 0 ? `${sorted.length} to look at` : "All clear"}
+          <p className={`text-[0.75rem] font-semibold ${sorted.length > 0 || errorsToday > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+            {sorted.length + (errorsToday > 0 ? 1 : 0) > 0 ? `${sorted.length + (errorsToday > 0 ? 1 : 0)} to look at` : "All clear"}
           </p>
         </div>
+        {errorsToday > 0 ? (
+          <Link
+            href={PLATFORM_ROUTES.errors}
+            className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-2.5 transition hover:bg-[var(--panel-strong)]"
+          >
+            <span className="h-8 w-[3px] shrink-0 rounded-full bg-red-500" aria-hidden />
+            <span className="min-w-0 flex-1 text-sm font-semibold text-[var(--ink)]">
+              {errorsToday} server {errorsToday === 1 ? "error" : "errors"} in the last 24 hours
+            </span>
+            <span className="shrink-0 text-[0.75rem] font-semibold text-[var(--ink)]">See errors</span>
+            <span className="shrink-0 text-[var(--ink-muted)]" aria-hidden>→</span>
+          </Link>
+        ) : null}
         {sorted.length === 0 ? (
           <p className="px-4 py-4 text-sm text-[var(--ink-muted)]">
-            No active organisation is past due, and no trial is ending or has lapsed.
+            Nothing is past due, and no trial is ending or lapsed.
           </p>
         ) : (
           <ul className="divide-y divide-[var(--line)]">

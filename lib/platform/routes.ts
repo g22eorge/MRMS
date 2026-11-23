@@ -5,6 +5,7 @@ export const PLATFORM_ROUTES = {
   payments: "/platform/payments",
   announcements: "/platform/announcements",
   audit: "/platform/audit",
+  errors: "/platform/errors",
   settings: "/platform/settings",
   org: (orgId: string) => `/platform/orgs/${orgId}`,
 } as const;

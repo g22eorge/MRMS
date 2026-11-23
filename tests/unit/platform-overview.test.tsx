@@ -36,7 +36,7 @@ describe("PlatformOverview", () => {
   it("says so plainly when nothing needs attention", () => {
     const html = renderToStaticMarkup(<PlatformOverview {...base} />);
     expect(html).toContain("All clear");
-    expect(html).toContain("No active organisation is past due");
+    expect(html).toContain("Nothing is past due");
   });
 
   it("lists what needs attention worst first, each linking to its organisation", () => {
