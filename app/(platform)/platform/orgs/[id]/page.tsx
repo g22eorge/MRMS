@@ -13,6 +13,7 @@ import {
   extendTrialAction,
   toggleOrgActive,
   purgeOrganisationAction,
+  setOrgTimezoneAction,
   setOrgSmsSenderAction,
   setOrgAiModelAction,
   toggleOrgModuleAction,
@@ -28,6 +29,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { COMMON_ZONES, DEFAULT_ZONE } from "@/lib/zoned-time";
 export const dynamic = "force-dynamic";
 
 const STATUS_CHIP = PLATFORM_STATUS_CHIP;
@@ -61,7 +63,7 @@ export default async function OrgDetailPage({
     where: { id },
     select: {
       id: true, name: true, slug: true, plan: true, billingStatus: true,
-      isActive: true, deletionRequestedAt: true, trialEndsAt: true, planRenewsAt: true, planCancelledAt: true,
+      isActive: true, deletionRequestedAt: true, timezone: true, trialEndsAt: true, planRenewsAt: true, planCancelledAt: true,
       flwSubscriptionId: true, flwCustomerId: true, aiModel: true,
       createdAt: true, updatedAt: true,
       _count: { select: { users: true, jobs: true } },
@@ -75,6 +77,11 @@ export default async function OrgDetailPage({
 
   if (!org) notFound();
   // Absent on the fallback read for a database that predates the column.
+  const orgZone = "timezone" in org && typeof org.timezone === "string" ? org.timezone : DEFAULT_ZONE;
+  // The organisation's current zone is always offered, even one outside the short list.
+  const zoneOptions = COMMON_ZONES.some((option) => option.zone === orgZone)
+    ? COMMON_ZONES
+    : [{ zone: orgZone, label: orgZone }, ...COMMON_ZONES];
   const deletionRequestedAt: Date | null = "deletionRequestedAt" in org ? (org.deletionRequestedAt as Date | null) : null;
 
   const [orgUsers, billingHistory, smsUsed, orgWaCfg, moduleGrants] = await Promise.all([
@@ -406,6 +413,29 @@ export default async function OrgDetailPage({
             },
           ]}
         />
+      </div>
+
+      {/* Time zone */}
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 space-y-3">
+        <div>
+          <SectionTitle>Time Zone</SectionTitle>
+          <p className="mt-1 text-xs text-[var(--ink-muted)]">When this business&apos;s day starts on its dashboard.</p>
+        </div>
+        <form action={setOrgTimezoneAction} className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="orgId" value={org.id} />
+          <select
+            name="timezone"
+            defaultValue={orgZone}
+            className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-sm text-[var(--ink)]"
+          >
+            {zoneOptions.map((option) => (
+              <option key={option.zone} value={option.zone}>{option.label}</option>
+            ))}
+          </select>
+          <SubmitButton bare className="rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)]">
+            Save
+          </SubmitButton>
+        </form>
       </div>
 
       {/* Module access */}

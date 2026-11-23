@@ -61,6 +61,13 @@ export function OnboardingForm() {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [businessName, setBusinessName] = useState("");
+  const [browserZone] = useState(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [selected, setSelected] = useState<Set<OrgModule>>(new Set(["INVOICING", "REPORTS"] as OrgModule[]));
 
   const recommended = recommendPlanForModules([...selected]);
@@ -240,6 +247,8 @@ export function OnboardingForm() {
         <form action={action} className="space-y-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
           {/* Hidden fields passed to server action */}
           <input type="hidden" name="businessName" value={businessName} />
+          {/* The browser's own time zone, so the business starts on its own clock. */}
+          <input type="hidden" name="timezone" value={browserZone} suppressHydrationWarning />
           {[...selected].map((m) => (
             <input key={m} type="hidden" name="module" value={m} />
           ))}

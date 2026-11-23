@@ -10,6 +10,7 @@ import { sendWelcomeEmail } from "@/lib/email";
 import { ALL_MODULES, recommendPlanForModules } from "@/lib/module-access";
 import { TRIAL_DAYS } from "@/lib/billing-access";
 import { defaultDocumentCodeForSlug } from "@/lib/commercial/org-number";
+import { zoneOrDefault } from "@/lib/zoned-time";
 
 const schema = z.object({
   businessName: z.string().min(2, "Business name must be at least 2 characters").max(100),
@@ -89,6 +90,9 @@ export async function createOrganization(
         trialEndsAt,
         billingStatus: "TRIALING",
         plan: recommendedPlan,
+        // The browser's own zone, sent by the form. Anything unrecognised
+        // falls back to the default in zoneOrDefault.
+        timezone: zoneOrDefault(String(formData.get("timezone") ?? "")),
       },
     });
 

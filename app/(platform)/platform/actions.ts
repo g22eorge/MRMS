@@ -84,6 +84,29 @@ export async function resetOrgAdminPasswordAction(
   return { success: `Password reset — ${target.email} signed out everywhere` };
 }
 
+/** Set the time zone a business keeps its day by. */
+export async function setOrgTimezoneAction(formData: FormData) {
+  const admin = await requirePlatformAdmin();
+  const orgId = String(formData.get("orgId") ?? "");
+  const timezone = String(formData.get("timezone") ?? "").trim();
+  const { isValidZone } = await import("@/lib/zoned-time");
+  if (!orgId || !isValidZone(timezone)) return;
+  const before = await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true, timezone: true } });
+  if (!before || before.timezone === timezone) return;
+  await prisma.organization.update({ where: { id: orgId }, data: { timezone } });
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: admin.id,
+    entityType: "Organization",
+    entityId: orgId,
+    action: "ORG_TIMEZONE_CHANGED",
+    summary: `${before.name}: time zone ${before.timezone} to ${timezone}`,
+    before: { timezone: before.timezone },
+    after: { timezone },
+  });
+  revalidatePlatformOrg(orgId);
+}
+
 export async function setPlanAction(formData: FormData) {
   const admin = await requirePlatformAdmin();
   const orgId = formData.get("orgId") as string;

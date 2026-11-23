@@ -9,6 +9,7 @@ import { getOrgModules } from "@/lib/module-access";
 
 import { loadTotalRevenueTrend, trendMonthsSinceStartOfYear } from "./data";
 import { statusLabel } from "./shared";
+import { DEFAULT_ZONE, zonedStartOfDay, zonedStartOfMonth } from "@/lib/zoned-time";
 
 /** Compact relative time for the mobile recent-activity feed: now / 5m / 3h / 2d. */
 function relTimeAgo(ms: number): string {
@@ -29,13 +30,15 @@ const RECENT_DOT: Record<string, string> = {
 };
 
 /** All ADMIN dashboard queries + derivations, extracted from page.tsx unchanged. */
-export async function loadAdminDashboardData(orgId: string | null) {
+export async function loadAdminDashboardData(orgId: string | null, zone: string = DEFAULT_ZONE) {
   const currency = getAppCurrency();
   const today = new Date();
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+  // The business's own midnight, not the server's. For a business on the
+  // default zone these are the same instant as before.
+  const todayStart = zonedStartOfDay(today, zone);
   const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
   const yesterdayEnd = new Date(todayStart.getTime() - 1);
-  const mtdStart = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+  const mtdStart = zonedStartOfMonth(today, zone);
   // Fail closed: without an org every groupBy/count below would aggregate
   // across all tenants (and list cross-org jobs). An impossible filter yields
   // zeros instead of someone else's figures.

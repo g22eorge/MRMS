@@ -11,7 +11,8 @@ import { can } from "@/lib/permissions";
 
 import { loadAdminDashboardData } from "./admin-data";
 import { Card, CardHead, SectionHead, type PermissionUser } from "./shared";
-import { eatHour } from "@/lib/date-eat";
+import { prisma } from "@/lib/prisma";
+import { zoneOrDefault, zonedParts } from "@/lib/zoned-time";
 
 /** ── Admin dashboard ───────────────────────────────────────────────────── */
 
@@ -24,7 +25,14 @@ export async function AdminDashboard({
   orgId: string | null;
   permissionUser: PermissionUser;
 }) {
-  const data = await loadAdminDashboardData(orgId);
+  // The business's own time zone decides when "today" starts and which
+  // greeting it gets. Kampala unless the organisation says otherwise.
+  const zone = zoneOrDefault(
+    orgId
+      ? (await prisma.organization.findUnique({ where: { id: orgId }, select: { timezone: true } }).catch(() => null))?.timezone
+      : null,
+  );
+  const data = await loadAdminDashboardData(orgId, zone);
   const {
     currency, orgName, enabledModules, today, recentJobs,
     receivedToday, completedToday,
@@ -73,9 +81,9 @@ export async function AdminDashboard({
   // hours behind, so this read "Good evening" under yesterday's date until
   // 03:00. The containers are set to EAT now; saying so here as well means the
   // greeting cannot drift again if that setting is ever lost.
-  const hour = eatHour(today);
+  const hour = zonedParts(today, zone).hour;
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const dayLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "Africa/Kampala" });
+  const dayLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: zone });
   const dateLine = `${dayLabel}${orgName ? ` · ${orgName}` : ""}`;
 
   // Jobs actually in play — same definition the mobile home screen uses, so the
