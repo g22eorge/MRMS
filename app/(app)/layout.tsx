@@ -25,6 +25,7 @@ import { AnnouncementBanner } from "@/components/shared/AnnouncementBanner";
 import { IdleLogout } from "@/components/shared/IdleLogout";
 import Link from "next/link";
 import { ConnectionGuard } from "@/components/layout/ConnectionGuard";
+import { PageTranslator } from "@/components/layout/PageTranslator";
 
 export default async function AppLayout({
   children,
@@ -213,6 +214,7 @@ export default async function AppLayout({
             <AnnouncementBanner announcements={announcements} />
             <FlashToast />
             <ConnectionGuard />
+            <PageTranslator locale={org?.locale} />
             {children}
           </div>
         </main>

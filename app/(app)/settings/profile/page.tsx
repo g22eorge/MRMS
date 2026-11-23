@@ -27,7 +27,7 @@ export default async function ProfilePage() {
       {user.role === "ADMIN" && orgLocale !== null ? (
         <section className="dc-card space-y-2 px-4 py-3.5">
           <h2 className="text-sm font-semibold text-[var(--ink)]">Language</h2>
-          <p className="text-[0.8125rem] text-[var(--ink-muted)]">For everyone in your business. Menus only for now; pages and documents stay in English.</p>
+          <p className="text-[0.8125rem] text-[var(--ink-muted)]">For everyone in your business. Menus and common page text. Longer sentences, documents and messages stay in English.</p>
           <form action={setOrgLocaleAction} className="flex flex-wrap items-center gap-2">
             <select
               name="locale"

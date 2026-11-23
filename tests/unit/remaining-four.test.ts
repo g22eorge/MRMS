@@ -82,3 +82,39 @@ describe("a release in progress", () => {
     }
   });
 });
+
+describe("page text in another language", () => {
+  it("has a translation in both languages for every phrase it lists", async () => {
+    const { pageTextTable } = await import("@/lib/i18n-pages");
+    const sw = pageTextTable("sw") ?? {};
+    const fr = pageTextTable("fr") ?? {};
+    expect(Object.keys(sw).length).toBeGreaterThan(500);
+    expect(Object.keys(sw).sort()).toEqual(Object.keys(fr).sort());
+    for (const [english, text] of [...Object.entries(sw), ...Object.entries(fr)]) {
+      expect(english.length).toBeGreaterThan(0);
+      expect(text.length).toBeGreaterThan(0);
+    }
+    expect(sw["Save changes"]).toBe("Hifadhi mabadiliko");
+    expect(fr["Record payment"]).toBe("Enregistrer un paiement");
+  });
+
+  it("has nothing to load for English", async () => {
+    const { pageTextTable } = await import("@/lib/i18n-pages");
+    expect(pageTextTable("en")).toBeNull();
+    expect(pageTextTable(null)).toBeNull();
+  });
+
+  it("swaps whole phrases in place, and leaves what people typed alone", () => {
+    const source = readFileSync("components/layout/PageTranslator.tsx", "utf8");
+    // Exact match on the trimmed text only: a client called "Sales Ltd" or a
+    // note containing "Paid" is not a phrase in the table.
+    expect(source).toContain("const translated = table[trimmed];");
+    expect(source).toContain("node.nodeValue = raw.replace(trimmed, translated);");
+    expect(source).toContain('"TEXTAREA"');
+    expect(source).toContain("[data-no-translate]");
+  });
+
+  it("is mounted for the whole signed-in app, from the business's setting", () => {
+    expect(readFileSync("app/(app)/layout.tsx", "utf8")).toContain("<PageTranslator locale={org?.locale} />");
+  });
+});
