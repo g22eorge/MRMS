@@ -654,7 +654,7 @@ async function truncateAll(order) {
  */
 class DryRunRollback extends Error {}
 
-const CREATION_COLUMNS = ["createdAt", "receivedAt", "issuedAt", "allocatedAt"];
+const CREATION_COLUMNS = ["createdAt", "receivedAt", "issuedAt", "allocatedAt", "changedAt"];
 const LABEL_COLUMNS = [
   "jobNumber", "invoiceNumber", "quoteNumber", "receiptNumber", "deliveryNoteNumber",
   "entryNumber", "requestNumber", "sku",
@@ -662,7 +662,9 @@ const LABEL_COLUMNS = [
 
 async function runMissingOnly(order, present) {
   const policy = importMap.missingOnly ?? {};
-  const roots = new Set([...(policy.roots ?? []), ...extraRoots]);
+  // --only-roots: just the models named with --roots, for a run that fills in
+  // one kind of record without reconsidering every job and invoice.
+  const roots = new Set([...(args.includes("--only-roots") ? [] : (policy.roots ?? [])), ...extraRoots]);
   const never = new Set((policy.never?.tables ?? []).filter((t) => !allowTables.includes(t) && !extraRoots.includes(t)));
   const polymorphic = policy.polymorphicOwners ?? {};
   const stamped = policy.stampedNumbers ?? {};
