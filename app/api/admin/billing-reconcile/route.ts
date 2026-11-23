@@ -100,8 +100,8 @@ export async function GET() {
       orgId: string; plan: string | null; status: string | null;
       amount: number | null; currency: string | null; event: string; createdAt: Date;
     }>>`
-      SELECT orgId, plan, status, amount, currency, event, createdAt
-      FROM "BillingEvent" ORDER BY createdAt DESC LIMIT 500
+      SELECT "orgId", "plan", "status", "amount", "currency", "event", "createdAt"
+      FROM "BillingEvent" ORDER BY "createdAt" DESC LIMIT 500
     `;
     events = rows.map((r) => ({
       orgId: r.orgId, plan: r.plan, status: r.status, amount: r.amount,

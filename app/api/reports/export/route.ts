@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
   let permissions: string[] = [];
   try {
     const permissionRows = await prisma.$queryRaw<Array<{ permission: string }>>`
-      SELECT permission FROM "UserPermission" WHERE userId = ${session.user.id}
+      SELECT "permission" FROM "UserPermission" WHERE "userId" = ${session.user.id}
     `;
     permissions = permissionRows
       .map((row) => row.permission)
