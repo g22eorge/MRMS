@@ -121,6 +121,16 @@ export default async function SettingsLayout({ children }: { children: ReactNode
         </svg>
       ),
     } satisfies SettingsNavItem,
+    data: {
+      href: "/settings/data",
+      label: "Your data",
+      description: "Import, export, close",
+      icon: (
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+          <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.19L6.28 7.97a.75.75 0 0 0-1.06 1.06l4.25 4.25c.3.3.77.3 1.06 0l4.25-4.25a.75.75 0 1 0-1.06-1.06l-2.97 2.97V2.75ZM3.5 14.75a.75.75 0 0 1 .75.75v.75c0 .14.11.25.25.25h11a.25.25 0 0 0 .25-.25v-.75a.75.75 0 0 1 1.5 0v.75A1.75 1.75 0 0 1 15.5 18h-11a1.75 1.75 0 0 1-1.75-1.75v-.75a.75.75 0 0 1 .75-.75Z" />
+        </svg>
+      ),
+    } satisfies SettingsNavItem,
     dataHeal: {
       href: "/settings/data-heal",
       label: "Data Heal",
@@ -189,6 +199,7 @@ export default async function SettingsLayout({ children }: { children: ReactNode
         // (richer user/department/branch scope) — reached from the Insights nav.
         isAdmin ? items.billing : null,
         isAdmin ? items.branding : null,
+        isAdmin ? items.data : null,
       ].filter(Boolean) as SettingsNavItem[],
     },
     {
