@@ -189,7 +189,7 @@ describe("a deactivated organisation is out of the platform's working view", () 
     // to show a "past due" alert nobody could act on.
     const page = readFileSync("app/(platform)/platform/page.tsx", "utf8");
     expect(page).toContain("const liveOrgs = orgs.filter((o) => o.isActive);");
-    expect(page).toContain('const pastDueOrgs = liveOrgs.filter((o) => o.billingStatus === "PAST_DUE");');
+    expect(page).toContain('const pastDueOrgs = customers.filter((o) => o.billingStatus === "PAST_DUE");');
     expect(page).toContain('const trialing = liveOrgs.filter((o) => o.billingStatus === "TRIALING");');
   });
 
@@ -197,5 +197,15 @@ describe("a deactivated organisation is out of the platform's working view", () 
     const job = readFileSync("lib/billing/subscription-lifecycle.ts", "utf8");
     expect(job).toContain('where: { isActive: true, billingStatus: "TRIALING", trialEndsAt: { gt: now } }');
     expect(job).toContain('where: { isActive: true, billingStatus: "ACTIVE", planRenewsAt: { lt: now } }');
+  });
+});
+
+describe("the operator's own organisation is not a customer", () => {
+  it("is left out of recurring revenue and the paying count", () => {
+    // Eagle Info is on Enterprise permanently and pays nothing. Counted, it
+    // made the headline figure mostly a number nobody is charged.
+    const page = readFileSync("app/(platform)/platform/page.tsx", "utf8");
+    expect(page).toContain("const customers = liveOrgs.filter((o) => o.id !== EIS_ORG_ID);");
+    expect(page).toContain('const paying = customers.filter((o) => o.billingStatus === "ACTIVE");');
   });
 });

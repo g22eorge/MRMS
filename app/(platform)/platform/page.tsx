@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getTotalRevenue, getMonthlyRevenue } from "@/lib/billing-events";
 import { formatMoney } from "@/lib/currency";
+import { EIS_ORG_ID } from "@/lib/org";
 import { getEffectivePlanPrices } from "@/lib/plan-prices";
 import { OrgTable } from "./OrgTable";
 import type { OrgRow } from "./OrgTable";
@@ -61,8 +62,13 @@ export default async function PlatformPage() {
 
   // Money. Recurring is what the plans of paying organisations add up to at
   // the prices in force; collected is what has actually been received.
-  const paying = liveOrgs.filter((o) => o.billingStatus === "ACTIVE");
-  const pastDueOrgs = liveOrgs.filter((o) => o.billingStatus === "PAST_DUE");
+  // The operator's own organisation is on Enterprise permanently and pays
+  // nothing, so it is not a customer: it is left out of recurring revenue, the
+  // paying count and the past-due list. It still counts as an organisation, a
+  // plan and a source of activity everywhere else on the page.
+  const customers = liveOrgs.filter((o) => o.id !== EIS_ORG_ID);
+  const paying = customers.filter((o) => o.billingStatus === "ACTIVE");
+  const pastDueOrgs = customers.filter((o) => o.billingStatus === "PAST_DUE");
   const priceOf = (plan: string) => planPrices[plan] ?? 0;
   const mrr = paying.reduce((sum, o) => sum + priceOf(o.plan), 0);
   const atRiskMrr = pastDueOrgs.reduce((sum, o) => sum + priceOf(o.plan), 0);
