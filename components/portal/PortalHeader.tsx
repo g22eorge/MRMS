@@ -31,7 +31,7 @@ export function PortalHeader({
   const link = (href: string, label: string, key: "dashboard" | "repairs" | "documents" | "complaints") => (
     <Link
       href={href}
-      className={`rounded-lg px-2.5 py-1.5 text-[0.8125rem] font-semibold transition ${
+      className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[0.8125rem] font-semibold transition ${
         active === key ? "bg-[var(--panel-strong)] text-[var(--ink)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
       }`}
     >
@@ -62,13 +62,23 @@ export function PortalHeader({
           </form>
         ) : null}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {link("/portal/dashboard", "Dashboard", "dashboard")}
         {link("/portal/repairs", "Repairs", "repairs")}
         {link("/portal/documents", "Documents", "documents")}
         {link("/portal/complaints", "Complaints", "complaints")}
+        {/* The change-password page has always handled a voluntary change — it
+            has separate wording and a way back for it — but nothing linked to
+            it, so after the forced change at first sign-in a customer could
+            only reach it by knowing the address. */}
+        <Link
+          href="/portal/change-password"
+          className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[0.8125rem] font-semibold text-[var(--ink-muted)] transition hover:text-[var(--ink)]"
+        >
+          Change password
+        </Link>
         <form action={portalLogoutAction}>
-          <SubmitButton bare className="ml-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
+          <SubmitButton bare className="ml-1 whitespace-nowrap rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[0.75rem] font-semibold hover:bg-[var(--panel-strong)]">
             Sign out
           </SubmitButton>
         </form>

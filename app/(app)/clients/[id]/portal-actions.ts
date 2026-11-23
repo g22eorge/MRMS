@@ -8,6 +8,7 @@ import { requireOrgSession } from "@/lib/org-context";
 import { assertOrgCanMutate } from "@/lib/org-write";
 import { writeSystemAuditEvent } from "@/lib/commercial/audit";
 import { hashPortalPassword } from "@/lib/portal-auth";
+import { flash } from "@/lib/flash";
 import type { PortalRole } from "@prisma/client";
 
 const ROLES: PortalRole[] = ["ORG_ADMIN", "IT_OFFICER", "MEMBER"];
@@ -169,6 +170,58 @@ export async function togglePortalUserAction(formData: FormData): Promise<void> 
   });
 
   if (clientId) revalidatePath(`/clients/${clientId}`);
+}
+
+/**
+ * Staff sets a new starting password on an existing portal login.
+ *
+ * For the customer who has forgotten theirs. There is no emailed reset link —
+ * outgoing email is optional in this product — so the only route was to delete
+ * the login and create it again, which also threw away its linked accounts and
+ * its history in the audit trail.
+ *
+ * Same rule as creation: whoever typed the password knows it, so the login is
+ * flagged to choose its own at the next sign-in. Every session is ended, on
+ * every device: a reset that leaves an old session signed in has not locked
+ * anyone out, which is half the reason to reset.
+ */
+export async function resetPortalUserPasswordAction(formData: FormData): Promise<void> {
+  const { user, orgId, org } = await requireOrgSession();
+  if (!canManagePortal(user.role)) return;
+  assertOrgCanMutate({ access: org.access, userRole: user.role, userAccessMode: user.accessMode, kind: "GENERAL" });
+
+  const id = String(formData.get("portalUserId") ?? "").trim();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  if (!id || !clientId) return;
+
+  if (password.length < 8) {
+    redirect(`/clients/${clientId}?error=${encodeURIComponent("The portal password must be at least 8 characters.")}`);
+  }
+
+  // Scoped to the org: a portal user id from another tenant matches nothing.
+  const target = await prisma.portalUser.findFirst({ where: { id, orgId }, select: { id: true, email: true } });
+  if (!target) return;
+
+  await prisma.$transaction([
+    prisma.portalUser.update({
+      where: { id: target.id },
+      data: { passwordHash: await hashPortalPassword(password), mustChangePassword: true },
+    }),
+    prisma.portalSession.deleteMany({ where: { portalUserId: target.id } }),
+  ]);
+
+  await writeSystemAuditEvent({
+    orgId,
+    actorUserId: user.id,
+    entityType: "PortalUser",
+    entityId: target.id,
+    action: "PORTAL_USER_PASSWORD_RESET",
+    summary: `Portal password reset for ${target.email}`,
+  });
+
+  revalidatePath(`/clients/${clientId}`);
+  redirect(flash(`/clients/${clientId}`, `Password reset for ${target.email}. They choose their own at next sign-in.`));
 }
 
 /**

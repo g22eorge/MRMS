@@ -17,7 +17,7 @@ import { prisma, type Row } from "@/lib/prisma";
 import { formatMoney } from "@/lib/currency";
 import { getClientStatement } from "@/lib/commercial/statements";
 import { shareStatementDocument } from "@/lib/notifications/share-document";
-import { createPortalUserAction, togglePortalUserAction, deletePortalUserAction, linkPortalUserToClientAction, unlinkPortalUserFromClientAction } from "./portal-actions";
+import { createPortalUserAction, togglePortalUserAction, deletePortalUserAction, resetPortalUserPasswordAction, linkPortalUserToClientAction, unlinkPortalUserFromClientAction } from "./portal-actions";
 import { ConfirmSubmitButton } from "@/components/shared/ConfirmSubmitButton";
 import { MergeClientPanel } from "@/components/clients/MergeClientPanel";
 import { ClientProfileCard } from "@/components/clients/ClientProfileCard";
@@ -461,6 +461,32 @@ export default async function ClientDetailPage({
                       </form>
                     </div>
                   </div>
+                  {/* For a customer who has forgotten their password. Closed by
+                      default so a password field is never sitting open on the
+                      page next to every login. */}
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-[0.75rem] font-semibold text-[var(--accent)] hover:underline">Reset password</summary>
+                    <form action={resetPortalUserPasswordAction} className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <input type="hidden" name="portalUserId" value={pu.id} />
+                      <input type="hidden" name="clientId" value={client.id} />
+                      <input
+                        name="password"
+                        type="text"
+                        required
+                        minLength={8}
+                        autoComplete="off"
+                        aria-label={`New temporary password for ${pu.email}`}
+                        placeholder="New temporary password (min 8)"
+                        className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[0.75rem] outline-none focus:border-[var(--accent)]/50"
+                      />
+                      <SubmitButton bare className="whitespace-nowrap rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-2.5 py-1 text-[0.75rem] font-semibold text-[var(--accent)]">
+                        Set new password
+                      </SubmitButton>
+                    </form>
+                    <p className="mt-1 text-[0.6875rem] text-[var(--ink-muted)]">
+                      Signs them out everywhere. Give them this password; they will be asked to choose their own when they sign in.
+                    </p>
+                  </details>
                   {/* Multi-account: this login also manages these client accounts. */}
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]/80">Also manages</span>
