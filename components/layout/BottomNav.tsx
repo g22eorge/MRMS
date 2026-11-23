@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions";
 import { hrefModuleAllowed } from "@/lib/nav/href-module";
 import { routeShortLabel as sl } from "@/lib/nav/registry";
 import type { Role } from "@prisma/client";
+import { translate } from "@/lib/i18n";
 
 type NavItem = {
   href: string;
@@ -186,11 +187,13 @@ export function BottomNav({
   role,
   permissions = [],
   enabledModules,
+  locale,
   badges,
 }: {
   role: Role;
   permissions: string[];
   enabledModules?: Set<string>;
+  locale?: string;
   badges?: {
     receivedJobs?: number;
     inventory?: number;
@@ -260,7 +263,7 @@ export function BottomNav({
                     ? "font-bold text-[var(--accent)]"
                     : "font-medium text-[var(--ink-muted)]"
                 }`}>
-                  {item.label}
+                  {translate(item.label, locale)}
                 </span>
                 {/* Active gold underline dot */}
                 <span className={`mt-0.5 h-0.5 w-5 rounded-full transition-all duration-200 ${

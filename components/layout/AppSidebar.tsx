@@ -16,6 +16,7 @@ import {
   isVisible,
 } from "@/lib/nav/sidebar-model";
 import { COMMUNICATIONS_ROUTES } from "@/lib/communications/routes";
+import { translate } from "@/lib/i18n";
 
 const STORAGE_KEY = "sidebar:open-groups";
 
@@ -109,12 +110,15 @@ export function AppSidebar({
   badges,
   isPlatformAdmin = false,
   enabledModules,
+  locale,
   orgName,
 }: {
   role: Role;
   permissions?: string[];
   isPlatformAdmin?: boolean;
   enabledModules?: Set<string>;
+  /** Language of the menu labels. English when absent. */
+  locale?: string;
   orgName?: string | null;
   badges?: {
     receivedJobs?: number;
@@ -212,7 +216,7 @@ export function AppSidebar({
         >
           {navIcon(item.href)}
         </span>
-        <span className="flex-1 truncate">{item.label}</span>
+        <span className="flex-1 truncate">{translate(item.label, locale)}</span>
         <span className="flex items-center gap-1">
           {typeof nb === "number" && nb > 0 && (
             <span className="rounded-full bg-[var(--dc-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold text-[#1c1600]">
@@ -261,7 +265,7 @@ export function AppSidebar({
                 aria-expanded={open}
                 className="flex w-full items-center gap-2 rounded-[9px] px-2 py-1.5 text-[0.625rem] font-bold uppercase tracking-[0.13em] text-[var(--dc-ink-3)] transition-colors hover:bg-[var(--dc-panel-2)] hover:text-[var(--dc-ink-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dc-accent)]/40"
               >
-                <span>{section.label}</span>
+                <span>{translate(section.label, locale)}</span>
                 <span className="h-px flex-1 bg-[var(--dc-line-soft)]" />
                 {!open && attention > 0 && (
                   <span className="rounded-full bg-[var(--dc-accent)] px-1.5 py-0.5 text-[0.625rem] font-bold text-[#1c1600]">

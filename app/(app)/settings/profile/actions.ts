@@ -205,3 +205,15 @@ export async function adminChangeUserPasswordAction(
 
   return { success: `Password changed for ${target.email}` };
 }
+
+/** The language of the menus for everyone in the business. Administrators only. */
+export async function setOrgLocaleAction(formData: FormData) {
+  const { requireOrgSession } = await import("@/lib/org-context");
+  const { isLocale } = await import("@/lib/i18n");
+  const { user, orgId } = await requireOrgSession();
+  if (user.role !== "ADMIN") return;
+  const locale = String(formData.get("locale") ?? "");
+  if (!isLocale(locale)) return;
+  await prisma.organization.update({ where: { id: orgId }, data: { locale } });
+  revalidatePath("/", "layout");
+}

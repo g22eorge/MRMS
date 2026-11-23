@@ -49,6 +49,11 @@ model Organization {
   /// be deleted. The workspace is deactivated at once; the data is removed by a
   /// platform admin, within the 30 days the privacy policy promises.
   deletionRequestedAt DateTime?
+  /// IANA time zone the business keeps its day by. "Today" on its dashboard
+  /// starts at this place's midnight. See lib/zoned-time.ts.
+  timezone            String    @default("Africa/Kampala")
+  /// Language of the menus for everyone in the business. See lib/i18n.ts.
+  locale              String    @default("en")
 
   // Flutterwave subscription tracking
   billingStatus     OrgBillingStatus @default(TRIALING)

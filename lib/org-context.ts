@@ -86,6 +86,8 @@ async function buildOrgSession(
         plan: true,
         billingStatus: true,
         isActive: true,
+        timezone: true,
+        locale: true,
         trialEndsAt: true,
         planRenewsAt: true,
         planCancelledAt: true,
@@ -112,6 +114,10 @@ async function buildOrgSession(
       baseCurrency,
       supportedCurrencies,
       plan: orgRow?.plan ?? "STARTER",
+      /** IANA zone the business keeps its day by. */
+      timezone: orgRow?.timezone ?? "Africa/Kampala",
+      /** Language of the menus. */
+      locale: orgRow?.locale ?? "en",
       billingStatus: orgRow?.billingStatus ?? "TRIALING",
       trialEndsAt: orgRow?.trialEndsAt ?? null,
       planRenewsAt: orgRow?.planRenewsAt ?? null,

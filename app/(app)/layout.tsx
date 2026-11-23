@@ -24,6 +24,7 @@ import { getActiveAnnouncements } from "@/lib/announcements";
 import { AnnouncementBanner } from "@/components/shared/AnnouncementBanner";
 import { IdleLogout } from "@/components/shared/IdleLogout";
 import Link from "next/link";
+import { ConnectionGuard } from "@/components/layout/ConnectionGuard";
 
 export default async function AppLayout({
   children,
@@ -169,6 +170,7 @@ export default async function AppLayout({
         permissions={user.permissions}
         isPlatformAdmin={isPlatformAdmin}
         enabledModules={enabledModules}
+        locale={org?.locale}
         orgName={org?.name}
         badges={{
           receivedJobs: receivedJobsCount,
@@ -210,6 +212,7 @@ export default async function AppLayout({
             ) : null}
             <AnnouncementBanner announcements={announcements} />
             <FlashToast />
+            <ConnectionGuard />
             {children}
           </div>
         </main>
@@ -218,6 +221,7 @@ export default async function AppLayout({
         role={user.role}
         permissions={user.permissions}
         enabledModules={enabledModules}
+        locale={org?.locale}
         badges={{
           receivedJobs: receivedJobsCount,
           inventory: lowStockCount,
