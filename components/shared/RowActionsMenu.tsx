@@ -145,14 +145,28 @@ export function RowActionsMenu({ children, label = "Actions", size = "default" }
       : Math.max(MARGIN, rect.top - GAP - availableHeight)
     : 0;
 
+  // The panel hangs from the trigger's right edge, which suits a trigger at the
+  // end of a row. On a card where the trigger sits at the start of the row —
+  // stock transfers on a phone — that put most of the panel left of x=0, with
+  // Approve and Cancel off-screen and unreachable. When there is no room to
+  // the left of the trigger, hang it from the trigger's left edge instead.
+  const minWidth = compact ? 188 : 220;
+  const maxWidth = rect ? Math.min(compact ? 236 : 300, window.innerWidth - MARGIN * 2) : 0;
+  const fitsFromRight = rect ? rect.right - maxWidth >= MARGIN : true;
+  const horizontal: React.CSSProperties = rect
+    ? fitsFromRight
+      ? { right: popupRight }
+      : { left: Math.max(MARGIN, Math.min(rect.left, window.innerWidth - maxWidth - MARGIN)) }
+    : {};
+
   const popupStyle: React.CSSProperties = rect
     ? {
         position: "fixed",
         top: popupTop,
-        right: popupRight,
+        ...horizontal,
         zIndex: 9999,
-        minWidth: compact ? 188 : 220,
-        maxWidth: compact ? 236 : 300,
+        minWidth: Math.min(minWidth, maxWidth),
+        maxWidth,
         maxHeight: compact ? Math.min(360, availableHeight) : availableHeight,
         overflowY: "auto",
         overscrollBehavior: "contain",

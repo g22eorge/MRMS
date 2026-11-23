@@ -2615,13 +2615,19 @@ export function JobDetailTabs({ role, permissions = [], orgBaseCurrency, job, te
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-[var(--ink-muted)]">Workflow note <span className="text-[var(--ink-muted)]/60">(optional)</span></label>
+                {/* This is not an internal note. The public tracking page
+                    (/status/<job number>) and the customer portal both print it
+                    under "Update from our team". It was labelled "Workflow note"
+                    with the placeholder "Internal note…", which invited staff to
+                    write things the customer was never meant to read. */}
+                <label className="mb-1.5 block text-xs font-medium text-[var(--ink-muted)]">Note to the customer <span className="text-[var(--ink-muted)]/60">(optional)</span></label>
                 <textarea
                   name="statusNote"
                   defaultValue={job.statusNote ?? ""}
-                  placeholder="Internal note…"
+                  placeholder="e.g. Waiting for a part, expected Friday"
                   className={areaClass}
                 />
+                <p className="mt-1 text-[0.6875rem] text-[var(--ink-muted)]">The customer sees this on their tracking page and in the portal.</p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
