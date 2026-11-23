@@ -159,6 +159,88 @@ It reports, and leaves for a person:
 Run Data Heal afterwards so the document counters catch up. The policy is in
 `missingOnly` in `docs/pg-migration/import-map.json`.
 
+### Widening or narrowing one run
+
+The default policy was written for the care database, where the records taken
+after the import were jobs and invoices. The commercial site ran on its own
+database (Turso `repairmanager`), where they were sales, and the policy never
+copies parts or bank entries at all. These options change one run and leave the
+policy file alone. Dry-run every combination first.
+
+| Option | Effect |
+| --- | --- |
+| `--org=<id>` | Only that organisation's rows are considered, in every table that carries `orgId`. Use it whenever the source holds more than one tenant. |
+| `--roots=<Model>,<Model>` | Treat these models as top-level records too, qualifying by creation date (`Sale`, `Part`, `JournalEntry`, `Receipt`, `ChartOfAccount`, `AuditLog`, ...). Naming a model here also takes it off the never-copy list. |
+| `--only-roots` | Use only the models named with `--roots`, not the policy's own. For filling in one kind of record without reconsidering every job and invoice; without it, a record removed from the target on purpose is a candidate again. |
+| `--allow=<Model>` | Take a model off the never-copy list so it can follow a record written in the same run (`BankTransaction` following its payment). |
+| `--skip=<id>,<id>` | Rows that must stay out, because a person re-entered them on the target under another id. |
+| `--renumber=all` | Renumber every clash in the run instead of listing ids. Reasonable with `--org`; not for a whole database. |
+
+Two things it does without being asked:
+
+- A parent the run does not write is matched to the target's own copy when
+  `sameAs` names its identifying columns. That is how journal lines reach the
+  target's chart of accounts (`orgId` + `code`) when each side created its own.
+  Each match is reported.
+- A table whose rows are dated by `changedAt` (job status history) qualifies by
+  that column.
+
+What was run for the commercial tenant that kept trading on the old site:
+
+```bash
+docker compose run --rm --no-deps \
+  -v "$(pwd)/appsite.db:/app/fresh.db:ro" \
+  migrate node scripts/pg/import.mjs fresh.db \
+    --missing-only --created-after=2026-10-26T07:32:00Z --dry-run \
+    --org=<orgId> --roots=Sale,Part --allow=BankTransaction --renumber=all \
+    --resolve-duplicates --resolve-orphans
+```
+
+**Stock is still never moved, and stored balances are not either.** Sales come
+across without changing `Part.qtyOnHand`, and bank entries without changing
+`BankAccount.currentBalance`. Add the imported entries to the balance by hand,
+guarded on the value you read, and settle stock with a count: the target may
+have re-entered receipts the source also holds.
+
+**Before bringing a payment across, look for it on the target.** A sale that
+shows the same or more paid on the target was settled there, and importing the
+source's payment counts the money twice. The same goes for a whole sale or
+invoice re-entered under a new number: two were imported as duplicates during
+the cutover and had to be removed. Match by amount and line items, not by id.
+
+### Settings tables
+
+Four tables are keyed without an `id` column, so the importer ignores them:
+`OrgModuleGrant`, `OrgWhatsAppConfig`, `AiOrgSettings` and `PlatformSetting`.
+`scripts/pg/copy-org-settings.mjs` copies them, adding only rows the target
+lacks and never printing a value (several are credentials):
+
+```bash
+docker compose run --rm --no-deps \
+  -v "$(pwd)/appsite.db:/app/fresh.db:ro" \
+  migrate node scripts/pg/copy-org-settings.mjs fresh.db --dry-run --skip-org=<orgId>,<orgId>
+```
+
+Two effects to decide on before running it for real. An organisation with no
+module grants sees every module, so copying grants *narrows* it to what it had
+on the source (an organisation on trial sees everything regardless). And
+`PlatformSetting` holds the payment and SMS provider credentials: copying them
+switches those integrations on.
+
+### Checking that nothing was lost
+
+Counts matching is not proof. The row-by-row check after the cutover found
+journal entries dropped and line items unlinked from their products in a tenant
+whose totals all matched: its chart of accounts had not existed on the target
+when it was first loaded, so the entries had nowhere to attach.
+
+The check that found them: for one organisation, list every row the source
+holds, including rows that belong to it through a parent; fetch the same ids
+from the target; then compare existence and fields. Three kinds of difference
+matter: a row the target lacks, a foreign key the target has cleared while the
+record it pointed at is still there, and a money or quantity field that
+differs. Timestamps differ in format between the two and are not a finding.
+
 ## Releasing a change
 
 **In production, a push to `main` is the release.** `.github/workflows/deploy.yml`
