@@ -24,8 +24,9 @@ export type PlatformResetState = { error?: string; success?: string };
 
 /**
  * Reset an organization's admin (or any user's) password from the platform
- * console — for when an org admin is locked out. Sets a new credential and
- * signs the target out everywhere. Platform-admin gated.
+ * console — for when an org admin is locked out. Sets a new credential, signs
+ * the target out everywhere, and makes them choose their own password at next
+ * sign-in. Platform-admin gated.
  */
 export async function resetOrgAdminPasswordAction(
   _state: PlatformResetState,
@@ -54,6 +55,13 @@ export async function resetOrgAdminPasswordAction(
         data: { accountId: userId, providerId: "credential", userId, password: hashed },
       });
     }
+    // The platform admin now knows this password. The user must choose their
+    // own before the app opens to them; requireOrgSession enforces it. Not for
+    // a platform admin resetting their own.
+    await tx.user.update({
+      where: { id: userId },
+      data: { mustChangePassword: userId !== admin.id },
+    });
     // Force re-login everywhere after a platform reset.
     await tx.session.deleteMany({ where: { userId } });
   });

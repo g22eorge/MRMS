@@ -93,8 +93,9 @@ Always preserve these:
 - `orgId` isolation for commercial routes and APIs.
 - Append-only audit logs. Do not delete audit entries as a cleanup shortcut.
 - File uploads must validate file type and size.
-- A password set by someone else is temporary. Both admin reset paths set
-  `User.mustChangePassword`, and `requireOrgSession` in `lib/org-context.ts`
+- A password set by someone else is temporary. All three reset paths
+  (Settings → Users, Settings → Profile, and the platform console's
+  `resetOrgAdminPasswordAction`) set `User.mustChangePassword`, and `requireOrgSession` in `lib/org-context.ts`
   sends a flagged user to `/change-password` until they choose their own. A new
   reset path must set the flag; a new page guard must not bypass
   `requireOrgSession`. Portal logins have the same rule on `PortalUser`.
